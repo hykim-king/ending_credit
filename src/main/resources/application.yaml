@@ -1,40 +1,18 @@
 spring:
   application:
-    name: sb10
+    name: ending_credit
 #--------------------------------------
 # dev/run
 #-------------------------------------- 
   profiles:
     active: app
-           
-          
-#--------------------------------------
-# Mail
-#-------------------------------------- 
-  mail:
-    host: smtp.naver.com
-    port: 465
-    username: 메일ID@naver.com
-    password: 앱비밀번호
-    default-encoding: UTF-8
-    
-    properties:
-      mail:
-        smtp:
-          auth: true
-          ssl:
-            enable: true
-            trust: smtp.naver.com
-            protocols: TLSv1.2
-      
-        debug: true      
               
 #--------------------------------------
 # Mybatis
 #-------------------------------------- 
 mybatis:
   mapper-locations: classpath:/mapper/**/*.xml
-  type-aliases-package: com.pcwk.ehr.domain     
+  type-aliases-package: com.endit.domain     
   configuration:
     map-underscore-to-camel-case: true
     cache-enabled: false
@@ -54,7 +32,6 @@ mybatis:
 server:
   port: 8080 
       
-            
 #--------------------------------------
 # logging
 #--------------------------------------	

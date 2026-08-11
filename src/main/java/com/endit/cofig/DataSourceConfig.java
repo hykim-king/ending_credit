@@ -18,11 +18,17 @@ public class DataSourceConfig {
 	public DataSource dataSource() {
 		HikariDataSource ds=new HikariDataSource();
 		
-		//Oracle datasource
+		//Oracle datasource-개인
 		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
 		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
-		ds.setUsername("scott");
+		ds.setUsername("scott_test");
 		ds.setPassword("pcwk");
+		
+		//Oracle datasource-공용
+//		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
+//		ds.setJdbcUrl("jdbc:oracle:thin:@//192.168.100.30:1522/XE");
+//		ds.setUsername("enditpcwk");
+//		ds.setPassword("qwer1234");
 		
 		//Hikari
 		ds.setPoolName("PCWK-HikariCP");

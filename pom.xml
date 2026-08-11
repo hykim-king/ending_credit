@@ -9,10 +9,10 @@
         <version>3.5.16</version>
         <relativePath /> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.pcwk.ehr</groupId>
-    <artifactId>sb10</artifactId>
+    <groupId>com.endit</groupId>
+    <artifactId>ending_credit</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>sb08</name>
+    <name>ending_credit</name>
     <description>DevTools,Thymeleaf</description>
     <url />
     <licenses>
