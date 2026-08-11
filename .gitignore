@@ -105,7 +105,8 @@ local.properties
 # Compiled class file
 *.class
 
-# Log file
+### Logs ###
+logs/
 *.log
 
 # BlueJ files
