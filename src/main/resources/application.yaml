@@ -1,0 +1,86 @@
+spring:
+  application:
+    name: sb10
+#--------------------------------------
+# dev/run
+#-------------------------------------- 
+  profiles:
+    active: app
+           
+          
+#--------------------------------------
+# Mail
+#-------------------------------------- 
+  mail:
+    host: smtp.naver.com
+    port: 465
+    username: 메일ID@naver.com
+    password: 앱비밀번호
+    default-encoding: UTF-8
+    
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            trust: smtp.naver.com
+            protocols: TLSv1.2
+      
+        debug: true      
+              
+#--------------------------------------
+# Mybatis
+#-------------------------------------- 
+mybatis:
+  mapper-locations: classpath:/mapper/**/*.xml
+  type-aliases-package: com.pcwk.ehr.domain     
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    
+#--------------------------------------
+# Thymeleaf
+# 개발: cache: false
+#--------------------------------------      
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+    encoding: UTF-8
+#--------------------------------------
+# server
+#--------------------------------------     
+server:
+  port: 8080 
+      
+            
+#--------------------------------------
+# logging
+#--------------------------------------	
+logging:
+  level:
+    root: info
+    com.pcwk.ehr: debug
+    # Transaction
+    org.springframework.transaction: TRACE
+    org.springframework.transaction.interceptor: TRACE
+
+    # DataSource TransactionManager
+    org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
+
+    # MyBatis
+    org.mybatis: DEBUG
+
+    # SQL
+    org.springframework.jdbc.core: DEBUG    
+
+  file:
+    name: logs/application.log
+
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+   
+
+    

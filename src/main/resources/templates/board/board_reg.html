@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}"
+>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>게시등록</title>
+</head>
+<body>    
+    <!--container-->
+    <div layout:fragment="content" class="container py-2" >
+        
+    <h3 class="display-7 mb-4 ">
+        <i class="bi bi-modem"></i>
+        게시글 등록
+    </h3>
+
+        <form>
+            <div class="mb-3">
+                <label for="title" class="form-label">
+                    제목
+                </label>
+                <input type="text" 
+                    name="title" 
+                    id="title" 
+                    class="form-control"
+                    placeholder="제목을 입력하세요"
+                    max="100"
+                />
+            </div>
+            <!--게시구분,작성자 -->
+            <div class="row">
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="div" class="form-label">
+                        게시구분
+                    </label>    
+                    <select class="form-select" name="div" id="div">
+                        <option value="10">공지사항</option>
+                        <option value="20">자유게시판</option>
+                    </select>                                
+                </div>
+                <div class="col-12 col-md-6 mb-3">
+                    <label for="regId" class="form-label">
+                        작성자
+                    </label>
+                    <input type="text" 
+                        name="regId" 
+                        id="regId" 
+                        class="form-control"
+                        readonly
+                    />                    
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="content" class="form-label">
+                    내용
+                </label>
+                <textarea id="content" 
+                    class="form-control"
+                    rows="10"
+                    placeholder="내용을 입력하세요"
+                ></textarea>
+            </div>
+            <div class="d-flex justify-content-end gap-1">
+                <button class="btn btn-secondary">목록</button>
+                <button class="btn btn-primary">등록</button>
+            </div>
+        </form>
+    </div>   
+    <!--//container--> 
+</body>
+</html>

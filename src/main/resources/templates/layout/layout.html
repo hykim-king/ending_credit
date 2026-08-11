@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="_csrf" th:content="${_csrf.token}">
+<meta name="_csrf_header" th:content="${_csrf.headerName}">
+<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
+<link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<title layout:title-pattern="$CONTENT_TITLE | PCWK" >PCWK</title>
+<script th:src="@{/assets/js/cmn/common.js}"></script>
+<script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
+</head>
+<body>
+    <!-- root container -->
+	<div>
+		<div class="d-flex flex-column border  min-vh-100">
+			<!-- Header -->
+			<header th:replace="~{fragments/header :: header}">Header</header>
+			<!--// Header end -->
+			
+			<!-- Main -->   
+			<main class="flex-grow-1 p-3" >
+				<div layout:fragment="content">
+				</div>
+			</main>
+			<!--// Main end-->
+			
+			<!-- Footer -->
+			<footer th:replace="~{fragments/footer :: footer}">Footer</footer>
+			<!--// Footer end -->
+			
+		</div>
+	</div>
+	<!--// root container end -->
+
+<script th:src="@{/assets/js/bootstrap.js}"></script>
+</body>
+</html>

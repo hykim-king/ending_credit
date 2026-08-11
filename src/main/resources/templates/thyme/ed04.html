@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+	<h2>Get 통신</h2>
+	<hr/>
+	<a th:href="@{/thyme/ed04/get(userId='pcwk01')}">전송</a>
+	
+	<div th:if="${vo}">	
+		<span th:text="${vo.userId}" >아이디:</span>
+	    <span th:text="${vo.name}">이름</span>
+    </div>
+</body>
+</html>

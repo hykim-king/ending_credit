@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}"
+>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회원등록</title>
+<script th:src="@{/assets/js/user/user_reg.js}" defer></script>
+</head>
+<body>
+    <!--container-->
+    <div layout:fragment="content" class="container py-2" >
+
+    <!-- 페이지 제목 -->
+    <div class="mb-4">
+        <h3 class="fw-bold mb-2">
+            <i class="bi bi-person-plus-fill text-primary me-2"></i>
+            회원 등록
+        </h3>
+
+        <div class="border-bottom border-primary border-2"
+             style="width: 170px;">
+        </div>
+
+        <p class="text-secondary mt-2 mb-0">
+            새로운 회원 정보를 입력해 주세요.
+        </p>
+    </div>
+
+  <!-- 회원등록 Card -->
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-4">
+
+            <form action="#"
+                  method="post"
+                  id="userForm">
+                <!-- 사용자ID / 이름 -->
+                <div class="row g-3">
+
+                    <div class="col-12 col-md-6">
+                        <label for="userId"
+                               class="form-label fw-semibold">
+                            사용자ID
+                            <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               name="userId"
+                               id="userId"
+                               class="form-control"
+                               placeholder="사용자ID를 입력하세요"
+                               maxlength="100"
+                               autocomplete="username"
+                               required>
+
+                        <div class="form-text">
+                            로그인에 사용할 사용자ID입니다.
+                        </div>
+
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <label for="name"
+                               class="form-label fw-semibold">
+                            이름
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <input type="text"
+                               name="name"
+                               id="name"
+                               class="form-control"
+                               placeholder="이름을 입력하세요"
+                               maxlength="50"
+                               required>
+                    </div>
+
+                    <!-- 비밀번호 -->
+                    <div class="col-12 col-md-6">
+
+                        <label for="password"
+                               class="form-label fw-semibold">
+                            비밀번호
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <input type="password"
+                               name="password"
+                               id="password"
+                               class="form-control"
+                               placeholder="비밀번호를 입력하세요"
+                               maxlength="100"
+                               autocomplete="new-password"
+                               required>
+
+                    </div>
+
+                    <!-- 이메일 -->
+                    <div class="col-12 col-md-6">
+
+                        <label for="email"
+                               class="form-label fw-semibold">
+                            이메일
+                            <span class="text-danger">*</span>
+                        </label>
+
+                        <input type="email"
+                               name="email"
+                               id="email"
+                               class="form-control"
+                               placeholder="example@pcwk.com"
+                               maxlength="100"
+                               autocomplete="email"
+                               required>
+
+                    </div>
+
+                    <!-- 로그인 횟수 -->
+                    <div class="col-12 col-md-4">
+
+                        <label for="login"
+                               class="form-label fw-semibold">
+                            로그인 횟수
+                        </label>
+
+                        <input type="number"
+                               name="login"
+                               id="login"
+                               class="form-control"
+                               value="0"
+                               min="0">
+
+                    </div>
+
+                    <!-- 추천 횟수 -->
+                    <div class="col-12 col-md-4">
+
+                        <label for="recommend"
+                               class="form-label fw-semibold">
+                            추천 횟수
+                        </label>
+
+                        <input type="number"
+                               name="recommend"
+                               id="recommend"
+                               class="form-control"
+                               value="0"
+                               min="0">
+
+                    </div>
+
+                    <!-- 등급 -->
+                    <div class="col-12 col-md-4">
+
+                        <label for="grade"
+                               class="form-label fw-semibold">
+                            등급
+                        </label>
+
+                        <select class="form-select"
+                                name="grade"
+                                id="grade">
+                            <option value="BASIC" selected>BASIC</option>
+                            <option value="SILVER">SILVER</option>
+                            <option value="GOLD">GOLD</option>
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- 버튼 -->
+                <div class="d-flex
+                            justify-content-between
+                            align-items-center
+                            border-top
+                            mt-4
+                            pt-3">
+
+                    <button type="button"
+                            class="btn btn-outline-secondary"
+                            id="btnRetrieve">
+
+                        <i class="bi bi-list-ul me-1"></i>
+                        목록
+
+                    </button>
+
+                    <button type="submit"
+                            class="btn btn-primary px-4"
+                            id="btnSave">
+
+                        <i class="bi bi-check-lg me-1"></i>
+                        등록
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+</div>
+
+</body>
+</html>
