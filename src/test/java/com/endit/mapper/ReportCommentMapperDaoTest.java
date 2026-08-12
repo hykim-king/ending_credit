@@ -1,6 +1,6 @@
 /**
  * <pre>
- * Class Name : ReportCommentMapperTest
+ * Class Name : ReportCommentMapperDaoTest
  * Description : 코멘트 신고 Mapper JUnit
  *
  * Modification Information
@@ -41,7 +41,7 @@ import com.endit.domain.ReportCommentVO;
 import com.endit.domain.UserCommentVO;
 
 @SpringBootTest
-class ReportCommentMapperTest {
+class ReportCommentMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 

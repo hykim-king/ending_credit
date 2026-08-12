@@ -1,6 +1,6 @@
 /**
  * <pre>
- * Class Name : CommentLikeMapperTest
+ * Class Name : CommentLikeMapperDaoTest
  * Description : 코멘트 좋아요 Mapper JUnit
  *
  * Modification Information
@@ -34,7 +34,7 @@ import com.endit.domain.CommentLikeVO;
 import com.endit.domain.UserCommentVO;
 
 @SpringBootTest
-class CommentLikeMapperTest {
+class CommentLikeMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
