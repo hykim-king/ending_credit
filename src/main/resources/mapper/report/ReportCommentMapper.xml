@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.ReportCommentMapper">
+
+    <!-- 검색조건: 목록조회/총건수 양쪽에서 같이 쓴다
+         searchDiv 10: 처리상태, 20: 신고사유, 30: 대상 코멘트ID -->
+    <sql id="reportWhere">
+        <where>
+         <if test="searchWord != null and searchWord != ''">
+             <choose>
+                <when test=" searchDiv == '10' ">
+                    status = #{searchWord}
+                </when>
+                <when test=" searchDiv == '20' ">
+                    reason = #{searchWord}
+                </when>
+                <when test=" searchDiv == '30' ">
+                    comment_id = #{searchWord}
+                </when>
+                <otherwise>
+
+                </otherwise>
+             </choose>
+         </if>
+        </where>
+    </sql>
+
+    <!-- 신고 접수. 처리상태는 DB DEFAULT('RECEIVED')가 넣으므로 생략한다.
+         PK는 DEFAULT가 없어서 시퀀스 값을 여기서 직접 채번한다 -->
+    <insert id="doSave" parameterType="ReportCommentVO">
+        <selectKey keyProperty="reportId" resultType="long" order="BEFORE">
+            SELECT SEQ_REPORT.NEXTVAL FROM dual
+        </selectKey>
+        INSERT INTO report_comment (
+            report_id,
+            report_member_id,
+            comment_id,
+            reason,
+            detail,
+            created_dt
+        ) VALUES (
+            #{reportId},
+            #{reportMemberId},
+            #{commentId},
+            #{reason},
+            #{detail,jdbcType=VARCHAR},
+            SYSDATE )
+    </insert>
+
+    <select id="doSelectOne"
+            parameterType="ReportCommentVO"
+            resultType="ReportCommentVO">
+         SELECT
+             report_id,
+             report_member_id,
+             comment_id,
+             reason,
+             detail,
+             status,
+             processed_by_member_id,
+             process_note,
+             TO_CHAR(created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
+             TO_CHAR(processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt
+         FROM
+             report_comment
+         WHERE report_id = #{reportId}
+    </select>
+
+    <!-- 신고 처리(승인/반려).
+         CK_REPORT_PROCESS_COMPLETE 때문에 상태·처리자·처리일시를 반드시 한 UPDATE로 갱신한다 -->
+    <update id="doUpdate" parameterType="ReportCommentVO">
+         UPDATE report_comment
+         SET
+              status                 = #{status},
+              processed_by_member_id = #{processedByMemberId,jdbcType=NUMERIC},
+              process_note           = #{processNote,jdbcType=VARCHAR},
+              processed_dt           = SYSDATE
+         WHERE
+                report_id = #{reportId}
+    </update>
+
+    <delete id="doDelete" parameterType="ReportCommentVO">
+        DELETE FROM report_comment
+        WHERE report_id = #{reportId}
+    </delete>
+
+    <select id="doRetrieve"
+        parameterType="com.endit.cmn.DTO" resultType="ReportCommentVO">
+          SELECT A.*,B.*
+            FROM(
+              SELECT tt1.rnum no,
+                     tt1.report_id,
+                     tt1.report_member_id,
+                     tt1.comment_id,
+                     tt1.reason,
+                     tt1.detail,
+                     tt1.status,
+                     tt1.processed_by_member_id,
+                     tt1.process_note,
+                     TO_CHAR(tt1.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
+                     TO_CHAR(tt1.processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt
+                FROM(
+                      SELECT ROWNUM rnum, t1.*
+                        FROM (
+                              SELECT *
+                                FROM report_comment
+                               <include refid="reportWhere"></include>
+                               ORDER BY created_dt DESC, report_id DESC
+                       )t1
+                    <![CDATA[    WHERE ROWNUM <= ( #{pageSize} * (#{pageNo} -1 ) + #{pageSize}  )  ]]>
+                )tt1
+             <![CDATA[   WHERE rnum >= ( #{pageSize} * (#{pageNo} -1 ) + 1    ) ]]>
+           ) A CROSS JOIN (
+              SELECT COUNT(*) total_cnt
+                FROM report_comment
+                <include refid="reportWhere"></include>
+           ) B
+    </select>
+
+    <select id="totalCnt" resultType="java.lang.Integer">
+        SELECT COUNT(*) AS total_cnt FROM report_comment
+    </select>
+
+    <delete id="deleteAll">
+        DELETE FROM report_comment
+    </delete>
+
+</mapper>
