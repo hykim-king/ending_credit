@@ -1,3 +1,5 @@
+package com.endit.domain;
+
 /**
  * <pre>
  * Class Name  : CollectionItemVO
@@ -14,8 +16,6 @@
  * @author jinyoung
  * @since 2026. 8. 12.
  */
-package com.endit.domain;
-
 public class CollectionItemVO {
 
 	private int collectionId;    // 컬렉션 번호

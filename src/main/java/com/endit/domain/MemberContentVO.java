@@ -1,3 +1,5 @@
+package com.endit.domain;
+
 /**
  * <pre>
  * Class Name  : MemberContentVO
@@ -14,8 +16,6 @@
  * @author jinyoung
  * @since 2026. 8. 12.
  */
-package com.endit.domain;
-
 public class MemberContentVO {
 
 	private int memberId;           // 회원 번호
