@@ -6,6 +6,16 @@ spring:
 #-------------------------------------- 
   profiles:
     active: app
+
+#--------------------------------------
+# Thymeleaf
+# 개발: cache: false
+#--------------------------------------
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+    encoding: UTF-8
               
 #--------------------------------------
 # Mybatis
@@ -18,15 +28,6 @@ mybatis:
     cache-enabled: false
     
 #--------------------------------------
-# Thymeleaf
-# 개발: cache: false
-#--------------------------------------      
-  thymeleaf:
-    prefix: classpath:/templates/
-    suffix: .html
-    cache: false
-    encoding: UTF-8
-#--------------------------------------
 # server
 #--------------------------------------     
 server:
@@ -34,14 +35,14 @@ server:
       
 #--------------------------------------
 # logging
-#--------------------------------------	
+#-------------------------------------- 
 logging:
   level:
     root: info
-    com.pcwk.ehr: debug
+    com.endit: DEBUG
     # Transaction
-    org.springframework.transaction: TRACE
-    org.springframework.transaction.interceptor: TRACE
+    org.springframework.transaction: DEBUG
+    org.springframework.transaction.interceptor: DEBUG
 
     # DataSource TransactionManager
     org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
@@ -60,4 +61,3 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
    
 
-    
