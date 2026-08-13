@@ -29,11 +29,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.domain.CommentLikeVO;
 import com.endit.domain.UserCommentVO;
 
 @SpringBootTest
+@Transactional
 class CommentLikeMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
