@@ -6,16 +6,6 @@ spring:
 #-------------------------------------- 
   profiles:
     active: app
-
-#--------------------------------------
-# Thymeleaf
-# 개발: cache: false
-#--------------------------------------
-  thymeleaf:
-    prefix: classpath:/templates/
-    suffix: .html
-    cache: false
-    encoding: UTF-8
               
 #--------------------------------------
 # Mybatis
@@ -27,6 +17,15 @@ mybatis:
     map-underscore-to-camel-case: true
     cache-enabled: false
     
+#--------------------------------------
+# Thymeleaf
+# 개발: cache: false
+#--------------------------------------      
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+    encoding: UTF-8
 #--------------------------------------
 # server
 #--------------------------------------     
