@@ -38,10 +38,10 @@ server:
 logging:
   level:
     root: info
-    com.pcwk.ehr: debug
+    com.endit: DEBUG
     # Transaction
-    org.springframework.transaction: TRACE
-    org.springframework.transaction.interceptor: TRACE
+    org.springframework.transaction: DEBUG
+    org.springframework.transaction.interceptor: DEBUG
 
     # DataSource TransactionManager
     org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG

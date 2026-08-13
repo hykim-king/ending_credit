@@ -21,8 +21,8 @@ public class DataSourceConfig {
 		//Oracle datasource-개인
 		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
 		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
-		ds.setUsername("scott_test");
-		ds.setPassword("pcwk");
+		ds.setUsername("endit_test");
+		ds.setPassword("endit_test");
 		
 		//Oracle datasource-공용
 //		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
