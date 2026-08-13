@@ -1,0 +1,497 @@
+package com.endit.mapper;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.endit.cmn.DTO;
+import com.endit.domain.CollectionItemVO;
+
+/**
+ * <pre>
+ * Class Name  : CollectionItemMapperTest
+ * Description : 컬렉션 콘텐츠 Mapper의 등록, 조회 및 삭제 기능을 검증하는 테스트
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 8. 13.	jinyoung    최초 생성
+ * ------------------------------------------------------------
+ * </pre>
+ *
+ * @author jinyoung
+ * @since 2026. 8. 13.
+ */
+@SpringBootTest
+@Transactional
+@DisplayName("CollectionItemMapper 테스트")
+class CollectionItemMapperTest {
+
+	// COMMON_CODE 테이블의 공통 코드값
+	private static final String CODE_YES = "Y";
+	private static final String MEMBER_ROLE_USER = "USER";
+	private static final String MEMBER_STATUS_ACTIVE = "ACTIVE";
+
+	private static final Logger log = LoggerFactory.getLogger(CollectionItemMapperTest.class);
+
+	@Autowired
+	private CollectionItemMapper mapper;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	// 각 테스트에서 사용하는 컬렉션 콘텐츠 데이터
+	private CollectionItemVO testData;
+
+	/**
+	 * 테스트에 필요한 회원, 콘텐츠, 컬렉션 및 컬렉션 콘텐츠 데이터 준비
+	 */
+	@BeforeEach
+	void setUp() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ setUp()                      │");
+		log.debug("└──────────────────────────────┘");
+
+		// 복합 FK 조건을 만족시키기 위해 부모 데이터를 먼저 등록
+		int memberId = nextId("SEQ_MEMBER");
+		int contentId = nextId("SEQ_CONTENT");
+		int collectionId = nextId("SEQ_COLLECTION");
+
+		insertMember(memberId);
+		insertContent(contentId);
+		insertCollection(collectionId, memberId);
+
+		// ADDED_DT는 Mapper에서 SYSDATE로 등록
+		testData = new CollectionItemVO(collectionId, contentId, null);
+
+		log.debug("* testData: collectionId-{}, contentId-{}, addedDt-{}",
+				testData.getCollectionId(), testData.getContentId(), testData.getAddedDt());
+	}
+
+	/**
+	 * 컬렉션 콘텐츠 등록 검증
+	 */
+	@Test
+	@DisplayName("컬렉션 콘텐츠 등록")
+	void doSave() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doSave()                     │");
+		log.debug("└──────────────────────────────┘");
+
+		// When: 컬렉션 콘텐츠를 등록하고 실제 저장된 데이터를 다시 조회
+		int flag = mapper.doSave(testData);
+		CollectionItemVO outVO = mapper.doSelectOne(testData);
+
+		// Then: 한 건이 등록되고 DB에서 생성한 추가 일시가 조회되어야 함
+		assertEquals(1, flag);
+		assertNotNull(outVO);
+
+		log.debug("* savedData: collectionId-{}, contentId-{}, addedDt-{}",
+				outVO.getCollectionId(), outVO.getContentId(), outVO.getAddedDt());
+
+		assertEquals(testData.getCollectionId(), outVO.getCollectionId());
+		assertEquals(testData.getContentId(), outVO.getContentId());
+		assertNotNull(outVO.getAddedDt());
+	}
+
+	/**
+	 * 컬렉션 번호와 콘텐츠 번호를 이용한 단건 조회 검증
+	 */
+	@Test
+	@DisplayName("컬렉션 콘텐츠 단건 조회")
+	void doSelectOne() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doSelectOne()                │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 조회할 컬렉션 콘텐츠를 등록
+		assertEquals(1, mapper.doSave(testData));
+
+		// When: 복합 PK 전체를 이용해 단건 조회
+		CollectionItemVO outVO = mapper.doSelectOne(testData);
+
+		// Then: 등록한 키값과 추가 일시가 조회되어야 함
+		assertNotNull(outVO);
+
+		log.debug("* selectedData: collectionId-{}, contentId-{}, addedDt-{}",
+				outVO.getCollectionId(), outVO.getContentId(), outVO.getAddedDt());
+
+		assertEquals(testData.getCollectionId(), outVO.getCollectionId());
+		assertEquals(testData.getContentId(), outVO.getContentId());
+		assertNotNull(outVO.getAddedDt());
+	}
+
+	/**
+	 * 컬렉션 번호와 콘텐츠 번호를 이용한 삭제 검증
+	 */
+	@Test
+	@DisplayName("컬렉션 콘텐츠 삭제")
+	void doDelete() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doDelete()                   │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 삭제할 컬렉션 콘텐츠를 등록하고 삭제 전 데이터를 조회
+		assertEquals(1, mapper.doSave(testData));
+
+		CollectionItemVO beforeDeleteVO = mapper.doSelectOne(testData);
+
+		assertNotNull(beforeDeleteVO);
+
+		// When: 복합 PK 전체를 이용해 삭제
+		int flag = mapper.doDelete(testData);
+
+		// Then: 삭제한 컬렉션 콘텐츠는 조회되지 않아야 함
+		CollectionItemVO afterDeleteVO = mapper.doSelectOne(testData);
+
+		assertEquals(1, flag);
+		assertNull(afterDeleteVO);
+
+		log.debug("* deletedData: collectionId-{}, contentId-{}, addedDt-{}, result-{}건",
+				beforeDeleteVO.getCollectionId(), beforeDeleteVO.getContentId(), beforeDeleteVO.getAddedDt(), flag);
+	}
+
+	/**
+	 * 컬렉션 번호 조건을 이용한 콘텐츠 목록 조회 검증
+	 */
+	@Test
+	@DisplayName("컬렉션별 콘텐츠 목록 조회")
+	void doRetrieve() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doRetrieve()                 │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 목록에서 조회할 컬렉션 콘텐츠와 검색 조건을 준비
+		assertEquals(1, mapper.doSave(testData));
+
+		DTO search = new DTO();
+		search.setPageNo(1);
+		search.setPageSize(10);
+		search.setSearchDiv("10");
+		search.setSearchWord(String.valueOf(testData.getCollectionId()));
+
+		// When: 컬렉션 번호를 조건으로 콘텐츠 목록을 조회
+		List<CollectionItemVO> list = mapper.doRetrieve(search);
+
+		// Then: 등록한 컬렉션 콘텐츠가 조회 결과에 포함되어야 함
+		assertNotNull(list);
+		assertFalse(list.isEmpty());
+
+		log.debug("retrievedCount: {}건", list.size());
+
+		list.forEach(item ->
+			log.debug("* retrievedData: collectionId-{}, contentId-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+
+		assertTrue(list.stream()
+				.anyMatch(item ->
+						item.getCollectionId() == testData.getCollectionId()	// 컬렉션 번호 일치 검증
+						&& item.getContentId() == testData.getContentId()		// 콘텐츠 번호 일치 검증
+				));
+	}
+
+	/**
+	 * 콘텐츠 번호 조건을 이용한 컬렉션 콘텐츠 목록 조회 검증
+	 */
+	@Test
+	@DisplayName("콘텐츠 번호 조건 컬렉션 콘텐츠 목록 조회")
+	void doRetrieveByContentId() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doRetrieveByContentId()      │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 검색 대상과 검색에서 제외할 컬렉션 콘텐츠를 등록
+		assertEquals(1, mapper.doSave(testData));
+
+		int comparisonContentId = nextId("SEQ_CONTENT");
+		insertContent(comparisonContentId);
+
+		CollectionItemVO comparisonData = new CollectionItemVO(
+				testData.getCollectionId(),
+				comparisonContentId,
+				null);
+
+		assertEquals(1, mapper.doSave(comparisonData));
+
+		DTO search = new DTO();
+		search.setPageNo(1);
+		search.setPageSize(10);
+		search.setSearchDiv("20");
+		search.setSearchWord(String.valueOf(testData.getContentId()));
+
+		// When: 콘텐츠 번호를 조건으로 컬렉션 콘텐츠 목록을 조회
+		List<CollectionItemVO> list = mapper.doRetrieve(search);
+
+		// Then: 검색한 콘텐츠 번호에 해당하는 데이터만 조회되어야 함
+		assertNotNull(list);
+		assertFalse(list.isEmpty());
+
+		log.debug("* retrievedCount: {}건", list.size());
+
+		list.forEach(item ->
+			log.debug("* retrievedData: collectionId-{}, contentId-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+
+		assertTrue(list.stream()
+				.anyMatch(item ->
+						item.getCollectionId() == testData.getCollectionId()
+						&& item.getContentId() == testData.getContentId()
+				));
+
+		assertFalse(list.stream()
+				.anyMatch(item ->
+						item.getContentId() == comparisonData.getContentId()
+				));
+	}
+
+	/**
+	 * 컬렉션 콘텐츠 목록 페이징 처리 검증
+	 */
+	@Test
+	@DisplayName("컬렉션 콘텐츠 목록 페이징")
+	void doRetrievePaging() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doRetrievePaging()           │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 같은 컬렉션에 콘텐츠 세 건을 등록
+		assertEquals(1, mapper.doSave(testData));
+
+		int secondContentId = nextId("SEQ_CONTENT");
+		int thirdContentId = nextId("SEQ_CONTENT");
+
+		insertContent(secondContentId);
+		insertContent(thirdContentId);
+
+		CollectionItemVO secondData = new CollectionItemVO(
+				testData.getCollectionId(), secondContentId, null);
+
+		CollectionItemVO thirdData = new CollectionItemVO(
+				testData.getCollectionId(), thirdContentId, null);
+
+		assertEquals(1, mapper.doSave(secondData));
+		assertEquals(1, mapper.doSave(thirdData));
+
+		DTO firstPageSearch = new DTO();
+		firstPageSearch.setPageNo(1);
+		firstPageSearch.setPageSize(2);
+		firstPageSearch.setSearchDiv("10");
+		firstPageSearch.setSearchWord(String.valueOf(testData.getCollectionId()));
+
+		DTO secondPageSearch = new DTO();
+		secondPageSearch.setPageNo(2);
+		secondPageSearch.setPageSize(2);
+		secondPageSearch.setSearchDiv("10");
+		secondPageSearch.setSearchWord(String.valueOf(testData.getCollectionId()));
+
+		// When: 페이지 크기를 두 건으로 설정해 1페이지와 2페이지를 조회
+		List<CollectionItemVO> firstPage = mapper.doRetrieve(firstPageSearch);
+		List<CollectionItemVO> secondPage = mapper.doRetrieve(secondPageSearch);
+
+		// Then: 1페이지에는 두 건, 2페이지에는 한 건이 조회되어야 함
+		assertNotNull(firstPage);
+		assertNotNull(secondPage);
+		assertEquals(2, firstPage.size());
+		assertEquals(1, secondPage.size());
+
+		log.debug("* firstPageCount: {}건", firstPage.size());
+		log.debug("* secondPageCount: {}건", secondPage.size());
+
+		firstPage.forEach(item ->
+			log.debug("* firstPageData: collectionId-{}, contentId-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+
+		secondPage.forEach(item ->
+			log.debug("* secondPageData: collectionId-{}, contentId-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+
+		assertTrue(firstPage.stream()
+				.noneMatch(firstItem ->
+						secondPage.stream()
+								.anyMatch(secondItem ->
+										secondItem.getCollectionId() == firstItem.getCollectionId()
+										&& secondItem.getContentId() == firstItem.getContentId()
+								)
+				));
+	}
+
+	/**
+	 * 동일한 복합 PK를 이용한 중복 등록 예외 검증
+	 */
+	@Test
+	@DisplayName("컬렉션 콘텐츠 중복 등록")
+	void doSaveDuplicate() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doSaveDuplicate()            │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 컬렉션 콘텐츠를 한 건 등록
+		assertEquals(1, mapper.doSave(testData));
+
+		// When, Then: 동일한 복합 PK를 다시 등록하면 예외가 발생해야 함
+		log.debug("* duplicateData: collectionId-{}, contentId-{}",
+				testData.getCollectionId(), testData.getContentId());
+
+		assertThrows(
+				DataIntegrityViolationException.class,
+				() -> mapper.doSave(testData));
+	}
+
+	/**
+	 * 존재하지 않는 컬렉션 콘텐츠 삭제 결과 검증
+	 */
+	@Test
+	@DisplayName("존재하지 않는 컬렉션 콘텐츠 삭제")
+	void doDeleteNotFound() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doDeleteNotFound()           │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: DB에 등록되지 않은 복합 PK를 준비
+		CollectionItemVO missingData = new CollectionItemVO(
+				testData.getCollectionId(),
+				nextId("SEQ_CONTENT"),
+				null);
+
+		// When: 존재하지 않는 컬렉션 콘텐츠를 삭제
+		int flag = mapper.doDelete(missingData);
+
+		// Then: 삭제된 행이 없으므로 0이 반환되어야 함
+		log.debug("* deleteResult: collectionId-{}, contentId-{}, result-{}건",
+				missingData.getCollectionId(), missingData.getContentId(), flag);
+
+		assertEquals(0, flag);
+	}
+	
+	/**
+	 * 테스트용 시퀀스의 다음 값 조회
+	 *
+	 * @param sequenceName 조회할 시퀀스명
+	 * @return 시퀀스의 다음 번호
+	 */
+	private int nextId(String sequenceName) {
+		// 시퀀스명은 바인딩할 수 없으므로 테스트 내부의 고정된 이름만 전달
+		String sql = """
+				SELECT %s.NEXTVAL
+				  FROM DUAL
+				""".formatted(sequenceName);
+
+		Integer id = jdbcTemplate.queryForObject(sql, Integer.class);
+
+		return id == null ? 0 : id;
+	}
+
+	/**
+	 * 컬렉션 FK 검증에 필요한 테스트 회원 등록
+	 *
+	 * @param memberId 회원 번호
+	 */
+	private void insertMember(int memberId) {
+		String sql = """
+				INSERT INTO MEMBER (
+					MEMBER_ID,
+					EMAIL,
+					PASSWORD,
+					NICKNAME,
+					ROLE,
+					STATUS,
+					CREATED_DT
+				) VALUES (
+					?,
+					?,
+					?,
+					?,
+					?,
+					?,
+					SYSDATE
+				)
+				""";
+
+		jdbcTemplate.update(
+				sql,
+				memberId,
+				"junit_collection_item_" + memberId + "@test.com",
+				"junit-password",
+				"JUnit컬렉션항목" + memberId,
+				MEMBER_ROLE_USER,
+				MEMBER_STATUS_ACTIVE);
+	}
+
+	/**
+	 * 컬렉션 콘텐츠 FK 검증에 필요한 테스트 콘텐츠 등록
+	 *
+	 * @param contentId 콘텐츠 번호
+	 */
+	private void insertContent(int contentId) {
+		String sql = """
+				INSERT INTO CONTENT (
+					CONTENT_ID,
+					EXTERNAL_ID,
+					TITLE_ORG,
+					CREATED_DT
+				) VALUES (
+					?,
+					?,
+					?,
+					SYSDATE
+				)
+				""";
+
+		jdbcTemplate.update(
+				sql,
+				contentId,
+				"JUNIT_COLLECTION_ITEM_" + contentId,
+				"JUnit Collection Item " + contentId);
+	}
+
+	/**
+	 * 컬렉션 콘텐츠 FK 검증에 필요한 테스트 컬렉션 등록
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @param memberId 작성 회원 번호
+	 */
+	private void insertCollection(int collectionId, int memberId) {
+		String sql = """
+				INSERT INTO COLLECTION (
+					COLLECTION_ID,
+					MEMBER_ID,
+					TITLE,
+					DESCRIPTION,
+					IS_PUBLIC,
+					CREATED_DT
+				) VALUES (
+					?,
+					?,
+					?,
+					?,
+					?,
+					SYSDATE
+				)
+				""";
+
+		jdbcTemplate.update(
+				sql,
+				collectionId,
+				memberId,
+				"JUnit 컬렉션 " + collectionId,
+				"컬렉션 콘텐츠 Mapper 테스트용 컬렉션",
+				CODE_YES);
+	}
+}

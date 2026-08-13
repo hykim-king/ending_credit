@@ -1,0 +1,60 @@
+package com.endit.mapper;
+
+import java.util.List;
+
+import org.apache.ibatis.annotations.Mapper;
+
+import com.endit.cmn.DTO;
+import com.endit.domain.PersonLikeVO;
+
+/**
+ * <pre>
+ * Class Name  : PersonLikeMapper
+ * Description : 회원의 인물 좋아요 정보의 등록, 조회 및 삭제를 처리하는 Mapper
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 8. 13.	jinyoung    최초 생성
+ * ------------------------------------------------------------
+ * </pre>
+ *
+ * @author jinyoung
+ * @since 2026. 8. 13.
+ */
+@Mapper
+public interface PersonLikeMapper {
+
+	/**
+	 * 목록 조회
+	 *
+	 * @param param 검색 및 페이징 조건
+	 * @return 인물 좋아요 목록
+	 */
+	List<PersonLikeVO> doRetrieve(DTO param);
+
+	/**
+	 * 단건 삭제
+	 *
+	 * @param param 회원 번호와 인물 번호
+	 * @return 1(성공)/0(실패)
+	 */
+	int doDelete(PersonLikeVO param);
+
+	/**
+	 * 등록
+	 *
+	 * @param param 인물 좋아요 정보
+	 * @return 1(성공)/0(실패)
+	 */
+	int doSave(PersonLikeVO param);
+
+	/**
+	 * 단건 조회
+	 *
+	 * @param param 회원 번호와 인물 번호
+	 * @return 인물 좋아요 정보
+	 */
+	PersonLikeVO doSelectOne(PersonLikeVO param);
+}

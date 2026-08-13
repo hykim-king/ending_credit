@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.endit.mapper.MemberContentMapper">
+
+	<!-- 회원별 콘텐츠 평가 및 보고 싶어요 등록 -->
+	<insert id="doSave" parameterType="MemberContentVO">
+		INSERT INTO MEMBER_CONTENT (
+			MEMBER_ID,
+			CONTENT_ID,
+			RATING_SCORE,
+			WATCHLIST,
+			RATED_DT,
+			WATCHLIST_DT,
+			UPDATED_DT
+		) VALUES (
+			#{memberId},
+			#{contentId},
+			#{ratingScore,jdbcType=INTEGER},
+			NVL(#{watchlist,jdbcType=CHAR}, 'N'),
+			CASE
+				WHEN #{ratingScore,jdbcType=INTEGER} IS NOT NULL THEN SYSDATE
+				ELSE NULL
+			END,
+			CASE
+				WHEN NVL(#{watchlist,jdbcType=CHAR}, 'N') = 'Y' THEN SYSDATE
+				ELSE NULL
+			END,
+			SYSDATE
+		)
+	</insert>
+
+	<!-- 회원별 콘텐츠 평가 및 보고 싶어요 단건 조회: 복합 PK 전체 사용 -->
+	<select id="doSelectOne" parameterType="MemberContentVO" resultType="MemberContentVO">
+		SELECT MEMBER_ID,
+		       CONTENT_ID,
+		       RATING_SCORE,
+		       WATCHLIST,
+		       TO_CHAR(RATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS RATED_DT,
+		       TO_CHAR(WATCHLIST_DT, 'YYYY-MM-DD HH24:MI:SS') AS WATCHLIST_DT,
+		       TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+		  FROM MEMBER_CONTENT
+		 WHERE MEMBER_ID = #{memberId}
+		   AND CONTENT_ID = #{contentId}
+	</select>
+
+	<!-- 회원별 콘텐츠 평가 및 보고 싶어요 수정: 복합 PK 전체 사용 -->
+	<update id="doUpdate" parameterType="MemberContentVO">
+		UPDATE MEMBER_CONTENT
+		   SET RATING_SCORE = #{ratingScore,jdbcType=INTEGER},
+		       WATCHLIST = #{watchlist},
+		       RATED_DT = CASE
+		           WHEN #{ratingScore,jdbcType=INTEGER} IS NOT NULL THEN SYSDATE
+		           ELSE NULL
+		       END,
+		       WATCHLIST_DT = CASE
+		           WHEN #{watchlist} = 'Y' THEN NVL(WATCHLIST_DT, SYSDATE)
+		           ELSE NULL
+		       END,
+		       UPDATED_DT = SYSDATE
+		 WHERE MEMBER_ID = #{memberId}
+		   AND CONTENT_ID = #{contentId}
+	</update>
+
+	<!-- 회원별 콘텐츠 평가 및 보고 싶어요 삭제: 복합 PK 전체 사용 -->
+	<delete id="doDelete" parameterType="MemberContentVO">
+		DELETE FROM MEMBER_CONTENT
+		 WHERE MEMBER_ID = #{memberId}
+		   AND CONTENT_ID = #{contentId}
+	</delete>
+
+	<!-- searchDiv: 10(회원 번호), 20(콘텐츠 번호), 30(보고 싶어요 여부), 40(별점) -->
+	<select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="MemberContentVO">
+		SELECT MEMBER_ID,
+		       CONTENT_ID,
+		       RATING_SCORE,
+		       WATCHLIST,
+		       RATED_DT,
+		       WATCHLIST_DT,
+		       UPDATED_DT
+		  FROM (
+			SELECT MC.MEMBER_ID,
+			       MC.CONTENT_ID,
+			       MC.RATING_SCORE,
+			       MC.WATCHLIST,
+			       TO_CHAR(MC.RATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS RATED_DT,
+			       TO_CHAR(MC.WATCHLIST_DT, 'YYYY-MM-DD HH24:MI:SS') AS WATCHLIST_DT,
+			       TO_CHAR(MC.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
+			       ROW_NUMBER() OVER (
+			           ORDER BY MC.UPDATED_DT DESC, MC.MEMBER_ID DESC, MC.CONTENT_ID DESC
+			       ) AS RNUM
+			  FROM MEMBER_CONTENT MC
+			<where>
+				<if test="searchWord != null and searchWord != ''">
+					<choose>
+						<when test="searchDiv == '10'">
+							AND MC.MEMBER_ID = #{searchWord}
+						</when>
+						<when test="searchDiv == '20'">
+							AND MC.CONTENT_ID = #{searchWord}
+						</when>
+						<when test="searchDiv == '30'">
+							AND MC.WATCHLIST = #{searchWord}
+						</when>
+						<when test="searchDiv == '40'">
+							AND MC.RATING_SCORE = #{searchWord}
+						</when>
+					</choose>
+				</if>
+			</where>
+		)
+		<if test="pageNo > 0 and pageSize > 0">
+		 WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
+		                 AND (#{pageNo} * #{pageSize})
+		</if>
+		 ORDER BY RNUM
+	</select>
+
+</mapper>

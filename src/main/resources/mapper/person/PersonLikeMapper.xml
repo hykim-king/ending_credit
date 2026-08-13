@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.endit.mapper.PersonLikeMapper">
+
+	<!-- 인물 좋아요 등록 -->
+	<insert id="doSave" parameterType="PersonLikeVO">
+		INSERT INTO PERSON_LIKE (
+			MEMBER_ID,
+			PERSON_ID,
+			CREATED_DT
+		) VALUES (
+			#{memberId},
+			#{personId},
+			SYSDATE
+		)
+	</insert>
+
+	<!-- 인물 좋아요 단건 조회: 복합 PK 전체 사용 -->
+	<select id="doSelectOne" parameterType="PersonLikeVO" resultType="PersonLikeVO">
+		SELECT MEMBER_ID,
+		       PERSON_ID,
+		       TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
+		  FROM PERSON_LIKE
+		 WHERE MEMBER_ID = #{memberId}
+		   AND PERSON_ID = #{personId}
+	</select>
+
+	<!-- 인물 좋아요 삭제: 복합 PK 전체 사용 -->
+	<delete id="doDelete" parameterType="PersonLikeVO">
+		DELETE FROM PERSON_LIKE
+		 WHERE MEMBER_ID = #{memberId}
+		   AND PERSON_ID = #{personId}
+	</delete>
+
+	<!-- searchDiv: 10(회원 번호), 20(인물 번호) -->
+	<select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="PersonLikeVO">
+		SELECT MEMBER_ID,
+		       PERSON_ID,
+		       CREATED_DT
+		  FROM (
+			SELECT PL.MEMBER_ID,
+			       PL.PERSON_ID,
+			       TO_CHAR(PL.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+			       ROW_NUMBER() OVER (
+			           ORDER BY PL.CREATED_DT DESC, PL.MEMBER_ID DESC, PL.PERSON_ID DESC
+			       ) AS RNUM
+			  FROM PERSON_LIKE PL
+			<where>
+				<if test="searchWord != null and searchWord != ''">
+					<choose>
+						<when test="searchDiv == '10'">
+							AND PL.MEMBER_ID = #{searchWord}
+						</when>
+						<when test="searchDiv == '20'">
+							AND PL.PERSON_ID = #{searchWord}
+						</when>
+					</choose>
+				</if>
+			</where>
+		)
+		<if test="pageNo > 0 and pageSize > 0">
+		 WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
+		                 AND (#{pageNo} * #{pageSize})
+		</if>
+		 ORDER BY RNUM
+	</select>
+
+</mapper>
