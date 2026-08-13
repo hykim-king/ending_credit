@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" " http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.CollectionLikeMapper">
+
+    <!-- COLLECTION_LIKE 테이블 컬럼 <-> CollectionLikeVO 필드 매핑 -->
+    <resultMap id="collectionLikeResultMap" type="com.endit.domain.CollectionLikeVO">
+        <id     property="memberId"     column="MEMBER_ID" />
+        <id     property="collectionId" column="COLLECTION_ID" />
+        <result property="createdDt"    column="CREATED_DT" />
+    </resultMap>
+
+    <!-- 좋아요 등록 (CREATED_DT는 DEFAULT SYSDATE라 별도로 넣지 않음) -->
+    <insert id="insertCollectionLike" parameterType="com.endit.domain.CollectionLikeVO">
+        INSERT INTO COLLECTION_LIKE
+            (MEMBER_ID, COLLECTION_ID)
+        VALUES
+            (#{memberId}, #{collectionId})
+    </insert>
+
+    <!-- 좋아요 취소 -->
+    <delete id="deleteCollectionLike" parameterType="com.endit.domain.CollectionLikeVO">
+        DELETE FROM COLLECTION_LIKE
+         WHERE MEMBER_ID     = #{memberId}
+           AND COLLECTION_ID = #{collectionId}
+    </delete>
+
+    <!-- 특정 회원+컬렉션 조합 좋아요 단건 조회 (좋아요 여부 확인용) -->
+    <select id="selectCollectionLike" parameterType="com.endit.domain.CollectionLikeVO" resultMap="collectionLikeResultMap">
+        SELECT MEMBER_ID,
+               COLLECTION_ID,
+               TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
+          FROM COLLECTION_LIKE
+         WHERE MEMBER_ID     = #{memberId}
+           AND COLLECTION_ID = #{collectionId}
+    </select>
+
+    <!-- 특정 회원이 좋아요 누른 컬렉션 목록 -->
+    <select id="selectCollectionLikeListByMember" parameterType="int" resultMap="collectionLikeResultMap">
+        SELECT MEMBER_ID,
+               COLLECTION_ID,
+               TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
+          FROM COLLECTION_LIKE
+         WHERE MEMBER_ID = #{memberId}
+         ORDER BY CREATED_DT DESC
+    </select>
+
+    <!-- 특정 컬렉션에 좋아요 누른 회원 목록 -->
+    <select id="selectCollectionLikeListByCollection" parameterType="int" resultMap="collectionLikeResultMap">
+        SELECT MEMBER_ID,
+               COLLECTION_ID,
+               TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
+          FROM COLLECTION_LIKE
+         WHERE COLLECTION_ID = #{collectionId}
+         ORDER BY CREATED_DT DESC
+    </select>
+
+    <!-- 특정 컬렉션의 좋아요 총 개수 -->
+    <select id="selectCollectionLikeCount" parameterType="int" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION_LIKE
+         WHERE COLLECTION_ID = #{collectionId}
+    </select>
+
+</mapper>
