@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  " https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.ContentImageMapper">
+
+	<sql id="contentImageWhere">
+		<where>
+			<if test="searchWord != null and searchWord != ''">
+				<choose>
+					<when test="searchDiv == '10'">
+						content_id = #{searchWord}
+					</when>
+					<when test="searchDiv == '20'">
+						image_id = #{searchWord}
+					</when>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="ContentImageVO">
+		SELECT A.*, B.*
+		  FROM (
+			SELECT tt1.rnum no,
+			       tt1.image_id,
+			       tt1.content_id,
+			       tt1.image_url,
+			       TO_CHAR(tt1.created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt
+			  FROM (
+					SELECT ROWNUM rnum, t1.*
+					  FROM (
+							SELECT *
+							  FROM content_image
+							 <include refid="contentImageWhere"/>
+							 ORDER BY content_id ASC, image_id ASC
+					) t1
+					<![CDATA[ WHERE ROWNUM <= (#{pageSize} * (#{pageNo} - 1) + #{pageSize}) ]]>
+			) tt1
+			<![CDATA[ WHERE rnum >= (#{pageSize} * (#{pageNo} - 1) + 1) ]]>
+		) A
+		CROSS JOIN (
+			SELECT COUNT(*) total_cnt
+			  FROM content_image
+			 <include refid="contentImageWhere"/>
+		) B
+	</select>
+
+	<select id="doSelectOne" parameterType="ContentImageVO" resultType="ContentImageVO">
+		SELECT image_id,
+		       content_id,
+		       image_url,
+		       TO_CHAR(created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt
+		  FROM content_image
+		 WHERE image_id = #{imageId}
+	</select>
+
+	<insert id="doSave" parameterType="ContentImageVO">
+		<selectKey keyProperty="imageId" order="BEFORE" resultType="int">
+			SELECT CONTENT_IMAGE_SEQ.NEXTVAL
+			  FROM dual
+		</selectKey>
+		INSERT INTO content_image (
+			image_id,
+			content_id,
+			image_url,
+			created_dt
+		) VALUES (
+			#{imageId},
+			#{contentId},
+			#{imageUrl, jdbcType=VARCHAR},
+			SYSDATE
+		)
+	</insert>
+
+	<update id="doUpdate" parameterType="ContentImageVO">
+		UPDATE content_image
+		   SET content_id = #{contentId},
+		       image_url  = #{imageUrl, jdbcType=VARCHAR}
+		 WHERE image_id = #{imageId}
+	</update>
+
+	<delete id="doDelete" parameterType="ContentImageVO">
+		DELETE FROM content_image
+		 WHERE image_id = #{imageId}
+	</delete>
+
+	<delete id="deleteAll">
+		DELETE FROM content_image
+	</delete>
+
+	<select id="selectAllCount" resultType="int">
+		SELECT COUNT(*)
+		  FROM content_image
+	</select>
+
+</mapper>

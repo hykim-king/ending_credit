@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import com.zaxxer.hikari.HikariDataSource;
 
 @Configuration
+@MapperScan("com.endit.mapper")
 public class DataSourceConfig {
 	final Logger log = LoggerFactory.getLogger(getClass());
 	
@@ -20,9 +21,12 @@ public class DataSourceConfig {
 		
 		//Oracle datasource-개인
 		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
-		ds.setUsername("scott_test");
-		ds.setPassword("pcwk");
+		//ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
+		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/xepdb1");
+		ds.setUsername("endit_test");
+		//ds.setPassword("pcwk");
+		ds.setPassword("qwer1234");
+		
 		
 		//Oracle datasource-공용
 //		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");

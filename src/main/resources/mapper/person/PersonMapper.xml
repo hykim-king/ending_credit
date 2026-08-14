@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  " https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.PersonMapper">
+
+	<select id="findPersonIdByExternal" resultType="java.lang.Integer">
+		SELECT person_id
+		  FROM person
+		 WHERE external_id = #{externalId}
+	</select>
+
+	<sql id="personWhere">
+		<where>
+			<if test="searchWord != null and searchWord != ''">
+				<choose>
+					<when test="searchDiv == '10'">
+						name_ko LIKE #{searchWord} || '%'
+					</when>
+					<when test="searchDiv == '20'">
+						name_org LIKE #{searchWord} || '%'
+					</when>
+					<when test="searchDiv == '30'">
+						external_id = #{searchWord}
+					</when>
+				</choose>
+			</if>
+		</where>
+	</sql>
+
+	<select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="PersonVO">
+		SELECT A.*, B.*
+		  FROM (
+			SELECT tt1.rnum no,
+			       tt1.person_id,
+			       tt1.external_id,
+			       tt1.name_ko,
+			       tt1.name_org,
+			       tt1.profile_image_url,
+			       TO_CHAR(tt1.created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt,
+			       TO_CHAR(tt1.updated_dt, 'YYYY-MM-DD HH24:MI:SS') updated_dt
+			  FROM (
+					SELECT ROWNUM rnum, t1.*
+					  FROM (
+							SELECT *
+							  FROM person
+							 <include refid="personWhere"/>
+							 ORDER BY created_dt DESC, person_id ASC
+					) t1
+					<![CDATA[ WHERE ROWNUM <= (#{pageSize} * (#{pageNo} - 1) + #{pageSize}) ]]>
+			) tt1
+			<![CDATA[ WHERE rnum >= (#{pageSize} * (#{pageNo} - 1) + 1) ]]>
+		) A
+		CROSS JOIN (
+			SELECT COUNT(*) total_cnt
+			  FROM person
+			 <include refid="personWhere"/>
+		) B
+	</select>
+
+	<select id="doSelectOne" parameterType="PersonVO" resultType="PersonVO">
+		SELECT person_id,
+		       external_id,
+		       name_ko,
+		       name_org,
+		       profile_image_url,
+		       TO_CHAR(created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt,
+		       TO_CHAR(updated_dt, 'YYYY-MM-DD HH24:MI:SS') updated_dt
+		  FROM person
+		 WHERE person_id = #{personId}
+	</select>
+
+	<insert id="doSave" parameterType="PersonVO">
+		<selectKey keyProperty="personId" order="BEFORE" resultType="int">
+			SELECT PERSON_SEQ.NEXTVAL
+			  FROM dual
+		</selectKey>
+		INSERT INTO person (
+			person_id,
+			external_id,
+			name_ko,
+			name_org,
+			profile_image_url,
+			created_dt,
+			updated_dt
+		) VALUES (
+			#{personId},
+			#{externalId, jdbcType=VARCHAR},
+			#{nameKo, jdbcType=NVARCHAR},
+			#{nameOrg, jdbcType=NVARCHAR},
+			#{profileImageUrl, jdbcType=VARCHAR},
+			SYSDATE,
+			NULL
+		)
+	</insert>
+
+	<update id="doUpdate" parameterType="PersonVO">
+		UPDATE person
+		   SET external_id       = #{externalId, jdbcType=VARCHAR},
+		       name_ko           = #{nameKo, jdbcType=NVARCHAR},
+		       name_org          = #{nameOrg, jdbcType=NVARCHAR},
+		       profile_image_url = #{profileImageUrl, jdbcType=VARCHAR},
+		       updated_dt        = SYSDATE
+		 WHERE person_id = #{personId}
+	</update>
+
+	<delete id="doDelete" parameterType="PersonVO">
+		DELETE FROM person
+		 WHERE person_id = #{personId}
+	</delete>
+
+	<delete id="deleteAll">
+		DELETE FROM person
+	</delete>
+
+	<select id="selectAllCount" resultType="int">
+		SELECT COUNT(*)
+		  FROM person
+	</select>
+
+</mapper>
