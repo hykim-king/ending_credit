@@ -7,6 +7,8 @@
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
+ * 2026. 8. 14.  강은후   MapperTestFixture 제거, sb14 UserMapperDaoTest 문법구조에 맞춰
+ *                         deleteAll() 기반 CRUD 검증으로 재정리.
  * </pre>
  *
  * @author 홍선기
@@ -14,12 +16,6 @@
  */
 package com.endit.mapper;
 
-import static com.endit.mapper.MapperTestFixture.ADMIN;
-import static com.endit.mapper.MapperTestFixture.COLLECTION_A;
-import static com.endit.mapper.MapperTestFixture.CONTENT_A;
-import static com.endit.mapper.MapperTestFixture.CONTENT_B;
-import static com.endit.mapper.MapperTestFixture.MEMBER_A;
-import static com.endit.mapper.MapperTestFixture.MEMBER_B;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,15 +46,23 @@ class UserCommentMapperDaoTest {
 	// 페이징 테스트 기준값
 	private static final int PAGE_SIZE = 4;
 
+	//더미데이터 PK (MEMBER/CONTENT/COLLECTION은 deleteAll() 대상이 아니므로 그대로 참조 가능)
+	private static final long member01 = 1L;
+	private static final long member02 = 2L;
+	private static final long memberAdmin = 9L;
+	private static final long content01 = 1L;
+	private static final long content02 = 2L;
+	private static final long collection01 = 1L;
+
 	@Autowired
 	UserCommentMapper mapper;
 
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
-	private UserCommentVO comment01; // 회원A → 영화A
-	private UserCommentVO comment02; // 회원A → 영화B (스포일러)
-	private UserCommentVO comment03; // 회원B → 컬렉션A
+	private UserCommentVO comment01; // member01 → content01
+	private UserCommentVO comment02; // member01 → content02 (스포일러)
+	private UserCommentVO comment03; // member02 → collection01
 
 	private DTO dto; // paging/검색
 
@@ -67,15 +71,11 @@ class UserCommentMapperDaoTest {
 		log.debug("*****************************");
 		log.debug("*@BeforeEach*");
 		log.debug("*****************************");
-		// 1. 부모 데이터(회원·영화·컬렉션) 심기 — 코멘트는 FK 때문에 부모 없이 못 들어간다
-		MapperTestFixture.seed(jdbcTemplate);
-
-		// 2. 테스트 코멘트 준비 (commentId는 doSave의 selectKey가 채운다)
-		comment01 = new UserCommentVO(0, MEMBER_A, CONTENT_A, null, "영화A 한줄평입니다", UserCommentVO.SPOILER_NO,
+		comment01 = new UserCommentVO(0, member01, content01, null, "영화A 한줄평입니다", UserCommentVO.SPOILER_NO,
 				"등록일_사용않함", "수정일_사용않함");
-		comment02 = new UserCommentVO(0, MEMBER_A, CONTENT_B, null, "영화B 결말 언급 한줄평", UserCommentVO.SPOILER_YES,
+		comment02 = new UserCommentVO(0, member01, content02, null, "영화B 결말 언급 한줄평", UserCommentVO.SPOILER_YES,
 				"등록일_사용않함", "수정일_사용않함");
-		comment03 = new UserCommentVO(0, MEMBER_B, null, COLLECTION_A, "컬렉션A 한줄평입니다", UserCommentVO.SPOILER_NO,
+		comment03 = new UserCommentVO(0, member02, null, collection01, "컬렉션A 한줄평입니다", UserCommentVO.SPOILER_NO,
 				"등록일_사용않함", "수정일_사용않함");
 
 		dto = new DTO();
@@ -196,10 +196,10 @@ class UserCommentMapperDaoTest {
 		//    ※ 같은 회원이 같은 대상에 2번 못 쓰므로(UNIQUE) 회원×대상 조합으로 만든다
 		// 3. 2페이지 조회(페이지당 4건) → 4건, 총건수 9건
 		// 4. 마지막 페이지(3페이지) → 1건
-		// 5. 검색: 회원A가 쓴 것만 → 3건
+		// 5. 검색: member01이 쓴 것만 → 3건
 
-		long[] members = { MEMBER_A, MEMBER_B, ADMIN };
-		Long[] contents = { CONTENT_A, CONTENT_B };
+		long[] members = { member01, member02, memberAdmin };
+		Long[] contents = { content01, content02 };
 		final int COMMENTS_PER_MEMBER = contents.length + 1; // 영화 2건 + 컬렉션 1건
 		final int TOTAL_COUNT = members.length * COMMENTS_PER_MEMBER; // 9건
 
@@ -213,7 +213,7 @@ class UserCommentMapperDaoTest {
 				mapper.doSave(new UserCommentVO(0, member, content, null, "영화 한줄평", UserCommentVO.SPOILER_NO,
 						null, null));
 			}
-			mapper.doSave(new UserCommentVO(0, member, null, COLLECTION_A, "컬렉션 한줄평", UserCommentVO.SPOILER_NO,
+			mapper.doSave(new UserCommentVO(0, member, null, collection01, "컬렉션 한줄평", UserCommentVO.SPOILER_NO,
 					null, null));
 		}
 		assertEquals(TOTAL_COUNT, mapper.totalCnt());
@@ -236,7 +236,7 @@ class UserCommentMapperDaoTest {
 		// 5.
 		dto.setPageNo(1);
 		dto.setSearchDiv("10");
-		dto.setSearchWord(String.valueOf(MEMBER_A));
+		dto.setSearchWord(String.valueOf(member01));
 		list = mapper.doRetrieve(dto);
 		assertEquals(COMMENTS_PER_MEMBER, list.size());
 	}
@@ -256,12 +256,12 @@ class UserCommentMapperDaoTest {
 		assertEquals(0, mapper.totalCnt());
 
 		// 2.
-		UserCommentVO bothTarget = new UserCommentVO(0, MEMBER_A, CONTENT_A, COLLECTION_A, "대상 두 개",
+		UserCommentVO bothTarget = new UserCommentVO(0, member01, content01, collection01, "대상 두 개",
 				UserCommentVO.SPOILER_NO, null, null);
 		assertThrows(DataIntegrityViolationException.class, () -> mapper.doSave(bothTarget));
 
 		// 3.
-		UserCommentVO noTarget = new UserCommentVO(0, MEMBER_A, null, null, "대상 없음",
+		UserCommentVO noTarget = new UserCommentVO(0, member01, null, null, "대상 없음",
 				UserCommentVO.SPOILER_NO, null, null);
 		assertThrows(DataIntegrityViolationException.class, () -> mapper.doSave(noTarget));
 
@@ -275,8 +275,8 @@ class UserCommentMapperDaoTest {
 		log.debug("---------------------------");
 		// 같은 회원은 같은 대상에 코멘트를 1개만 쓸 수 있다 (UK_USER_COMMENT_CONTENT)
 		// 1. 전체삭제
-		// 2. 단건등록(comment01: 회원A → 영화A)
-		// 3. 같은 회원A → 영화A 한 건 더 → DB가 거부
+		// 2. 단건등록(comment01: member01 → content01)
+		// 3. 같은 member01 → content01 한 건 더 → DB가 거부
 		// 4. 지우고 다시 쓰면 정상 등록된다 (물리삭제라 행이 사라지므로)
 
 		// 1.
@@ -288,7 +288,7 @@ class UserCommentMapperDaoTest {
 		assertEquals(1, flag);
 
 		// 3.
-		UserCommentVO second = new UserCommentVO(0, MEMBER_A, CONTENT_A, null, "같은 영화에 두 번째",
+		UserCommentVO second = new UserCommentVO(0, member01, content01, null, "같은 영화에 두 번째",
 				UserCommentVO.SPOILER_NO, null, null);
 		assertThrows(DataIntegrityViolationException.class, () -> mapper.doSave(second));
 
@@ -308,9 +308,9 @@ class UserCommentMapperDaoTest {
 		// 컬렉션 대상에도 같은 규칙이 걸려 있다 (UK_USER_COMMENT_COLLECTION)
 		// 영화용(UK_USER_COMMENT_CONTENT)과 별개의 인덱스라 따로 확인한다
 		// 1. 전체삭제
-		// 2. 단건등록(comment03: 회원B → 컬렉션A)
-		// 3. 같은 회원B → 컬렉션A 한 건 더 → DB가 거부
-		// 4. 회원A는 같은 컬렉션에 쓸 수 있다 (회원이 다르므로)
+		// 2. 단건등록(comment03: member02 → collection01)
+		// 3. 같은 member02 → collection01 한 건 더 → DB가 거부
+		// 4. member01은 같은 컬렉션에 쓸 수 있다 (회원이 다르므로)
 
 		// 1.
 		mapper.deleteAll();
@@ -321,12 +321,12 @@ class UserCommentMapperDaoTest {
 		assertEquals(1, flag);
 
 		// 3.
-		UserCommentVO second = new UserCommentVO(0, MEMBER_B, null, COLLECTION_A, "같은 컬렉션에 두 번째",
+		UserCommentVO second = new UserCommentVO(0, member02, null, collection01, "같은 컬렉션에 두 번째",
 				UserCommentVO.SPOILER_NO, null, null);
 		assertThrows(DataIntegrityViolationException.class, () -> mapper.doSave(second));
 
 		// 4.
-		UserCommentVO otherMember = new UserCommentVO(0, MEMBER_A, null, COLLECTION_A, "다른 회원의 컬렉션 한줄평",
+		UserCommentVO otherMember = new UserCommentVO(0, member01, null, collection01, "다른 회원의 컬렉션 한줄평",
 				UserCommentVO.SPOILER_NO, null, null);
 		flag = mapper.doSave(otherMember);
 		assertEquals(1, flag);

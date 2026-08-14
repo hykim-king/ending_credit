@@ -7,6 +7,9 @@
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
+ * 2026. 8. 14.  강은후   MapperTestFixture 제거, sb14 UserMapperDaoTest 문법구조에 맞춰
+ *                         deleteAll() 기반 CRUD 검증으로 재정리.
+ *                         회원/영화 PK는 ENDIT_TEST2 더미데이터를 소문자 상수로 참조
  * </pre>
  *
  * @author 홍선기
@@ -14,11 +17,6 @@
  */
 package com.endit.mapper;
 
-import static com.endit.mapper.MapperTestFixture.ADMIN;
-import static com.endit.mapper.MapperTestFixture.CONTENT_A;
-import static com.endit.mapper.MapperTestFixture.CONTENT_B;
-import static com.endit.mapper.MapperTestFixture.MEMBER_A;
-import static com.endit.mapper.MapperTestFixture.MEMBER_B;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,6 +48,13 @@ class ReportCommentMapperDaoTest {
 	// 페이징 테스트 기준값
 	private static final int PAGE_SIZE = 10;
 
+	// ENDIT_TEST2 더미데이터 PK (MEMBER/CONTENT는 deleteAll() 대상이 아니므로 그대로 참조 가능)
+	private static final long member01 = 1L;
+	private static final long member02 = 2L;
+	private static final long memberAdmin = 9L;
+	private static final long content01 = 1L;
+	private static final long content02 = 2L;
+
 	@Autowired
 	ReportCommentMapper mapper;
 
@@ -59,9 +64,9 @@ class ReportCommentMapperDaoTest {
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
-	private UserCommentVO comment01; // 신고 대상 코멘트 (회원A → 영화A)
-	private UserCommentVO comment02; // 신고 대상 코멘트 (회원B → 영화B)
-	private ReportCommentVO report01; // 회원B가 comment01을 스포일러로 신고
+	private UserCommentVO comment01; // 신고 대상 코멘트 (member01 → content01)
+	private UserCommentVO comment02; // 신고 대상 코멘트 (member02 → content02)
+	private ReportCommentVO report01; // member02가 comment01을 스포일러로 신고
 
 	private DTO dto; // paging/검색
 
@@ -70,20 +75,17 @@ class ReportCommentMapperDaoTest {
 		log.debug("*****************************");
 		log.debug("*@BeforeEach*");
 		log.debug("*****************************");
-		// 1. 부모 데이터(회원·영화·컬렉션) 심기
-		MapperTestFixture.seed(jdbcTemplate);
-
-		// 2. 신고 대상 코멘트 등록
+		// 1. 신고 대상 코멘트 등록
 		commentMapper.deleteAll();
-		comment01 = new UserCommentVO(0, MEMBER_A, CONTENT_A, null, "신고 대상 한줄평(회원A)", UserCommentVO.SPOILER_NO,
+		comment01 = new UserCommentVO(0, member01, content01, null, "신고 대상 한줄평(회원A)", UserCommentVO.SPOILER_NO,
 				null, null);
-		comment02 = new UserCommentVO(0, MEMBER_B, CONTENT_B, null, "신고 대상 한줄평(회원B)", UserCommentVO.SPOILER_NO,
+		comment02 = new UserCommentVO(0, member02, content02, null, "신고 대상 한줄평(회원B)", UserCommentVO.SPOILER_NO,
 				null, null);
 		commentMapper.doSave(comment01);
 		commentMapper.doSave(comment02);
 
-		// 3. 테스트 신고 준비 (reportId는 doSave의 selectKey가 채운다)
-		report01 = new ReportCommentVO(0, MEMBER_B, comment01.getCommentId(), ReportCommentVO.REASON_SPOILER,
+		// 2. 테스트 신고 준비 (reportId는 doSave의 selectKey가 채운다)
+		report01 = new ReportCommentVO(0, member02, comment01.getCommentId(), ReportCommentVO.REASON_SPOILER,
 				"스포일러 표시 없이 결말을 언급했습니다", null, null, null, null, null);
 
 		dto = new DTO();
@@ -144,12 +146,12 @@ class ReportCommentMapperDaoTest {
 		assertEquals(0, mapper.totalCnt());
 
 		// 2.
-		ReportCommentVO noDetail = new ReportCommentVO(0, MEMBER_B, comment01.getCommentId(),
+		ReportCommentVO noDetail = new ReportCommentVO(0, member02, comment01.getCommentId(),
 				ReportCommentVO.REASON_OTHER, null, null, null, null, null, null);
 		assertThrows(DataIntegrityViolationException.class, () -> mapper.doSave(noDetail));
 
 		// 3.
-		ReportCommentVO withDetail = new ReportCommentVO(0, MEMBER_B, comment01.getCommentId(),
+		ReportCommentVO withDetail = new ReportCommentVO(0, member02, comment01.getCommentId(),
 				ReportCommentVO.REASON_OTHER, "광고 링크가 들어 있습니다", null, null, null, null, null);
 		int flag = mapper.doSave(withDetail);
 		assertEquals(1, flag);
@@ -177,7 +179,7 @@ class ReportCommentMapperDaoTest {
 
 		// 3.
 		report01.setStatus(ReportCommentVO.STATUS_ACCEPTED);
-		report01.setProcessedByMemberId(ADMIN);
+		report01.setProcessedByMemberId(memberAdmin);
 		report01.setProcessNote("신고 승인 - 해당 코멘트 삭제 처리");
 		flag = mapper.doUpdate(report01);
 		assertEquals(1, flag);
@@ -187,7 +189,7 @@ class ReportCommentMapperDaoTest {
 		assertNotNull(outVO);
 		log.debug("outVO: {}", outVO);
 		assertEquals(ReportCommentVO.STATUS_ACCEPTED, outVO.getStatus());
-		assertEquals(Long.valueOf(ADMIN), outVO.getProcessedByMemberId());
+		assertEquals(Long.valueOf(memberAdmin), outVO.getProcessedByMemberId());
 		assertEquals(report01.getProcessNote(), outVO.getProcessNote());
 		assertNotNull(outVO.getProcessedDt());
 	}
@@ -277,7 +279,7 @@ class ReportCommentMapperDaoTest {
 		log.debug("*doRetrieve()*");
 		log.debug("---------------------------");
 		// 1. 전체삭제
-		// 2. 신고 2건 접수 (회원B→comment01 스포일러, 회원A→comment02 스팸)
+		// 2. 신고 2건 접수 (member02→comment01 스포일러, member01→comment02 스팸)
 		// 3. 상태 검색(RECEIVED) → 2건
 		// 4. 사유 검색(SPAM) → 1건
 
@@ -286,7 +288,7 @@ class ReportCommentMapperDaoTest {
 		assertEquals(0, mapper.totalCnt());
 
 		// 2.
-		ReportCommentVO report02 = new ReportCommentVO(0, MEMBER_A, comment02.getCommentId(),
+		ReportCommentVO report02 = new ReportCommentVO(0, member01, comment02.getCommentId(),
 				ReportCommentVO.REASON_SPAM, "반복 도배 코멘트입니다", null, null, null, null, null);
 		mapper.doSave(report01);
 		mapper.doSave(report02);

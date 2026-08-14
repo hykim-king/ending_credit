@@ -7,6 +7,9 @@
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
+ * 2026. 8. 14.  강은후   MapperTestFixture 제거, sb14 UserMapperDaoTest 문법구조에 맞춰
+ *                         deleteAll() 기반 CRUD 검증으로 재정리.
+ *                         회원/영화 PK는 ENDIT_TEST2 더미데이터를 소문자 상수로 참조
  * </pre>
  *
  * @author 홍선기
@@ -14,9 +17,6 @@
  */
 package com.endit.mapper;
 
-import static com.endit.mapper.MapperTestFixture.CONTENT_A;
-import static com.endit.mapper.MapperTestFixture.MEMBER_A;
-import static com.endit.mapper.MapperTestFixture.MEMBER_B;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -40,6 +40,11 @@ class CommentLikeMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
+	// ENDIT_TEST2 더미데이터 PK (MEMBER/CONTENT는 deleteAll() 대상이 아니므로 그대로 참조 가능)
+	private static final long member01 = 1L;
+	private static final long member02 = 2L;
+	private static final long content01 = 1L;
+
 	@Autowired
 	CommentLikeMapper mapper;
 
@@ -49,25 +54,22 @@ class CommentLikeMapperDaoTest {
 	@Autowired
 	JdbcTemplate jdbcTemplate;
 
-	private UserCommentVO comment01; // 좋아요 대상 코멘트 (회원A 작성)
-	private CommentLikeVO like01;    // 회원B가 comment01에 누르는 좋아요
+	private UserCommentVO comment01; // 좋아요 대상 코멘트 (member01 작성)
+	private CommentLikeVO like01;    // member02가 comment01에 누르는 좋아요
 
 	@BeforeEach
 	void setUp() throws Exception {
 		log.debug("*****************************");
 		log.debug("*@BeforeEach*");
 		log.debug("*****************************");
-		// 1. 부모 데이터(회원·영화·컬렉션) 심기
-		MapperTestFixture.seed(jdbcTemplate);
-
-		// 2. 좋아요를 달 코멘트 1건 등록 (회원A → 영화A)
+		// 1. 좋아요를 달 코멘트 1건 등록 (member01 → content01)
 		commentMapper.deleteAll();
-		comment01 = new UserCommentVO(0, MEMBER_A, CONTENT_A, null, "좋아요 대상 한줄평", UserCommentVO.SPOILER_NO,
+		comment01 = new UserCommentVO(0, member01, content01, null, "좋아요 대상 한줄평", UserCommentVO.SPOILER_NO,
 				null, null);
 		commentMapper.doSave(comment01);
 
-		// 3. 테스트 좋아요 준비
-		like01 = new CommentLikeVO(MEMBER_B, comment01.getCommentId(), "등록일_사용않함");
+		// 2. 테스트 좋아요 준비
+		like01 = new CommentLikeVO(member02, comment01.getCommentId(), "등록일_사용않함");
 
 		log.debug("comment01: {}", comment01);
 		log.debug("like01: {}", like01);
