@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
@@ -23,14 +22,15 @@ import com.endit.domain.CollectionVO;
 
 /**
  * <pre>
- * Class Name  : CollectionMapperTest
+ * Class Name  : CollectionMapperDaoTest
  * Description : 컬렉션 Mapper의 등록, 조회, 수정 및 삭제 기능을 검증하는 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
- * 2026. 8. 13.	jinyoung    최초 생성
+ * 2026. 8. 13. jinyoung    최초 생성
+ * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * ------------------------------------------------------------
  * </pre>
  *
@@ -40,27 +40,26 @@ import com.endit.domain.CollectionVO;
 @SpringBootTest
 @Transactional
 @DisplayName("CollectionMapper 테스트")
-class CollectionMapperTest {
+class CollectionMapperDaoTest {
 
 	// COMMON_CODE 테이블의 공통 코드값
 	private static final String CODE_YES = "Y";
 	private static final String CODE_NO = "N";
-	private static final String MEMBER_ROLE_USER = "USER";
-	private static final String MEMBER_STATUS_ACTIVE = "ACTIVE";
 
-	private static final Logger log = LoggerFactory.getLogger(CollectionMapperTest.class);
+	// 공용 DB의 MEMBER 더미 데이터에서 사용하는 회원 번호
+	private static final int TEST_MEMBER_ID = 10;
+	private static final int MISSING_COLLECTION_ID = 999_999_999;
+
+	private static final Logger log = LoggerFactory.getLogger(CollectionMapperDaoTest.class);
 
 	@Autowired
 	private CollectionMapper mapper;
-
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
 
 	// 각 테스트에서 사용하는 컬렉션 데이터
 	private CollectionVO testData;
 
 	/**
-	 * 테스트에 필요한 회원과 컬렉션 입력 데이터 준비
+	 * 공용 DB의 회원 더미 데이터를 이용한 컬렉션 입력 데이터 준비
 	 */
 	@BeforeEach
 	void setUp() {
@@ -68,13 +67,10 @@ class CollectionMapperTest {
 		log.debug("│ setUp()                      │");
 		log.debug("└──────────────────────────────┘");
 
-		// FK 조건을 만족시키기 위해 회원 데이터를 먼저 등록
-		int memberId = nextId("SEQ_MEMBER");
-		insertMember(memberId);
-
+		// MEMBER_ID 10은 공용 DB의 MEMBER 테이블에 등록된 더미 데이터
 		// COLLECTION_ID는 Mapper의 selectKey에서 생성하므로 0으로 설정
 		testData = new CollectionVO(
-				0, memberId, "JUnit 컬렉션", "JUnit 컬렉션 설명", CODE_YES, null, null);
+				0, TEST_MEMBER_ID, "JUnit 컬렉션", "JUnit 컬렉션 설명", CODE_YES, null, null);
 
 		log.debug("* testData: collectionId-{}, memberId-{}, title-{}, description-{}, isPublic-{}, createdDt-{}, updatedDt-{}",
 				testData.getCollectionId(), testData.getMemberId(), testData.getTitle(), testData.getDescription(),
@@ -317,13 +313,15 @@ class CollectionMapperTest {
 		log.debug("│ doRetrievePaging()           │");
 		log.debug("└──────────────────────────────┘");
 
-		// Given: 같은 회원의 컬렉션 세 건을 등록
+		// Given: 같은 검색어를 포함하는 컬렉션 세 건을 등록
+		String pagingTitle = "JUnit 페이징 검증";
+		testData.setTitle(pagingTitle + " 첫 번째 컬렉션");
 		assertEquals(1, mapper.doSave(testData));
 
 		CollectionVO secondData = new CollectionVO(
 				0,
 				testData.getMemberId(),
-				"JUnit 두 번째 컬렉션",
+				pagingTitle + " 두 번째 컬렉션",
 				"페이징 검증용 두 번째 컬렉션",
 				CODE_YES,
 				null,
@@ -332,7 +330,7 @@ class CollectionMapperTest {
 		CollectionVO thirdData = new CollectionVO(
 				0,
 				testData.getMemberId(),
-				"JUnit 세 번째 컬렉션",
+				pagingTitle + " 세 번째 컬렉션",
 				"페이징 검증용 세 번째 컬렉션",
 				CODE_NO,
 				null,
@@ -344,14 +342,14 @@ class CollectionMapperTest {
 		DTO firstPageSearch = new DTO();
 		firstPageSearch.setPageNo(1);
 		firstPageSearch.setPageSize(2);
-		firstPageSearch.setSearchDiv("20");
-		firstPageSearch.setSearchWord(String.valueOf(testData.getMemberId()));
+		firstPageSearch.setSearchDiv("10");
+		firstPageSearch.setSearchWord(pagingTitle);
 
 		DTO secondPageSearch = new DTO();
 		secondPageSearch.setPageNo(2);
 		secondPageSearch.setPageSize(2);
-		secondPageSearch.setSearchDiv("20");
-		secondPageSearch.setSearchWord(String.valueOf(testData.getMemberId()));
+		secondPageSearch.setSearchDiv("10");
+		secondPageSearch.setSearchWord(pagingTitle);
 
 		// When: 페이지 크기를 두 건으로 설정해 1페이지와 2페이지를 조회
 		List<CollectionVO> firstPage = mapper.doRetrieve(firstPageSearch);
@@ -424,7 +422,7 @@ class CollectionMapperTest {
 
 		// Given: DB에 등록되지 않은 컬렉션 정보를 준비
 		CollectionVO missingData = new CollectionVO(
-				nextId("SEQ_COLLECTION"),
+				MISSING_COLLECTION_ID,
 				testData.getMemberId(),
 				"존재하지 않는 컬렉션",
 				"수정 결과 0 검증",
@@ -454,7 +452,7 @@ class CollectionMapperTest {
 
 		// Given: DB에 등록되지 않은 컬렉션 번호를 준비
 		CollectionVO missingData = new CollectionVO();
-		missingData.setCollectionId(nextId("SEQ_COLLECTION"));
+		missingData.setCollectionId(MISSING_COLLECTION_ID);
 
 		// When: 존재하지 않는 컬렉션을 삭제
 		int flag = mapper.doDelete(missingData);
@@ -466,57 +464,4 @@ class CollectionMapperTest {
 		assertEquals(0, flag);
 	}
 
-	/**
-	 * 테스트용 시퀀스의 다음 값 조회
-	 *
-	 * @param sequenceName 조회할 시퀀스명
-	 * @return 시퀀스의 다음 번호
-	 */
-	private int nextId(String sequenceName) {
-		// 시퀀스명은 바인딩할 수 없으므로 테스트 내부의 고정된 이름만 전달
-		String sql = """
-				SELECT %s.NEXTVAL
-				  FROM DUAL
-				""".formatted(sequenceName);
-
-		Integer id = jdbcTemplate.queryForObject(sql, Integer.class);
-
-		return id == null ? 0 : id;
-	}
-
-	/**
-	 * 컬렉션 FK 검증에 필요한 테스트 회원 등록
-	 *
-	 * @param memberId 회원 번호
-	 */
-	private void insertMember(int memberId) {
-		String sql = """
-				INSERT INTO MEMBER (
-					MEMBER_ID,
-					EMAIL,
-					PASSWORD,
-					NICKNAME,
-					ROLE,
-					STATUS,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				memberId,
-				"junit_collection_" + memberId + "@test.com",
-				"junit-password",
-				"JUnit컬렉션" + memberId,
-				MEMBER_ROLE_USER,
-				MEMBER_STATUS_ACTIVE);
-	}
 }

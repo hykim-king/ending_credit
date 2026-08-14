@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
@@ -25,14 +24,15 @@ import com.endit.domain.MemberContentVO;
 
 /**
  * <pre>
- * Class Name  : MemberContentMapperTest
+ * Class Name  : MemberContentMapperDaoTest
  * Description : 회원별 콘텐츠 Mapper의 등록, 조회, 수정 및 삭제 기능을 검증하는 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
- * 2026. 8. 13.	jinyoung    최초 생성
+ * 2026. 8. 13. jinyoung    최초 생성
+ * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * ------------------------------------------------------------
  * </pre>
  *
@@ -42,27 +42,29 @@ import com.endit.domain.MemberContentVO;
 @SpringBootTest
 @Transactional
 @DisplayName("MemberContentMapper 테스트")
-class MemberContentMapperTest {
+class MemberContentMapperDaoTest {
 
 	// COMMON_CODE 테이블의 공통 코드값
 	private static final String CODE_YES = "Y";
 	private static final String CODE_NO = "N";
-	private static final String MEMBER_ROLE_USER = "USER";
-	private static final String MEMBER_STATUS_ACTIVE = "ACTIVE";
 
-	private static final Logger log = LoggerFactory.getLogger(MemberContentMapperTest.class);
+	// 공용 DB의 부모 테이블 더미 데이터에서 사용하는 번호
+	private static final int TEST_MEMBER_ID = 10;
+	private static final int TEST_CONTENT_ID = 1;
+	private static final int SECOND_CONTENT_ID = 2;
+	private static final int THIRD_CONTENT_ID = 3;
+	private static final int MISSING_CONTENT_ID = 999_999_999;
+
+	private static final Logger log = LoggerFactory.getLogger(MemberContentMapperDaoTest.class);
 
 	@Autowired
 	private MemberContentMapper mapper;
-
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
 
 	// 각 테스트에서 사용하는 회원별 콘텐츠 데이터
 	private MemberContentVO testData;
 
 	/**
-	 * 테스트에 필요한 회원, 콘텐츠 및 회원별 콘텐츠 데이터 준비
+	 * 공용 DB의 회원과 콘텐츠 더미 데이터를 이용한 입력 데이터 준비
 	 */
 	@BeforeEach
 	void setUp() {
@@ -70,16 +72,11 @@ class MemberContentMapperTest {
 		log.debug("│ setUp()                      │");
 		log.debug("└──────────────────────────────┘");
 
-		// 복합 FK 조건을 만족시키기 위해 회원과 콘텐츠를 먼저 등록
-		int memberId = nextId("SEQ_MEMBER");
-		int contentId = nextId("SEQ_CONTENT");
-
-		insertMember(memberId);
-		insertContent(contentId);
-
+		// MEMBER_ID 10과 CONTENT_ID 1은 공용 DB에 존재하는 부모 더미 데이터
+		// 두 번호의 조합은 MEMBER_CONTENT 더미 데이터에 없으므로 등록 테스트에 사용 가능
 		// 날짜 컬럼은 Mapper가 별점과 보고 싶어요 상태에 따라 처리
 		testData = new MemberContentVO(
-				memberId, contentId, 4, CODE_YES, null, null, null);
+				TEST_MEMBER_ID, TEST_CONTENT_ID, 4, CODE_YES, null, null, null);
 
 		log.debug("* testData: memberId-{}, contentId-{}, ratingScore-{}, watchlist-{}, ratedDt-{}, watchlistDt-{}, updatedDt-{}",
 				testData.getMemberId(), testData.getContentId(), testData.getRatingScore(), testData.getWatchlist(),
@@ -273,12 +270,9 @@ class MemberContentMapperTest {
 		// Given: 검색 대상과 검색에서 제외할 회원별 콘텐츠를 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int comparisonContentId = nextId("SEQ_CONTENT");
-		insertContent(comparisonContentId);
-
 		MemberContentVO comparisonData = new MemberContentVO(
 				testData.getMemberId(),
-				comparisonContentId,
+				SECOND_CONTENT_ID,
 				3,
 				CODE_NO,
 				null,
@@ -332,12 +326,9 @@ class MemberContentMapperTest {
 		// Given: 보고 싶어요 Y와 N 상태의 데이터를 각각 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int comparisonContentId = nextId("SEQ_CONTENT");
-		insertContent(comparisonContentId);
-
 		MemberContentVO comparisonData = new MemberContentVO(
 				testData.getMemberId(),
-				comparisonContentId,
+				SECOND_CONTENT_ID,
 				4,
 				CODE_NO,
 				null,
@@ -392,12 +383,9 @@ class MemberContentMapperTest {
 		// Given: 서로 다른 별점을 가진 데이터를 각각 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int comparisonContentId = nextId("SEQ_CONTENT");
-		insertContent(comparisonContentId);
-
 		MemberContentVO comparisonData = new MemberContentVO(
 				testData.getMemberId(),
-				comparisonContentId,
+				SECOND_CONTENT_ID,
 				5,
 				CODE_YES,
 				null,
@@ -452,17 +440,11 @@ class MemberContentMapperTest {
 		// Given: 같은 회원의 콘텐츠 세 건을 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int secondContentId = nextId("SEQ_CONTENT");
-		int thirdContentId = nextId("SEQ_CONTENT");
-
-		insertContent(secondContentId);
-		insertContent(thirdContentId);
-
 		MemberContentVO secondData = new MemberContentVO(
-				testData.getMemberId(), secondContentId, 3, CODE_NO, null, null, null);
+				testData.getMemberId(), SECOND_CONTENT_ID, 3, CODE_NO, null, null, null);
 
 		MemberContentVO thirdData = new MemberContentVO(
-				testData.getMemberId(), thirdContentId, 5, CODE_YES, null, null, null);
+				testData.getMemberId(), THIRD_CONTENT_ID, 5, CODE_YES, null, null, null);
 
 		assertEquals(1, mapper.doSave(secondData));
 		assertEquals(1, mapper.doSave(thirdData));
@@ -580,7 +562,7 @@ class MemberContentMapperTest {
 		// Given: DB에 등록되지 않은 복합 PK를 준비
 		MemberContentVO missingData = new MemberContentVO(
 				testData.getMemberId(),
-				nextId("SEQ_CONTENT"),
+				MISSING_CONTENT_ID,
 				3,
 				CODE_NO,
 				null,
@@ -610,7 +592,7 @@ class MemberContentMapperTest {
 		// Given: DB에 등록되지 않은 복합 PK를 준비
 		MemberContentVO missingData = new MemberContentVO();
 		missingData.setMemberId(testData.getMemberId());
-		missingData.setContentId(nextId("SEQ_CONTENT"));
+		missingData.setContentId(MISSING_CONTENT_ID);
 
 		// When: 존재하지 않는 회원별 콘텐츠를 삭제
 		int flag = mapper.doDelete(missingData);
@@ -622,84 +604,4 @@ class MemberContentMapperTest {
 		assertEquals(0, flag);
 	}
 	
-	/**
-	 * 테스트용 시퀀스의 다음 값 조회
-	 *
-	 * @param sequenceName 조회할 시퀀스명
-	 * @return 시퀀스의 다음 번호
-	 */
-	private int nextId(String sequenceName) {
-		// 시퀀스명은 바인딩할 수 없으므로 테스트 내부의 고정된 이름만 전달
-		String sql = """
-				SELECT %s.NEXTVAL
-				  FROM DUAL
-				""".formatted(sequenceName);
-
-		Integer id = jdbcTemplate.queryForObject(sql, Integer.class);
-
-		return id == null ? 0 : id;
-	}
-
-	/**
-	 * 회원별 콘텐츠 FK 검증에 필요한 테스트 회원 등록
-	 *
-	 * @param memberId 회원 번호
-	 */
-	private void insertMember(int memberId) {
-		String sql = """
-				INSERT INTO MEMBER (
-					MEMBER_ID,
-					EMAIL,
-					PASSWORD,
-					NICKNAME,
-					ROLE,
-					STATUS,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				memberId,
-				"junit_member_content_" + memberId + "@test.com",
-				"junit-password",
-				"JUnit회원콘텐츠" + memberId,
-				MEMBER_ROLE_USER,
-				MEMBER_STATUS_ACTIVE);
-	}
-
-	/**
-	 * 회원별 콘텐츠 FK 검증에 필요한 테스트 콘텐츠 등록
-	 *
-	 * @param contentId 콘텐츠 번호
-	 */
-	private void insertContent(int contentId) {
-		String sql = """
-				INSERT INTO CONTENT (
-					CONTENT_ID,
-					EXTERNAL_ID,
-					TITLE_ORG,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				contentId,
-				"JUNIT_MEMBER_CONTENT_" + contentId,
-				"JUnit Member Content " + contentId);
-	}
 }

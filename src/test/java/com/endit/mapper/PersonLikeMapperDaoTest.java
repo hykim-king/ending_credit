@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
@@ -25,14 +24,15 @@ import com.endit.domain.PersonLikeVO;
 
 /**
  * <pre>
- * Class Name  : PersonLikeMapperTest
+ * Class Name  : PersonLikeMapperDaoTest
  * Description : 인물 좋아요 Mapper의 등록, 조회 및 삭제 기능을 검증하는 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
- * 2026. 8. 13.	jinyoung    최초 생성
+ * 2026. 8. 13. jinyoung    최초 생성
+ * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * ------------------------------------------------------------
  * </pre>
  *
@@ -42,25 +42,25 @@ import com.endit.domain.PersonLikeVO;
 @SpringBootTest
 @Transactional
 @DisplayName("PersonLikeMapper 테스트")
-class PersonLikeMapperTest {
+class PersonLikeMapperDaoTest {
 
-	// COMMON_CODE 테이블의 공통 코드값
-	private static final String MEMBER_ROLE_USER = "USER";
-	private static final String MEMBER_STATUS_ACTIVE = "ACTIVE";
+	// 공용 DB의 부모 테이블 더미 데이터에서 사용하는 번호
+	private static final int TEST_MEMBER_ID = 10;
+	private static final int TEST_PERSON_ID = 1;
+	private static final int SECOND_PERSON_ID = 2;
+	private static final int THIRD_PERSON_ID = 3;
+	private static final int MISSING_PERSON_ID = 999_999_999;
 
-	private static final Logger log = LoggerFactory.getLogger(PersonLikeMapperTest.class);
+	private static final Logger log = LoggerFactory.getLogger(PersonLikeMapperDaoTest.class);
 
 	@Autowired
 	private PersonLikeMapper mapper;
-
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
 
 	// 각 테스트에서 사용하는 인물 좋아요 데이터
 	private PersonLikeVO testData;
 
 	/**
-	 * 테스트에 필요한 회원, 인물 및 인물 좋아요 데이터 준비
+	 * 공용 DB의 회원과 인물 더미 데이터를 이용한 입력 데이터 준비
 	 */
 	@BeforeEach
 	void setUp() {
@@ -68,15 +68,10 @@ class PersonLikeMapperTest {
 		log.debug("│ setUp()                      │");
 		log.debug("└──────────────────────────────┘");
 
-		// 복합 FK 조건을 만족시키기 위해 회원과 인물을 먼저 등록
-		int memberId = nextId("SEQ_MEMBER");
-		int personId = nextId("SEQ_PERSON");
-
-		insertMember(memberId);
-		insertPerson(personId);
-
+		// MEMBER_ID 10과 PERSON_ID 1은 공용 DB에 존재하는 부모 더미 데이터
+		// 두 번호의 조합은 PERSON_LIKE 더미 데이터에 없으므로 등록 테스트에 사용 가능
 		// CREATED_DT는 Mapper에서 SYSDATE로 등록
-		testData = new PersonLikeVO(memberId, personId, null);
+		testData = new PersonLikeVO(TEST_MEMBER_ID, TEST_PERSON_ID, null);
 
 		log.debug("* testData: memberId-{}, personId-{}, createdDt-{}",
 				testData.getMemberId(), testData.getPersonId(), testData.getCreatedDt());
@@ -217,12 +212,9 @@ class PersonLikeMapperTest {
 		// Given: 검색 대상과 검색에서 제외할 인물 좋아요를 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int comparisonPersonId = nextId("SEQ_PERSON");
-		insertPerson(comparisonPersonId);
-
 		PersonLikeVO comparisonData = new PersonLikeVO(
 				testData.getMemberId(),
-				comparisonPersonId,
+				SECOND_PERSON_ID,
 				null);
 
 		assertEquals(1, mapper.doSave(comparisonData));
@@ -271,17 +263,11 @@ class PersonLikeMapperTest {
 		// Given: 같은 회원의 인물 좋아요 세 건을 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int secondPersonId = nextId("SEQ_PERSON");
-		int thirdPersonId = nextId("SEQ_PERSON");
-
-		insertPerson(secondPersonId);
-		insertPerson(thirdPersonId);
-
 		PersonLikeVO secondData = new PersonLikeVO(
-				testData.getMemberId(), secondPersonId, null);
+				testData.getMemberId(), SECOND_PERSON_ID, null);
 
 		PersonLikeVO thirdData = new PersonLikeVO(
-				testData.getMemberId(), thirdPersonId, null);
+				testData.getMemberId(), THIRD_PERSON_ID, null);
 
 		assertEquals(1, mapper.doSave(secondData));
 		assertEquals(1, mapper.doSave(thirdData));
@@ -364,7 +350,7 @@ class PersonLikeMapperTest {
 		// Given: DB에 등록되지 않은 복합 PK를 준비
 		PersonLikeVO missingData = new PersonLikeVO(
 				testData.getMemberId(),
-				nextId("SEQ_PERSON"),
+				MISSING_PERSON_ID,
 				null);
 
 		// When: 존재하지 않는 인물 좋아요를 삭제
@@ -377,84 +363,4 @@ class PersonLikeMapperTest {
 		assertEquals(0, flag);
 	}
 	
-	/**
-	 * 테스트용 시퀀스의 다음 값 조회
-	 *
-	 * @param sequenceName 조회할 시퀀스명
-	 * @return 시퀀스의 다음 번호
-	 */
-	private int nextId(String sequenceName) {
-		// 시퀀스명은 바인딩할 수 없으므로 테스트 내부의 고정된 이름만 전달
-		String sql = """
-				SELECT %s.NEXTVAL
-				  FROM DUAL
-				""".formatted(sequenceName);
-
-		Integer id = jdbcTemplate.queryForObject(sql, Integer.class);
-
-		return id == null ? 0 : id;
-	}
-
-	/**
-	 * 인물 좋아요 FK 검증에 필요한 테스트 회원 등록
-	 *
-	 * @param memberId 회원 번호
-	 */
-	private void insertMember(int memberId) {
-		String sql = """
-				INSERT INTO MEMBER (
-					MEMBER_ID,
-					EMAIL,
-					PASSWORD,
-					NICKNAME,
-					ROLE,
-					STATUS,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				memberId,
-				"junit_person_like_" + memberId + "@test.com",
-				"junit-password",
-				"JUnit인물좋아요" + memberId,
-				MEMBER_ROLE_USER,
-				MEMBER_STATUS_ACTIVE);
-	}
-
-	/**
-	 * 인물 좋아요 FK 검증에 필요한 테스트 인물 등록
-	 *
-	 * @param personId 인물 번호
-	 */
-	private void insertPerson(int personId) {
-		String sql = """
-				INSERT INTO PERSON (
-					PERSON_ID,
-					EXTERNAL_ID,
-					NAME_ORG,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				personId,
-				"JUNIT_PERSON_LIKE_" + personId,
-				"JUnit Person Like " + personId);
-	}
 }

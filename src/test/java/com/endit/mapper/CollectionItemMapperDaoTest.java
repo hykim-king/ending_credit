@@ -17,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
@@ -25,14 +24,15 @@ import com.endit.domain.CollectionItemVO;
 
 /**
  * <pre>
- * Class Name  : CollectionItemMapperTest
+ * Class Name  : CollectionItemMapperDaoTest
  * Description : 컬렉션 콘텐츠 Mapper의 등록, 조회 및 삭제 기능을 검증하는 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
- * 2026. 8. 13.	jinyoung    최초 생성
+ * 2026. 8. 13. jinyoung    최초 생성
+ * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * ------------------------------------------------------------
  * </pre>
  *
@@ -41,27 +41,26 @@ import com.endit.domain.CollectionItemVO;
  */
 @SpringBootTest
 @Transactional
-@DisplayName("CollectionItemMapper 테스트")
-class CollectionItemMapperTest {
+@DisplayName("CollectionItem 테스트")
+class CollectionItemMapperDaoTest {
 
-	// COMMON_CODE 테이블의 공통 코드값
-	private static final String CODE_YES = "Y";
-	private static final String MEMBER_ROLE_USER = "USER";
-	private static final String MEMBER_STATUS_ACTIVE = "ACTIVE";
+	// 공용 DB의 부모 테이블 더미 데이터에서 사용하는 번호
+	private static final int TEST_COLLECTION_ID = 10;
+	private static final int TEST_CONTENT_ID = 1;
+	private static final int SECOND_CONTENT_ID = 2;
+	private static final int THIRD_CONTENT_ID = 3;
+	private static final int MISSING_CONTENT_ID = 999_999_999;
 
-	private static final Logger log = LoggerFactory.getLogger(CollectionItemMapperTest.class);
+	private static final Logger log = LoggerFactory.getLogger(CollectionItemMapperDaoTest.class);
 
 	@Autowired
 	private CollectionItemMapper mapper;
-
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
 
 	// 각 테스트에서 사용하는 컬렉션 콘텐츠 데이터
 	private CollectionItemVO testData;
 
 	/**
-	 * 테스트에 필요한 회원, 콘텐츠, 컬렉션 및 컬렉션 콘텐츠 데이터 준비
+	 * 공용 DB의 컬렉션과 콘텐츠 더미 데이터를 이용한 입력 데이터 준비
 	 */
 	@BeforeEach
 	void setUp() {
@@ -69,17 +68,10 @@ class CollectionItemMapperTest {
 		log.debug("│ setUp()                      │");
 		log.debug("└──────────────────────────────┘");
 
-		// 복합 FK 조건을 만족시키기 위해 부모 데이터를 먼저 등록
-		int memberId = nextId("SEQ_MEMBER");
-		int contentId = nextId("SEQ_CONTENT");
-		int collectionId = nextId("SEQ_COLLECTION");
-
-		insertMember(memberId);
-		insertContent(contentId);
-		insertCollection(collectionId, memberId);
-
+		// COLLECTION_ID 10과 CONTENT_ID 1은 공용 DB에 존재하는 부모 더미 데이터
+		// 두 번호의 조합은 COLLECTION_ITEM 더미 데이터에 없으므로 등록 테스트에 사용 가능
 		// ADDED_DT는 Mapper에서 SYSDATE로 등록
-		testData = new CollectionItemVO(collectionId, contentId, null);
+		testData = new CollectionItemVO(TEST_COLLECTION_ID, TEST_CONTENT_ID, null);
 
 		log.debug("* testData: collectionId-{}, contentId-{}, addedDt-{}",
 				testData.getCollectionId(), testData.getContentId(), testData.getAddedDt());
@@ -220,12 +212,9 @@ class CollectionItemMapperTest {
 		// Given: 검색 대상과 검색에서 제외할 컬렉션 콘텐츠를 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int comparisonContentId = nextId("SEQ_CONTENT");
-		insertContent(comparisonContentId);
-
 		CollectionItemVO comparisonData = new CollectionItemVO(
 				testData.getCollectionId(),
-				comparisonContentId,
+				SECOND_CONTENT_ID,
 				null);
 
 		assertEquals(1, mapper.doSave(comparisonData));
@@ -274,17 +263,11 @@ class CollectionItemMapperTest {
 		// Given: 같은 컬렉션에 콘텐츠 세 건을 등록
 		assertEquals(1, mapper.doSave(testData));
 
-		int secondContentId = nextId("SEQ_CONTENT");
-		int thirdContentId = nextId("SEQ_CONTENT");
-
-		insertContent(secondContentId);
-		insertContent(thirdContentId);
-
 		CollectionItemVO secondData = new CollectionItemVO(
-				testData.getCollectionId(), secondContentId, null);
+				testData.getCollectionId(), SECOND_CONTENT_ID, null);
 
 		CollectionItemVO thirdData = new CollectionItemVO(
-				testData.getCollectionId(), thirdContentId, null);
+				testData.getCollectionId(), THIRD_CONTENT_ID, null);
 
 		assertEquals(1, mapper.doSave(secondData));
 		assertEquals(1, mapper.doSave(thirdData));
@@ -367,7 +350,7 @@ class CollectionItemMapperTest {
 		// Given: DB에 등록되지 않은 복합 PK를 준비
 		CollectionItemVO missingData = new CollectionItemVO(
 				testData.getCollectionId(),
-				nextId("SEQ_CONTENT"),
+				MISSING_CONTENT_ID,
 				null);
 
 		// When: 존재하지 않는 컬렉션 콘텐츠를 삭제
@@ -380,118 +363,4 @@ class CollectionItemMapperTest {
 		assertEquals(0, flag);
 	}
 	
-	/**
-	 * 테스트용 시퀀스의 다음 값 조회
-	 *
-	 * @param sequenceName 조회할 시퀀스명
-	 * @return 시퀀스의 다음 번호
-	 */
-	private int nextId(String sequenceName) {
-		// 시퀀스명은 바인딩할 수 없으므로 테스트 내부의 고정된 이름만 전달
-		String sql = """
-				SELECT %s.NEXTVAL
-				  FROM DUAL
-				""".formatted(sequenceName);
-
-		Integer id = jdbcTemplate.queryForObject(sql, Integer.class);
-
-		return id == null ? 0 : id;
-	}
-
-	/**
-	 * 컬렉션 FK 검증에 필요한 테스트 회원 등록
-	 *
-	 * @param memberId 회원 번호
-	 */
-	private void insertMember(int memberId) {
-		String sql = """
-				INSERT INTO MEMBER (
-					MEMBER_ID,
-					EMAIL,
-					PASSWORD,
-					NICKNAME,
-					ROLE,
-					STATUS,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				memberId,
-				"junit_collection_item_" + memberId + "@test.com",
-				"junit-password",
-				"JUnit컬렉션항목" + memberId,
-				MEMBER_ROLE_USER,
-				MEMBER_STATUS_ACTIVE);
-	}
-
-	/**
-	 * 컬렉션 콘텐츠 FK 검증에 필요한 테스트 콘텐츠 등록
-	 *
-	 * @param contentId 콘텐츠 번호
-	 */
-	private void insertContent(int contentId) {
-		String sql = """
-				INSERT INTO CONTENT (
-					CONTENT_ID,
-					EXTERNAL_ID,
-					TITLE_ORG,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				contentId,
-				"JUNIT_COLLECTION_ITEM_" + contentId,
-				"JUnit Collection Item " + contentId);
-	}
-
-	/**
-	 * 컬렉션 콘텐츠 FK 검증에 필요한 테스트 컬렉션 등록
-	 *
-	 * @param collectionId 컬렉션 번호
-	 * @param memberId 작성 회원 번호
-	 */
-	private void insertCollection(int collectionId, int memberId) {
-		String sql = """
-				INSERT INTO COLLECTION (
-					COLLECTION_ID,
-					MEMBER_ID,
-					TITLE,
-					DESCRIPTION,
-					IS_PUBLIC,
-					CREATED_DT
-				) VALUES (
-					?,
-					?,
-					?,
-					?,
-					?,
-					SYSDATE
-				)
-				""";
-
-		jdbcTemplate.update(
-				sql,
-				collectionId,
-				memberId,
-				"JUnit 컬렉션 " + collectionId,
-				"컬렉션 콘텐츠 Mapper 테스트용 컬렉션",
-				CODE_YES);
-	}
 }
