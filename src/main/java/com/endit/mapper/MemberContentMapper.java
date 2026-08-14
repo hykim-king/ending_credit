@@ -15,6 +15,7 @@ import com.endit.domain.MemberContentVO;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 13.	jinyoung    최초 생성
+ * 2026. 8. 14. jinyoung    전체 삭제 및 전체 건수 조회 기능 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -24,4 +25,17 @@ import com.endit.domain.MemberContentVO;
 @Mapper
 public interface MemberContentMapper extends WorkDiv<MemberContentVO> {
 
+	/**
+	 * 전체 삭제
+	 *
+	 * @return 삭제된 행 수
+	 */
+	int deleteAll();
+
+	/**
+	 * 전체 건수 조회
+	 *
+	 * @return 회원별 콘텐츠 전체 건수
+	 */
+	int totalCnt();
 }

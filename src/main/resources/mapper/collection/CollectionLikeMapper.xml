@@ -75,4 +75,15 @@
          WHERE COLLECTION_ID = #{collectionId}
     </select>
 
+    <!-- 컬렉션 좋아요 전체 삭제 -->
+    <delete id="deleteAll">
+        DELETE FROM COLLECTION_LIKE
+    </delete>
+
+    <!-- 컬렉션 좋아요 전체 건수 조회 -->
+    <select id="totalCnt" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION_LIKE
+    </select>
+
 </mapper>

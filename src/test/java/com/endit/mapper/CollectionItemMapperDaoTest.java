@@ -33,6 +33,7 @@ import com.endit.domain.CollectionItemVO;
  * ------------------------------------------------------------
  * 2026. 8. 13. jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
+ * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -67,6 +68,11 @@ class CollectionItemMapperDaoTest {
 		log.debug("┌──────────────────────────────┐");
 		log.debug("│ setUp()                      │");
 		log.debug("└──────────────────────────────┘");
+
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
+
+		log.debug("* initializedData: totalCnt-{}건", mapper.totalCnt());
 
 		// COLLECTION_ID 10과 CONTENT_ID 1은 공용 DB에 존재하는 부모 더미 데이터
 		// 두 번호의 조합은 COLLECTION_ITEM 더미 데이터에 없으므로 등록 테스트에 사용 가능

@@ -17,6 +17,7 @@ import com.endit.domain.CollectionLikeVO;
  * ------------------------------------------------------------
  * 2026. 8. 13. gunwoo      최초 생성
  * 2026. 8. 14. jinyoung    주석 및 코드 형식 정리
+ * 2026. 8. 14. jinyoung    전체 삭제 및 전체 건수 조회 기능 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -73,4 +74,18 @@ public interface CollectionLikeMapper {
 	 * @return 컬렉션 좋아요 개수
 	 */
 	int selectCollectionLikeCount(int collectionId);
+
+	/**
+	 * 전체 삭제
+	 *
+	 * @return 삭제된 행 수
+	 */
+	int deleteAll();
+
+	/**
+	 * 전체 건수 조회
+	 *
+	 * @return 컬렉션 좋아요 전체 건수
+	 */
+	int totalCnt();
 }

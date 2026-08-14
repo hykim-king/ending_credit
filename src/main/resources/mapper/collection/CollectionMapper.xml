@@ -5,97 +5,108 @@
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
 
-	<!-- 컬렉션 등록 -->
-	<insert id="doSave" parameterType="CollectionVO">
-		<selectKey keyProperty="collectionId" resultType="int" order="BEFORE">
-			SELECT SEQ_COLLECTION.NEXTVAL
-			  FROM DUAL
-		</selectKey>
-		INSERT INTO COLLECTION (
-			COLLECTION_ID,
-			MEMBER_ID,
-			TITLE,
-			DESCRIPTION,
-			IS_PUBLIC,
-			CREATED_DT
-		) VALUES (
-			#{collectionId},
-			#{memberId},
-			#{title},
-			#{description,jdbcType=NVARCHAR},
-			NVL(#{isPublic,jdbcType=CHAR}, 'Y'),
-			SYSDATE
-		)
-	</insert>
+    <!-- 컬렉션 등록 -->
+    <insert id="doSave" parameterType="CollectionVO">
+        <selectKey keyProperty="collectionId" resultType="int" order="BEFORE">
+            SELECT SEQ_COLLECTION.NEXTVAL
+              FROM DUAL
+        </selectKey>
+        INSERT INTO COLLECTION (
+            COLLECTION_ID,
+            MEMBER_ID,
+            TITLE,
+            DESCRIPTION,
+            IS_PUBLIC,
+            CREATED_DT
+        ) VALUES (
+            #{collectionId},
+            #{memberId},
+            #{title},
+            #{description,jdbcType=NVARCHAR},
+            NVL(#{isPublic,jdbcType=CHAR}, 'Y'),
+            SYSDATE
+        )
+    </insert>
 
-	<!-- 컬렉션 단건 조회 -->
-	<select id="doSelectOne" parameterType="CollectionVO" resultType="CollectionVO">
-		SELECT COLLECTION_ID,
-		       MEMBER_ID,
-		       TITLE,
-		       DESCRIPTION,
-		       IS_PUBLIC,
-		       TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-		       TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
-		  FROM COLLECTION
-		 WHERE COLLECTION_ID = #{collectionId}
-	</select>
+    <!-- 컬렉션 단건 조회 -->
+    <select id="doSelectOne" parameterType="CollectionVO" resultType="CollectionVO">
+        SELECT COLLECTION_ID,
+               MEMBER_ID,
+               TITLE,
+               DESCRIPTION,
+               IS_PUBLIC,
+               TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+               TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+          FROM COLLECTION
+         WHERE COLLECTION_ID = #{collectionId}
+    </select>
 
-	<!-- 컬렉션 수정 -->
-	<update id="doUpdate" parameterType="CollectionVO">
-		UPDATE COLLECTION
-		   SET TITLE = #{title},
-		       DESCRIPTION = #{description,jdbcType=NVARCHAR},
-		       IS_PUBLIC = #{isPublic},
-		       UPDATED_DT = SYSDATE
-		 WHERE COLLECTION_ID = #{collectionId}
-	</update>
+    <!-- 컬렉션 수정 -->
+    <update id="doUpdate" parameterType="CollectionVO">
+        UPDATE COLLECTION
+           SET TITLE = #{title},
+               DESCRIPTION = #{description,jdbcType=NVARCHAR},
+               IS_PUBLIC = #{isPublic},
+               UPDATED_DT = SYSDATE
+         WHERE COLLECTION_ID = #{collectionId}
+    </update>
 
-	<!-- 컬렉션 삭제 -->
-	<delete id="doDelete" parameterType="CollectionVO">
-		DELETE FROM COLLECTION
-		 WHERE COLLECTION_ID = #{collectionId}
-	</delete>
+    <!-- 컬렉션 삭제 -->
+    <delete id="doDelete" parameterType="CollectionVO">
+        DELETE FROM COLLECTION
+         WHERE COLLECTION_ID = #{collectionId}
+    </delete>
 
-	<!-- searchDiv: 10(제목), 20(회원 번호) -->
-	<select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionVO">
-		SELECT COLLECTION_ID,
-		       MEMBER_ID,
-		       TITLE,
-		       DESCRIPTION,
-		       IS_PUBLIC,
-		       CREATED_DT,
-		       UPDATED_DT
-		  FROM (
-			SELECT C.COLLECTION_ID,
-			       C.MEMBER_ID,
-			       C.TITLE,
-			       C.DESCRIPTION,
-			       C.IS_PUBLIC,
-			       TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-			       TO_CHAR(C.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
-			       ROW_NUMBER() OVER (
-			           ORDER BY C.CREATED_DT DESC, C.COLLECTION_ID DESC
-			       ) AS RNUM
-			  FROM COLLECTION C
-			<where>
-				<if test="searchWord != null and searchWord != ''">
-					<choose>
-						<when test="searchDiv == '10'">
-							AND C.TITLE LIKE '%' || #{searchWord} || '%'
-						</when>
-						<when test="searchDiv == '20'">
-							AND C.MEMBER_ID = #{searchWord}
-						</when>
-					</choose>
-				</if>
-			</where>
-		)
-		<if test="pageNo > 0 and pageSize > 0">
-		 WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
-		                 AND (#{pageNo} * #{pageSize})
-		</if>
-		 ORDER BY RNUM
-	</select>
+    <!-- searchDiv: 10(제목), 20(회원 번호) -->
+    <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionVO">
+        SELECT COLLECTION_ID,
+               MEMBER_ID,
+               TITLE,
+               DESCRIPTION,
+               IS_PUBLIC,
+               CREATED_DT,
+               UPDATED_DT
+          FROM (
+            SELECT C.COLLECTION_ID,
+                   C.MEMBER_ID,
+                   C.TITLE,
+                   C.DESCRIPTION,
+                   C.IS_PUBLIC,
+                   TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+                   TO_CHAR(C.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
+                   ROW_NUMBER() OVER (
+                       ORDER BY C.CREATED_DT DESC, C.COLLECTION_ID DESC
+                   ) AS RNUM
+              FROM COLLECTION C
+            <where>
+                <if test="searchWord != null and searchWord != ''">
+                    <choose>
+                        <when test="searchDiv == '10'">
+                            AND C.TITLE LIKE '%' || #{searchWord} || '%'
+                        </when>
+                        <when test="searchDiv == '20'">
+                            AND C.MEMBER_ID = #{searchWord}
+                        </when>
+                    </choose>
+                </if>
+            </where>
+        )
+        <if test="pageNo > 0 and pageSize > 0">
+         WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
+                         AND (#{pageNo} * #{pageSize})
+        </if>
+         ORDER BY RNUM
+    </select>
+
+    <!-- 컬렉션 전체 삭제 -->
+    <delete id="deleteAll">
+        DELETE FROM COLLECTION
+    </delete>
+
+    <!-- 컬렉션 전체 건수 조회 -->
+    <select id="totalCnt" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION
+    </select>
 
 </mapper>
