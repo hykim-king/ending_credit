@@ -39,8 +39,4 @@
         SELECT COUNT(*) AS total_cnt FROM comment_like
     </select>
 
-    <delete id="deleteAll">
-        DELETE FROM comment_like
-    </delete>
-
 </mapper>
