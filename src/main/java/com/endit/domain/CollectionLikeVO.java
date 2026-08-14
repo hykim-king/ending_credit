@@ -1,27 +1,28 @@
+package com.endit.domain;
+
 /**
  * <pre>
- * Class Name  : COllectionLikeVO
+ * Class Name  : CollectionLikeVO
  * Description : 회원이 좋아요를 누른 컬렉션 정보를 관리하는 VO
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
- * 2026. 8. 13.	gunwoo        최초생성
+ * 2026. 8. 13. gunwoo      최초 생성
+ * 2026. 8. 14. jinyoung    주석 및 코드 형식 정리
  * ------------------------------------------------------------
  * </pre>
  *
  * @author gunwoo
  * @since 2026. 8. 13.
  */
-package com.endit.domain;
-
 public class CollectionLikeVO {
 
-	private int memberId; 		 //회원 번호
-	private int collectionId;   //컬렉션 번호
-	private String createdDt;  //좋아요 일시
-	
+	private int memberId;          // 회원 번호
+	private int collectionId;      // 컬렉션 번호
+	private String createdDt;      // 좋아요 등록 일시
+
 	public CollectionLikeVO() {
 		super();
 	}
@@ -59,7 +60,7 @@ public class CollectionLikeVO {
 
 	@Override
 	public String toString() {
-		return "CollectionLikeVO [memberId=" + memberId + ", collectionId=" + collectionId + ", createdDt=" + createdDt
-				+ "]";
+		return "CollectionLikeVO [memberId=" + memberId + ", collectionId=" + collectionId + ", createdDt="
+				+ createdDt + "]";
 	}
 }
