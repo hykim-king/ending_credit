@@ -8,23 +8,26 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentVO;
 import com.endit.mapper.ContentMapper;
 
 @SpringBootTest
+@Transactional
 class ContentMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private ContentMapper contentMapper;
+	private ContentMapper mapper;
 
 	private ContentVO content01;
 	private ContentVO content02;
@@ -38,16 +41,15 @@ class ContentMapperDaoTest {
 		log.debug("*@BeforeEach*");
 		log.debug("*****************************");
 
-		// PK는 doSave 시 시퀀스로 채워짐. 절대 고정값(1,2,3)을 기대하지 말 것.
 		int seq = 0;
 		dto = new DTO();
 
 		content01 = new ContentVO(seq, "TMDB_TEST_1001", "테스트영화1", "Test Movie 1", "줄거리1",
-				"2024-01-01", 120, "Korea", "http://poster1", "http://backdrop1", "사용않함", "사용않함");
+				"2024-01-01", 120, "Korea", "http://poster1", "http://backdrop1", "사용않함");
 		content02 = new ContentVO(seq, "TMDB_TEST_1002", "테스트영화2", "Test Movie 2", "줄거리2",
-				"2024-02-01", 110, "USA", "http://poster2", "http://backdrop2", "사용않함", "사용않함");
+				"2024-02-01", 110, "USA", "http://poster2", "http://backdrop2", "사용않함");
 		content03 = new ContentVO(seq, "TMDB_TEST_1003", "테스트영화3", "Test Movie 3", "줄거리3",
-				"2024-03-01", 100, "Japan", "http://poster3", "http://backdrop3", "사용않함", "사용않함");
+				"2024-03-01", 100, "Japan", "http://poster3", "http://backdrop3", "사용않함");
 	}
 
 	@AfterEach
@@ -62,19 +64,22 @@ class ContentMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doRetrieve()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 입력
+		// 3. 페이징 조회
 
-		contentMapper.deleteAll();
-		assertEquals(0, contentMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		contentMapper.doSave(content01);
-		contentMapper.doSave(content02);
-		contentMapper.doSave(content03);
-		assertEquals(3, contentMapper.selectAllCount());
+		mapper.doSave(content01);
+		mapper.doSave(content02);
+		mapper.doSave(content03);
+		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 
-		List<ContentVO> list = contentMapper.doRetrieve(dto);
+		List<ContentVO> list = mapper.doRetrieve(dto);
 		for (ContentVO vo : list) {
 			log.debug("{}", vo);
 		}
@@ -82,53 +87,61 @@ class ContentMapperDaoTest {
 	}
 
 	@Test
-	void doDelete() {
-		log.debug("---------------------------");
-		log.debug("*doDelete()*");
-		log.debug("---------------------------");
-
-		contentMapper.deleteAll();
-		assertEquals(0, contentMapper.selectAllCount());
-
-		contentMapper.doSave(content01);
-		assertEquals(1, contentMapper.selectAllCount());
-
-		contentMapper.doSave(content02);
-		assertEquals(2, contentMapper.selectAllCount());
-
-		// content01.contentId 는 doSave 시 시퀀스로 채워진 값 사용
-		contentMapper.doDelete(content01);
-		assertEquals(1, contentMapper.selectAllCount());
-	}
-
-	@Test
 	void doUpdate() {
 		log.debug("---------------------------");
 		log.debug("*doUpdate()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록(content01)
+		// 3. 단건조회
+		// 4. 조회 결과 수정
+		// 5. update
+		// 6. 재조회 후 비교
 
-		contentMapper.deleteAll();
-		assertEquals(0, contentMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = contentMapper.doSave(content01);
+		int flag = mapper.doSave(content01);
 		assertEquals(1, flag);
-		assertEquals(1, contentMapper.selectAllCount());
+		assertEquals(1, mapper.totalCnt());
 
-		ContentVO outVO01 = contentMapper.doSelectOne(content01);
-		assertNotNull(outVO01);
+		ContentVO updateVO = mapper.doSelectOne(content01);
+		assertNotNull(updateVO);
 
-		String upString = "_U";
-		outVO01.setTitleKo(outVO01.getTitleKo() + upString);
-		outVO01.setTitleOrg(outVO01.getTitleOrg() + upString);
-		outVO01.setOverview(outVO01.getOverview() + upString);
-		outVO01.setCountry(outVO01.getCountry() + upString);
+		String updateStr = "_U";
+		updateVO.setTitleKo(updateVO.getTitleKo() + updateStr);
+		updateVO.setTitleOrg(updateVO.getTitleOrg() + updateStr);
+		updateVO.setOverview(updateVO.getOverview() + updateStr);
+		updateVO.setCountry(updateVO.getCountry() + updateStr);
 
-		flag = contentMapper.doUpdate(outVO01);
+		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		ContentVO resultVO01 = contentMapper.doSelectOne(outVO01);
-		assertNotNull(resultVO01);
-		isSameData(resultVO01, outVO01);
+		ContentVO outVO = mapper.doSelectOne(updateVO);
+		assertNotNull(outVO);
+		isSameData(updateVO, outVO);
+	}
+
+	@Test
+	void doDelete() {
+		log.debug("---------------------------");
+		log.debug("*doDelete()*");
+		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건삭제
+		// 4. 건수비교
+
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
+
+		int flag = mapper.doSave(content01);
+		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+
+		flag = mapper.doDelete(content01);
+		assertEquals(1, flag);
+		assertEquals(0, mapper.totalCnt());
 	}
 
 	@Test
@@ -136,28 +149,30 @@ class ContentMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSave()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 건수비교 / 외부ID 조회
 
-		contentMapper.deleteAll();
-		assertEquals(0, contentMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = contentMapper.doSave(content01);
+		int flag = mapper.doSave(content01);
 		assertEquals(1, flag);
-		assertEquals(1, contentMapper.selectAllCount());
+		assertEquals(1, mapper.totalCnt());
+		assertEquals(true, content01.getContentId() > 0);
 		log.debug("saved contentId(content01)={}", content01.getContentId());
 
-		flag = contentMapper.doSave(content02);
+		flag = mapper.doSave(content02);
 		assertEquals(1, flag);
-		assertEquals(2, contentMapper.selectAllCount());
-		log.debug("saved contentId(content02)={}", content02.getContentId());
+		assertEquals(2, mapper.totalCnt());
 
-		flag = contentMapper.doSave(content03);
+		flag = mapper.doSave(content03);
 		assertEquals(1, flag);
-		assertEquals(3, contentMapper.selectAllCount());
-		log.debug("saved contentId(content03)={}", content03.getContentId());
+		assertEquals(3, mapper.totalCnt());
 
-		Integer foundId = contentMapper.findContentIdByExternal(content01.getExternalId());
+		Integer foundId = mapper.findContentIdByExternal(content01.getExternalId());
 		assertEquals(content01.getContentId(), foundId.intValue());
-		assertNull(contentMapper.findContentIdByExternal("NOT_EXISTS"));
+		assertNull(mapper.findContentIdByExternal("NOT_EXISTS"));
 	}
 
 	@Test
@@ -165,44 +180,50 @@ class ContentMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSelectOne()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 단건조회 후 비교
 
-		contentMapper.deleteAll();
-		assertEquals(0, contentMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		contentMapper.doSave(content01);
-		contentMapper.doSave(content02);
-		contentMapper.doSave(content03);
-		assertEquals(3, contentMapper.selectAllCount());
+		mapper.doSave(content01);
+		mapper.doSave(content02);
+		mapper.doSave(content03);
+		assertEquals(3, mapper.totalCnt());
 
-		ContentVO outVO01 = contentMapper.doSelectOne(content01);
+		ContentVO outVO01 = mapper.doSelectOne(content01);
 		assertNotNull(outVO01);
 
-		ContentVO outVO02 = contentMapper.doSelectOne(content02);
-		ContentVO outVO03 = contentMapper.doSelectOne(content03);
+		ContentVO outVO02 = mapper.doSelectOne(content02);
+		assertNotNull(outVO02);
 
-		isSameData(outVO01, content01);
-		isSameData(outVO02, content02);
-		isSameData(outVO03, content03);
+		ContentVO outVO03 = mapper.doSelectOne(content03);
+		assertNotNull(outVO03);
+
+		isSameData(content01, outVO01);
+		isSameData(content02, outVO02);
+		isSameData(content03, outVO03);
 	}
 
-	private void isSameData(ContentVO outVO, ContentVO content) {
-		// PK는 시퀀스 값이므로, doSave 이후 VO에 채워진 값과 조회 결과를 비교
-		assertEquals(outVO.getContentId(), content.getContentId());
-		assertEquals(outVO.getExternalId(), content.getExternalId());
-		assertEquals(outVO.getTitleKo(), content.getTitleKo());
-		assertEquals(outVO.getTitleOrg(), content.getTitleOrg());
-		assertEquals(outVO.getOverview(), content.getOverview());
-		assertEquals(outVO.getReleaseYear(), content.getReleaseYear());
-		assertEquals(outVO.getRuntimeMin(), content.getRuntimeMin());
-		assertEquals(outVO.getCountry(), content.getCountry());
-		assertEquals(outVO.getPosterUrl(), content.getPosterUrl());
-		assertEquals(outVO.getBackdropUrl(), content.getBackdropUrl());
+	private void isSameData(ContentVO expected, ContentVO actual) {
+		assertEquals(expected.getContentId(), actual.getContentId());
+		assertEquals(expected.getExternalId(), actual.getExternalId());
+		assertEquals(expected.getTitleKo(), actual.getTitleKo());
+		assertEquals(expected.getTitleOrg(), actual.getTitleOrg());
+		assertEquals(expected.getOverview(), actual.getOverview());
+		assertEquals(expected.getReleaseYear(), actual.getReleaseYear());
+		assertEquals(expected.getRuntimeMin(), actual.getRuntimeMin());
+		assertEquals(expected.getCountry(), actual.getCountry());
+		assertEquals(expected.getPosterUrl(), actual.getPosterUrl());
+		assertEquals(expected.getBackdropUrl(), actual.getBackdropUrl());
 	}
 
 	@Test
+	@DisplayName("bean테스트")
 	void beans() {
-		assertNotNull(contentMapper);
-		log.debug("contentMapper: {}", contentMapper);
+		assertNotNull(mapper);
+		log.debug("mapper: {}", mapper);
 	}
 
 }

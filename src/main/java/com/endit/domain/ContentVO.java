@@ -15,15 +15,13 @@ public class ContentVO extends DTO {
 	private String posterUrl;
 	private String backdropUrl;
 	private String createdDt;
-	private String updatedDt;
 
 	public ContentVO() {
 		super();
 	}
 
 	public ContentVO(int contentId, String externalId, String titleKo, String titleOrg, String overview,
-			String releaseYear, int runtimeMin, String country, String posterUrl, String backdropUrl, String createdDt,
-			String updatedDt) {
+			String releaseYear, int runtimeMin, String country, String posterUrl, String backdropUrl, String createdDt) {
 		super();
 		this.contentId = contentId;
 		this.externalId = externalId;
@@ -36,7 +34,6 @@ public class ContentVO extends DTO {
 		this.posterUrl = posterUrl;
 		this.backdropUrl = backdropUrl;
 		this.createdDt = createdDt;
-		this.updatedDt = updatedDt;
 	}
 
 	public int getContentId() {
@@ -127,20 +124,12 @@ public class ContentVO extends DTO {
 		this.createdDt = createdDt;
 	}
 
-	public String getUpdatedDt() {
-		return updatedDt;
-	}
-
-	public void setUpdatedDt(String updatedDt) {
-		this.updatedDt = updatedDt;
-	}
-
 	@Override
 	public String toString() {
 		return "ContentVO [contentId=" + contentId + ", externalId=" + externalId + ", titleKo=" + titleKo
 				+ ", titleOrg=" + titleOrg + ", overview=" + overview + ", releaseYear=" + releaseYear + ", runtimeMin="
 				+ runtimeMin + ", country=" + country + ", posterUrl=" + posterUrl + ", backdropUrl=" + backdropUrl
-				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", toString()=" + super.toString() + "]";
+				+ ", createdDt=" + createdDt + ", toString()=" + super.toString() + "]";
 	}
 
 }

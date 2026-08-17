@@ -7,30 +7,29 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentImageVO;
-import com.endit.domain.ContentVO;
 import com.endit.mapper.ContentImageMapper;
-import com.endit.mapper.ContentMapper;
 
 @SpringBootTest
+@Transactional
 class ContentImageMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private ContentImageMapper contentImageMapper;
+	private ContentImageMapper mapper;
 
-	@Autowired
-	private ContentMapper contentMapper;
-
-	private ContentVO content01;
+	// 더미 CONTENT.CONTENT_ID = 1 - 인셉션
+	private static final int PARENT_CONTENT_ID = 1;
 
 	private ContentImageVO image01;
 	private ContentImageVO image02;
@@ -47,12 +46,9 @@ class ContentImageMapperDaoTest {
 		int seq = 0;
 		dto = new DTO();
 
-		content01 = new ContentVO(seq, "TMDB_IMG_C_1001", "이미지영화", "Image Movie", "줄거리",
-				"2024-01-01", 120, "Korea", "http://poster", "http://backdrop", "사용않함", "사용않함");
-
-		image01 = new ContentImageVO(seq, seq, "http://image1.jpg", "사용않함");
-		image02 = new ContentImageVO(seq, seq, "http://image2.jpg", "사용않함");
-		image03 = new ContentImageVO(seq, seq, "http://image3.jpg", "사용않함");
+		image01 = new ContentImageVO(seq, PARENT_CONTENT_ID, "http://image1.jpg", "사용않함");
+		image02 = new ContentImageVO(seq, PARENT_CONTENT_ID, "http://image2.jpg", "사용않함");
+		image03 = new ContentImageVO(seq, PARENT_CONTENT_ID, "http://image3.jpg", "사용않함");
 	}
 
 	@AfterEach
@@ -62,37 +58,29 @@ class ContentImageMapperDaoTest {
 		log.debug("*****************************");
 	}
 
-	private void prepareParents() {
-		contentImageMapper.deleteAll();
-		contentMapper.deleteAll();
-
-		contentMapper.doSave(content01);
-
-		image01.setContentId(content01.getContentId());
-		image02.setContentId(content01.getContentId());
-		image03.setContentId(content01.getContentId());
-	}
-
 	@Test
 	void doRetrieve() {
 		log.debug("---------------------------");
 		log.debug("*doRetrieve()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 입력 (부모 CONTENT_ID=1 하드코딩)
+		// 3. 페이징 조회
 
-		prepareParents();
-		assertEquals(0, contentImageMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		contentImageMapper.doSave(image01);
-		contentImageMapper.doSave(image02);
-		contentImageMapper.doSave(image03);
-		assertEquals(3, contentImageMapper.selectAllCount());
+		mapper.doSave(image01);
+		mapper.doSave(image02);
+		mapper.doSave(image03);
+		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 		dto.setSearchDiv("10");
-		dto.setSearchWord(String.valueOf(content01.getContentId()));
+		dto.setSearchWord(String.valueOf(PARENT_CONTENT_ID));
 
-		List<ContentImageVO> list = contentImageMapper.doRetrieve(dto);
+		List<ContentImageVO> list = mapper.doRetrieve(dto);
 		for (ContentImageVO vo : list) {
 			log.debug("{}", vo);
 		}
@@ -100,45 +88,56 @@ class ContentImageMapperDaoTest {
 	}
 
 	@Test
-	void doDelete() {
-		log.debug("---------------------------");
-		log.debug("*doDelete()*");
-		log.debug("---------------------------");
-
-		prepareParents();
-
-		contentImageMapper.doSave(image01);
-		assertEquals(1, contentImageMapper.selectAllCount());
-
-		contentImageMapper.doSave(image02);
-		assertEquals(2, contentImageMapper.selectAllCount());
-
-		contentImageMapper.doDelete(image01);
-		assertEquals(1, contentImageMapper.selectAllCount());
-	}
-
-	@Test
 	void doUpdate() {
 		log.debug("---------------------------");
 		log.debug("*doUpdate()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건조회 후 수정
+		// 4. update
+		// 5. 재조회 후 비교
 
-		prepareParents();
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = contentImageMapper.doSave(image01);
+		int flag = mapper.doSave(image01);
+		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+
+		ContentImageVO updateVO = mapper.doSelectOne(image01);
+		assertNotNull(updateVO);
+
+		updateVO.setImageUrl(updateVO.getImageUrl() + "_U");
+
+		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		ContentImageVO outVO01 = contentImageMapper.doSelectOne(image01);
-		assertNotNull(outVO01);
+		ContentImageVO outVO = mapper.doSelectOne(updateVO);
+		assertNotNull(outVO);
+		isSameData(updateVO, outVO);
+	}
 
-		outVO01.setImageUrl(outVO01.getImageUrl() + "_U");
+	@Test
+	void doDelete() {
+		log.debug("---------------------------");
+		log.debug("*doDelete()*");
+		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건삭제
+		// 4. 건수비교
 
-		flag = contentImageMapper.doUpdate(outVO01);
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
+
+		int flag = mapper.doSave(image01);
 		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
 
-		ContentImageVO resultVO01 = contentImageMapper.doSelectOne(outVO01);
-		assertNotNull(resultVO01);
-		isSameData(resultVO01, outVO01);
+		flag = mapper.doDelete(image01);
+		assertEquals(1, flag);
+		assertEquals(0, mapper.totalCnt());
 	}
 
 	@Test
@@ -146,21 +145,26 @@ class ContentImageMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSave()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 건수비교
 
-		prepareParents();
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = contentImageMapper.doSave(image01);
+		int flag = mapper.doSave(image01);
 		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+		assertEquals(true, image01.getImageId() > 0);
 		log.debug("saved imageId(image01)={}", image01.getImageId());
-		assertEquals(1, contentImageMapper.selectAllCount());
 
-		flag = contentImageMapper.doSave(image02);
+		flag = mapper.doSave(image02);
 		assertEquals(1, flag);
-		assertEquals(2, contentImageMapper.selectAllCount());
+		assertEquals(2, mapper.totalCnt());
 
-		flag = contentImageMapper.doSave(image03);
+		flag = mapper.doSave(image03);
 		assertEquals(1, flag);
-		assertEquals(3, contentImageMapper.selectAllCount());
+		assertEquals(3, mapper.totalCnt());
 	}
 
 	@Test
@@ -168,36 +172,43 @@ class ContentImageMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSelectOne()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 단건조회 후 비교
 
-		prepareParents();
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		contentImageMapper.doSave(image01);
-		contentImageMapper.doSave(image02);
-		contentImageMapper.doSave(image03);
-		assertEquals(3, contentImageMapper.selectAllCount());
+		mapper.doSave(image01);
+		mapper.doSave(image02);
+		mapper.doSave(image03);
+		assertEquals(3, mapper.totalCnt());
 
-		ContentImageVO outVO01 = contentImageMapper.doSelectOne(image01);
+		ContentImageVO outVO01 = mapper.doSelectOne(image01);
 		assertNotNull(outVO01);
 
-		ContentImageVO outVO02 = contentImageMapper.doSelectOne(image02);
-		ContentImageVO outVO03 = contentImageMapper.doSelectOne(image03);
+		ContentImageVO outVO02 = mapper.doSelectOne(image02);
+		assertNotNull(outVO02);
 
-		isSameData(outVO01, image01);
-		isSameData(outVO02, image02);
-		isSameData(outVO03, image03);
+		ContentImageVO outVO03 = mapper.doSelectOne(image03);
+		assertNotNull(outVO03);
+
+		isSameData(image01, outVO01);
+		isSameData(image02, outVO02);
+		isSameData(image03, outVO03);
 	}
 
-	private void isSameData(ContentImageVO outVO, ContentImageVO image) {
-		assertEquals(outVO.getImageId(), image.getImageId());
-		assertEquals(outVO.getContentId(), image.getContentId());
-		assertEquals(outVO.getImageUrl(), image.getImageUrl());
+	private void isSameData(ContentImageVO expected, ContentImageVO actual) {
+		assertEquals(expected.getImageId(), actual.getImageId());
+		assertEquals(expected.getContentId(), actual.getContentId());
+		assertEquals(expected.getImageUrl(), actual.getImageUrl());
 	}
 
 	@Test
+	@DisplayName("bean테스트")
 	void beans() {
-		assertNotNull(contentImageMapper);
-		assertNotNull(contentMapper);
-		log.debug("contentImageMapper: {}", contentImageMapper);
+		assertNotNull(mapper);
+		log.debug("mapper: {}", mapper);
 	}
 
 }

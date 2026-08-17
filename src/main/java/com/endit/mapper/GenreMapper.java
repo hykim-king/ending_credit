@@ -17,5 +17,5 @@ public interface GenreMapper extends WorkDiv<GenreVO> {
 	int deleteAll();
 
 	//테스트용
-	int selectAllCount();
+	int totalCnt();
 }

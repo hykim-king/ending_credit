@@ -78,7 +78,7 @@
 		DELETE FROM content_genre
 	</delete>
 
-	<select id="selectAllCount" resultType="int">
+	<select id="totalCnt" resultType="int">
 		SELECT COUNT(*)
 		  FROM content_genre
 	</select>

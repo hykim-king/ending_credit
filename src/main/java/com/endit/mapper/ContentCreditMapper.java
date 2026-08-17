@@ -12,5 +12,5 @@ public interface ContentCreditMapper extends WorkDiv<ContentCreditVO> {
 	int deleteAll();
 
 	//테스트용
-	int selectAllCount();
+	int totalCnt();
 }

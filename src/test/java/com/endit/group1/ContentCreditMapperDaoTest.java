@@ -7,37 +7,33 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentCreditVO;
-import com.endit.domain.ContentVO;
-import com.endit.domain.PersonVO;
 import com.endit.mapper.ContentCreditMapper;
-import com.endit.mapper.ContentMapper;
-import com.endit.mapper.PersonMapper;
 
 @SpringBootTest
+@Transactional
 class ContentCreditMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private ContentCreditMapper contentCreditMapper;
+	private ContentCreditMapper mapper;
 
-	@Autowired
-	private ContentMapper contentMapper;
-
-	@Autowired
-	private PersonMapper personMapper;
-
-	private ContentVO content01;
-	private PersonVO person01;
-	private PersonVO person02;
+	// 더미 CONTENT.CONTENT_ID = 1 - 인셉션
+	private static final int PARENT_CONTENT_ID = 1;
+	// 더미 PERSON.PERSON_ID = 1 - 디카프리오, 2 - 놀란, 6 - 톰 하디
+	private static final int PARENT_PERSON_ID_01 = 1;
+	private static final int PARENT_PERSON_ID_02 = 2;
+	private static final int PARENT_PERSON_ID_03 = 6;
 
 	private ContentCreditVO credit01;
 	private ContentCreditVO credit02;
@@ -54,15 +50,9 @@ class ContentCreditMapperDaoTest {
 		int seq = 0;
 		dto = new DTO();
 
-		content01 = new ContentVO(seq, "TMDB_CREDIT_C_1001", "크레딧영화", "Credit Movie", "줄거리",
-				"2024-01-01", 120, "Korea", "http://poster", "http://backdrop", "사용않함", "사용않함");
-		person01 = new PersonVO(seq, "TMDB_CREDIT_P_1001", "배우A", "Actor A", "http://p1", "사용않함", "사용않함");
-		person02 = new PersonVO(seq, "TMDB_CREDIT_P_1002", "감독A", "Director A", "http://p2", "사용않함", "사용않함");
-
-		// contentId/personId/creditId 는 저장 후 시퀀스 값으로 채움
-		credit01 = new ContentCreditVO(seq, seq, seq, "ACTOR", "주인공", 0);
-		credit02 = new ContentCreditVO(seq, seq, seq, "ACTOR", "조연", 1);
-		credit03 = new ContentCreditVO(seq, seq, seq, "DIRECTOR", null, 0);
+		credit01 = new ContentCreditVO(seq, PARENT_CONTENT_ID, PARENT_PERSON_ID_01, "ACTOR", "코브", 1);
+		credit02 = new ContentCreditVO(seq, PARENT_CONTENT_ID, PARENT_PERSON_ID_02, "DIRECTOR", null, 1);
+		credit03 = new ContentCreditVO(seq, PARENT_CONTENT_ID, PARENT_PERSON_ID_03, "ACTOR", "임스", 2);
 	}
 
 	@AfterEach
@@ -72,47 +62,29 @@ class ContentCreditMapperDaoTest {
 		log.debug("*****************************");
 	}
 
-	private void prepareParents() {
-		contentCreditMapper.deleteAll();
-		contentMapper.deleteAll();
-		personMapper.deleteAll();
-
-		contentMapper.doSave(content01);
-		personMapper.doSave(person01);
-		personMapper.doSave(person02);
-
-		credit01.setContentId(content01.getContentId());
-		credit01.setPersonId(person01.getPersonId());
-
-		credit02.setContentId(content01.getContentId());
-		credit02.setPersonId(person01.getPersonId());
-		credit02.setRole("WRITER");
-		credit02.setCharacter(null);
-
-		credit03.setContentId(content01.getContentId());
-		credit03.setPersonId(person02.getPersonId());
-	}
-
 	@Test
 	void doRetrieve() {
 		log.debug("---------------------------");
 		log.debug("*doRetrieve()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 입력 (부모 CONTENT/PERSON PK 하드코딩)
+		// 3. 페이징 조회
 
-		prepareParents();
-		assertEquals(0, contentCreditMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		contentCreditMapper.doSave(credit01);
-		contentCreditMapper.doSave(credit02);
-		contentCreditMapper.doSave(credit03);
-		assertEquals(3, contentCreditMapper.selectAllCount());
+		mapper.doSave(credit01);
+		mapper.doSave(credit02);
+		mapper.doSave(credit03);
+		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 		dto.setSearchDiv("10");
-		dto.setSearchWord(String.valueOf(content01.getContentId()));
+		dto.setSearchWord(String.valueOf(PARENT_CONTENT_ID));
 
-		List<ContentCreditVO> list = contentCreditMapper.doRetrieve(dto);
+		List<ContentCreditVO> list = mapper.doRetrieve(dto);
 		for (ContentCreditVO vo : list) {
 			log.debug("{}", vo);
 		}
@@ -120,46 +92,57 @@ class ContentCreditMapperDaoTest {
 	}
 
 	@Test
-	void doDelete() {
-		log.debug("---------------------------");
-		log.debug("*doDelete()*");
-		log.debug("---------------------------");
-
-		prepareParents();
-
-		contentCreditMapper.doSave(credit01);
-		assertEquals(1, contentCreditMapper.selectAllCount());
-
-		contentCreditMapper.doSave(credit03);
-		assertEquals(2, contentCreditMapper.selectAllCount());
-
-		contentCreditMapper.doDelete(credit01);
-		assertEquals(1, contentCreditMapper.selectAllCount());
-	}
-
-	@Test
 	void doUpdate() {
 		log.debug("---------------------------");
 		log.debug("*doUpdate()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건조회 후 수정
+		// 4. update
+		// 5. 재조회 후 비교
 
-		prepareParents();
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = contentCreditMapper.doSave(credit01);
+		int flag = mapper.doSave(credit01);
+		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+
+		ContentCreditVO updateVO = mapper.doSelectOne(credit01);
+		assertNotNull(updateVO);
+
+		updateVO.setCharacter(updateVO.getCharacter() + "_U");
+		updateVO.setDisplayOrder(9);
+
+		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		ContentCreditVO outVO01 = contentCreditMapper.doSelectOne(credit01);
-		assertNotNull(outVO01);
+		ContentCreditVO outVO = mapper.doSelectOne(updateVO);
+		assertNotNull(outVO);
+		isSameData(updateVO, outVO);
+	}
 
-		outVO01.setCharacter(outVO01.getCharacter() + "_U");
-		outVO01.setDisplayOrder(9);
+	@Test
+	void doDelete() {
+		log.debug("---------------------------");
+		log.debug("*doDelete()*");
+		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건삭제
+		// 4. 건수비교
 
-		flag = contentCreditMapper.doUpdate(outVO01);
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
+
+		int flag = mapper.doSave(credit01);
 		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
 
-		ContentCreditVO resultVO01 = contentCreditMapper.doSelectOne(outVO01);
-		assertNotNull(resultVO01);
-		isSameData(resultVO01, outVO01);
+		flag = mapper.doDelete(credit01);
+		assertEquals(1, flag);
+		assertEquals(0, mapper.totalCnt());
 	}
 
 	@Test
@@ -167,21 +150,26 @@ class ContentCreditMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSave()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 건수비교
 
-		prepareParents();
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = contentCreditMapper.doSave(credit01);
+		int flag = mapper.doSave(credit01);
 		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+		assertEquals(true, credit01.getCreditId() > 0);
 		log.debug("saved creditId(credit01)={}", credit01.getCreditId());
-		assertEquals(1, contentCreditMapper.selectAllCount());
 
-		flag = contentCreditMapper.doSave(credit02);
+		flag = mapper.doSave(credit02);
 		assertEquals(1, flag);
-		assertEquals(2, contentCreditMapper.selectAllCount());
+		assertEquals(2, mapper.totalCnt());
 
-		flag = contentCreditMapper.doSave(credit03);
+		flag = mapper.doSave(credit03);
 		assertEquals(1, flag);
-		assertEquals(3, contentCreditMapper.selectAllCount());
+		assertEquals(3, mapper.totalCnt());
 	}
 
 	@Test
@@ -189,40 +177,46 @@ class ContentCreditMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSelectOne()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 단건조회 후 비교
 
-		prepareParents();
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		contentCreditMapper.doSave(credit01);
-		contentCreditMapper.doSave(credit02);
-		contentCreditMapper.doSave(credit03);
-		assertEquals(3, contentCreditMapper.selectAllCount());
+		mapper.doSave(credit01);
+		mapper.doSave(credit02);
+		mapper.doSave(credit03);
+		assertEquals(3, mapper.totalCnt());
 
-		ContentCreditVO outVO01 = contentCreditMapper.doSelectOne(credit01);
+		ContentCreditVO outVO01 = mapper.doSelectOne(credit01);
 		assertNotNull(outVO01);
 
-		ContentCreditVO outVO02 = contentCreditMapper.doSelectOne(credit02);
-		ContentCreditVO outVO03 = contentCreditMapper.doSelectOne(credit03);
+		ContentCreditVO outVO02 = mapper.doSelectOne(credit02);
+		assertNotNull(outVO02);
 
-		isSameData(outVO01, credit01);
-		isSameData(outVO02, credit02);
-		isSameData(outVO03, credit03);
+		ContentCreditVO outVO03 = mapper.doSelectOne(credit03);
+		assertNotNull(outVO03);
+
+		isSameData(credit01, outVO01);
+		isSameData(credit02, outVO02);
+		isSameData(credit03, outVO03);
 	}
 
-	private void isSameData(ContentCreditVO outVO, ContentCreditVO credit) {
-		assertEquals(outVO.getCreditId(), credit.getCreditId());
-		assertEquals(outVO.getContentId(), credit.getContentId());
-		assertEquals(outVO.getPersonId(), credit.getPersonId());
-		assertEquals(outVO.getRole(), credit.getRole());
-		assertEquals(outVO.getCharacter(), credit.getCharacter());
-		assertEquals(outVO.getDisplayOrder(), credit.getDisplayOrder());
+	private void isSameData(ContentCreditVO expected, ContentCreditVO actual) {
+		assertEquals(expected.getCreditId(), actual.getCreditId());
+		assertEquals(expected.getContentId(), actual.getContentId());
+		assertEquals(expected.getPersonId(), actual.getPersonId());
+		assertEquals(expected.getRole(), actual.getRole());
+		assertEquals(expected.getCharacter(), actual.getCharacter());
+		assertEquals(expected.getDisplayOrder(), actual.getDisplayOrder());
 	}
 
 	@Test
+	@DisplayName("bean테스트")
 	void beans() {
-		assertNotNull(contentCreditMapper);
-		assertNotNull(contentMapper);
-		assertNotNull(personMapper);
-		log.debug("contentCreditMapper: {}", contentCreditMapper);
+		assertNotNull(mapper);
+		log.debug("mapper: {}", mapper);
 	}
 
 }

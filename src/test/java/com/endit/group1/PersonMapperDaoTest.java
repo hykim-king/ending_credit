@@ -8,23 +8,26 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.PersonVO;
 import com.endit.mapper.PersonMapper;
 
 @SpringBootTest
+@Transactional
 class PersonMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private PersonMapper personMapper;
+	private PersonMapper mapper;
 
 	private PersonVO person01;
 	private PersonVO person02;
@@ -58,19 +61,22 @@ class PersonMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doRetrieve()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 입력
+		// 3. 페이징 조회
 
-		personMapper.deleteAll();
-		assertEquals(0, personMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		personMapper.doSave(person01);
-		personMapper.doSave(person02);
-		personMapper.doSave(person03);
-		assertEquals(3, personMapper.selectAllCount());
+		mapper.doSave(person01);
+		mapper.doSave(person02);
+		mapper.doSave(person03);
+		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 
-		List<PersonVO> list = personMapper.doRetrieve(dto);
+		List<PersonVO> list = mapper.doRetrieve(dto);
 		for (PersonVO vo : list) {
 			log.debug("{}", vo);
 		}
@@ -78,51 +84,59 @@ class PersonMapperDaoTest {
 	}
 
 	@Test
-	void doDelete() {
-		log.debug("---------------------------");
-		log.debug("*doDelete()*");
-		log.debug("---------------------------");
-
-		personMapper.deleteAll();
-		assertEquals(0, personMapper.selectAllCount());
-
-		personMapper.doSave(person01);
-		assertEquals(1, personMapper.selectAllCount());
-
-		personMapper.doSave(person02);
-		assertEquals(2, personMapper.selectAllCount());
-
-		personMapper.doDelete(person01);
-		assertEquals(1, personMapper.selectAllCount());
-	}
-
-	@Test
 	void doUpdate() {
 		log.debug("---------------------------");
 		log.debug("*doUpdate()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건조회 후 수정
+		// 4. update
+		// 5. 재조회 후 비교
 
-		personMapper.deleteAll();
-		assertEquals(0, personMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = personMapper.doSave(person01);
+		int flag = mapper.doSave(person01);
 		assertEquals(1, flag);
-		assertEquals(1, personMapper.selectAllCount());
+		assertEquals(1, mapper.totalCnt());
 
-		PersonVO outVO01 = personMapper.doSelectOne(person01);
-		assertNotNull(outVO01);
+		PersonVO updateVO = mapper.doSelectOne(person01);
+		assertNotNull(updateVO);
 
-		String upString = "_U";
-		outVO01.setNameKo(outVO01.getNameKo() + upString);
-		outVO01.setNameOrg(outVO01.getNameOrg() + upString);
-		outVO01.setProfileImageUrl(outVO01.getProfileImageUrl() + upString);
+		String updateStr = "_U";
+		updateVO.setNameKo(updateVO.getNameKo() + updateStr);
+		updateVO.setNameOrg(updateVO.getNameOrg() + updateStr);
+		updateVO.setProfileImageUrl(updateVO.getProfileImageUrl() + updateStr);
 
-		flag = personMapper.doUpdate(outVO01);
+		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		PersonVO resultVO01 = personMapper.doSelectOne(outVO01);
-		assertNotNull(resultVO01);
-		isSameData(resultVO01, outVO01);
+		PersonVO outVO = mapper.doSelectOne(updateVO);
+		assertNotNull(outVO);
+		isSameData(updateVO, outVO);
+	}
+
+	@Test
+	void doDelete() {
+		log.debug("---------------------------");
+		log.debug("*doDelete()*");
+		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건삭제
+		// 4. 건수비교
+
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
+
+		int flag = mapper.doSave(person01);
+		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+
+		flag = mapper.doDelete(person01);
+		assertEquals(1, flag);
+		assertEquals(0, mapper.totalCnt());
 	}
 
 	@Test
@@ -130,26 +144,30 @@ class PersonMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSave()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 건수비교 / 외부ID 조회
 
-		personMapper.deleteAll();
-		assertEquals(0, personMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = personMapper.doSave(person01);
+		int flag = mapper.doSave(person01);
 		assertEquals(1, flag);
-		assertEquals(1, personMapper.selectAllCount());
+		assertEquals(1, mapper.totalCnt());
+		assertEquals(true, person01.getPersonId() > 0);
 		log.debug("saved personId(person01)={}", person01.getPersonId());
 
-		flag = personMapper.doSave(person02);
+		flag = mapper.doSave(person02);
 		assertEquals(1, flag);
-		assertEquals(2, personMapper.selectAllCount());
+		assertEquals(2, mapper.totalCnt());
 
-		flag = personMapper.doSave(person03);
+		flag = mapper.doSave(person03);
 		assertEquals(1, flag);
-		assertEquals(3, personMapper.selectAllCount());
+		assertEquals(3, mapper.totalCnt());
 
-		Integer foundId = personMapper.findPersonIdByExternal(person01.getExternalId());
+		Integer foundId = mapper.findPersonIdByExternal(person01.getExternalId());
 		assertEquals(person01.getPersonId(), foundId.intValue());
-		assertNull(personMapper.findPersonIdByExternal("NOT_EXISTS"));
+		assertNull(mapper.findPersonIdByExternal("NOT_EXISTS"));
 	}
 
 	@Test
@@ -157,38 +175,45 @@ class PersonMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSelectOne()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 단건조회 후 비교
 
-		personMapper.deleteAll();
-		assertEquals(0, personMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		personMapper.doSave(person01);
-		personMapper.doSave(person02);
-		personMapper.doSave(person03);
-		assertEquals(3, personMapper.selectAllCount());
+		mapper.doSave(person01);
+		mapper.doSave(person02);
+		mapper.doSave(person03);
+		assertEquals(3, mapper.totalCnt());
 
-		PersonVO outVO01 = personMapper.doSelectOne(person01);
+		PersonVO outVO01 = mapper.doSelectOne(person01);
 		assertNotNull(outVO01);
 
-		PersonVO outVO02 = personMapper.doSelectOne(person02);
-		PersonVO outVO03 = personMapper.doSelectOne(person03);
+		PersonVO outVO02 = mapper.doSelectOne(person02);
+		assertNotNull(outVO02);
 
-		isSameData(outVO01, person01);
-		isSameData(outVO02, person02);
-		isSameData(outVO03, person03);
+		PersonVO outVO03 = mapper.doSelectOne(person03);
+		assertNotNull(outVO03);
+
+		isSameData(person01, outVO01);
+		isSameData(person02, outVO02);
+		isSameData(person03, outVO03);
 	}
 
-	private void isSameData(PersonVO outVO, PersonVO person) {
-		assertEquals(outVO.getPersonId(), person.getPersonId());
-		assertEquals(outVO.getExternalId(), person.getExternalId());
-		assertEquals(outVO.getNameKo(), person.getNameKo());
-		assertEquals(outVO.getNameOrg(), person.getNameOrg());
-		assertEquals(outVO.getProfileImageUrl(), person.getProfileImageUrl());
+	private void isSameData(PersonVO expected, PersonVO actual) {
+		assertEquals(expected.getPersonId(), actual.getPersonId());
+		assertEquals(expected.getExternalId(), actual.getExternalId());
+		assertEquals(expected.getNameKo(), actual.getNameKo());
+		assertEquals(expected.getNameOrg(), actual.getNameOrg());
+		assertEquals(expected.getProfileImageUrl(), actual.getProfileImageUrl());
 	}
 
 	@Test
+	@DisplayName("bean테스트")
 	void beans() {
-		assertNotNull(personMapper);
-		log.debug("personMapper: {}", personMapper);
+		assertNotNull(mapper);
+		log.debug("mapper: {}", mapper);
 	}
 
 }

@@ -16,5 +16,5 @@ public interface PersonMapper extends WorkDiv<PersonVO> {
 	int deleteAll();
 
 	//테스트용
-	int selectAllCount();
+	int totalCnt();
 }

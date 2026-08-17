@@ -60,7 +60,7 @@
 
 	<insert id="doSave" parameterType="GenreVO">
 		<selectKey keyProperty="genreId" order="BEFORE" resultType="int">
-			SELECT GENRE_SEQ.NEXTVAL
+			SELECT SEQ_GENRE.NEXTVAL
 			  FROM dual
 		</selectKey>
 		INSERT INTO genre (
@@ -90,7 +90,7 @@
 		DELETE FROM genre
 	</delete>
 
-	<select id="selectAllCount" resultType="int">
+	<select id="totalCnt" resultType="int">
 		SELECT COUNT(*)
 		  FROM genre
 	</select>

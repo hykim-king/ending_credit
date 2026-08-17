@@ -8,23 +8,26 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.GenreVO;
 import com.endit.mapper.GenreMapper;
 
 @SpringBootTest
+@Transactional
 class GenreMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private GenreMapper genreMapper;
+	private GenreMapper mapper;
 
 	private GenreVO genre01;
 	private GenreVO genre02;
@@ -41,9 +44,9 @@ class GenreMapperDaoTest {
 		int seq = 0;
 		dto = new DTO();
 
-		genre01 = new GenreVO(seq, "28", "액션");
-		genre02 = new GenreVO(seq, "35", "코미디");
-		genre03 = new GenreVO(seq, "18", "드라마");
+		genre01 = new GenreVO(seq, "T_28", "테스트액션");
+		genre02 = new GenreVO(seq, "T_35", "테스트코미디");
+		genre03 = new GenreVO(seq, "T_18", "테스트드라마");
 	}
 
 	@AfterEach
@@ -58,19 +61,22 @@ class GenreMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doRetrieve()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 입력
+		// 3. 페이징 조회
 
-		genreMapper.deleteAll();
-		assertEquals(0, genreMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		genreMapper.doSave(genre01);
-		genreMapper.doSave(genre02);
-		genreMapper.doSave(genre03);
-		assertEquals(3, genreMapper.selectAllCount());
+		mapper.doSave(genre01);
+		mapper.doSave(genre02);
+		mapper.doSave(genre03);
+		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 
-		List<GenreVO> list = genreMapper.doRetrieve(dto);
+		List<GenreVO> list = mapper.doRetrieve(dto);
 		for (GenreVO vo : list) {
 			log.debug("{}", vo);
 		}
@@ -78,48 +84,56 @@ class GenreMapperDaoTest {
 	}
 
 	@Test
-	void doDelete() {
-		log.debug("---------------------------");
-		log.debug("*doDelete()*");
-		log.debug("---------------------------");
-
-		genreMapper.deleteAll();
-		assertEquals(0, genreMapper.selectAllCount());
-
-		genreMapper.doSave(genre01);
-		assertEquals(1, genreMapper.selectAllCount());
-
-		genreMapper.doSave(genre02);
-		assertEquals(2, genreMapper.selectAllCount());
-
-		genreMapper.doDelete(genre01);
-		assertEquals(1, genreMapper.selectAllCount());
-	}
-
-	@Test
 	void doUpdate() {
 		log.debug("---------------------------");
 		log.debug("*doUpdate()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건조회 후 수정
+		// 4. update
+		// 5. 재조회 후 비교
 
-		genreMapper.deleteAll();
-		assertEquals(0, genreMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = genreMapper.doSave(genre01);
+		int flag = mapper.doSave(genre01);
 		assertEquals(1, flag);
-		assertEquals(1, genreMapper.selectAllCount());
+		assertEquals(1, mapper.totalCnt());
 
-		GenreVO outVO01 = genreMapper.doSelectOne(genre01);
-		assertNotNull(outVO01);
+		GenreVO updateVO = mapper.doSelectOne(genre01);
+		assertNotNull(updateVO);
 
-		outVO01.setName(outVO01.getName() + "_U");
+		updateVO.setName(updateVO.getName() + "_U");
 
-		flag = genreMapper.doUpdate(outVO01);
+		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		GenreVO resultVO01 = genreMapper.doSelectOne(outVO01);
-		assertNotNull(resultVO01);
-		isSameData(resultVO01, outVO01);
+		GenreVO outVO = mapper.doSelectOne(updateVO);
+		assertNotNull(outVO);
+		isSameData(updateVO, outVO);
+	}
+
+	@Test
+	void doDelete() {
+		log.debug("---------------------------");
+		log.debug("*doDelete()*");
+		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 단건등록
+		// 3. 단건삭제
+		// 4. 건수비교
+
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
+
+		int flag = mapper.doSave(genre01);
+		assertEquals(1, flag);
+		assertEquals(1, mapper.totalCnt());
+
+		flag = mapper.doDelete(genre01);
+		assertEquals(1, flag);
+		assertEquals(0, mapper.totalCnt());
 	}
 
 	@Test
@@ -127,26 +141,30 @@ class GenreMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSave()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 건수비교 / 외부ID 조회
 
-		genreMapper.deleteAll();
-		assertEquals(0, genreMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		int flag = genreMapper.doSave(genre01);
+		int flag = mapper.doSave(genre01);
 		assertEquals(1, flag);
-		assertEquals(1, genreMapper.selectAllCount());
+		assertEquals(1, mapper.totalCnt());
+		assertEquals(true, genre01.getGenreId() > 0);
 		log.debug("saved genreId(genre01)={}", genre01.getGenreId());
 
-		flag = genreMapper.doSave(genre02);
+		flag = mapper.doSave(genre02);
 		assertEquals(1, flag);
-		assertEquals(2, genreMapper.selectAllCount());
+		assertEquals(2, mapper.totalCnt());
 
-		flag = genreMapper.doSave(genre03);
+		flag = mapper.doSave(genre03);
 		assertEquals(1, flag);
-		assertEquals(3, genreMapper.selectAllCount());
+		assertEquals(3, mapper.totalCnt());
 
-		Integer foundId = genreMapper.findGenreIdByExternal(genre01.getExternalGenreId());
+		Integer foundId = mapper.findGenreIdByExternal(genre01.getExternalGenreId());
 		assertEquals(genre01.getGenreId(), foundId.intValue());
-		assertNull(genreMapper.findGenreIdByExternal("NOT_EXISTS"));
+		assertNull(mapper.findGenreIdByExternal("NOT_EXISTS"));
 	}
 
 	@Test
@@ -154,36 +172,43 @@ class GenreMapperDaoTest {
 		log.debug("---------------------------");
 		log.debug("*doSelectOne()*");
 		log.debug("---------------------------");
+		// 1. 전체삭제
+		// 2. 3건 등록
+		// 3. 단건조회 후 비교
 
-		genreMapper.deleteAll();
-		assertEquals(0, genreMapper.selectAllCount());
+		mapper.deleteAll();
+		assertEquals(0, mapper.totalCnt());
 
-		genreMapper.doSave(genre01);
-		genreMapper.doSave(genre02);
-		genreMapper.doSave(genre03);
-		assertEquals(3, genreMapper.selectAllCount());
+		mapper.doSave(genre01);
+		mapper.doSave(genre02);
+		mapper.doSave(genre03);
+		assertEquals(3, mapper.totalCnt());
 
-		GenreVO outVO01 = genreMapper.doSelectOne(genre01);
+		GenreVO outVO01 = mapper.doSelectOne(genre01);
 		assertNotNull(outVO01);
 
-		GenreVO outVO02 = genreMapper.doSelectOne(genre02);
-		GenreVO outVO03 = genreMapper.doSelectOne(genre03);
+		GenreVO outVO02 = mapper.doSelectOne(genre02);
+		assertNotNull(outVO02);
 
-		isSameData(outVO01, genre01);
-		isSameData(outVO02, genre02);
-		isSameData(outVO03, genre03);
+		GenreVO outVO03 = mapper.doSelectOne(genre03);
+		assertNotNull(outVO03);
+
+		isSameData(genre01, outVO01);
+		isSameData(genre02, outVO02);
+		isSameData(genre03, outVO03);
 	}
 
-	private void isSameData(GenreVO outVO, GenreVO genre) {
-		assertEquals(outVO.getGenreId(), genre.getGenreId());
-		assertEquals(outVO.getExternalGenreId(), genre.getExternalGenreId());
-		assertEquals(outVO.getName(), genre.getName());
+	private void isSameData(GenreVO expected, GenreVO actual) {
+		assertEquals(expected.getGenreId(), actual.getGenreId());
+		assertEquals(expected.getExternalGenreId(), actual.getExternalGenreId());
+		assertEquals(expected.getName(), actual.getName());
 	}
 
 	@Test
+	@DisplayName("bean테스트")
 	void beans() {
-		assertNotNull(genreMapper);
-		log.debug("genreMapper: {}", genreMapper);
+		assertNotNull(mapper);
+		log.debug("mapper: {}", mapper);
 	}
 
 }

@@ -17,5 +17,5 @@ public interface ContentMapper extends WorkDiv<ContentVO> {
 	int deleteAll();
 
 	//테스트용
-	int selectAllCount();
+	int totalCnt();
 }

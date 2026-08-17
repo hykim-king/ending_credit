@@ -56,7 +56,7 @@
 
 	<insert id="doSave" parameterType="ContentImageVO">
 		<selectKey keyProperty="imageId" order="BEFORE" resultType="int">
-			SELECT CONTENT_IMAGE_SEQ.NEXTVAL
+			SELECT SEQ_CONTENT_IMAGE.NEXTVAL
 			  FROM dual
 		</selectKey>
 		INSERT INTO content_image (
@@ -88,7 +88,7 @@
 		DELETE FROM content_image
 	</delete>
 
-	<select id="selectAllCount" resultType="int">
+	<select id="totalCnt" resultType="int">
 		SELECT COUNT(*)
 		  FROM content_image
 	</select>

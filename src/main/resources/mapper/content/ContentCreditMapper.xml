@@ -63,7 +63,7 @@
 
 	<insert id="doSave" parameterType="ContentCreditVO">
 		<selectKey keyProperty="creditId" order="BEFORE" resultType="int">
-			SELECT CONTENT_CREDIT_SEQ.NEXTVAL
+			SELECT SEQ_CONTENT_CREDIT.NEXTVAL
 			  FROM dual
 		</selectKey>
 		INSERT INTO content_credit (
@@ -102,7 +102,7 @@
 		DELETE FROM content_credit
 	</delete>
 
-	<select id="selectAllCount" resultType="int">
+	<select id="totalCnt" resultType="int">
 		SELECT COUNT(*)
 		  FROM content_credit
 	</select>

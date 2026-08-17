@@ -71,7 +71,7 @@
 
 	<insert id="doSave" parameterType="PersonVO">
 		<selectKey keyProperty="personId" order="BEFORE" resultType="int">
-			SELECT PERSON_SEQ.NEXTVAL
+			SELECT SEQ_PERSON.NEXTVAL
 			  FROM dual
 		</selectKey>
 		INSERT INTO person (
@@ -112,7 +112,7 @@
 		DELETE FROM person
 	</delete>
 
-	<select id="selectAllCount" resultType="int">
+	<select id="totalCnt" resultType="int">
 		SELECT COUNT(*)
 		  FROM person
 	</select>

@@ -44,8 +44,7 @@
 			       tt1.country,
 			       tt1.poster_url,
 			       tt1.backdrop_url,
-			       TO_CHAR(tt1.created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt,
-			       TO_CHAR(tt1.updated_dt, 'YYYY-MM-DD HH24:MI:SS') updated_dt
+			       TO_CHAR(tt1.created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt
 			  FROM (
 					SELECT ROWNUM rnum, t1.*
 					  FROM (
@@ -76,15 +75,14 @@
 		       country,
 		       poster_url,
 		       backdrop_url,
-		       TO_CHAR(created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt,
-		       TO_CHAR(updated_dt, 'YYYY-MM-DD HH24:MI:SS') updated_dt
+		       TO_CHAR(created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt
 		  FROM content
 		 WHERE content_id = #{contentId}
 	</select>
 
 	<insert id="doSave" parameterType="ContentVO">
 		<selectKey keyProperty="contentId" order="BEFORE" resultType="int">
-			SELECT CONTENT_SEQ.NEXTVAL
+			SELECT SEQ_CONTENT.NEXTVAL
 			  FROM dual
 		</selectKey>
 		INSERT INTO content (
@@ -98,8 +96,7 @@
 			country,
 			poster_url,
 			backdrop_url,
-			created_dt,
-			updated_dt
+			created_dt
 		) VALUES (
 			#{contentId},
 			#{externalId, jdbcType=VARCHAR},
@@ -118,8 +115,7 @@
 			#{country, jdbcType=NVARCHAR},
 			#{posterUrl, jdbcType=VARCHAR},
 			#{backdropUrl, jdbcType=VARCHAR},
-			SYSDATE,
-			NULL
+			SYSDATE
 		)
 	</insert>
 
@@ -141,8 +137,7 @@
 		       runtime_min  = #{runtimeMin, jdbcType=INTEGER},
 		       country      = #{country, jdbcType=NVARCHAR},
 		       poster_url   = #{posterUrl, jdbcType=VARCHAR},
-		       backdrop_url = #{backdropUrl, jdbcType=VARCHAR},
-		       updated_dt   = SYSDATE
+		       backdrop_url = #{backdropUrl, jdbcType=VARCHAR}
 		 WHERE content_id = #{contentId}
 	</update>
 
@@ -155,7 +150,7 @@
 		DELETE FROM content
 	</delete>
 
-	<select id="selectAllCount" resultType="int">
+	<select id="totalCnt" resultType="int">
 		SELECT COUNT(*)
 		  FROM content
 	</select>
