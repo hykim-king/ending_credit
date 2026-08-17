@@ -1,7 +1,5 @@
 package com.endit.domain;
 
-import java.time.LocalDateTime;
-
 public class NoticeVO {
 
     private Long noticeId;
@@ -9,11 +7,11 @@ public class NoticeVO {
     private String content;
     private String important;
     private String status;
-    private Long viewCount;
+    private int viewCount;
     private Long createdId;
-    private LocalDateTime createdDt;
+    private String createdDt;
     private Long updatedId;
-    private LocalDateTime updatedDt;
+    private String updatedDt;
 
     public NoticeVO() {
     }
@@ -58,11 +56,11 @@ public class NoticeVO {
         this.status = status;
     }
 
-    public Long getViewCount() {
+    public int getViewCount() {
         return viewCount;
     }
 
-    public void setViewCount(Long viewCount) {
+    public void setViewCount(int viewCount) {
         this.viewCount = viewCount;
     }
 
@@ -74,11 +72,11 @@ public class NoticeVO {
         this.createdId = createdId;
     }
 
-    public LocalDateTime getCreatedDt() {
+    public String getCreatedDt() {
         return createdDt;
     }
 
-    public void setCreatedDt(LocalDateTime createdDt) {
+    public void setCreatedDt(String createdDt) {
         this.createdDt = createdDt;
     }
 
@@ -90,11 +88,11 @@ public class NoticeVO {
         this.updatedId = updatedId;
     }
 
-    public LocalDateTime getUpdatedDt() {
+    public String getUpdatedDt() {
         return updatedDt;
     }
 
-    public void setUpdatedDt(LocalDateTime updatedDt) {
+    public void setUpdatedDt(String updatedDt) {
         this.updatedDt = updatedDt;
     }
 
