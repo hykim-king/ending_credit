@@ -1,6 +1,6 @@
 package com.endit.mapper;
 
-import java.util.List; 
+import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 
@@ -9,18 +9,21 @@ import com.endit.domain.NoticeVO;
 @Mapper
 public interface NoticeMapper {
 
-    // 등록
-    int doSave(NoticeVO inVO);
+    /** 공지 등록 */
+    int insertNotice(NoticeVO notice);
 
-    // 단건 조회
-    NoticeVO doSelectOne(Long noticeId);
+    /** 공지 단건 조회 */
+    NoticeVO selectNoticeById(Long noticeId);
 
-    // 전체 조회
-    List<NoticeVO> doRetrieve();
+    /** 공지 목록 조회 */
+    List<NoticeVO> selectNoticeList();
 
-    // 수정
-    int doUpdate(NoticeVO inVO);
+    /** 공지 수정 */
+    int updateNotice(NoticeVO notice);
 
-    // 삭제
-    int doDelete(Long noticeId);
+    /** 조회수 1 증가 */
+    int increaseViewCount(Long noticeId);
+
+    /** 공지 삭제 */
+    int deleteNotice(Long noticeId);
 }
