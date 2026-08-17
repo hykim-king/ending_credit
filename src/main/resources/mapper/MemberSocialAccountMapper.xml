@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" " http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.MemberSocialAccountMapper">
+
+    <insert id="insertSocialAccount" parameterType="MemberSocialAccountVO">
+        <selectKey keyProperty="memberSocialAccountId" resultType="long" order="BEFORE">
+            SELECT SEQ_MEMBER_SOCIAL_ACCOUNT.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO MEMBER_SOCIAL_ACCOUNT (
+            MEMBER_SOCIAL_ACCOUNT_ID,
+            MEMBER_ID,
+            PROVIDER_CODE,
+            PROVIDER_USER_ID,
+            PROVIDER_EMAIL,
+            CONNECTED_DT
+        ) VALUES (
+            #{memberSocialAccountId},
+            #{memberId},
+            #{providerCode},
+            #{providerUserId},
+            #{providerEmail, jdbcType=VARCHAR},
+            SYSDATE
+        )
+    </insert>
+
+    <select id="selectByProvider" resultType="MemberSocialAccountVO">
+        SELECT
+            MEMBER_SOCIAL_ACCOUNT_ID,
+            MEMBER_ID,
+            PROVIDER_CODE,
+            PROVIDER_USER_ID,
+            PROVIDER_EMAIL,
+            TO_CHAR(CONNECTED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CONNECTED_DT
+        FROM MEMBER_SOCIAL_ACCOUNT
+        WHERE PROVIDER_CODE = #{providerCode}
+          AND PROVIDER_USER_ID = #{providerUserId}
+    </select>
+
+</mapper>
