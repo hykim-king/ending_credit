@@ -11,7 +11,6 @@ import org.springframework.context.annotation.Configuration;
 import com.zaxxer.hikari.HikariDataSource;
 
 @Configuration
-@MapperScan("com.endit.mapper")
 public class DataSourceConfig {
 	final Logger log = LoggerFactory.getLogger(getClass());
 	
@@ -19,20 +18,17 @@ public class DataSourceConfig {
 	public DataSource dataSource() {
 		HikariDataSource ds=new HikariDataSource();
 		
-		// //Oracle datasource-개인
-		// ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-		// //ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
-		// ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/xepdb1");
-		// ds.setUsername("endit_test");
-		// //ds.setPassword("pcwk");
-		// ds.setPassword("qwer1234");
-		
+		//Oracle datasource-개인
+		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
+		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
+		ds.setUsername("scott_test");
+		ds.setPassword("pcwk");
 		
 		//Oracle datasource-공용
-		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-		ds.setJdbcUrl("jdbc:oracle:thin:@//218.144.130.138:1522/XE");
-		ds.setUsername("enditpcwk");
-		ds.setPassword("qwer1234");
+//		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
+//		ds.setJdbcUrl("jdbc:oracle:thin:@//192.168.100.30:1522/XE");
+//		ds.setUsername("enditpcwk");
+//		ds.setPassword("qwer1234");
 		
 		//Hikari
 		ds.setPoolName("PCWK-HikariCP");
