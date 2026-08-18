@@ -121,8 +121,4 @@
         SELECT COUNT(*) AS total_cnt FROM report_comment
     </select>
 
-    <delete id="deleteAll">
-        DELETE FROM report_comment
-    </delete>
-
 </mapper>

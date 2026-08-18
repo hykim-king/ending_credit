@@ -10,6 +10,7 @@
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
+ * 2026. 8. 14.  홍선기   deleteAll 제거(테스트가 @Transactional 롤백 방식으로 바뀌어 미사용·전체삭제 위험만 남음)
  * </pre>
  *
  * @author 홍선기
@@ -65,16 +66,4 @@ public interface CommentLikeMapper extends WorkDiv<CommentLikeVO> {
 	 * @return int(총건수)
 	 */
 	int totalCnt();
-
-	/**
-	 *
-	 * <pre>
-	 * Method Name : deleteAll
-	 * Description : JUnit전용: 모든 좋아요 삭제
-	 *               ⚠️ 로컬 개발 DB에서만 사용할 것
-	 * </pre>
-	 *
-	 * @return int(삭제건수)
-	 */
-	int deleteAll();
 }
