@@ -117,8 +117,4 @@
         SELECT COUNT(*) AS total_cnt FROM user_comment
     </select>
 
-    <delete id="deleteAll">
-        DELETE FROM user_comment
-    </delete>
-
 </mapper>
