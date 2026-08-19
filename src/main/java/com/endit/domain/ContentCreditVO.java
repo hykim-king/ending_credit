@@ -11,6 +11,13 @@ public class ContentCreditVO extends DTO {
 	private String character;
 	private int displayOrder;
 
+	private String nameKo;
+	private String nameOrg;
+	private String profileImageUrl;
+	private String titleKo;
+	private String posterUrl;
+	private String releaseYear;
+
 	public ContentCreditVO() {
 		super();
 	}
@@ -74,11 +81,61 @@ public class ContentCreditVO extends DTO {
 		this.displayOrder = displayOrder;
 	}
 
+	public String getNameKo() {
+		return nameKo;
+	}
+
+	public void setNameKo(String nameKo) {
+		this.nameKo = nameKo;
+	}
+
+	public String getNameOrg() {
+		return nameOrg;
+	}
+
+	public void setNameOrg(String nameOrg) {
+		this.nameOrg = nameOrg;
+	}
+
+	public String getProfileImageUrl() {
+		return profileImageUrl;
+	}
+
+	public void setProfileImageUrl(String profileImageUrl) {
+		this.profileImageUrl = profileImageUrl;
+	}
+
+	public String getTitleKo() {
+		return titleKo;
+	}
+
+	public void setTitleKo(String titleKo) {
+		this.titleKo = titleKo;
+	}
+
+	public String getPosterUrl() {
+		return posterUrl;
+	}
+
+	public void setPosterUrl(String posterUrl) {
+		this.posterUrl = posterUrl;
+	}
+
+	public String getReleaseYear() {
+		return releaseYear;
+	}
+
+	public void setReleaseYear(String releaseYear) {
+		this.releaseYear = releaseYear;
+	}
+
 	@Override
 	public String toString() {
 		return "ContentCreditVO [creditId=" + creditId + ", contentId=" + contentId + ", personId=" + personId
-				+ ", role=" + role + ", character=" + character + ", displayOrder=" + displayOrder + ", toString()="
-				+ super.toString() + "]";
+				+ ", role=" + role + ", character=" + character + ", displayOrder=" + displayOrder + ", nameKo="
+				+ nameKo + ", nameOrg=" + nameOrg + ", profileImageUrl=" + profileImageUrl + ", titleKo=" + titleKo
+				+ ", posterUrl=" + posterUrl + ", releaseYear=" + releaseYear + ", toString()=" + super.toString()
+				+ "]";
 	}
 
 }
