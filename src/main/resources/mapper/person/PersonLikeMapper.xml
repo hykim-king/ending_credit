@@ -39,15 +39,25 @@
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="PersonLikeVO">
         SELECT MEMBER_ID,
                PERSON_ID,
-               CREATED_DT
+               CREATED_DT,
+               EXTERNAL_ID,
+               NAME_KO,
+               NAME_ORG,
+               PROFILE_IMAGE_URL
           FROM (
             SELECT PL.MEMBER_ID,
                    PL.PERSON_ID,
                    TO_CHAR(PL.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+                   P.EXTERNAL_ID,
+                   P.NAME_KO,
+                   P.NAME_ORG,
+                   P.PROFILE_IMAGE_URL,
                    ROW_NUMBER() OVER (
                        ORDER BY PL.CREATED_DT DESC, PL.MEMBER_ID DESC, PL.PERSON_ID DESC
                    ) AS RNUM
               FROM PERSON_LIKE PL
+              JOIN PERSON P
+                ON P.PERSON_ID = PL.PERSON_ID
             <where>
                 <if test="searchWord != null and searchWord != ''">
                     <choose>

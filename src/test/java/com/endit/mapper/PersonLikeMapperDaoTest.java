@@ -34,6 +34,7 @@ import com.endit.domain.PersonLikeVO;
  * 2026. 8. 13. jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
+ * 2026. 8. 19. jinyoung    목록 조회용 인물 JOIN 결과 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -188,7 +189,7 @@ class PersonLikeMapperDaoTest {
 		// When: 회원 번호를 조건으로 인물 좋아요 목록을 조회
 		List<PersonLikeVO> list = mapper.doRetrieve(search);
 
-		// Then: 등록한 인물 좋아요가 조회 결과에 포함되어야 함
+		// Then: 등록한 인물 좋아요와 JOIN된 인물 정보가 조회되어야 함
 		assertNotNull(list);
 		assertFalse(list.isEmpty());
 
@@ -202,6 +203,8 @@ class PersonLikeMapperDaoTest {
 				.anyMatch(item ->
 						item.getMemberId() == testData.getMemberId()	// 회원 번호 일치 검증
 						&& item.getPersonId() == testData.getPersonId()	// 인물 번호 일치 검증
+						&& item.getExternalId() != null
+						&& item.getNameOrg() != null
 				));
 	}
 
@@ -299,6 +302,8 @@ class PersonLikeMapperDaoTest {
 		assertNotNull(secondPage);
 		assertEquals(2, firstPage.size());
 		assertEquals(1, secondPage.size());
+		assertTrue(firstPage.stream().allMatch(item -> item.getExternalId() != null && item.getNameOrg() != null));
+		assertTrue(secondPage.stream().allMatch(item -> item.getExternalId() != null && item.getNameOrg() != null));
 
 		log.debug("* firstPageCount: {}건", firstPage.size());
 		log.debug("* secondPageCount: {}건", secondPage.size());
