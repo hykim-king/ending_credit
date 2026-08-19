@@ -44,9 +44,15 @@
         FROM NOTICE
         WHERE NOTICE_ID = #{noticeId}
     </select>
+    
+    <!-- 전체 공지 개수 -->
+    <select id="countNoticeList" resultType="int">
+        SELECT COUNT(*)
+        FROM NOTICE
+    </select>
 
-<!-- 공지 목록 조회 (중요 공지 우선, 최신순) -->
-<select id="selectNoticeList" resultType="NoticeVO">
+    <!-- 공지 목록 조회 (중요 공지 우선, 최신순) -->
+    <select id="selectNoticeList" resultType="NoticeVO">
 
     <bind name="offset" value="(page - 1) * size"/>
 
