@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" " http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.MemberMapper">
+
+    <!-- 회원 등록: SEQ_MEMBER로 memberId 채번 후 insert -->
+    <insert id="insertMember" parameterType="MemberVO">
+        <selectKey keyProperty="memberId" resultType="long" order="BEFORE">
+            SELECT SEQ_MEMBER.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO MEMBER (
+            MEMBER_ID,
+            EMAIL,
+            PASSWORD,
+            NICKNAME,
+            INTRODUCTION,
+            PROFILE_IMG_URL,
+            ROLE,
+            CREATED_DT
+        ) VALUES (
+            #{memberId},
+            #{email},
+            #{password, jdbcType=VARCHAR},
+            #{nickname},
+            #{introduction, jdbcType=VARCHAR},
+            #{profileImgUrl, jdbcType=VARCHAR},
+            NVL(#{role}, 'USER'),
+            SYSDATE
+        )
+    </insert>
+
+    <!-- 회원번호(PK)로 조회 -->
+    <select id="selectMemberById" parameterType="long" resultType="MemberVO">
+        SELECT
+            MEMBER_ID,
+            EMAIL,
+            PASSWORD,
+            NICKNAME,
+            INTRODUCTION,
+            PROFILE_IMG_URL,
+            ROLE,
+            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+        FROM MEMBER
+        WHERE MEMBER_ID = #{memberId}
+    </select>
+
+    <!-- 이메일로 조회 (자체 로그인 / 중복가입 체크) -->
+    <select id="selectMemberByEmail" parameterType="string" resultType="MemberVO">
+        SELECT
+            MEMBER_ID,
+            EMAIL,
+            PASSWORD,
+            NICKNAME,
+            INTRODUCTION,
+            PROFILE_IMG_URL,
+            ROLE,
+            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+        FROM MEMBER
+        WHERE EMAIL = #{email}
+    </select>
+
+    <!-- 닉네임 중복 검사 (Count로 중복시 1반환) -->
+    <select id="countByNickname" parameterType="string" resultType="int">
+        SELECT COUNT(*)
+        FROM MEMBER
+        WHERE NICKNAME = #{nickname}
+    </select>
+
+    <!-- 프로필 수정 (닉네임/소개/프로필이미지 + 수정일시 갱신) -->
+    <update id="updateProfile" parameterType="MemberVO">
+        UPDATE MEMBER
+        SET
+            NICKNAME        = #{nickname},
+            INTRODUCTION    = #{introduction},
+            PROFILE_IMG_URL = #{profileImgUrl},
+            UPDATED_DT      = SYSDATE
+        WHERE MEMBER_ID = #{memberId}
+    </update>
+
+    <!-- 비밀번호 변경 -->
+    <update id="updatePassword">
+        UPDATE MEMBER
+        SET
+            PASSWORD   = #{password},
+            UPDATED_DT = SYSDATE
+        WHERE MEMBER_ID = #{memberId}
+    </update>
+
+    <!-- 회원 삭제 (하드 삭제) -->
+    <delete id="deleteMember" parameterType="long">
+        DELETE FROM MEMBER
+        WHERE MEMBER_ID = #{memberId}
+    </delete>
+
+</mapper>    

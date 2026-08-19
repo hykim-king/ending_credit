@@ -9,5 +9,4 @@ public class EndingCreditApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(EndingCreditApplication.class, args);
 	}
-
 }
