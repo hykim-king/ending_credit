@@ -33,6 +33,7 @@ import com.endit.domain.CollectionLikeVO;
  * 2026. 8. 14. jinyoung    주석, 로그 및 테스트 데이터 선언 정리
  * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
  * 2026. 8. 18. gunwoo      회원별 좋아요 컬렉션 목록 JOIN/페이징 테스트 추가
+ * 2026. 8. 19. jinyoung    페이징 동률 정렬 및 페이지 간 비중복 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -329,11 +330,25 @@ class CollectionLikeDaoTest {
 		// When: pageSize=1로 2페이지(마지막 페이지) 조회
 		List<CollectionLikeItemVO> lastPage =
 				collectionLikeMapper.selectLikedCollectionListByMember(1, 2, 1);
+		List<CollectionLikeItemVO> firstPage =
+				collectionLikeMapper.selectLikedCollectionListByMember(1, 1, 1);
 
-		// Then: 남은 1건만 조회되어야 함
+		// Then: 각 페이지에 한 건씩 조회되고 페이지 간 데이터가 중복되지 않아야 함
 		assertNotNull(lastPage);
+		assertNotNull(firstPage);
+		assertEquals(1, firstPage.size(), "1페이지에는 한 건이 조회되어야 합니다.");
 		assertEquals(1, lastPage.size(), "2페이지에는 남은 1건만 조회되어야 합니다.");
+		assertEquals(like01.getCollectionId(), firstPage.get(0).getCollectionId(),
+				"최신 좋아요가 1페이지에 조회되어야 합니다.");
+		assertEquals(newLike.getCollectionId(), lastPage.get(0).getCollectionId(),
+				"이전 좋아요가 2페이지에 조회되어야 합니다.");
+		assertTrue(firstPage.stream()
+				.noneMatch(firstItem -> lastPage.stream()
+						.anyMatch(lastItem ->
+								lastItem.getCollectionId() == firstItem.getCollectionId())),
+				"페이지 간 동일한 컬렉션이 중복 조회되면 안 됩니다.");
 
+		log.debug("* firstPage: {}", firstPage);
 		log.debug("* lastPage: {}", lastPage);
 	}
 
