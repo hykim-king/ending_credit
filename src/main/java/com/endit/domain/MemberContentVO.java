@@ -10,6 +10,7 @@ package com.endit.domain;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 12.	jinyoung    최초 생성
+ * 2026. 8. 19. jinyoung    목록 조회용 콘텐츠 정보 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -25,6 +26,10 @@ public class MemberContentVO {
 	private String ratedDt;         // 별점 등록·수정 일시
 	private String watchlistDt;     // 보고 싶어요 등록 일시
 	private String updatedDt;       // 최종 수정 일시
+	private String titleKo;         // 영화 국문 제목
+	private String titleOrg;        // 영화 원문 제목
+	private String releaseYear;     // 개봉 연도
+	private String posterUrl;       // 포스터 URL
 
 	public MemberContentVO() {
 		super();
@@ -98,10 +103,43 @@ public class MemberContentVO {
 		this.updatedDt = updatedDt;
 	}
 
+	public String getTitleKo() {
+		return titleKo;
+	}
+
+	public void setTitleKo(String titleKo) {
+		this.titleKo = titleKo;
+	}
+
+	public String getTitleOrg() {
+		return titleOrg;
+	}
+
+	public void setTitleOrg(String titleOrg) {
+		this.titleOrg = titleOrg;
+	}
+
+	public String getReleaseYear() {
+		return releaseYear;
+	}
+
+	public void setReleaseYear(String releaseYear) {
+		this.releaseYear = releaseYear;
+	}
+
+	public String getPosterUrl() {
+		return posterUrl;
+	}
+
+	public void setPosterUrl(String posterUrl) {
+		this.posterUrl = posterUrl;
+	}
+
 	@Override
 	public String toString() {
 		return "MemberContentVO [memberId=" + memberId + ", contentId=" + contentId + ", ratingScore="
 				+ ratingScore + ", watchlist=" + watchlist + ", ratedDt=" + ratedDt + ", watchlistDt=" + watchlistDt
-				+ ", updatedDt=" + updatedDt + "]";
+				+ ", updatedDt=" + updatedDt + ", titleKo=" + titleKo + ", titleOrg=" + titleOrg
+				+ ", releaseYear=" + releaseYear + ", posterUrl=" + posterUrl + "]";
 	}
 }

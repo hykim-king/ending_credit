@@ -71,7 +71,8 @@
            AND CONTENT_ID = #{contentId}
     </delete>
 
-    <!-- searchDiv: 10(회원 번호), 20(콘텐츠 번호), 30(보고 싶어요 여부), 40(별점) -->
+    <!-- searchDiv: 10(회원 번호), 20(콘텐츠 번호), 30(보고 싶어요 여부), 40(별점),
+                    50(회원별 평가 목록), 60(회원별 보고 싶어요 목록) -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="MemberContentVO">
         SELECT MEMBER_ID,
                CONTENT_ID,
@@ -79,7 +80,11 @@
                WATCHLIST,
                RATED_DT,
                WATCHLIST_DT,
-               UPDATED_DT
+               UPDATED_DT,
+               TITLE_KO,
+               TITLE_ORG,
+               RELEASE_YEAR,
+               POSTER_URL
           FROM (
             SELECT MC.MEMBER_ID,
                    MC.CONTENT_ID,
@@ -88,10 +93,28 @@
                    TO_CHAR(MC.RATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS RATED_DT,
                    TO_CHAR(MC.WATCHLIST_DT, 'YYYY-MM-DD HH24:MI:SS') AS WATCHLIST_DT,
                    TO_CHAR(MC.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
+                   C.TITLE_KO,
+                   C.TITLE_ORG,
+                   TO_CHAR(C.RELEASE_YEAR, 'YYYY') AS RELEASE_YEAR,
+                   C.POSTER_URL,
                    ROW_NUMBER() OVER (
-                       ORDER BY MC.UPDATED_DT DESC, MC.MEMBER_ID DESC, MC.CONTENT_ID DESC
+                       ORDER BY
+                       <choose>
+                           <when test="searchDiv == '50'">
+                               MC.RATED_DT DESC,
+                           </when>
+                           <when test="searchDiv == '60'">
+                               MC.WATCHLIST_DT DESC,
+                           </when>
+                           <otherwise>
+                               MC.UPDATED_DT DESC,
+                           </otherwise>
+                       </choose>
+                       MC.MEMBER_ID DESC, MC.CONTENT_ID DESC
                    ) AS RNUM
               FROM MEMBER_CONTENT MC
+              JOIN CONTENT C
+                ON C.CONTENT_ID = MC.CONTENT_ID
             <where>
                 <if test="searchWord != null and searchWord != ''">
                     <choose>
@@ -106,6 +129,14 @@
                         </when>
                         <when test="searchDiv == '40'">
                             AND MC.RATING_SCORE = #{searchWord}
+                        </when>
+                        <when test="searchDiv == '50'">
+                            AND MC.MEMBER_ID = #{searchWord}
+                            AND MC.RATING_SCORE IS NOT NULL
+                        </when>
+                        <when test="searchDiv == '60'">
+                            AND MC.MEMBER_ID = #{searchWord}
+                            AND MC.WATCHLIST = 'Y'
                         </when>
                     </choose>
                 </if>
