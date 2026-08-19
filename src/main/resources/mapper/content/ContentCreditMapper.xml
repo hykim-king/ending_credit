@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  " https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.endit.mapper.ContentCreditMapper">
 
 	<sql id="contentCreditWhere">
@@ -8,13 +8,13 @@
 			<if test="searchWord != null and searchWord != ''">
 				<choose>
 					<when test="searchDiv == '10'">
-						content_id = #{searchWord}
+						cc.content_id = #{searchWord}
 					</when>
 					<when test="searchDiv == '20'">
-						person_id = #{searchWord}
+						cc.person_id = #{searchWord}
 					</when>
 					<when test="searchDiv == '30'">
-						role = #{searchWord}
+						cc.role = #{searchWord}
 					</when>
 				</choose>
 			</if>
@@ -29,15 +29,34 @@
 			       tt1.content_id,
 			       tt1.person_id,
 			       tt1.role,
-			       tt1."CHARACTER" AS character,
-			       tt1.display_order
+			       tt1.character,
+			       tt1.display_order,
+			       tt1.name_ko,
+			       tt1.name_org,
+			       tt1.profile_image_url,
+			       tt1.title_ko,
+			       tt1.poster_url,
+			       tt1.release_year
 			  FROM (
 					SELECT ROWNUM rnum, t1.*
 					  FROM (
-							SELECT *
-							  FROM content_credit
+							SELECT cc.credit_id,
+							       cc.content_id,
+							       cc.person_id,
+							       cc.role,
+							       cc."CHARACTER" AS character,
+							       cc.display_order,
+							       p.name_ko,
+							       p.name_org,
+							       p.profile_image_url,
+							       c.title_ko,
+							       c.poster_url,
+							       TO_CHAR(c.release_year, 'YYYY-MM-DD') release_year
+							  FROM content_credit cc
+							  JOIN person p ON cc.person_id = p.person_id
+							  JOIN content c ON cc.content_id = c.content_id
 							 <include refid="contentCreditWhere"/>
-							 ORDER BY content_id ASC, role ASC, display_order ASC, credit_id ASC
+							 ORDER BY cc.content_id ASC, cc.role ASC, cc.display_order ASC, cc.credit_id ASC
 					) t1
 					<![CDATA[ WHERE ROWNUM <= (#{pageSize} * (#{pageNo} - 1) + #{pageSize}) ]]>
 			) tt1
@@ -45,20 +64,28 @@
 		) A
 		CROSS JOIN (
 			SELECT COUNT(*) total_cnt
-			  FROM content_credit
+			  FROM content_credit cc
 			 <include refid="contentCreditWhere"/>
 		) B
 	</select>
 
 	<select id="doSelectOne" parameterType="ContentCreditVO" resultType="ContentCreditVO">
-		SELECT credit_id,
-		       content_id,
-		       person_id,
-		       role,
-		       "CHARACTER" AS character,
-		       display_order
-		  FROM content_credit
-		 WHERE credit_id = #{creditId}
+		SELECT cc.credit_id,
+		       cc.content_id,
+		       cc.person_id,
+		       cc.role,
+		       cc."CHARACTER" AS character,
+		       cc.display_order,
+		       p.name_ko,
+		       p.name_org,
+		       p.profile_image_url,
+		       c.title_ko,
+		       c.poster_url,
+		       TO_CHAR(c.release_year, 'YYYY-MM-DD') release_year
+		  FROM content_credit cc
+		  JOIN person p ON cc.person_id = p.person_id
+		  JOIN content c ON cc.content_id = c.content_id
+		 WHERE cc.credit_id = #{creditId}
 	</select>
 
 	<insert id="doSave" parameterType="ContentCreditVO">

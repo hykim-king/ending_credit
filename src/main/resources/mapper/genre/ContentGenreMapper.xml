@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  " https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.endit.mapper.ContentGenreMapper">
 
 	<sql id="contentGenreWhere">
@@ -8,10 +8,10 @@
 			<if test="searchWord != null and searchWord != ''">
 				<choose>
 					<when test="searchDiv == '10'">
-						content_id = #{searchWord}
+						cg.content_id = #{searchWord}
 					</when>
 					<when test="searchDiv == '20'">
-						genre_id = #{searchWord}
+						cg.genre_id = #{searchWord}
 					</when>
 				</choose>
 			</if>
@@ -23,14 +23,18 @@
 		  FROM (
 			SELECT tt1.rnum no,
 			       tt1.content_id,
-			       tt1.genre_id
+			       tt1.genre_id,
+			       tt1.genre_name
 			  FROM (
 					SELECT ROWNUM rnum, t1.*
 					  FROM (
-							SELECT *
-							  FROM content_genre
+							SELECT cg.content_id,
+							       cg.genre_id,
+							       g.name AS genre_name
+							  FROM content_genre cg
+							  JOIN genre g ON cg.genre_id = g.genre_id
 							 <include refid="contentGenreWhere"/>
-							 ORDER BY content_id ASC, genre_id ASC
+							 ORDER BY cg.content_id ASC, cg.genre_id ASC
 					) t1
 					<![CDATA[ WHERE ROWNUM <= (#{pageSize} * (#{pageNo} - 1) + #{pageSize}) ]]>
 			) tt1
@@ -38,17 +42,19 @@
 		) A
 		CROSS JOIN (
 			SELECT COUNT(*) total_cnt
-			  FROM content_genre
+			  FROM content_genre cg
 			 <include refid="contentGenreWhere"/>
 		) B
 	</select>
 
 	<select id="doSelectOne" parameterType="ContentGenreVO" resultType="ContentGenreVO">
-		SELECT content_id,
-		       genre_id
-		  FROM content_genre
-		 WHERE content_id = #{contentId}
-		   AND genre_id = #{genreId}
+		SELECT cg.content_id,
+		       cg.genre_id,
+		       g.name AS genre_name
+		  FROM content_genre cg
+		  JOIN genre g ON cg.genre_id = g.genre_id
+		 WHERE cg.content_id = #{contentId}
+		   AND cg.genre_id = #{genreId}
 	</select>
 
 	<insert id="doSave" parameterType="ContentGenreVO">
