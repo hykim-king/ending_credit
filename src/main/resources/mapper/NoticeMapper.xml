@@ -45,22 +45,28 @@
         WHERE NOTICE_ID = #{noticeId}
     </select>
 
-    <!-- 공지 목록 조회 (중요 공지 우선, 최신순) -->
-    <select id="selectNoticeList" resultType="NoticeVO">
-        SELECT
-            NOTICE_ID,
-            TITLE,
-            CONTENT,
-            IMPORTANT,
-            STATUS,
-            VIEW_COUNT,
-            CREATED_ID,
-            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-            UPDATED_ID,
-            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
-        FROM NOTICE
-        ORDER BY IMPORTANT DESC, NOTICE_ID DESC
-    </select>
+<!-- 공지 목록 조회 (중요 공지 우선, 최신순) -->
+<select id="selectNoticeList" resultType="NoticeVO">
+
+    <bind name="offset" value="(page - 1) * size"/>
+
+    SELECT
+        NOTICE_ID,
+        TITLE,
+        CONTENT,
+        IMPORTANT,
+        STATUS,
+        VIEW_COUNT,
+        CREATED_ID,
+        TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+        UPDATED_ID,
+        TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+    FROM NOTICE
+    ORDER BY IMPORTANT DESC, NOTICE_ID DESC
+    OFFSET #{offset} ROWS
+    FETCH NEXT #{size} ROWS ONLY
+
+</select>
 
     <!-- 공지 수정 -->
     <update id="updateNotice" parameterType="NoticeVO">
