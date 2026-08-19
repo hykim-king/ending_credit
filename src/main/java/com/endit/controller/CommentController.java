@@ -53,6 +53,7 @@ public class CommentController {
 	 * <pre>
 	 * Method Name : doRetrieve
 	 * Description : 코멘트 목록 화면 (검색 10=회원ID/20=영화ID/30=컬렉션ID + 페이징)
+	 *               정렬(sort): latest(기본)/likes/rating_desc/rating_asc — 화면설계서 C-04
 	 *
 	 * </pre>
 	 *
@@ -60,6 +61,7 @@ public class CommentController {
 	 * @param searchWord
 	 * @param pageSize
 	 * @param pageNo
+	 * @param sort
 	 * @param model
 	 * @return comment/comment_list
 	 */
@@ -69,19 +71,22 @@ public class CommentController {
 			@RequestParam(required = false, name = "searchWord", defaultValue = "") String searchWord,
 			@RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
 			@RequestParam(name = "pageNo", defaultValue = "1") int pageNo,
+			@RequestParam(name = "sort", defaultValue = "latest") String sort,
 			Model model) {
 		String viewName = "comment/comment_list";
 		log.debug("=============================");
 		log.debug("{}()", "doRetrieve");
-		log.debug("searchDiv: {}, searchWord: {}, pageSize: {}, pageNo: {}", searchDiv, searchWord, pageSize, pageNo);
+		log.debug("searchDiv: {}, searchWord: {}, pageSize: {}, pageNo: {}, sort: {}", searchDiv, searchWord,
+				pageSize, pageNo, sort);
 		log.debug("=============================");
 
-		// 1. 검색·페이징 조건
+		// 1. 검색·페이징·정렬 조건 (정렬은 학원 24장 searchMap 방식 — 허용값 외에는 매퍼가 latest로 처리)
 		DTO dto = new DTO();
 		dto.setSearchDiv(searchDiv);
 		dto.setSearchWord(searchWord);
 		dto.setPageSize(pageSize);
 		dto.setPageNo(pageNo);
+		dto.getSearchMap().put("sort", sort);
 
 		// 2. 목록 조회
 		List<UserCommentVO> list = userCommentService.doRetrieve(dto);
