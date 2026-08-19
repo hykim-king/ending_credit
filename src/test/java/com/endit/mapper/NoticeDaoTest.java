@@ -55,7 +55,11 @@ class NoticeDaoTest {
     void selectNoticeList() {
         noticeMapper.insertNotice(newNotice());
 
-        List<NoticeVO> list = noticeMapper.selectNoticeList();
+        int page = 1;
+        int size = 10;
+
+        List<NoticeVO> list = noticeMapper.selectNoticeList(page, size);
+
         assertNotNull(list);
         assertTrue(list.size() >= 1);
     }
