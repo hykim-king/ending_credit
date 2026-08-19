@@ -1,8 +1,11 @@
 package com.endit.mapper;
 
+import java.util.List;
+
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.endit.cmn.DTO;
 import com.endit.domain.MemberVO;
 
 @Mapper
@@ -29,4 +32,10 @@ public interface MemberMapper {
 
     /** 회원 삭제 (하드 삭제) */
     int deleteMember(Long memberId);	
+    
+    /** 회원 목록 조회 (검색 + 페이징) */
+    List<MemberVO> selectMemberList(DTO dto);
+
+    /** 회원 전체 개수 (검색 조건 반영) */
+    int selectMemberCount(DTO dto);
 }
