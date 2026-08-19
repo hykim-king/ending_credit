@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.CommentLikeMapper">
+
+    <!-- 같은 회원이 같은 코멘트에 두 번 누르면 PK(MEMBER_ID, COMMENT_ID) 위반 -->
+    <insert id="doSave" parameterType="CommentLikeVO">
+        INSERT INTO comment_like (
+            member_id,
+            comment_id,
+            created_dt
+        ) VALUES (
+            #{memberId},
+            #{commentId},
+            SYSDATE )
+    </insert>
+
+    <delete id="doDelete" parameterType="CommentLikeVO">
+        DELETE FROM comment_like
+        WHERE member_id  = #{memberId}
+          AND comment_id = #{commentId}
+    </delete>
+
+    <select id="likeCheck" parameterType="CommentLikeVO"
+        resultType="java.lang.Integer">
+        SELECT COUNT(*) cnt
+          FROM comment_like
+         WHERE member_id  = #{memberId}
+           AND comment_id = #{commentId}
+    </select>
+
+    <select id="getLikeCnt" parameterType="java.lang.Long"
+        resultType="java.lang.Integer">
+        SELECT COUNT(*) cnt
+          FROM comment_like
+         WHERE comment_id = #{commentId}
+    </select>
+
+    <select id="totalCnt" resultType="java.lang.Integer">
+        SELECT COUNT(*) AS total_cnt FROM comment_like
+    </select>
+
+</mapper>
