@@ -32,6 +32,10 @@ public class UserCommentVO extends DTO {
 	private String createdDt;     // 등록일
 	private String updatedDt;     // 수정일
 
+	// join 전용 조회값 (INSERT/UPDATE에는 안 쓰임) — doSelectOne/doRetrieve에서만 채워진다
+	private String authorNickname;  // 작성자 닉네임 (MEMBER.nickname)
+	private String collectionTitle; // 컬렉션명 (컬렉션 코멘트일 때만, 아니면 null)
+
 	public UserCommentVO() {
 		super();
 	}
@@ -113,11 +117,28 @@ public class UserCommentVO extends DTO {
 		this.updatedDt = updatedDt;
 	}
 
+	public String getAuthorNickname() {
+		return authorNickname;
+	}
+
+	public void setAuthorNickname(String authorNickname) {
+		this.authorNickname = authorNickname;
+	}
+
+	public String getCollectionTitle() {
+		return collectionTitle;
+	}
+
+	public void setCollectionTitle(String collectionTitle) {
+		this.collectionTitle = collectionTitle;
+	}
+
 	@Override
 	public String toString() {
 		return "UserCommentVO [commentId=" + commentId + ", memberId=" + memberId + ", contentId=" + contentId
 				+ ", collectionId=" + collectionId + ", commentDetail=" + commentDetail + ", spoiler=" + spoiler
-				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", toString()=" + super.toString() + "]";
+				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", authorNickname=" + authorNickname
+				+ ", collectionTitle=" + collectionTitle + ", toString()=" + super.toString() + "]";
 	}
 
 }

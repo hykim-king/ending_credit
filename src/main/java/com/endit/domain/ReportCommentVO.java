@@ -42,6 +42,10 @@ public class ReportCommentVO extends DTO {
 	private String createdDt;          // 신고 접수일
 	private String processedDt;        // 처리 완료일
 
+	// join 전용 조회값 (INSERT/UPDATE에는 안 쓰임) — doSelectOne/doRetrieve에서만 채워진다
+	private String reporterNickname;  // 신고자 닉네임 (MEMBER.nickname)
+	private String processorNickname; // 처리자 닉네임 (처리 전이면 null)
+
 	public ReportCommentVO() {
 		super();
 	}
@@ -141,12 +145,29 @@ public class ReportCommentVO extends DTO {
 		this.processedDt = processedDt;
 	}
 
+	public String getReporterNickname() {
+		return reporterNickname;
+	}
+
+	public void setReporterNickname(String reporterNickname) {
+		this.reporterNickname = reporterNickname;
+	}
+
+	public String getProcessorNickname() {
+		return processorNickname;
+	}
+
+	public void setProcessorNickname(String processorNickname) {
+		this.processorNickname = processorNickname;
+	}
+
 	@Override
 	public String toString() {
 		return "ReportCommentVO [reportId=" + reportId + ", reportMemberId=" + reportMemberId + ", commentId="
 				+ commentId + ", reason=" + reason + ", detail=" + detail + ", status=" + status
 				+ ", processedByMemberId=" + processedByMemberId + ", processNote=" + processNote + ", createdDt="
-				+ createdDt + ", processedDt=" + processedDt + ", toString()=" + super.toString() + "]";
+				+ createdDt + ", processedDt=" + processedDt + ", reporterNickname=" + reporterNickname
+				+ ", processorNickname=" + processorNickname + ", toString()=" + super.toString() + "]";
 	}
 
 }

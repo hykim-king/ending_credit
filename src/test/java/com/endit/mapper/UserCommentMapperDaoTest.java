@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
@@ -63,6 +64,9 @@ class UserCommentMapperDaoTest {
 
 	@Autowired
 	UserCommentMapper mapper;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 
 	private UserCommentVO comment01; // 회원A → 영화A
 	private UserCommentVO comment02; // 회원A → 영화B (스포일러)
@@ -120,6 +124,12 @@ class UserCommentMapperDaoTest {
 		isSameComment(comment01, outVO);
 		assertNotNull(outVO.getCreatedDt());
 		assertNull(outVO.getUpdatedDt()); // 등록 직후에는 수정일이 없다
+
+		// 4-1. join으로 채워지는 필드 검증 (영화 코멘트라 collectionTitle은 비어야 함)
+		String expectedNickname = jdbcTemplate.queryForObject(
+				"SELECT nickname FROM member WHERE member_id = ?", String.class, MEMBER_A);
+		assertEquals(expectedNickname, outVO.getAuthorNickname());
+		assertNull(outVO.getCollectionTitle());
 
 		// 5.
 		flag = mapper.doSave(comment02);
@@ -294,6 +304,12 @@ class UserCommentMapperDaoTest {
 		int flag = mapper.doSave(comment03);
 		assertEquals(1, flag);
 
+		// 1-1. 컬렉션 코멘트는 collectionTitle이 join으로 채워져야 한다
+		UserCommentVO savedVO = mapper.doSelectOne(comment03);
+		String expectedTitle = jdbcTemplate.queryForObject(
+				"SELECT title FROM collection WHERE collection_id = ?", String.class, COLLECTION_A);
+		assertEquals(expectedTitle, savedVO.getCollectionTitle());
+
 		// 2.
 		UserCommentVO second = new UserCommentVO(0, MEMBER_A, null, COLLECTION_A, "같은 컬렉션에 두 번째",
 				UserCommentVO.SPOILER_NO, null, null);
@@ -312,6 +328,7 @@ class UserCommentMapperDaoTest {
 		log.debug("*beans()*");
 		log.debug("---------------------------");
 		assertNotNull(mapper);
+		assertNotNull(jdbcTemplate);
 		log.debug("mapper: {}", mapper);
 	}
 

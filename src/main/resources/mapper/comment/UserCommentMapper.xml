@@ -3,19 +3,20 @@
 <mapper namespace="com.endit.mapper.UserCommentMapper">
 
     <!-- 검색조건: 목록조회/총건수 양쪽에서 같이 쓴다
-         searchDiv 10: 작성자 회원ID, 20: 영화ID, 30: 컬렉션ID -->
+         searchDiv 10: 작성자 회원ID, 20: 영화ID, 30: 컬렉션ID
+         join 추가로 member_id가 user_comment/member 양쪽에 다 있어서 컬럼 모호(ORA-00918)가 나므로 uc. 별칭을 붙인다 -->
     <sql id="userCommentWhere">
         <where>
          <if test="searchWord != null and searchWord != ''">
              <choose>
                 <when test=" searchDiv == '10' ">
-                    member_id = #{searchWord}
+                    uc.member_id = #{searchWord}
                 </when>
                 <when test=" searchDiv == '20' ">
-                    content_id = #{searchWord}
+                    uc.content_id = #{searchWord}
                 </when>
                 <when test=" searchDiv == '30' ">
-                    collection_id = #{searchWord}
+                    uc.collection_id = #{searchWord}
                 </when>
                 <otherwise>
 
@@ -48,21 +49,27 @@
             SYSDATE )
     </insert>
 
+    <!-- 작성자 닉네임/컬렉션명은 화면설계서(C-04, D-07)상 필요해서 join으로 가져온다.
+         collection_id는 영화 코멘트일 때 null이므로 LEFT JOIN을 쓴다(INNER JOIN이면 그 행이 통째로 사라짐) -->
     <select id="doSelectOne"
             parameterType="UserCommentVO"
             resultType="UserCommentVO">
          SELECT
-             comment_id,
-             member_id,
-             content_id,
-             collection_id,
-             comment_detail,
-             spoiler,
-             TO_CHAR(created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
-             TO_CHAR(updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt
+             uc.comment_id,
+             uc.member_id,
+             uc.content_id,
+             uc.collection_id,
+             uc.comment_detail,
+             uc.spoiler,
+             TO_CHAR(uc.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
+             TO_CHAR(uc.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
+             m.nickname   author_nickname,
+             col.title    collection_title
          FROM
-             user_comment
-         WHERE comment_id = #{commentId}
+             user_comment uc
+             LEFT JOIN member     m   ON uc.member_id     = m.member_id
+             LEFT JOIN collection col ON uc.collection_id = col.collection_id
+         WHERE uc.comment_id = #{commentId}
     </select>
 
     <!-- 수정은 내용과 스포일러 여부만. 대상(영화/컬렉션)은 바꿀 수 없다 -->
@@ -94,21 +101,27 @@
                      tt1.comment_detail,
                      tt1.spoiler,
                      TO_CHAR(tt1.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
-                     TO_CHAR(tt1.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt
+                     TO_CHAR(tt1.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
+                     tt1.author_nickname,
+                     tt1.collection_title
                 FROM(
                       SELECT ROWNUM rnum, t1.*
                         FROM (
-                              SELECT *
-                                FROM user_comment
+                              SELECT uc.*,
+                                     m.nickname   author_nickname,
+                                     col.title    collection_title
+                                FROM user_comment uc
+                                LEFT JOIN member     m   ON uc.member_id     = m.member_id
+                                LEFT JOIN collection col ON uc.collection_id = col.collection_id
                                <include refid="userCommentWhere"></include>
-                               ORDER BY created_dt DESC, comment_id DESC
+                               ORDER BY uc.created_dt DESC, uc.comment_id DESC
                        )t1
                     <![CDATA[    WHERE ROWNUM <= ( #{pageSize} * (#{pageNo} -1 ) + #{pageSize}  )  ]]>
                 )tt1
              <![CDATA[   WHERE rnum >= ( #{pageSize} * (#{pageNo} -1 ) + 1    ) ]]>
            ) A CROSS JOIN (
               SELECT COUNT(*) total_cnt
-                FROM user_comment
+                FROM user_comment uc
                 <include refid="userCommentWhere"></include>
            ) B
     </select>

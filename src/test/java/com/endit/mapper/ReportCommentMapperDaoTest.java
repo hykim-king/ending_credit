@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
@@ -67,6 +68,9 @@ class ReportCommentMapperDaoTest {
 
 	@Autowired
 	UserCommentMapper commentMapper;
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
 
 	private UserCommentVO comment01;  // 신고 대상 코멘트 (회원9 → 영화9, 트랜잭션 안에서 생성)
 	private UserCommentVO comment02;  // 신고 대상 코멘트 (회원9 → 영화10)
@@ -132,6 +136,12 @@ class ReportCommentMapperDaoTest {
 		assertNotNull(outVO.getCreatedDt());
 		assertNull(outVO.getProcessedByMemberId()); // 처리 전이므로 처리자 없음
 		assertNull(outVO.getProcessedDt());
+
+		// 4-1. 신고자 닉네임 join 검증 (처리 전이라 processorNickname은 비어야 함)
+		String expectedReporterNickname = jdbcTemplate.queryForObject(
+				"SELECT nickname FROM member WHERE member_id = ?", String.class, MEMBER_REPORTER);
+		assertEquals(expectedReporterNickname, outVO.getReporterNickname());
+		assertNull(outVO.getProcessorNickname());
 	}
 
 	@Test
@@ -184,6 +194,11 @@ class ReportCommentMapperDaoTest {
 		assertEquals(Long.valueOf(ADMIN_PROCESSOR), outVO.getProcessedByMemberId());
 		assertEquals(report01.getProcessNote(), outVO.getProcessNote());
 		assertNotNull(outVO.getProcessedDt());
+
+		// 3-1. 처리자 지정 후 processorNickname이 join으로 채워지는지 확인
+		String expectedProcessorNickname = jdbcTemplate.queryForObject(
+				"SELECT nickname FROM member WHERE member_id = ?", String.class, ADMIN_PROCESSOR);
+		assertEquals(expectedProcessorNickname, outVO.getProcessorNickname());
 	}
 
 	@Test
@@ -302,6 +317,7 @@ class ReportCommentMapperDaoTest {
 		log.debug("---------------------------");
 		assertNotNull(mapper);
 		assertNotNull(commentMapper);
+		assertNotNull(jdbcTemplate);
 		log.debug("mapper: {}", mapper);
 	}
 

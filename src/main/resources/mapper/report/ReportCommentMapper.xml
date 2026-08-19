@@ -3,19 +3,20 @@
 <mapper namespace="com.endit.mapper.ReportCommentMapper">
 
     <!-- 검색조건: 목록조회/총건수 양쪽에서 같이 쓴다
-         searchDiv 10: 처리상태, 20: 신고사유, 30: 대상 코멘트ID -->
+         searchDiv 10: 처리상태, 20: 신고사유, 30: 대상 코멘트ID
+         join 대비 일관성 있게 rc. 별칭을 붙인다 -->
     <sql id="reportWhere">
         <where>
          <if test="searchWord != null and searchWord != ''">
              <choose>
                 <when test=" searchDiv == '10' ">
-                    status = #{searchWord}
+                    rc.status = #{searchWord}
                 </when>
                 <when test=" searchDiv == '20' ">
-                    reason = #{searchWord}
+                    rc.reason = #{searchWord}
                 </when>
                 <when test=" searchDiv == '30' ">
-                    comment_id = #{searchWord}
+                    rc.comment_id = #{searchWord}
                 </when>
                 <otherwise>
 
@@ -47,23 +48,29 @@
             SYSDATE )
     </insert>
 
+    <!-- 신고자/처리자 닉네임은 화면설계서(AD-10 신고 처리) 상 필요해서 join으로 가져온다.
+         MEMBER를 두 번 조인(reporter/processor)한다. processed_by_member_id는 처리 전이면 null이므로 LEFT JOIN -->
     <select id="doSelectOne"
             parameterType="ReportCommentVO"
             resultType="ReportCommentVO">
          SELECT
-             report_id,
-             report_member_id,
-             comment_id,
-             reason,
-             detail,
-             status,
-             processed_by_member_id,
-             process_note,
-             TO_CHAR(created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
-             TO_CHAR(processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt
+             rc.report_id,
+             rc.report_member_id,
+             rc.comment_id,
+             rc.reason,
+             rc.detail,
+             rc.status,
+             rc.processed_by_member_id,
+             rc.process_note,
+             TO_CHAR(rc.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
+             TO_CHAR(rc.processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt,
+             reporter.nickname  reporter_nickname,
+             processor.nickname processor_nickname
          FROM
-             report_comment
-         WHERE report_id = #{reportId}
+             report_comment rc
+             LEFT JOIN member reporter  ON rc.report_member_id       = reporter.member_id
+             LEFT JOIN member processor ON rc.processed_by_member_id = processor.member_id
+         WHERE rc.report_id = #{reportId}
     </select>
 
     <!-- 신고 처리(승인/반려).
@@ -98,21 +105,27 @@
                      tt1.processed_by_member_id,
                      tt1.process_note,
                      TO_CHAR(tt1.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
-                     TO_CHAR(tt1.processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt
+                     TO_CHAR(tt1.processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt,
+                     tt1.reporter_nickname,
+                     tt1.processor_nickname
                 FROM(
                       SELECT ROWNUM rnum, t1.*
                         FROM (
-                              SELECT *
-                                FROM report_comment
+                              SELECT rc.*,
+                                     reporter.nickname  reporter_nickname,
+                                     processor.nickname processor_nickname
+                                FROM report_comment rc
+                                LEFT JOIN member reporter  ON rc.report_member_id       = reporter.member_id
+                                LEFT JOIN member processor ON rc.processed_by_member_id = processor.member_id
                                <include refid="reportWhere"></include>
-                               ORDER BY created_dt DESC, report_id DESC
+                               ORDER BY rc.created_dt DESC, rc.report_id DESC
                        )t1
                     <![CDATA[    WHERE ROWNUM <= ( #{pageSize} * (#{pageNo} -1 ) + #{pageSize}  )  ]]>
                 )tt1
              <![CDATA[   WHERE rnum >= ( #{pageSize} * (#{pageNo} -1 ) + 1    ) ]]>
            ) A CROSS JOIN (
               SELECT COUNT(*) total_cnt
-                FROM report_comment
+                FROM report_comment rc
                 <include refid="reportWhere"></include>
            ) B
     </select>
