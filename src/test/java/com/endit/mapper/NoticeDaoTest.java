@@ -33,6 +33,56 @@ class NoticeDaoTest {
         n.setUpdatedId(WRITER_ID);
         return n;
     }
+    
+    @Test
+    @DisplayName("공지 목록 페이징 - 페이지 크기만큼 조회된다")
+    void selectNoticeList_paging() {
+        // given: 공지 3개 등록
+        for (int i = 0; i < 3; i++) {
+            noticeMapper.insertNotice(newNotice());
+        }
+
+        // when: 1페이지, 2개씩 조회
+        List<NoticeVO> list = noticeMapper.selectNoticeList(1, 2);
+
+        // then: 최대 2개
+        assertNotNull(list);
+        assertTrue(list.size() <= 2);
+    }
+
+    @Test
+    @DisplayName("공지 전체 개수를 조회할 수 있다")
+    void countNoticeList() {
+        // given: 등록 전 개수
+        int before = noticeMapper.countNoticeList();
+
+        // 공지 1개 등록
+        noticeMapper.insertNotice(newNotice());
+
+        // then: 1 늘어남
+        int after = noticeMapper.countNoticeList();
+        assertEquals(before + 1, after);
+    }
+
+    @Test
+    @DisplayName("2페이지 조회 시 1페이지와 다른 데이터가 나온다")
+    void selectNoticeList_secondPage() {
+        // given: 공지 4개 등록
+        for (int i = 0; i < 4; i++) {
+            noticeMapper.insertNotice(newNotice());
+        }
+
+        // when: 1페이지 2개, 2페이지 2개
+        List<NoticeVO> page1 = noticeMapper.selectNoticeList(1, 2);
+        List<NoticeVO> page2 = noticeMapper.selectNoticeList(2, 2);
+
+        // then: 두 페이지의 첫 공지 번호가 다름
+        assertNotNull(page1);
+        assertNotNull(page2);
+        if (!page1.isEmpty() && !page2.isEmpty()) {
+            assertNotEquals(page1.get(0).getNoticeId(), page2.get(0).getNoticeId());
+        }
+    }
 
     @Test
     @DisplayName("공지 등록 후 조회")
@@ -55,7 +105,11 @@ class NoticeDaoTest {
     void selectNoticeList() {
         noticeMapper.insertNotice(newNotice());
 
-        List<NoticeVO> list = noticeMapper.selectNoticeList();
+        int page = 1;
+        int size = 10;
+
+        List<NoticeVO> list = noticeMapper.selectNoticeList(page, size);
+
         assertNotNull(list);
         assertTrue(list.size() >= 1);
     }

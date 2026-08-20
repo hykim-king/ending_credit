@@ -2,6 +2,8 @@ package com.endit.mapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.endit.cmn.DTO;
 import com.endit.domain.MemberVO;
 import com.endit.mapper.MemberMapper;
 
@@ -186,6 +189,75 @@ class MemberDaoTest {
         
         assertEquals(1, deleted);
         assertNull(memberMapper.selectMemberById(id));
+    }
+    
+    @Test
+    @DisplayName("회원 목록 페이징 조회 - 1페이지 10개")
+    void selectMemberList() {
+        DTO dto = new DTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+
+        List<MemberVO> list = memberMapper.selectMemberList(dto);
+
+        assertNotNull(list);
+        assertTrue(list.size() <= 10);   // 한 페이지 최대 10개
+    }
+
+    @Test
+    @DisplayName("회원 전체 개수 조회")
+    void selectMemberCount() {
+        DTO dto = new DTO();
+
+        int count = memberMapper.selectMemberCount(dto);
+
+        assertTrue(count >= 0);
+    }
+
+    @Test
+    @DisplayName("이메일로 검색하면 해당 회원만 조회된다")
+    void selectMemberList_searchByEmail() {
+        DTO dto = new DTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        dto.setSearchDiv("email");
+        dto.setSearchWord("admin1");   // admin1@endit.com
+
+        List<MemberVO> list = memberMapper.selectMemberList(dto);
+
+        assertNotNull(list);
+        assertTrue(list.size() >= 1);
+        assertTrue(list.get(0).getEmail().contains("admin1"));
+    }
+
+    @Test
+    @DisplayName("닉네임으로 검색하면 해당 회원만 조회된다")
+    void selectMemberList_searchByNickname() {
+        DTO dto = new DTO();
+        dto.setPageNo(1);
+        dto.setPageSize(10);
+        dto.setSearchDiv("nickname");
+        dto.setSearchWord("관리자");   // ENDIT수석관리자 등
+
+        List<MemberVO> list = memberMapper.selectMemberList(dto);
+
+        assertNotNull(list);
+        assertTrue(list.size() >= 1);
+    }
+
+    @Test
+    @DisplayName("검색어와 개수가 일치한다 - 목록과 카운트 조건 동일")
+    void listCountMatch() {
+        DTO dto = new DTO();
+        dto.setPageNo(1);
+        dto.setPageSize(100);        // 넉넉히 잡아 전체를 한 페이지에
+        dto.setSearchDiv("email");
+        dto.setSearchWord("endit.com");   // 다 포함
+
+        List<MemberVO> list = memberMapper.selectMemberList(dto);
+        int count = memberMapper.selectMemberCount(dto);
+
+        assertEquals(count, list.size());   // 목록 개수 == 카운트
     }
 
 }

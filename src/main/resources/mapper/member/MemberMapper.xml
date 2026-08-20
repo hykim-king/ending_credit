@@ -2,6 +2,63 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" " http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.endit.mapper.MemberMapper">
 
+    <!-- 회원 검색 조건 (목록/카운트 공통) -->
+    <sql id="memberWhere">
+        <if test="searchWord != null and searchWord != ''">
+            <choose>
+                <when test="searchDiv == 'email'">
+                    WHERE EMAIL LIKE '%' || #{searchWord} || '%'
+                </when>
+                <when test="searchDiv == 'nickname'">
+                    WHERE NICKNAME LIKE '%' || #{searchWord} || '%'
+                </when>
+                <otherwise>
+                    WHERE (EMAIL LIKE '%' || #{searchWord} || '%'
+                        OR NICKNAME LIKE '%' || #{searchWord} || '%')
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- 회원 목록 조회 (검색 + 페이징, 가입 최신순) -->
+    <select id="selectMemberList" parameterType="com.endit.cmn.DTO" resultType="MemberVO">
+        SELECT
+            MEMBER_ID,
+            EMAIL,
+            NICKNAME,
+            INTRODUCTION,
+            PROFILE_IMG_URL,
+            ROLE,
+            CREATED_DT,
+            UPDATED_DT
+        FROM (
+            SELECT ROWNUM rnum, t1.*
+            FROM (
+                SELECT
+                    MEMBER_ID,
+                    EMAIL,
+                    NICKNAME,
+                    INTRODUCTION,
+                    PROFILE_IMG_URL,
+                    ROLE,
+                    TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+                    TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+                FROM MEMBER
+                <include refid="memberWhere"/>
+                ORDER BY CREATED_DT DESC
+            ) t1
+            <![CDATA[ WHERE ROWNUM <= (#{pageSize} * (#{pageNo} - 1) + #{pageSize}) ]]>
+        )
+        <![CDATA[ WHERE rnum >= (#{pageSize} * (#{pageNo} - 1) + 1) ]]>
+    </select>
+
+    <!-- 회원 전체 개수 (검색 조건 반영) -->
+    <select id="selectMemberCount" parameterType="com.endit.cmn.DTO" resultType="int">
+        SELECT COUNT(*)
+        FROM MEMBER
+        <include refid="memberWhere"/>
+    </select>
+
     <!-- 회원 등록: SEQ_MEMBER로 memberId 채번 후 insert -->
     <insert id="insertMember" parameterType="MemberVO">
         <selectKey keyProperty="memberId" resultType="long" order="BEFORE">
