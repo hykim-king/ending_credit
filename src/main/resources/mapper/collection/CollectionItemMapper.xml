@@ -39,15 +39,27 @@
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionItemVO">
         SELECT COLLECTION_ID,
                CONTENT_ID,
-               ADDED_DT
+               ADDED_DT,
+               EXTERNAL_ID,
+               TITLE_KO,
+               TITLE_ORG,
+               RELEASE_YEAR,
+               POSTER_URL
           FROM (
             SELECT CI.COLLECTION_ID,
                    CI.CONTENT_ID,
                    TO_CHAR(CI.ADDED_DT, 'YYYY-MM-DD HH24:MI:SS') AS ADDED_DT,
+                   C.EXTERNAL_ID,
+                   C.TITLE_KO,
+                   C.TITLE_ORG,
+                   TO_CHAR(C.RELEASE_YEAR, 'YYYY') AS RELEASE_YEAR,
+                   C.POSTER_URL,
                    ROW_NUMBER() OVER (
                        ORDER BY CI.ADDED_DT DESC, CI.COLLECTION_ID DESC, CI.CONTENT_ID DESC
                    ) AS RNUM
               FROM COLLECTION_ITEM CI
+             INNER JOIN CONTENT C
+                ON C.CONTENT_ID = CI.CONTENT_ID
             <where>
                 <if test="searchWord != null and searchWord != ''">
                     <choose>
