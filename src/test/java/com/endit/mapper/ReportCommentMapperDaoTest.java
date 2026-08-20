@@ -15,6 +15,7 @@
  * 2026. 8. 12.  홍선기   최초 생성
  * 2026. 8. 13.  홍선기   @Transactional 적용(종료 시 롤백)
  * 2026. 8. 14.  홍선기   픽스처 제거, 공용 더미 기반으로 재작성(팀 테스트 규칙)
+ * 2026. 8. 19.  홍선기   join 필드(신고자·처리자 닉네임, 대상 코멘트 내용) 검증 추가 — 8/18 공지 보완점2
  * </pre>
  *
  * @author 홍선기
@@ -132,6 +133,10 @@ class ReportCommentMapperDaoTest {
 		assertNotNull(outVO.getCreatedDt());
 		assertNull(outVO.getProcessedByMemberId()); // 처리 전이므로 처리자 없음
 		assertNull(outVO.getProcessedDt());
+		// join 필드 — 신고자 닉네임(더미 회원10), 처리자 없음, 대상 코멘트 본문
+		assertEquals("ENDIT운영팀장", outVO.getReporterNickname());
+		assertNull(outVO.getProcessorNickname());
+		assertEquals(comment01.getCommentDetail(), outVO.getCommentDetail());
 	}
 
 	@Test
@@ -184,6 +189,7 @@ class ReportCommentMapperDaoTest {
 		assertEquals(Long.valueOf(ADMIN_PROCESSOR), outVO.getProcessedByMemberId());
 		assertEquals(report01.getProcessNote(), outVO.getProcessNote());
 		assertNotNull(outVO.getProcessedDt());
+		assertEquals("ENDIT수석관리자", outVO.getProcessorNickname()); // 처리자(더미 회원9) 닉네임 join
 	}
 
 	@Test
@@ -287,6 +293,8 @@ class ReportCommentMapperDaoTest {
 		}
 		assertEquals(2, list.size());
 		assertEquals(2, list.get(0).getTotalCnt());
+		assertNotNull(list.get(0).getReporterNickname()); // join — 신고자 닉네임
+		assertNotNull(list.get(0).getCommentDetail());    // join — 대상 코멘트 요약(200자)
 
 		// 3.
 		dto.setSearchDiv("20"); // 신고 사유 검색

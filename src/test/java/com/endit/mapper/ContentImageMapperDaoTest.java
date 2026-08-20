@@ -1,4 +1,4 @@
-package com.endit.group1;
+package com.endit.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

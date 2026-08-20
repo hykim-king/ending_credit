@@ -4,9 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class EndingCreditApplication {
+public class EnditApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(EndingCreditApplication.class, args);
+		SpringApplication.run(EnditApplication.class, args);
 	}
+
 }

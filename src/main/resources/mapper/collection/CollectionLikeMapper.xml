@@ -2,88 +2,110 @@
 <!DOCTYPE mapper
     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
 <mapper namespace="com.endit.mapper.CollectionLikeMapper">
 
-    <!-- COLLECTION_LIKE 테이블 컬럼과 CollectionLikeVO 필드 매핑 -->
+    <!-- COLLECTION_LIKE 테이블 컬럼 <-> CollectionLikeVO 필드 매핑 -->
     <resultMap id="collectionLikeResultMap" type="com.endit.domain.CollectionLikeVO">
-        <id property="memberId" column="MEMBER_ID" />
-        <id property="collectionId" column="COLLECTION_ID" />
-        <result property="createdDt" column="CREATED_DT" />
+        <id     property="memberId"     column="MEMBER_ID" />
+        <id     property="collectionId" column="COLLECTION_ID" />
+        <result property="createdDt"    column="CREATED_DT" />
     </resultMap>
 
-    <!-- 컬렉션 좋아요 등록: CREATED_DT는 테이블 기본값 SYSDATE 사용 -->
+    <!-- COLLECTION_LIKE + COLLECTION JOIN 결과 <-> CollectionLikeItemVO 필드 매핑 -->
+    <resultMap id="collectionLikeItemResultMap" type="com.endit.domain.CollectionLikeItemVO">
+        <id     property="collectionId" column="COLLECTION_ID" />
+        <result property="title"        column="TITLE" />
+        <result property="description"  column="DESCRIPTION" />
+        <result property="isPublic"     column="IS_PUBLIC" />
+        <result property="likedDt"      column="LIKED_DT" />
+    </resultMap>
+
+    <!-- 좋아요 등록 (CREATED_DT는 DEFAULT SYSDATE라 별도로 넣지 않음) -->
     <insert id="insertCollectionLike" parameterType="com.endit.domain.CollectionLikeVO">
-        INSERT INTO COLLECTION_LIKE (
-            MEMBER_ID,
-            COLLECTION_ID
-        ) VALUES (
-            #{memberId},
-            #{collectionId}
-        )
+        INSERT INTO COLLECTION_LIKE
+            (MEMBER_ID, COLLECTION_ID)
+        VALUES
+            (#{memberId}, #{collectionId})
     </insert>
 
-    <!-- 컬렉션 좋아요 삭제: 복합 PK 전체 사용 -->
+    <!-- 좋아요 취소 -->
     <delete id="deleteCollectionLike" parameterType="com.endit.domain.CollectionLikeVO">
         DELETE FROM COLLECTION_LIKE
-         WHERE MEMBER_ID = #{memberId}
+         WHERE MEMBER_ID     = #{memberId}
            AND COLLECTION_ID = #{collectionId}
     </delete>
 
-    <!-- 회원 번호와 컬렉션 번호를 이용한 단건 조회 -->
-    <select id="selectCollectionLike"
-            parameterType="com.endit.domain.CollectionLikeVO"
-            resultMap="collectionLikeResultMap">
+    <!-- 특정 회원+컬렉션 조합 좋아요 단건 조회 (좋아요 여부 확인용) -->
+    <select id="selectCollectionLike" parameterType="com.endit.domain.CollectionLikeVO" resultMap="collectionLikeResultMap">
         SELECT MEMBER_ID,
                COLLECTION_ID,
                TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
           FROM COLLECTION_LIKE
-         WHERE MEMBER_ID = #{memberId}
+         WHERE MEMBER_ID     = #{memberId}
            AND COLLECTION_ID = #{collectionId}
     </select>
 
-    <!-- 특정 회원이 좋아요를 누른 컬렉션 목록 조회 -->
-    <select id="selectCollectionLikeListByMember"
-            parameterType="int"
-            resultMap="collectionLikeResultMap">
+    <!-- 특정 회원이 좋아요 누른 컬렉션 목록 (키 값만, 페이징 없음) -->
+    <select id="selectCollectionLikeListByMember" parameterType="int" resultMap="collectionLikeResultMap">
         SELECT MEMBER_ID,
                COLLECTION_ID,
                TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
           FROM COLLECTION_LIKE
          WHERE MEMBER_ID = #{memberId}
-         ORDER BY CREATED_DT DESC
+         ORDER BY CREATED_DT DESC, COLLECTION_ID DESC
     </select>
 
-    <!-- 특정 컬렉션에 좋아요를 누른 회원 목록 조회 -->
-    <select id="selectCollectionLikeListByCollection"
-            parameterType="int"
-            resultMap="collectionLikeResultMap">
+    <!--
+        특정 회원이 좋아요 누른 컬렉션 목록 (화면 표시용, COLLECTION JOIN + 페이징)
+        OFFSET/FETCH는 Oracle 12c 이상 문법. pageNo는 1부터 시작.
+    -->
+    <select id="selectLikedCollectionListByMember" resultMap="collectionLikeItemResultMap">
+        SELECT c.COLLECTION_ID,
+               c.TITLE,
+               c.DESCRIPTION,
+               c.IS_PUBLIC,
+               TO_CHAR(cl.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS LIKED_DT
+          FROM COLLECTION_LIKE cl
+          JOIN COLLECTION c
+            ON cl.COLLECTION_ID = c.COLLECTION_ID
+         WHERE cl.MEMBER_ID = #{memberId}
+         ORDER BY cl.CREATED_DT DESC, c.COLLECTION_ID DESC
+        OFFSET (#{pageNo} - 1) * #{pageSize} ROWS
+        FETCH NEXT #{pageSize} ROWS ONLY
+    </select>
+
+    <!-- 특정 회원이 좋아요 누른 컬렉션 전체 건수 (페이징 total count용) -->
+    <select id="selectLikedCollectionCountByMember" parameterType="int" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION_LIKE
+         WHERE MEMBER_ID = #{memberId}
+    </select>
+
+    <!-- 특정 컬렉션에 좋아요 누른 회원 목록 (페이징 미적용: 화면에 회원목록 UI 없음, 카운트만 표시) -->
+    <select id="selectCollectionLikeListByCollection" parameterType="int" resultMap="collectionLikeResultMap">
         SELECT MEMBER_ID,
                COLLECTION_ID,
                TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT
           FROM COLLECTION_LIKE
          WHERE COLLECTION_ID = #{collectionId}
-         ORDER BY CREATED_DT DESC
+         ORDER BY CREATED_DT DESC, MEMBER_ID DESC
     </select>
 
-    <!-- 특정 컬렉션의 좋아요 개수 조회 -->
-    <select id="selectCollectionLikeCount"
-            parameterType="int"
-            resultType="int">
+    <!-- 특정 컬렉션의 좋아요 총 개수 -->
+    <select id="selectCollectionLikeCount" parameterType="int" resultType="int">
         SELECT COUNT(*)
           FROM COLLECTION_LIKE
          WHERE COLLECTION_ID = #{collectionId}
     </select>
 
-    <!-- 컬렉션 좋아요 전체 삭제 -->
+    <!-- 전체 건수 -->
+    <select id="totalCnt" resultType="int">
+        SELECT COUNT(*) FROM COLLECTION_LIKE
+    </select>
+
+    <!-- JUnit전용: 전체 삭제 -->
     <delete id="deleteAll">
         DELETE FROM COLLECTION_LIKE
     </delete>
-
-    <!-- 컬렉션 좋아요 전체 건수 조회 -->
-    <select id="totalCnt" resultType="int">
-        SELECT COUNT(*)
-          FROM COLLECTION_LIKE
-    </select>
 
 </mapper>

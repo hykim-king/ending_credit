@@ -1,4 +1,4 @@
-package com.endit.group1;
+package com.endit.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -17,21 +17,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
-import com.endit.domain.PersonVO;
-import com.endit.mapper.PersonMapper;
+import com.endit.domain.GenreVO;
+import com.endit.mapper.GenreMapper;
 
 @SpringBootTest
 @Transactional
-class PersonMapperDaoTest {
+class GenreMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private PersonMapper mapper;
+	private GenreMapper mapper;
 
-	private PersonVO person01;
-	private PersonVO person02;
-	private PersonVO person03;
+	private GenreVO genre01;
+	private GenreVO genre02;
+	private GenreVO genre03;
 
 	private DTO dto;
 
@@ -44,9 +44,9 @@ class PersonMapperDaoTest {
 		int seq = 0;
 		dto = new DTO();
 
-		person01 = new PersonVO(seq, "TMDB_PERSON_1001", "배우1", "Actor One", "http://profile1", "사용않함", "사용않함");
-		person02 = new PersonVO(seq, "TMDB_PERSON_1002", "배우2", "Actor Two", "http://profile2", "사용않함", "사용않함");
-		person03 = new PersonVO(seq, "TMDB_PERSON_1003", "감독1", "Director One", "http://profile3", "사용않함", "사용않함");
+		genre01 = new GenreVO(seq, "T_28", "테스트액션");
+		genre02 = new GenreVO(seq, "T_35", "테스트코미디");
+		genre03 = new GenreVO(seq, "T_18", "테스트드라마");
 	}
 
 	@AfterEach
@@ -68,16 +68,16 @@ class PersonMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		mapper.doSave(person01);
-		mapper.doSave(person02);
-		mapper.doSave(person03);
+		mapper.doSave(genre01);
+		mapper.doSave(genre02);
+		mapper.doSave(genre03);
 		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 
-		List<PersonVO> list = mapper.doRetrieve(dto);
-		for (PersonVO vo : list) {
+		List<GenreVO> list = mapper.doRetrieve(dto);
+		for (GenreVO vo : list) {
 			log.debug("{}", vo);
 		}
 		assertEquals(3, list.size());
@@ -97,22 +97,19 @@ class PersonMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		int flag = mapper.doSave(person01);
+		int flag = mapper.doSave(genre01);
 		assertEquals(1, flag);
 		assertEquals(1, mapper.totalCnt());
 
-		PersonVO updateVO = mapper.doSelectOne(person01);
+		GenreVO updateVO = mapper.doSelectOne(genre01);
 		assertNotNull(updateVO);
 
-		String updateStr = "_U";
-		updateVO.setNameKo(updateVO.getNameKo() + updateStr);
-		updateVO.setNameOrg(updateVO.getNameOrg() + updateStr);
-		updateVO.setProfileImageUrl(updateVO.getProfileImageUrl() + updateStr);
+		updateVO.setName(updateVO.getName() + "_U");
 
 		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		PersonVO outVO = mapper.doSelectOne(updateVO);
+		GenreVO outVO = mapper.doSelectOne(updateVO);
 		assertNotNull(outVO);
 		isSameData(updateVO, outVO);
 	}
@@ -130,11 +127,11 @@ class PersonMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		int flag = mapper.doSave(person01);
+		int flag = mapper.doSave(genre01);
 		assertEquals(1, flag);
 		assertEquals(1, mapper.totalCnt());
 
-		flag = mapper.doDelete(person01);
+		flag = mapper.doDelete(genre01);
 		assertEquals(1, flag);
 		assertEquals(0, mapper.totalCnt());
 	}
@@ -151,23 +148,23 @@ class PersonMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		int flag = mapper.doSave(person01);
+		int flag = mapper.doSave(genre01);
 		assertEquals(1, flag);
 		assertEquals(1, mapper.totalCnt());
-		assertEquals(true, person01.getPersonId() > 0);
-		log.debug("saved personId(person01)={}", person01.getPersonId());
+		assertEquals(true, genre01.getGenreId() > 0);
+		log.debug("saved genreId(genre01)={}", genre01.getGenreId());
 
-		flag = mapper.doSave(person02);
+		flag = mapper.doSave(genre02);
 		assertEquals(1, flag);
 		assertEquals(2, mapper.totalCnt());
 
-		flag = mapper.doSave(person03);
+		flag = mapper.doSave(genre03);
 		assertEquals(1, flag);
 		assertEquals(3, mapper.totalCnt());
 
-		Integer foundId = mapper.findPersonIdByExternal(person01.getExternalId());
-		assertEquals(person01.getPersonId(), foundId.intValue());
-		assertNull(mapper.findPersonIdByExternal("NOT_EXISTS"));
+		Integer foundId = mapper.findGenreIdByExternal(genre01.getExternalGenreId());
+		assertEquals(genre01.getGenreId(), foundId.intValue());
+		assertNull(mapper.findGenreIdByExternal("NOT_EXISTS"));
 	}
 
 	@Test
@@ -182,31 +179,29 @@ class PersonMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		mapper.doSave(person01);
-		mapper.doSave(person02);
-		mapper.doSave(person03);
+		mapper.doSave(genre01);
+		mapper.doSave(genre02);
+		mapper.doSave(genre03);
 		assertEquals(3, mapper.totalCnt());
 
-		PersonVO outVO01 = mapper.doSelectOne(person01);
+		GenreVO outVO01 = mapper.doSelectOne(genre01);
 		assertNotNull(outVO01);
 
-		PersonVO outVO02 = mapper.doSelectOne(person02);
+		GenreVO outVO02 = mapper.doSelectOne(genre02);
 		assertNotNull(outVO02);
 
-		PersonVO outVO03 = mapper.doSelectOne(person03);
+		GenreVO outVO03 = mapper.doSelectOne(genre03);
 		assertNotNull(outVO03);
 
-		isSameData(person01, outVO01);
-		isSameData(person02, outVO02);
-		isSameData(person03, outVO03);
+		isSameData(genre01, outVO01);
+		isSameData(genre02, outVO02);
+		isSameData(genre03, outVO03);
 	}
 
-	private void isSameData(PersonVO expected, PersonVO actual) {
-		assertEquals(expected.getPersonId(), actual.getPersonId());
-		assertEquals(expected.getExternalId(), actual.getExternalId());
-		assertEquals(expected.getNameKo(), actual.getNameKo());
-		assertEquals(expected.getNameOrg(), actual.getNameOrg());
-		assertEquals(expected.getProfileImageUrl(), actual.getProfileImageUrl());
+	private void isSameData(GenreVO expected, GenreVO actual) {
+		assertEquals(expected.getGenreId(), actual.getGenreId());
+		assertEquals(expected.getExternalGenreId(), actual.getExternalGenreId());
+		assertEquals(expected.getName(), actual.getName());
 	}
 
 	@Test

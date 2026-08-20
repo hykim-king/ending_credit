@@ -6,6 +6,7 @@ public class ContentGenreVO extends DTO {
 
 	private int contentId;
 	private int genreId;
+	private String genreName;
 
 	public ContentGenreVO() {
 		super();
@@ -33,10 +34,18 @@ public class ContentGenreVO extends DTO {
 		this.genreId = genreId;
 	}
 
+	public String getGenreName() {
+		return genreName;
+	}
+
+	public void setGenreName(String genreName) {
+		this.genreName = genreName;
+	}
+
 	@Override
 	public String toString() {
-		return "ContentGenreVO [contentId=" + contentId + ", genreId=" + genreId + ", toString()=" + super.toString()
-				+ "]";
+		return "ContentGenreVO [contentId=" + contentId + ", genreId=" + genreId + ", genreName=" + genreName
+				+ ", toString()=" + super.toString() + "]";
 	}
 
 }
