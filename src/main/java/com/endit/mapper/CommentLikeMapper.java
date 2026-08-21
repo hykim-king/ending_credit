@@ -2,9 +2,7 @@
  * <pre>
  * Class Name : CommentLikeMapper
  * Description : 코멘트 좋아요 Mapper
- *               학원 표준대로 모든 Mapper는 WorkDiv를 상속한다.
- *               XML에는 좋아요에 실제 쓰는 것만 구현한다(doSave/doDelete + 확인/집계)
- *               — 구현 안 된 메서드는 호출할 때만 오류가 나므로 문제없다(TimeMapper 방식).
+ *               좋아요에 실제 필요한 등록, 삭제, 확인 및 집계 기능만 제공한다.
  *
  * Modification Information
  * 수정일        수정자     수정내용
@@ -20,14 +18,26 @@ package com.endit.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.endit.cmn.WorkDiv;
 import com.endit.domain.CommentLikeVO;
 
 @Mapper // MyBatis 매퍼 인터페이스임을 선언(구현체는 MyBatis가 자동 생성)
-public interface CommentLikeMapper extends WorkDiv<CommentLikeVO> {
-	// doSave   : 좋아요 등록 — 같은 코멘트에 두 번 누르면 PK(MEMBER_ID, COMMENT_ID) 위반으로 실패
-	// doDelete : 좋아요 취소
-	// (WorkDiv 상속 — 목록/수정/단건조회는 좋아요에 없어서 XML에 구현하지 않는다)
+public interface CommentLikeMapper {
+
+	/**
+	 * 코멘트 좋아요 등록
+	 *
+	 * @param param 회원 번호와 코멘트 번호
+	 * @return 등록된 행 수
+	 */
+	int doSave(CommentLikeVO param);
+
+	/**
+	 * 코멘트 좋아요 취소
+	 *
+	 * @param param 회원 번호와 코멘트 번호
+	 * @return 삭제된 행 수
+	 */
+	int doDelete(CommentLikeVO param);
 
 	/**
 	 *

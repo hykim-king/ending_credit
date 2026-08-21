@@ -2,6 +2,7 @@ package com.endit.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 
+import com.endit.cmn.DTO;
 import com.endit.cmn.WorkDiv;
 import com.endit.domain.MemberContentVO;
 
@@ -38,4 +39,12 @@ public interface MemberContentMapper extends WorkDiv<MemberContentVO> {
 	 * @return 회원별 콘텐츠 전체 건수
 	 */
 	int totalCnt();
+
+	/**
+	 * 검색 조건을 반영한 건수 조회
+	 *
+	 * @param param 검색 조건
+	 * @return 검색된 회원별 콘텐츠 건수
+	 */
+	int count(DTO param);
 }

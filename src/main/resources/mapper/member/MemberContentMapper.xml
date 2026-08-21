@@ -5,6 +5,37 @@
 
 <mapper namespace="com.endit.mapper.MemberContentMapper">
 
+    <!-- searchDiv: 10(회원 번호), 20(콘텐츠 번호), 30(보고 싶어요 여부), 40(별점),
+                    50(회원별 평가 목록), 60(회원별 보고 싶어요 목록) -->
+    <sql id="memberContentWhere">
+        <where>
+            <if test="searchWord != null and searchWord != ''">
+                <choose>
+                    <when test="searchDiv == '10'">
+                        AND MC.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                    <when test="searchDiv == '20'">
+                        AND MC.CONTENT_ID = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                    <when test="searchDiv == '30'">
+                        AND MC.WATCHLIST = #{searchWord}
+                    </when>
+                    <when test="searchDiv == '40'">
+                        AND MC.RATING_SCORE = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                    <when test="searchDiv == '50'">
+                        AND MC.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                        AND MC.RATING_SCORE IS NOT NULL
+                    </when>
+                    <when test="searchDiv == '60'">
+                        AND MC.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                        AND MC.WATCHLIST = 'Y'
+                    </when>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
     <!-- 회원별 콘텐츠 평가 및 보고 싶어요 등록 -->
     <insert id="doSave" parameterType="MemberContentVO">
         INSERT INTO MEMBER_CONTENT (
@@ -71,8 +102,6 @@
            AND CONTENT_ID = #{contentId}
     </delete>
 
-    <!-- searchDiv: 10(회원 번호), 20(콘텐츠 번호), 30(보고 싶어요 여부), 40(별점),
-                    50(회원별 평가 목록), 60(회원별 보고 싶어요 목록) -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="MemberContentVO">
         SELECT MEMBER_ID,
                CONTENT_ID,
@@ -115,32 +144,7 @@
               FROM MEMBER_CONTENT MC
               JOIN CONTENT C
                 ON C.CONTENT_ID = MC.CONTENT_ID
-            <where>
-                <if test="searchWord != null and searchWord != ''">
-                    <choose>
-                        <when test="searchDiv == '10'">
-                            AND MC.MEMBER_ID = #{searchWord}
-                        </when>
-                        <when test="searchDiv == '20'">
-                            AND MC.CONTENT_ID = #{searchWord}
-                        </when>
-                        <when test="searchDiv == '30'">
-                            AND MC.WATCHLIST = #{searchWord}
-                        </when>
-                        <when test="searchDiv == '40'">
-                            AND MC.RATING_SCORE = #{searchWord}
-                        </when>
-                        <when test="searchDiv == '50'">
-                            AND MC.MEMBER_ID = #{searchWord}
-                            AND MC.RATING_SCORE IS NOT NULL
-                        </when>
-                        <when test="searchDiv == '60'">
-                            AND MC.MEMBER_ID = #{searchWord}
-                            AND MC.WATCHLIST = 'Y'
-                        </when>
-                    </choose>
-                </if>
-            </where>
+            <include refid="memberContentWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
          WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
@@ -158,6 +162,12 @@
     <select id="totalCnt" resultType="int">
         SELECT COUNT(*)
           FROM MEMBER_CONTENT
+    </select>
+
+    <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
+        SELECT COUNT(*)
+          FROM MEMBER_CONTENT MC
+        <include refid="memberContentWhere"/>
     </select>
 
 </mapper>

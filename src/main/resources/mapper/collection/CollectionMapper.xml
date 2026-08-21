@@ -5,6 +5,22 @@
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
 
+    <!-- searchDiv: 10(제목), 20(회원 번호) -->
+    <sql id="collectionWhere">
+        <where>
+            <if test="searchWord != null and searchWord != ''">
+                <choose>
+                    <when test="searchDiv == '10'">
+                        AND C.TITLE LIKE '%' || #{searchWord} || '%'
+                    </when>
+                    <when test="searchDiv == '20'">
+                        AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
     <!-- 컬렉션 등록 -->
     <insert id="doSave" parameterType="CollectionVO">
         <selectKey keyProperty="collectionId" resultType="int" order="BEFORE">
@@ -85,7 +101,6 @@
          WHERE COLLECTION_ID = #{collectionId}
     </delete>
 
-    <!-- searchDiv: 10(제목), 20(회원 번호) -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionVO">
         SELECT COLLECTION_ID,
                MEMBER_ID,
@@ -138,18 +153,7 @@
                      GROUP BY COLLECTION_ID
               ) UC
                 ON UC.COLLECTION_ID = C.COLLECTION_ID
-            <where>
-                <if test="searchWord != null and searchWord != ''">
-                    <choose>
-                        <when test="searchDiv == '10'">
-                            AND C.TITLE LIKE '%' || #{searchWord} || '%'
-                        </when>
-                        <when test="searchDiv == '20'">
-                            AND C.MEMBER_ID = #{searchWord}
-                        </when>
-                    </choose>
-                </if>
-            </where>
+            <include refid="collectionWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
          WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
@@ -167,6 +171,12 @@
     <select id="totalCnt" resultType="int">
         SELECT COUNT(*)
           FROM COLLECTION
+    </select>
+
+    <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION C
+        <include refid="collectionWhere"/>
     </select>
 
 </mapper>

@@ -11,7 +11,9 @@ const isEmpty = (input,message) => {
 
 //숫자 check
 const isNumber = (input, message) => {
-    if (Number.isNaN(Number(input.value.trim()))) {
+    const value = input.value.trim();
+
+    if (value === '' || Number.isNaN(Number(value))) {
       alert(message);
       input.focus();
       return false;

@@ -1,8 +1,6 @@
 package com.endit.cmn;
 import java.util.List;
 
-import org.springframework.dao.EmptyResultDataAccessException;
-
 public interface WorkDiv<T> {
 
 	/**

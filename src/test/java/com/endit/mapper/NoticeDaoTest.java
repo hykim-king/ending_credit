@@ -101,6 +101,39 @@ class NoticeDaoTest {
     }
 
     @Test
+    @DisplayName("공지 등록 시 수정자가 없으면 작성자를 수정자로 저장한다")
+    void insertNotice_usesCreatedIdAsUpdatedId() {
+        NoticeVO notice = newNotice();
+        notice.setUpdatedId(null);
+
+        noticeMapper.insertNotice(notice);
+
+        NoticeVO outVO = noticeMapper.selectNoticeById(notice.getNoticeId());
+        assertEquals(WRITER_ID, outVO.getUpdatedId());
+    }
+
+    @Test
+    @DisplayName("공개 공지 목록에는 게시 상태 공지만 포함된다")
+    void selectPublishedNoticeList_onlyPublished() {
+        int before = noticeMapper.countPublishedNoticeList();
+
+        NoticeVO draft = newNotice();
+        draft.setStatus("DRAFT");
+        noticeMapper.insertNotice(draft);
+        assertEquals(before, noticeMapper.countPublishedNoticeList());
+
+        NoticeVO published = newNotice();
+        published.setImportant("Y");
+        noticeMapper.insertNotice(published);
+        assertEquals(before + 1, noticeMapper.countPublishedNoticeList());
+
+        List<NoticeVO> list = noticeMapper.selectPublishedNoticeList(1, 100);
+
+        assertTrue(list.stream().noneMatch(item -> item.getNoticeId().equals(draft.getNoticeId())));
+        assertTrue(list.stream().anyMatch(item -> item.getNoticeId().equals(published.getNoticeId())));
+    }
+
+    @Test
     @DisplayName("공지 목록 조회")
     void selectNoticeList() {
         noticeMapper.insertNotice(newNotice());
