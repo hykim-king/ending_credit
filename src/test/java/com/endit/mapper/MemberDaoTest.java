@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.MemberVO;
-import com.endit.mapper.MemberMapper;
 
 @SpringBootTest
 @Transactional
