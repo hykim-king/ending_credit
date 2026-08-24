@@ -13,7 +13,7 @@
  * @author 홍선기
  * @since 2026. 8. 18.
  */
-package com.endit.serviceImpl;
+package com.endit.service.Impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

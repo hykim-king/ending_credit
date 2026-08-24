@@ -15,7 +15,7 @@
  * @author 홍선기
  * @since 2026. 8. 18.
  */
-package com.endit.serviceImpl;
+package com.endit.service.Impl;
 
 import java.util.List;
 
