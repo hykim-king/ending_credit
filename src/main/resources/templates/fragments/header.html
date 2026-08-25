@@ -5,26 +5,18 @@
 <title>header</title>
 </head>
 <body>
-    <header th:fragment="header" class="bg-primary text-white py-2 px-3">
-        <div class="bg-primary text-white p-3">
-            <nav class="navbar navbar-expand-lg bg-primary">
-	            <div class="container-fluid">
-	                <a class="navbar-brand text-white" th:href="@{/comment/doRetrieve}">ENDING CREDIT</a>
-	                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-	                <span class="navbar-toggler-icon"></span>
-	                </button>
-	                <div class="collapse navbar-collapse" id="navbarNav">
-		                <ul class="navbar-nav">
-		                    <li class="nav-item">
-		                    	<a class="nav-link text-white" th:href="@{/comment/doRetrieve}">코멘트</a>
-		                    </li>
-		                    <li class="nav-item">
-		                    	<a class="nav-link text-white" th:href="@{/report/doRetrieve}">신고 관리</a>
-		                    </li>
-		                    <!-- 로그인/로그아웃: 회원(2조) 시큐리티 연동 시 sec:authorize로 추가 -->
-		                </ul>
-	                </div>
-	            </div>
+    <!--GlobalHeader (CMP-01, 설계서 p.5): END IT · 중앙 검색 · 우측 메뉴/프로필-->
+    <header th:fragment="header" class="endit-header">
+        <div class="endit-main d-flex align-items-center gap-4 h-100 px-3">
+            <a class="endit-brand" th:href="@{/comment/doRetrieve}">END IT</a>
+            <input type="text" class="form-control endit-search d-none d-md-block"
+                   placeholder="영화, 인물, 컬렉션 검색" disabled
+                   title="검색은 담당 조 구현 예정">
+            <nav class="ms-auto d-flex align-items-center gap-3">
+                <a class="endit-nav-link" th:href="@{/comment/doRetrieve}">코멘트</a>
+                <a class="endit-nav-link" th:href="@{/report/doRetrieve}">신고 관리</a>
+                <!-- 로그인/프로필: 회원(2조) 시큐리티 연동 시 교체 -->
+                <span class="avatar-circle" title="로그인 연동 전"><i class="bi bi-person"></i></span>
             </nav>
         </div>
     </header>

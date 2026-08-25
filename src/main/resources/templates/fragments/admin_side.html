@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>admin_side</title>
+</head>
+<body>
+    <!--관리자 사이드 메뉴 (설계서 AD 화면 공통) — 신고만 4조 구현, 나머지는 담당 조 예정-->
+    <aside th:fragment="admin_side" class="admin-side">
+        <div class="side-label">ADMIN</div>
+        <span>대시보드</span>
+        <span>영화</span>
+        <span>인물</span>
+        <span>회원</span>
+        <a th:href="@{/report/doRetrieve}" class="active">신고</a>
+        <span>커뮤니티</span>
+        <span>공지</span>
+    </aside>
+</body>
+</html>

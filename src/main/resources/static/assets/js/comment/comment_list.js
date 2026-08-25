@@ -21,10 +21,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnCmDelete').addEventListener('click', doDeleteInModal);
     document.getElementById('btnRpSave').addEventListener('click', doReport);
 
-    // 목록 버튼은 이벤트 위임으로 처리 (closest/dataset — 학원 모달 패턴)
+    // 카드 버튼은 이벤트 위임으로 처리 (closest/dataset — 학원 모달 패턴, CommentCard)
     document.getElementById('commentTbody').addEventListener('click', (e) => {
-        const tr = e.target.closest('tr');
-        if (!tr || !tr.dataset.commentId) {
+        const card = e.target.closest('[data-comment-id]');
+        if (!card) {
             return;
         }
         if (e.target.closest('.spoiler-btn')) {
@@ -32,19 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (e.target.closest('.like-btn')) {
-            doToggleLike(tr, e.target.closest('.like-btn'));
+            doToggleLike(card, e.target.closest('.like-btn'));
             return;
         }
         if (e.target.closest('.edit-btn')) {
-            openEditModal(tr);
+            openEditModal(card);
             return;
         }
         if (e.target.closest('.del-btn')) {
-            doDeleteRow(tr);
+            doDeleteRow(card);
             return;
         }
         if (e.target.closest('.report-btn')) {
-            openReportModal(tr);
+            openReportModal(card);
         }
     });
 });
@@ -80,26 +80,26 @@ function openSaveModal() {
 }
 
 // 수정 모달 열기 — 행의 data-* 값으로 채운다. 대상(영화/컬렉션)은 수정 불가
-function openEditModal(tr) {
+function openEditModal(card) {
     document.getElementById('commentModalTitle').textContent = '코멘트 수정';
     document.getElementById('cmMode').value = 'update';
-    document.getElementById('cmCommentId').value = tr.dataset.commentId;
+    document.getElementById('cmCommentId').value = card.dataset.commentId;
 
     const targetType = document.getElementById('cmTargetType');
     const targetId = document.getElementById('cmTargetId');
-    if (tr.dataset.contentId) {
+    if (card.dataset.contentId) {
         targetType.value = 'content';
-        targetId.value = tr.dataset.contentId;
+        targetId.value = card.dataset.contentId;
     } else {
         targetType.value = 'collection';
-        targetId.value = tr.dataset.collectionId;
+        targetId.value = card.dataset.collectionId;
     }
     targetType.disabled = true;
     targetId.disabled = true;
 
-    document.getElementById('cmDetail').value = tr.dataset.detail;
-    document.getElementById('cmCount').textContent = tr.dataset.detail.length;
-    document.getElementById('cmSpoiler').checked = ('Y' === tr.dataset.spoiler);
+    document.getElementById('cmDetail').value = card.dataset.detail;
+    document.getElementById('cmCount').textContent = card.dataset.detail.length;
+    document.getElementById('cmSpoiler').checked = ('Y' === card.dataset.spoiler);
     document.getElementById('btnCmDelete').classList.remove('d-none');
     commentModal.show();
 }
@@ -159,8 +159,8 @@ async function doDeleteInModal() {
 }
 
 // 삭제 (목록 행)
-async function doDeleteRow(tr) {
-    await deleteComment(tr.dataset.commentId, null);
+async function doDeleteRow(card) {
+    await deleteComment(card.dataset.commentId, null);
 }
 
 async function deleteComment(commentId, afterHide) {
@@ -182,7 +182,7 @@ async function deleteComment(commentId, afterHide) {
 }
 
 // 좋아요 토글 — 응답 detailMessage에 토글 후 좋아요 수가 실려 온다
-async function doToggleLike(tr, btn) {
+async function doToggleLike(card, btn) {
     const memberId = getMemberId();
     if (null === memberId) {
         return;
@@ -190,7 +190,7 @@ async function doToggleLike(tr, btn) {
     try {
         const result = await requestPostForm('/commentLike/upToggleLike', {
             memberId: memberId,
-            commentId: tr.dataset.commentId
+            commentId: card.dataset.commentId
         });
         btn.querySelector('.like-cnt').textContent = result.detailMessage;
     } catch (e) {
@@ -210,8 +210,8 @@ function toggleSpoiler(guard, btn) {
 }
 
 // 신고 모달 (MOD-04)
-function openReportModal(tr) {
-    document.getElementById('rpCommentId').value = tr.dataset.commentId;
+function openReportModal(card) {
+    document.getElementById('rpCommentId').value = card.dataset.commentId;
     document.getElementById('rpDetail').value = '';
     reportModal.show();
 }

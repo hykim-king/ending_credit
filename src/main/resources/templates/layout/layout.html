@@ -10,6 +10,7 @@ xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 <link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
 <link rel="stylesheet"
 href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+<link rel="stylesheet" th:href="@{/assets/css/endit.css}">
 <title layout:title-pattern="$CONTENT_TITLE | ENDIT">ENDIT</title>
 <script th:src="@{/assets/js/cmn/common.js}" defer></script>
 <script th:src="@{/assets/js/cmn/common_fetch.js}" defer></script>
@@ -22,8 +23,8 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.m
 			<header th:replace="~{fragments/header :: header}">Header</header>
 			<!--// Header end -->
 
-			<!-- Main -->
-			<main class="flex-grow-1 p-3">
+			<!-- Main (본문 폭 1200px — 설계서 p.5) -->
+			<main class="flex-grow-1 p-3 endit-main">
 				<div layout:fragment="content">
 				</div>
 			</main>
