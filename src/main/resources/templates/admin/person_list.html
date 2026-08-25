@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>인물 관리</title>
+</head>
+<body>
+<div layout:fragment="content">
+
+<div class="d-flex gap-3">
+    <aside th:replace="~{fragments/admin_side :: admin_side('person')}">side</aside>
+
+    <div class="flex-grow-1">
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <h4 class="fw-bold mb-0">인물 관리 목록</h4>
+            <span class="filter-bar text-muted">임시 조회 전용 — 1조 구현 시 대체</span>
+        </div>
+
+        <table class="table table-sm table-hover align-middle admin-table bg-white">
+            <thead>
+                <tr>
+                    <th style="width:10%;">ID</th>
+                    <th>이름</th>
+                    <th style="width:16%;">등록일</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:if="${#lists.isEmpty(rows)}">
+                    <td colspan="3" class="text-center text-muted py-4">데이터가 없습니다.</td>
+                </tr>
+                <tr th:each="row : ${rows}">
+                    <td th:text="${row['PERSON_ID']}">1</td>
+                    <td th:text="${row['NAME']}">이름</td>
+                    <td th:text="${row['CREATED_DT']}">2026/08/25</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
+</body>
+</html>

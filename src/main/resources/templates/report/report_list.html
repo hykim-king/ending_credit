@@ -11,7 +11,7 @@ layout:decorate="~{layout/layout}">
 
 <div class="d-flex gap-3">
     <!--관리자 사이드 메뉴-->
-    <aside th:replace="~{fragments/admin_side :: admin_side}">side</aside>
+    <aside th:replace="~{fragments/admin_side :: admin_side('report')}">side</aside>
     <!--//관리자 사이드 메뉴-->
 
     <div class="flex-grow-1">
