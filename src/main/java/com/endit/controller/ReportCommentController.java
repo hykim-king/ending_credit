@@ -17,7 +17,9 @@
  */
 package com.endit.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +31,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.endit.cmn.CodeUtil;
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
+import com.endit.cmn.exception.ReportNotFoundException;
+import com.endit.domain.CodeVO;
 import com.endit.domain.ReportCommentVO;
+import com.endit.service.CodeService;
 import com.endit.service.ReportCommentService;
 
 @Controller
@@ -41,11 +47,14 @@ public class ReportCommentController {
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	private final ReportCommentService reportCommentService;
+	private final CodeService codeService; // 검색 필터 select 렌더링용 (학원 28장 두 서비스 주입 패턴)
 
-	public ReportCommentController(ReportCommentService reportCommentService) {
+	public ReportCommentController(ReportCommentService reportCommentService, CodeService codeService) {
 		super();
 		this.reportCommentService = reportCommentService;
+		this.codeService = codeService;
 		log.debug("reportCommentService: {}", reportCommentService);
+		log.debug("codeService: {}", codeService);
 	}
 
 	/**
@@ -83,18 +92,60 @@ public class ReportCommentController {
 		dto.setPageSize(pageSize);
 		dto.setPageNo(pageNo);
 
-		// 2. 목록 조회
+		// 2. 검색 필터 select용 공통코드 조회 (사유·처리상태 — 학원 28장 패턴)
+		String[] codeStr = { "REPORT_REASON", "REPORT_STATUS" };
+		Map<String, Object> codeMap = new HashMap<>();
+		codeMap.put("code", codeStr);
+		List<CodeVO> codeList = codeService.doRetrieve(codeMap);
+		model.addAttribute("reasonList", CodeUtil.getCodeList(codeList, "REPORT_REASON"));
+		model.addAttribute("statusList", CodeUtil.getCodeList(codeList, "REPORT_STATUS"));
+
+		// 3. 목록 조회
 		List<ReportCommentVO> list = reportCommentService.doRetrieve(dto);
 
-		// 3. 총건수 — 각 행에 실려 오는 totalCnt 사용
+		// 4. 총건수 — 각 행에 실려 오는 totalCnt 사용
 		int totalCnt = list.size() > 0 ? list.get(0).getTotalCnt() : 0;
 
-		// 4. 페이지 블록 계산
+		// 5. 페이지 블록 계산
 		DTO pageDTO = new DTO(dto.getPageNo(), dto.getPageSize(), totalCnt);
 
 		model.addAttribute("list", list);
 		model.addAttribute("pageDTO", pageDTO);
 		model.addAttribute("dto", dto);
+
+		return viewName;
+	}
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : doSelectOne
+	 * Description : 신고 상세·처리 화면(AD-10)
+	 *
+	 * </pre>
+	 *
+	 * @param reportId
+	 * @param model
+	 * @return report/report_mng
+	 */
+	@GetMapping("/doSelectOne")
+	public String doSelectOne(@RequestParam(name = "reportId") long reportId, Model model) {
+		String viewName = "report/report_mng";
+		log.debug("=============================");
+		log.debug("{}()", "doSelectOne");
+		log.debug("reportId: {}", reportId);
+		log.debug("=============================");
+
+		ReportCommentVO param = new ReportCommentVO();
+		param.setReportId(reportId);
+
+		ReportCommentVO outVO = reportCommentService.doSelectOne(param);
+		if (null == outVO) {
+			throw new ReportNotFoundException("신고가 존재하지 않습니다. reportId=" + reportId);
+		}
+		log.debug("outVO: {}", outVO);
+
+		model.addAttribute("outVO", outVO);
 
 		return viewName;
 	}

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>신고 상세·처리</title>
+</head>
+<body>
+<div layout:fragment="content">
+
+    <!--상단-->
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h4 class="mb-0">신고 상세·처리 <span class="text-muted fs-6">(AD-10)</span></h4>
+        <a th:href="@{/report/doRetrieve}" class="btn btn-secondary btn-sm">목록</a>
+    </div>
+    <!--//상단-->
+
+    <!--신고 정보-->
+    <div class="card mb-3">
+        <div class="card-body">
+            <input type="hidden" id="reportId" th:value="${outVO.reportId}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="small text-muted">신고 번호</div>
+                    <div class="fw-bold" th:text="${outVO.reportId}">1</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">현재 상태</div>
+                    <div class="fw-bold" th:text="${outVO.status}">RECEIVED</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">신고자</div>
+                    <div class="fw-bold" th:text="|${outVO.reporterNickname} (회원 ${outVO.reportMemberId})|">신고자</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">접수일</div>
+                    <div class="fw-bold" th:text="${outVO.createdDt}">2026/08/25</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="small text-muted">사유</div>
+                    <div class="fw-bold" th:text="${outVO.reason}">SPOILER</div>
+                </div>
+                <div class="col-md-9">
+                    <div class="small text-muted">신고 상세 내용</div>
+                    <div th:text="${outVO.detail}">상세 내용</div>
+                </div>
+                <div class="col-12">
+                    <div class="small text-muted">신고된 코멘트 (COMMENT_ID <span th:text="${outVO.commentId}">1</span>)</div>
+                    <div class="border rounded p-2 bg-body-tertiary" th:text="${outVO.commentDetail}">코멘트 본문</div>
+                </div>
+                <div class="col-md-6" th:if="${outVO.processedDt != null}">
+                    <div class="small text-muted">처리자 / 처리일</div>
+                    <div th:text="|${outVO.processorNickname} · ${outVO.processedDt}|">-</div>
+                </div>
+                <div class="col-md-6" th:if="${outVO.processNote != null}">
+                    <div class="small text-muted">처리 내용</div>
+                    <div th:text="${outVO.processNote}">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--//신고 정보-->
+
+    <!--처리 입력: 완료(승인/반려)는 처리자·처리 내용 필수 (CK_REPORT_PROCESS_COMPLETE)-->
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label for="processorId" class="form-label small">처리 관리자 회원ID (로그인 연동 전 테스트용)</label>
+                    <input type="number" id="processorId" class="form-control form-control-sm" value="9" min="1">
+                </div>
+                <div class="col-md-9">
+                    <label for="processNote" class="form-label small">처리 내용</label>
+                    <textarea id="processNote" class="form-control" rows="2" maxlength="1000"
+                              placeholder="처리 근거와 결과를 입력"></textarea>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-1">
+                <button type="button" class="btn btn-secondary" id="btnReject">신고 반려</button>
+                <button type="button" class="btn btn-danger" id="btnApprove">신고 승인</button>
+            </div>
+            <p class="small text-muted mt-2 mb-0">
+                승인하면 신고된 코멘트가 삭제되고, 이 신고 이력도 함께 사라집니다(물리삭제 + FK CASCADE — 팀 결정).
+            </p>
+        </div>
+    </div>
+    <!--//처리 입력-->
+
+    <script th:src="@{/assets/js/report/report_mng.js}" defer></script>
+</div>
+</body>
+</html>

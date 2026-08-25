@@ -17,7 +17,9 @@
  */
 package com.endit.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +31,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.endit.cmn.CodeUtil;
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
+import com.endit.domain.CodeVO;
 import com.endit.domain.UserCommentVO;
+import com.endit.service.CodeService;
 import com.endit.service.UserCommentService;
 
 @Controller
@@ -41,11 +46,14 @@ public class CommentController {
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	private final UserCommentService userCommentService;
+	private final CodeService codeService; // 신고 모달 사유 select 렌더링용 (학원 28장 두 서비스 주입 패턴)
 
-	public CommentController(UserCommentService userCommentService) {
+	public CommentController(UserCommentService userCommentService, CodeService codeService) {
 		super();
 		this.userCommentService = userCommentService;
+		this.codeService = codeService;
 		log.debug("userCommentService: {}", userCommentService);
+		log.debug("codeService: {}", codeService);
 	}
 
 	/**
@@ -88,13 +96,20 @@ public class CommentController {
 		dto.setPageNo(pageNo);
 		dto.getSearchMap().put("sort", sort);
 
-		// 2. 목록 조회
+		// 2. 신고 모달의 사유 select용 공통코드 조회 (학원 28장 패턴)
+		String[] codeStr = { "REPORT_REASON" };
+		Map<String, Object> codeMap = new HashMap<>();
+		codeMap.put("code", codeStr);
+		List<CodeVO> codeList = codeService.doRetrieve(codeMap);
+		model.addAttribute("reasonList", CodeUtil.getCodeList(codeList, "REPORT_REASON"));
+
+		// 3. 목록 조회
 		List<UserCommentVO> list = userCommentService.doRetrieve(dto);
 
-		// 3. 총건수 — 각 행에 실려 오는 totalCnt 사용 (학원 user 계열 방식)
+		// 4. 총건수 — 각 행에 실려 오는 totalCnt 사용 (학원 user 계열 방식)
 		int totalCnt = list.size() > 0 ? list.get(0).getTotalCnt() : 0;
 
-		// 4. 페이지 블록 계산 (blockSize=10: startNo/endNo/pre/next)
+		// 5. 페이지 블록 계산 (blockSize=10: startNo/endNo/pre/next)
 		DTO pageDTO = new DTO(dto.getPageNo(), dto.getPageSize(), totalCnt);
 
 		model.addAttribute("list", list);
