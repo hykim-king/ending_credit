@@ -9,116 +9,129 @@ layout:decorate="~{layout/layout}">
 <body>
 <div layout:fragment="content">
 
-    <!--상단: 제목 + 정렬(FilterSortBar) + 작성 버튼 (설계서 C-04)-->
-    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
-        <div>
-            <h3 class="mb-0 fw-bold">코멘트</h3>
-            <span class="text-muted filter-bar">영화·컬렉션 한줄평</span>
+    <!--진입 안내 (대상 없이 직접 접근한 경우) — 정식 진입은 영화 상세(1조)·컬렉션 상세(3조)-->
+    <div th:if="${mode == 'none'}" class="comment-card text-center py-5">
+        <h5 class="fw-bold mb-2">코멘트 화면은 상세 화면에서 진입합니다</h5>
+        <p class="text-muted filter-bar mb-3">
+            영화 상세(C-02)의 "코멘트 더보기" 또는 컬렉션 상세(D-01)에서 이 화면으로 연결됩니다.<br>
+            해당 화면(1조·3조) 연동 전까지는 아래 임시 링크로 확인하십시오.
+        </p>
+        <div class="filter-bar mb-1 text-muted">영화 코멘트 (C-04)</div>
+        <div class="d-flex flex-wrap justify-content-center gap-1 mb-3">
+            <a th:each="i : ${#numbers.sequence(1,10)}" class="btn btn-outline-primary btn-sm"
+               th:href="@{/comment/doRetrieve(contentId=${i})}" th:text="|영화 ${i}|">영화 1</a>
         </div>
-        <div class="d-flex align-items-end gap-2">
+        <div class="filter-bar mb-1 text-muted">컬렉션 코멘트 (D-07)</div>
+        <div class="d-flex flex-wrap justify-content-center gap-1">
+            <a th:each="i : ${#numbers.sequence(1,10)}" class="btn btn-outline-primary btn-sm"
+               th:href="@{/comment/doRetrieve(collectionId=${i})}" th:text="|컬렉션 ${i}|">컬렉션 1</a>
+        </div>
+    </div>
+    <!--//진입 안내-->
+
+    <div th:if="${mode != 'none'}">
+
+        <!--상단: 대상 요약 헤더 + 정렬 (설계서 C-04·D-07)-->
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
             <div>
-                <label for="memberId" class="form-label mb-0 filter-bar text-muted">회원ID (로그인 연동 전)</label>
-                <input type="number" id="memberId" class="form-control form-control-sm" value="9" min="1">
+                <span class="filter-bar text-muted"
+                      th:text="${mode == 'content'} ? '영화 코멘트' : '컬렉션 코멘트'">영화 코멘트</span>
+                <h3 class="mb-0 fw-bold" th:text="${targetTitle != null} ? ${targetTitle} : '(대상 없음)'">대상 제목</h3>
+                <span class="filter-bar text-muted" th:text="|코멘트 ${totalCnt}개|">코멘트 0개</span>
             </div>
-            <button type="button" class="btn btn-primary" id="btnOpenSave">코멘트 작성</button>
-        </div>
-    </div>
-    <!--//상단-->
-
-    <!--검색·정렬 바-->
-    <form id="searchForm" th:action="@{/comment/doRetrieve}" method="get" class="row g-1 mb-3 filter-bar">
-        <input type="hidden" name="pageNo" id="pageNo" th:value="${dto.pageNo}">
-        <div class="col-auto">
-            <select name="searchDiv" id="searchDiv" class="form-select form-select-sm">
-                <option value=""  th:selected="${dto.searchDiv == ''}">전체</option>
-                <option value="10" th:selected="${dto.searchDiv == '10'}">작성자 회원ID</option>
-                <option value="20" th:selected="${dto.searchDiv == '20'}">영화ID</option>
-                <option value="30" th:selected="${dto.searchDiv == '30'}">컬렉션ID</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <input type="text" name="searchWord" id="searchWord" class="form-control form-control-sm"
-                   placeholder="번호 입력" th:value="${dto.searchWord}">
-        </div>
-        <div class="col-auto">
-            <select name="sort" id="sort" class="form-select form-select-sm">
-                <option value="latest"      th:selected="${dto.searchMap['sort'] == 'latest'}">최신순</option>
-                <option value="likes"       th:selected="${dto.searchMap['sort'] == 'likes'}">좋아요순</option>
-                <option value="rating_desc" th:selected="${dto.searchMap['sort'] == 'rating_desc'}">높은 평점순</option>
-                <option value="rating_asc"  th:selected="${dto.searchMap['sort'] == 'rating_asc'}">낮은 평점순</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <select name="pageSize" id="pageSize" class="form-select form-select-sm">
-                <option value="10" th:selected="${dto.pageSize == 10}">10개</option>
-                <option value="20" th:selected="${dto.pageSize == 20}">20개</option>
-                <option value="30" th:selected="${dto.pageSize == 30}">30개</option>
-            </select>
-        </div>
-        <div class="col-auto">
-            <button type="button" class="btn btn-outline-primary btn-sm" onclick="doSearch(1)">검색</button>
-        </div>
-    </form>
-    <!--//검색·정렬 바-->
-
-    <!--CommentCard 목록 (CMP-10)-->
-    <div id="commentTbody">
-        <div th:if="${#lists.isEmpty(list)}" class="comment-card text-center text-muted py-5">
-            아직 코멘트가 없어요. 첫 코멘트를 남겨 보세요.
-        </div>
-        <div class="comment-card" th:each="vo : ${list}"
-             th:attr="data-comment-id=${vo.commentId},data-detail=${vo.commentDetail},data-spoiler=${vo.spoiler},data-content-id=${vo.contentId},data-collection-id=${vo.collectionId},data-member-id=${vo.memberId}">
-            <!--카드 머리: 아바타 + 닉네임 + 별점-->
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="avatar-circle" th:text="${#strings.substring(vo.nickname,0,1)}">닉</span>
+            <div class="d-flex align-items-end gap-2">
                 <div>
-                    <div class="fw-bold" th:text="${vo.nickname}">작성자</div>
-                    <div class="filter-bar text-muted" th:text="${vo.createdDt}">2026/08/25</div>
+                    <label for="memberId" class="form-label mb-0 filter-bar text-muted">회원ID (로그인 연동 전)</label>
+                    <input type="number" id="memberId" class="form-control form-control-sm" value="9" min="1">
                 </div>
-                <span class="ms-auto star" th:if="${vo.ratingScore != null}"
-                      th:text="|★ ${vo.ratingScore}|">★ 5</span>
-            </div>
-            <!--본문 (스포일러 가림 C-08: 메타는 유지, 본문만 안내 문구로 대체)-->
-            <p class="mb-2">
-                <span class="spoiler-guard" th:if="${vo.spoiler == 'Y'}">
-                    <span class="text-muted">스포일러가 포함된 코멘트예요.</span>
-                    <button type="button" class="btn btn-outline-secondary btn-sm spoiler-btn ms-1">내용 보기</button>
-                    <span class="real-detail d-none" th:text="${vo.commentDetail}">본문</span>
-                </span>
-                <span th:unless="${vo.spoiler == 'Y'}" th:text="${vo.commentDetail}">본문</span>
-            </p>
-            <!--카드 발: ♡ · 신고 · (내 것) 수정 · 삭제-->
-            <div class="d-flex align-items-center gap-3 filter-bar">
-                <button type="button" class="like-btn" th:attr="data-comment-id=${vo.commentId}">
-                    <i class="bi bi-heart"></i> <span class="like-cnt" th:text="${vo.likeCnt}">0</span>
-                </button>
-                <button type="button" class="card-action report-btn"><i class="bi bi-flag"></i> 신고</button>
-                <span class="ms-auto"></span>
-                <button type="button" class="card-action edit-btn"><i class="bi bi-pencil"></i> 수정</button>
-                <button type="button" class="card-action danger del-btn"><i class="bi bi-trash"></i> 삭제</button>
+                <!--작성 버튼은 컬렉션 코멘트(D-07)에만 있다 — 영화 코멘트 작성은 영화 상세(C-01)에서 진입-->
+                <button th:if="${mode == 'collection'}" type="button" class="btn btn-primary" id="btnOpenSave">코멘트 작성</button>
             </div>
         </div>
+        <!--//상단-->
+
+        <!--정렬 바 (영화=4종 / 컬렉션=2종 — 설계서 범위결정)-->
+        <form id="searchForm" th:action="@{/comment/doRetrieve}" method="get" class="row g-1 mb-3 filter-bar">
+            <input type="hidden" name="pageNo" id="pageNo" th:value="${dto.pageNo}">
+            <input type="hidden" name="contentId" th:if="${contentId != null}" th:value="${contentId}">
+            <input type="hidden" name="collectionId" id="pageCollectionId" th:if="${collectionId != null}" th:value="${collectionId}">
+            <div class="col-auto">
+                <select name="sort" id="sort" class="form-select form-select-sm">
+                    <option value="latest" th:selected="${dto.searchMap['sort'] == 'latest'}">최신순</option>
+                    <option value="likes"  th:selected="${dto.searchMap['sort'] == 'likes'}">좋아요순</option>
+                    <option th:if="${mode == 'content'}" value="rating_desc"
+                            th:selected="${dto.searchMap['sort'] == 'rating_desc'}">높은 평점순</option>
+                    <option th:if="${mode == 'content'}" value="rating_asc"
+                            th:selected="${dto.searchMap['sort'] == 'rating_asc'}">낮은 평점순</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <select name="pageSize" id="pageSize" class="form-select form-select-sm">
+                    <option value="10" th:selected="${dto.pageSize == 10}">10개</option>
+                    <option value="20" th:selected="${dto.pageSize == 20}">20개</option>
+                    <option value="30" th:selected="${dto.pageSize == 30}">30개</option>
+                </select>
+            </div>
+        </form>
+        <!--//정렬 바-->
+
+        <!--CommentCard 목록 (CMP-10)-->
+        <div id="commentTbody">
+            <div th:if="${#lists.isEmpty(list)}" class="comment-card text-center text-muted py-5">
+                아직 코멘트가 없어요. 첫 코멘트를 남겨 보세요.
+            </div>
+            <div class="comment-card" th:each="vo : ${list}"
+                 th:attr="data-comment-id=${vo.commentId},data-detail=${vo.commentDetail},data-spoiler=${vo.spoiler},data-content-id=${vo.contentId},data-collection-id=${vo.collectionId},data-member-id=${vo.memberId}">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="avatar-circle" th:text="${#strings.substring(vo.nickname,0,1)}">닉</span>
+                    <div>
+                        <div class="fw-bold" th:text="${vo.nickname}">작성자</div>
+                        <div class="filter-bar text-muted" th:text="${vo.createdDt}">2026/08/25</div>
+                    </div>
+                    <span class="ms-auto star" th:if="${vo.ratingScore != null}"
+                          th:text="|★ ${vo.ratingScore}|">★ 5</span>
+                </div>
+                <p class="mb-2">
+                    <span class="spoiler-guard" th:if="${vo.spoiler == 'Y'}">
+                        <span class="text-muted">스포일러가 포함된 코멘트예요.</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm spoiler-btn ms-1">내용 보기</button>
+                        <span class="real-detail d-none" th:text="${vo.commentDetail}">본문</span>
+                    </span>
+                    <span th:unless="${vo.spoiler == 'Y'}" th:text="${vo.commentDetail}">본문</span>
+                </p>
+                <div class="d-flex align-items-center gap-3 filter-bar">
+                    <button type="button" class="like-btn" th:attr="data-comment-id=${vo.commentId}">
+                        <i class="bi bi-heart"></i> <span class="like-cnt" th:text="${vo.likeCnt}">0</span>
+                    </button>
+                    <button type="button" class="card-action report-btn"><i class="bi bi-flag"></i> 신고</button>
+                    <span class="ms-auto"></span>
+                    <button type="button" class="card-action edit-btn"><i class="bi bi-pencil"></i> 수정</button>
+                    <button type="button" class="card-action danger del-btn"><i class="bi bi-trash"></i> 삭제</button>
+                </div>
+            </div>
+        </div>
+        <!--//CommentCard 목록-->
+
+        <!--페이징 (CMP-19)-->
+        <nav th:if="${pageDTO.totalCnt > 0}" aria-label="페이지" class="mt-3">
+            <ul class="pagination pagination-sm justify-content-center">
+                <li class="page-item" th:classappend="${!pageDTO.pre} ? 'disabled'">
+                    <a class="page-link" href="#" th:onclick="|doSearch(${pageDTO.startNo - 1})|">이전</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(pageDTO.startNo, pageDTO.endNo)}"
+                    th:classappend="${i == dto.pageNo} ? 'active'">
+                    <a class="page-link" href="#" th:onclick="|doSearch(${i})|" th:text="${i}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${!pageDTO.next} ? 'disabled'">
+                    <a class="page-link" href="#" th:onclick="|doSearch(${pageDTO.endNo + 1})|">다음</a>
+                </li>
+            </ul>
+        </nav>
+        <!--//페이징-->
+
     </div>
-    <!--//CommentCard 목록-->
 
-    <!--페이징 (CMP-19)-->
-    <nav th:if="${pageDTO.totalCnt > 0}" aria-label="페이지" class="mt-3">
-        <ul class="pagination pagination-sm justify-content-center">
-            <li class="page-item" th:classappend="${!pageDTO.pre} ? 'disabled'">
-                <a class="page-link" href="#" th:onclick="|doSearch(${pageDTO.startNo - 1})|">이전</a>
-            </li>
-            <li class="page-item" th:each="i : ${#numbers.sequence(pageDTO.startNo, pageDTO.endNo)}"
-                th:classappend="${i == dto.pageNo} ? 'active'">
-                <a class="page-link" href="#" th:onclick="|doSearch(${i})|" th:text="${i}">1</a>
-            </li>
-            <li class="page-item" th:classappend="${!pageDTO.next} ? 'disabled'">
-                <a class="page-link" href="#" th:onclick="|doSearch(${pageDTO.endNo + 1})|">다음</a>
-            </li>
-        </ul>
-    </nav>
-    <!--//페이징-->
-
-    <!--코멘트 작성·수정 모달 (C-07 / MOD-02·16)-->
+    <!--코멘트 작성·수정 모달 (C-07 / MOD-02·16) — 대상은 화면 진입 대상으로 고정-->
     <div class="modal fade" id="commentModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -129,23 +142,10 @@ layout:decorate="~{layout/layout}">
                 <div class="modal-body">
                     <input type="hidden" id="cmMode" value="save">
                     <input type="hidden" id="cmCommentId" value="0">
-                    <div class="row g-2 mb-2" id="cmTargetRow">
-                        <div class="col-6">
-                            <label for="cmTargetType" class="form-label filter-bar">대상 구분</label>
-                            <select id="cmTargetType" class="form-select form-select-sm">
-                                <option value="content" selected>영화</option>
-                                <option value="collection">컬렉션</option>
-                            </select>
-                        </div>
-                        <div class="col-6">
-                            <label for="cmTargetId" class="form-label filter-bar">대상 ID (테스트용 직접 입력)</label>
-                            <input type="number" id="cmTargetId" class="form-control form-control-sm" min="1" placeholder="예: 9">
-                        </div>
-                    </div>
+                    <p class="filter-bar text-muted mb-2" th:text="${targetTitle}">대상 제목</p>
                     <div class="mb-2">
-                        <label for="cmDetail" class="form-label filter-bar">내용</label>
                         <textarea id="cmDetail" class="form-control" rows="4" maxlength="1000"
-                                  placeholder="영화·컬렉션에 대한 생각을 남겨 보세요."></textarea>
+                                  placeholder="생각을 남겨 보세요."></textarea>
                         <div class="text-end filter-bar text-muted"><span id="cmCount">0</span> / 1,000</div>
                     </div>
                     <div class="form-check">

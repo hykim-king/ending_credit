@@ -164,4 +164,13 @@
         SELECT COUNT(*) AS total_cnt FROM user_comment
     </select>
 
+    <!-- 화면 헤더용 대상 제목 (C-04 영화 요약 / D-07 컬렉션 정보) -->
+    <select id="getContentTitle" parameterType="long" resultType="string">
+        SELECT NVL(title_ko, title_org) FROM content WHERE content_id = #{contentId}
+    </select>
+
+    <select id="getCollectionTitle" parameterType="long" resultType="string">
+        SELECT title FROM collection WHERE collection_id = #{collectionId}
+    </select>
+
 </mapper>

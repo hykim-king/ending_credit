@@ -1,5 +1,7 @@
 /**
- * comment_list.js — 코멘트 목록/작성·수정/삭제/좋아요 토글/신고 (학원 fetch 공통 사용)
+ * comment_list.js — 코멘트 목록(C-04·D-07)/작성·수정/삭제/좋아요 토글/신고 (학원 fetch 공통 사용)
+ * 화면은 대상(영화 또는 컬렉션) 고정으로 진입한다. 작성은 컬렉션 코멘트(D-07)에서만 —
+ * 영화 코멘트 작성은 영화 상세(C-01, 1조) 연동 후 그쪽 모달에서 진입한다.
  * 회원 인증(2조) 연동 전이라 회원ID는 화면 상단 테스트 입력값을 쓴다.
  */
 let commentModal;
@@ -16,40 +18,54 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cmCount').textContent = cmDetail.value.length;
     });
 
-    document.getElementById('btnOpenSave').addEventListener('click', openSaveModal);
+    // 작성 버튼은 컬렉션 코멘트(D-07)에만 있다
+    const btnOpenSave = document.getElementById('btnOpenSave');
+    if (btnOpenSave) {
+        btnOpenSave.addEventListener('click', openSaveModal);
+    }
     document.getElementById('btnCmSave').addEventListener('click', doSave);
     document.getElementById('btnCmDelete').addEventListener('click', doDeleteInModal);
     document.getElementById('btnRpSave').addEventListener('click', doReport);
 
+    // 정렬·페이지크기 변경 시 즉시 재조회
+    const sort = document.getElementById('sort');
+    if (sort) {
+        sort.addEventListener('change', () => doSearch(1));
+        document.getElementById('pageSize').addEventListener('change', () => doSearch(1));
+    }
+
     // 카드 버튼은 이벤트 위임으로 처리 (closest/dataset — 학원 모달 패턴, CommentCard)
-    document.getElementById('commentTbody').addEventListener('click', (e) => {
-        const card = e.target.closest('[data-comment-id]');
-        if (!card) {
-            return;
-        }
-        if (e.target.closest('.spoiler-btn')) {
-            toggleSpoiler(e.target.closest('.spoiler-guard'), e.target.closest('.spoiler-btn'));
-            return;
-        }
-        if (e.target.closest('.like-btn')) {
-            doToggleLike(card, e.target.closest('.like-btn'));
-            return;
-        }
-        if (e.target.closest('.edit-btn')) {
-            openEditModal(card);
-            return;
-        }
-        if (e.target.closest('.del-btn')) {
-            doDeleteRow(card);
-            return;
-        }
-        if (e.target.closest('.report-btn')) {
-            openReportModal(card);
-        }
-    });
+    const tbody = document.getElementById('commentTbody');
+    if (tbody) {
+        tbody.addEventListener('click', (e) => {
+            const card = e.target.closest('[data-comment-id]');
+            if (!card) {
+                return;
+            }
+            if (e.target.closest('.spoiler-btn')) {
+                toggleSpoiler(e.target.closest('.spoiler-guard'), e.target.closest('.spoiler-btn'));
+                return;
+            }
+            if (e.target.closest('.like-btn')) {
+                doToggleLike(card, e.target.closest('.like-btn'));
+                return;
+            }
+            if (e.target.closest('.edit-btn')) {
+                openEditModal(card);
+                return;
+            }
+            if (e.target.closest('.del-btn')) {
+                doDeleteRow(card);
+                return;
+            }
+            if (e.target.closest('.report-btn')) {
+                openReportModal(card);
+            }
+        });
+    }
 });
 
-// 검색 + 페이지 이동 (hidden pageNo 채우고 GET 폼 제출)
+// 정렬·페이지 이동 (hidden pageNo 채우고 GET 폼 제출 — 대상 hidden은 폼이 갖고 있다)
 function doSearch(pageNo) {
     document.getElementById('pageNo').value = pageNo;
     document.getElementById('searchForm').submit();
@@ -64,14 +80,11 @@ function getMemberId() {
     return memberInput.value.trim();
 }
 
-// 작성 모달 열기 (신규)
+// 작성 모달 열기 (D-07 신규 — 대상은 화면의 컬렉션으로 고정)
 function openSaveModal() {
-    document.getElementById('commentModalTitle').textContent = '코멘트 작성';
+    document.getElementById('commentModalTitle').textContent = '컬렉션 코멘트 작성';
     document.getElementById('cmMode').value = 'save';
     document.getElementById('cmCommentId').value = '0';
-    document.getElementById('cmTargetType').disabled = false;
-    document.getElementById('cmTargetId').disabled = false;
-    document.getElementById('cmTargetId').value = '';
     document.getElementById('cmDetail').value = '';
     document.getElementById('cmCount').textContent = '0';
     document.getElementById('cmSpoiler').checked = false;
@@ -79,24 +92,11 @@ function openSaveModal() {
     commentModal.show();
 }
 
-// 수정 모달 열기 — 행의 data-* 값으로 채운다. 대상(영화/컬렉션)은 수정 불가
+// 수정 모달 열기 — 카드의 data-* 값으로 채운다. 대상은 수정 불가라 표시만 유지
 function openEditModal(card) {
     document.getElementById('commentModalTitle').textContent = '코멘트 수정';
     document.getElementById('cmMode').value = 'update';
     document.getElementById('cmCommentId').value = card.dataset.commentId;
-
-    const targetType = document.getElementById('cmTargetType');
-    const targetId = document.getElementById('cmTargetId');
-    if (card.dataset.contentId) {
-        targetType.value = 'content';
-        targetId.value = card.dataset.contentId;
-    } else {
-        targetType.value = 'collection';
-        targetId.value = card.dataset.collectionId;
-    }
-    targetType.disabled = true;
-    targetId.disabled = true;
-
     document.getElementById('cmDetail').value = card.dataset.detail;
     document.getElementById('cmCount').textContent = card.dataset.detail.length;
     document.getElementById('cmSpoiler').checked = ('Y' === card.dataset.spoiler);
@@ -104,7 +104,7 @@ function openEditModal(card) {
     commentModal.show();
 }
 
-// 저장 (신규=doSave / 수정=doUpdate)
+// 저장 (신규=doSave: 컬렉션 고정 / 수정=doUpdate)
 async function doSave() {
     const detailInput = document.getElementById('cmDetail');
     if (isEmpty(detailInput, '내용을 입력하세요.')) {
@@ -120,21 +120,12 @@ async function doSave() {
             if (null === memberId) {
                 return;
             }
-            const targetIdInput = document.getElementById('cmTargetId');
-            if (isEmpty(targetIdInput, '대상 ID를 입력하세요.')) {
-                return;
-            }
-            const data = {
+            result = await requestPostForm('/comment/doSave', {
                 memberId: memberId,
+                collectionId: document.getElementById('pageCollectionId').value,
                 commentDetail: detailInput.value.trim(),
                 spoiler: spoiler
-            };
-            if ('content' === document.getElementById('cmTargetType').value) {
-                data.contentId = targetIdInput.value.trim();
-            } else {
-                data.collectionId = targetIdInput.value.trim();
-            }
-            result = await requestPostForm('/comment/doSave', data);
+            });
         } else {
             result = await requestPostForm('/comment/doUpdate', {
                 commentId: document.getElementById('cmCommentId').value,
@@ -158,7 +149,7 @@ async function doDeleteInModal() {
     await deleteComment(document.getElementById('cmCommentId').value, () => commentModal.hide());
 }
 
-// 삭제 (목록 행)
+// 삭제 (카드)
 async function doDeleteRow(card) {
     await deleteComment(card.dataset.commentId, null);
 }

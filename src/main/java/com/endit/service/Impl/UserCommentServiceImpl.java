@@ -105,6 +105,24 @@ public class UserCommentServiceImpl implements UserCommentService {
 		return userCommentMapper.totalCnt();
 	}
 
+	@Override
+	public String getContentTitle(long contentId) {
+		log.debug("=============================");
+		log.debug("{}()", "getContentTitle");
+		log.debug("=============================");
+
+		return userCommentMapper.getContentTitle(contentId);
+	}
+
+	@Override
+	public String getCollectionTitle(long collectionId) {
+		log.debug("=============================");
+		log.debug("{}()", "getCollectionTitle");
+		log.debug("=============================");
+
+		return userCommentMapper.getCollectionTitle(collectionId);
+	}
+
 	// 숫자 검색을 쓰는 검색구분 — 매퍼 XML의 <when> 값과 일치해야 한다 (10=회원ID/20=영화ID/30=컬렉션ID)
 	private static final List<String> NUMERIC_SEARCH_DIVS = List.of("10", "20", "30");
 

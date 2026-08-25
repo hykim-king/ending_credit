@@ -60,41 +60,57 @@ public class CommentController {
 	 *
 	 * <pre>
 	 * Method Name : doRetrieve
-	 * Description : 코멘트 목록 화면 (검색 10=회원ID/20=영화ID/30=컬렉션ID + 페이징)
-	 *               정렬(sort): latest(기본)/likes/rating_desc/rating_asc — 화면설계서 C-04
+	 * Description : 코멘트 목록 화면 — 대상 고정 진입 (화면설계서 C-04·D-07)
+	 *               contentId가 오면 그 영화의 코멘트(C-04, 정렬 4종·작성 버튼 없음),
+	 *               collectionId가 오면 그 컬렉션의 코멘트(D-07, 정렬 2종·작성 버튼 있음).
+	 *               대상 없이 직접 들어오면 진입 안내만 보여준다 —
+	 *               정식 진입은 영화 상세(1조)·컬렉션 상세(3조)에서 연결된다.
 	 *
 	 * </pre>
 	 *
-	 * @param searchDiv
-	 * @param searchWord
+	 * @param contentId
+	 * @param collectionId
+	 * @param sort
 	 * @param pageSize
 	 * @param pageNo
-	 * @param sort
 	 * @param model
 	 * @return comment/comment_list
 	 */
 	@GetMapping("/doRetrieve")
 	public String doRetrieve(
-			@RequestParam(required = false, name = "searchDiv", defaultValue = "") String searchDiv,
-			@RequestParam(required = false, name = "searchWord", defaultValue = "") String searchWord,
+			@RequestParam(required = false, name = "contentId") Long contentId,
+			@RequestParam(required = false, name = "collectionId") Long collectionId,
+			@RequestParam(name = "sort", defaultValue = "latest") String sort,
 			@RequestParam(name = "pageSize", defaultValue = "10") int pageSize,
 			@RequestParam(name = "pageNo", defaultValue = "1") int pageNo,
-			@RequestParam(name = "sort", defaultValue = "latest") String sort,
 			Model model) {
 		String viewName = "comment/comment_list";
 		log.debug("=============================");
 		log.debug("{}()", "doRetrieve");
-		log.debug("searchDiv: {}, searchWord: {}, pageSize: {}, pageNo: {}, sort: {}", searchDiv, searchWord,
-				pageSize, pageNo, sort);
+		log.debug("contentId: {}, collectionId: {}, sort: {}, pageSize: {}, pageNo: {}", contentId, collectionId,
+				sort, pageSize, pageNo);
 		log.debug("=============================");
 
-		// 1. 검색·페이징·정렬 조건 (정렬은 학원 24장 searchMap 방식 — 허용값 외에는 매퍼가 latest로 처리)
+		// 1. 진입 대상 판별 — 영화(C-04) / 컬렉션(D-07) / 없음(안내)
+		String mode = "none";
+		String targetTitle = null;
+
 		DTO dto = new DTO();
-		dto.setSearchDiv(searchDiv);
-		dto.setSearchWord(searchWord);
 		dto.setPageSize(pageSize);
 		dto.setPageNo(pageNo);
 		dto.getSearchMap().put("sort", sort);
+
+		if (null != contentId) {
+			mode = "content";
+			dto.setSearchDiv("20"); // 영화ID 검색 (매퍼 검색조각 재사용)
+			dto.setSearchWord(String.valueOf(contentId));
+			targetTitle = userCommentService.getContentTitle(contentId);
+		} else if (null != collectionId) {
+			mode = "collection";
+			dto.setSearchDiv("30"); // 컬렉션ID 검색
+			dto.setSearchWord(String.valueOf(collectionId));
+			targetTitle = userCommentService.getCollectionTitle(collectionId);
+		}
 
 		// 2. 신고 모달의 사유 select용 공통코드 조회 (학원 28장 패턴)
 		String[] codeStr = { "REPORT_REASON" };
@@ -103,8 +119,8 @@ public class CommentController {
 		List<CodeVO> codeList = codeService.doRetrieve(codeMap);
 		model.addAttribute("reasonList", CodeUtil.getCodeList(codeList, "REPORT_REASON"));
 
-		// 3. 목록 조회
-		List<UserCommentVO> list = userCommentService.doRetrieve(dto);
+		// 3. 목록 조회 (진입 대상이 있을 때만)
+		List<UserCommentVO> list = "none".equals(mode) ? List.of() : userCommentService.doRetrieve(dto);
 
 		// 4. 총건수 — 각 행에 실려 오는 totalCnt 사용 (학원 user 계열 방식)
 		int totalCnt = list.size() > 0 ? list.get(0).getTotalCnt() : 0;
@@ -112,6 +128,11 @@ public class CommentController {
 		// 5. 페이지 블록 계산 (blockSize=10: startNo/endNo/pre/next)
 		DTO pageDTO = new DTO(dto.getPageNo(), dto.getPageSize(), totalCnt);
 
+		model.addAttribute("mode", mode);
+		model.addAttribute("contentId", contentId);
+		model.addAttribute("collectionId", collectionId);
+		model.addAttribute("targetTitle", targetTitle);
+		model.addAttribute("totalCnt", totalCnt);
 		model.addAttribute("list", list);
 		model.addAttribute("pageDTO", pageDTO);
 		model.addAttribute("dto", dto);

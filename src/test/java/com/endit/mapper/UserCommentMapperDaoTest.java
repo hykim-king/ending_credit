@@ -374,6 +374,17 @@ class UserCommentMapperDaoTest {
 	}
 
 	@Test
+	public void getTargetTitle() {
+		log.debug("---------------------------");
+		log.debug("*getTargetTitle()*");
+		log.debug("---------------------------");
+		// 화면 헤더용 대상 제목 조회 — 공용 더미 실제 값과 대조 (C-04·D-07)
+		assertEquals("어벤져스: 인피니티 워", mapper.getContentTitle(CONTENT_A));
+		assertEquals("인생 SF 영화 모음집", mapper.getCollectionTitle(COLLECTION_A));
+		assertNull(mapper.getContentTitle(999_999_999L)); // 없는 대상은 null
+	}
+
+	@Test
 	void beans() {
 		log.debug("---------------------------");
 		log.debug("*beans()*");
