@@ -130,6 +130,11 @@ class ReportCommentServiceJUnit {
 		UserCommentVO afterVO = commentMapper.doSelectOne(comment01);
 		assertNotNull(afterVO);
 		assertEquals(ReportCommentVO.REASON_SPOILER, afterVO.getBlindReason());
+
+		// 4. 완료된 신고는 재처리 금지 — 재승인도, 반려 전환도 거부된다 (이력 보호)
+		assertThrows(IllegalArgumentException.class, () -> service.upApproveReport(report01));
+		report01.setStatus(ReportCommentVO.STATUS_REJECTED);
+		assertThrows(IllegalArgumentException.class, () -> service.doUpdate(report01));
 	}
 
 	@Test
