@@ -3,7 +3,9 @@
  * Class Name : ReportCommentServiceImpl
  * Description : 코멘트 신고 Service 구현체
  *               - doSave: 사유가 OTHER면 상세 필수(CK_REPORT_OTHER_DETAIL)를 먼저 검증
- *               - upApproveReport: 승인 처리 + 코멘트 삭제를 한 트랜잭션으로(ⓑ안)
+ *               - upApproveReport: 승인 = 신고 상태만 ACCEPTED로 저장(팀 결정: 데이터 삭제 없음).
+ *                 코멘트는 그대로 두고, 코멘트 조회가 "승인된 신고 존재"를 blindReason으로
+ *                 실어 화면에서 사유별 안내 문구로 가린다
  *               - 검색조건은 10=처리상태/20=사유(문자), 30=코멘트ID(숫자) — 30만 숫자 검증
  *
  * Modification Information
@@ -28,9 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.endit.cmn.DTO;
 import com.endit.cmn.exception.ReportNotFoundException;
 import com.endit.domain.ReportCommentVO;
-import com.endit.domain.UserCommentVO;
 import com.endit.mapper.ReportCommentMapper;
-import com.endit.mapper.UserCommentMapper;
 import com.endit.service.ReportCommentService;
 
 @Service
@@ -45,14 +45,11 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 	private static final String NUMERIC_PATTERN = "\\d{1,18}";
 
 	private final ReportCommentMapper reportCommentMapper;
-	private final UserCommentMapper userCommentMapper; // 승인 시 코멘트 삭제용(같은 4조 도메인)
 
-	public ReportCommentServiceImpl(ReportCommentMapper reportCommentMapper, UserCommentMapper userCommentMapper) {
+	public ReportCommentServiceImpl(ReportCommentMapper reportCommentMapper) {
 		super();
 		this.reportCommentMapper = reportCommentMapper;
-		this.userCommentMapper = userCommentMapper;
 		log.debug("reportCommentMapper: {}", reportCommentMapper);
-		log.debug("userCommentMapper: {}", userCommentMapper);
 	}
 
 	@Override
@@ -141,21 +138,16 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 			throw new ReportNotFoundException("신고가 존재하지 않습니다. reportId=" + param.getReportId());
 		}
 
-		// 2. 승인 처리 — CK_REPORT_PROCESS_COMPLETE: 완료 상태면 처리자·처리일시 필수.
-		//    처리자 없이 승인하려 하면 여기서 DB가 거부하고 전체가 롤백된다.
+		// 2. 승인 처리 — 신고 상태만 ACCEPTED로 저장한다 (팀 결정: 데이터 삭제 없음.
+		//    삭제하면 처리자·처리내용 기록이 무의미해지고, soft delete 미구현 상태의
+		//    관리자 임의 hard delete는 위험하기 때문). 코멘트는 그대로 남고,
+		//    코멘트 목록·단건조회가 blindReason으로 이 승인 건을 실어 화면에서 가린다.
+		//    CK_REPORT_PROCESS_COMPLETE: 완료 상태면 처리자·처리일시 필수 —
+		//    처리자 없이 승인하려 하면 여기서 DB가 거부하고 롤백된다.
 		param.setStatus(ReportCommentVO.STATUS_ACCEPTED);
 		int flag = reportCommentMapper.doUpdate(param);
 		if (1 != flag) {
 			throw new RuntimeException("신고 승인 처리에 실패했습니다.");
-		}
-
-		// 3. 신고된 코멘트 삭제 (팀 잠정 결정 ⓑ안)
-		//    — 좋아요·신고 이력(이 신고 포함)이 FK ON DELETE CASCADE로 함께 사라진다
-		UserCommentVO comment = new UserCommentVO();
-		comment.setCommentId(outVO.getCommentId());
-		flag = userCommentMapper.doDelete(comment);
-		if (1 != flag) {
-			throw new RuntimeException("신고된 코멘트 삭제에 실패했습니다.");
 		}
 
 		return 1;

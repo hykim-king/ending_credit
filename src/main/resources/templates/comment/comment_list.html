@@ -92,12 +92,21 @@ layout:decorate="~{layout/layout}">
                           th:text="|★ ${vo.ratingScore}|">★ 5</span>
                 </div>
                 <p class="mb-2">
-                    <span class="spoiler-guard" th:if="${vo.spoiler == 'Y'}">
-                        <span class="text-muted">스포일러가 포함된 코멘트예요.</span>
-                        <button type="button" class="btn btn-outline-secondary btn-sm spoiler-btn ms-1">내용 보기</button>
-                        <span class="real-detail d-none" th:text="${vo.commentDetail}">본문</span>
+                    <!--신고 승인으로 가려진 코멘트 — 사유별 안내 박스(팀 결정: 삭제 없이 가림)-->
+                    <span th:if="${vo.blindReason != null}"
+                          class="d-block border rounded p-2 text-muted"
+                          th:text="${vo.blindReason == 'SPOILER'} ? '스포일러 댓글입니다.'
+                                 : (${vo.blindReason == 'INAPPROPRIATE'} ? '부적절한 댓글입니다.' : '신고승인된 댓글입니다.')">
+                        신고승인된 댓글입니다.
                     </span>
-                    <span th:unless="${vo.spoiler == 'Y'}" th:text="${vo.commentDetail}">본문</span>
+                    <th:block th:if="${vo.blindReason == null}">
+                        <span class="spoiler-guard" th:if="${vo.spoiler == 'Y'}">
+                            <span class="text-muted">스포일러가 포함된 코멘트예요.</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm spoiler-btn ms-1">내용 보기</button>
+                            <span class="real-detail d-none" th:text="${vo.commentDetail}">본문</span>
+                        </span>
+                        <span th:unless="${vo.spoiler == 'Y'}" th:text="${vo.commentDetail}">본문</span>
+                    </th:block>
                 </p>
                 <div class="d-flex align-items-center gap-3 filter-bar">
                     <button type="button" class="like-btn" th:attr="data-comment-id=${vo.commentId}">

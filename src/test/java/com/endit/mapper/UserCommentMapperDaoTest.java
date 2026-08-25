@@ -133,6 +133,7 @@ class UserCommentMapperDaoTest {
 		assertEquals("ENDIT수석관리자", outVO.getNickname());
 		assertEquals(0, outVO.getLikeCnt());
 		assertNull(outVO.getRatingScore());
+		assertNull(outVO.getBlindReason()); // 승인된 신고가 없으면 가림 사유도 없다
 
 		// 5.
 		flag = mapper.doSave(comment02);

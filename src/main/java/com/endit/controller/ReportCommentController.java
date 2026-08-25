@@ -205,8 +205,8 @@ public class ReportCommentController {
 	 *
 	 * <pre>
 	 * Method Name : upApproveReport
-	 * Description : 신고 승인(AD-10) — 승인 처리 후 대상 코멘트 삭제까지 한 트랜잭션.
-	 *               코멘트가 지워지면 이 신고 이력도 CASCADE로 함께 사라진다(팀 잠정 ⓑ안).
+	 * Description : 신고 승인(AD-10) — 신고 상태만 ACCEPTED로 저장(팀 결정: 삭제 없음).
+	 *               해당 코멘트는 목록에서 사유별 안내 문구로 가려진다.
 	 *
 	 * </pre>
 	 *
@@ -222,7 +222,7 @@ public class ReportCommentController {
 		log.debug("=============================");
 
 		int flag = reportCommentService.upApproveReport(param);
-		String message = 1 == flag ? "신고를 승인하고 해당 코멘트를 삭제했습니다." : "신고 승인에 실패 했습니다.";
+		String message = 1 == flag ? "신고를 승인했습니다. 해당 댓글은 목록에서 안내 문구로 가려집니다." : "신고 승인에 실패 했습니다.";
 
 		return new MessageVO(flag + "", message);
 	}

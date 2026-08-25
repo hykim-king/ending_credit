@@ -36,10 +36,9 @@ public interface ReportCommentService extends WorkDiv<ReportCommentVO> {
 	 *
 	 * <pre>
 	 * Method Name : upApproveReport
-	 * Description : 신고 승인 — 승인 처리(상태·처리자·처리일시)와 대상 코멘트 삭제를
-	 *               한 트랜잭션으로 조합한다(조합 메서드는 up~ 접두).
-	 *               팀 잠정 결정 ⓑ안: 코멘트를 삭제하면 이 신고 이력도
-	 *               FK ON DELETE CASCADE로 함께 사라지는 것을 수용한다.
+	 * Description : 신고 승인 — 신고 상태만 ACCEPTED로 저장한다(팀 결정: 데이터 삭제 없음).
+	 *               코멘트는 그대로 남고, 코멘트 조회가 승인된 신고의 사유(blindReason)를
+	 *               실어 화면에서 사유별 안내 문구로 가린다.
 	 *
 	 * </pre>
 	 *

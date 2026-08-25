@@ -90,7 +90,8 @@ layout:decorate="~{layout/layout}">
                 <button type="button" class="btn btn-primary" id="btnApprove">신고 승인</button>
             </div>
             <p class="filter-bar text-muted mt-2 mb-0">
-                승인하면 신고된 코멘트가 삭제되고, 이 신고 이력도 함께 사라집니다(물리삭제 + FK CASCADE — 팀 결정).
+                승인하면 신고 상태만 ACCEPTED로 저장되고 댓글은 삭제되지 않습니다(팀 결정).
+                해당 댓글은 목록에서 사유별 안내 문구("스포일러 댓글입니다." 등)로 가려집니다.
             </p>
         </div>
         <!--//처리 입력-->

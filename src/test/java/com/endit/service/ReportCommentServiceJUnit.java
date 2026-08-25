@@ -107,25 +107,29 @@ class ReportCommentServiceJUnit {
 		log.debug("---------------------------");
 		log.debug("*upApproveReport()*");
 		log.debug("---------------------------");
-		// 승인(ⓑ안): 승인 처리 + 코멘트 삭제가 한 트랜잭션 —
-		// 코멘트가 지워지면 신고 이력도 CASCADE로 함께 사라진다
-		// 1. 신고 접수
+		// 승인(팀 결정): 신고 상태만 ACCEPTED로 저장 — 데이터 삭제 없음.
+		// 코멘트는 그대로 남고, 조회 시 blindReason(승인된 신고 사유)이 실려
+		// 화면에서 안내 문구로 가려진다
+		// 1. 신고 접수 (이 시점 코멘트 blindReason은 없어야 한다)
 		// 2. 승인 (처리자·메모 필수)
-		// 3. 신고·코멘트 둘 다 사라졌는지 확인
+		// 3. 신고는 ACCEPTED로 남고, 코멘트도 남으며 blindReason=SPOILER
 
 		// 1.
 		int flag = service.doSave(report01);
 		assertEquals(1, flag);
+		assertNull(commentMapper.doSelectOne(comment01).getBlindReason());
 
 		// 2.
 		report01.setProcessedByMemberId(ADMIN_PROCESSOR);
-		report01.setProcessNote("신고 승인 - 해당 코멘트 삭제 처리");
+		report01.setProcessNote("신고 승인 - 코멘트는 안내 문구로 가림");
 		flag = service.upApproveReport(report01);
 		assertEquals(1, flag);
 
 		// 3.
-		assertNull(reportMapper.doSelectOne(report01));
-		assertNull(commentMapper.doSelectOne(comment01));
+		assertEquals(ReportCommentVO.STATUS_ACCEPTED, reportMapper.doSelectOne(report01).getStatus());
+		UserCommentVO afterVO = commentMapper.doSelectOne(comment01);
+		assertNotNull(afterVO);
+		assertEquals(ReportCommentVO.REASON_SPOILER, afterVO.getBlindReason());
 	}
 
 	@Test
@@ -133,8 +137,8 @@ class ReportCommentServiceJUnit {
 		log.debug("---------------------------");
 		log.debug("*doUpdateCannotAccept()*");
 		log.debug("---------------------------");
-		// 승인은 upApproveReport 전용 — 일반 doUpdate로 ACCEPTED가 오면
-		// "코멘트가 남는 승인"이 생겨 ⓑ안 불변식이 깨지므로 서비스가 거부한다
+		// 승인은 upApproveReport 전용 — 처리자·메모 검증과 상태 전이를
+		// 한 경로로 일원화하기 위해 일반 doUpdate의 ACCEPTED는 서비스가 거부한다
 		// 1. 신고 접수
 		// 2. doUpdate로 ACCEPTED 시도 → IllegalArgumentException
 		// 3. REJECTED(반려)는 정상 처리

@@ -1,6 +1,6 @@
 /**
  * report_mng.js — 신고 상세·처리 (AD-10)
- * 반려 = /report/doUpdate(REJECTED) · 승인 = /report/upApproveReport(코멘트 삭제까지 한 트랜잭션)
+ * 반려 = /report/doUpdate(REJECTED) · 승인 = /report/upApproveReport(상태만 ACCEPTED — 삭제 없음, 팀 결정)
  */
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnReject').addEventListener('click', doReject);
@@ -46,13 +46,13 @@ async function doReject() {
     }
 }
 
-// 신고 승인 — 코멘트 삭제 + 신고 이력 CASCADE 소멸
+// 신고 승인 — 신고 상태만 ACCEPTED로 저장(삭제 없음), 댓글은 목록에서 안내 문구로 가려진다
 async function doApprove() {
     const param = getProcessParam();
     if (null === param) {
         return;
     }
-    if (!confirm('신고를 승인할까요? 신고된 코멘트가 삭제되고 이 신고 이력도 함께 사라집니다.')) {
+    if (!confirm('신고를 승인할까요? 댓글은 삭제되지 않고, 목록에서 안내 문구로 가려집니다.')) {
         return;
     }
 

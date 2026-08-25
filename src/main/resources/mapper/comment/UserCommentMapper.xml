@@ -67,7 +67,10 @@
              TO_CHAR(uc.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
              m.nickname,
              NVL(lc.like_cnt, 0) like_cnt,
-             mc.rating_score
+             mc.rating_score,
+             (SELECT MAX(rc.reason) FROM report_comment rc
+               WHERE rc.comment_id = uc.comment_id
+                 AND rc.status = 'ACCEPTED') AS blind_reason
          FROM
              user_comment uc
              JOIN member m ON m.member_id = uc.member_id
@@ -116,14 +119,18 @@
                      TO_CHAR(tt1.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
                      tt1.nickname,
                      tt1.like_cnt,
-                     tt1.rating_score
+                     tt1.rating_score,
+                     tt1.blind_reason
                 FROM(
                       SELECT ROWNUM rnum, t1.*
                         FROM (
                               SELECT uc.*,
                                      m.nickname,
                                      NVL(lc.like_cnt, 0) like_cnt,
-                                     mc.rating_score
+                                     mc.rating_score,
+                                     (SELECT MAX(rc.reason) FROM report_comment rc
+                                       WHERE rc.comment_id = uc.comment_id
+                                         AND rc.status = 'ACCEPTED') AS blind_reason
                                 FROM user_comment uc
                                 JOIN member m ON m.member_id = uc.member_id
                                 LEFT JOIN (SELECT comment_id, COUNT(*) like_cnt
