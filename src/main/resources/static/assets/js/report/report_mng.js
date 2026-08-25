@@ -3,8 +3,13 @@
  * 반려 = /report/doUpdate(REJECTED) · 승인 = /report/upApproveReport(상태만 ACCEPTED — 삭제 없음, 팀 결정)
  */
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnReject').addEventListener('click', doReject);
-    document.getElementById('btnApprove').addEventListener('click', doApprove);
+    const btnReject = document.getElementById('btnReject');
+    const btnApprove = document.getElementById('btnApprove');
+    if (null === btnReject || null === btnApprove) {
+        return; // 완료된 신고 — 처리폼이 없다 (이력만 표시)
+    }
+    btnReject.addEventListener('click', doReject);
+    btnApprove.addEventListener('click', doApprove);
 });
 
 // 완료 처리는 처리자·처리 내용이 필수 (CK_REPORT_PROCESS_COMPLETE)

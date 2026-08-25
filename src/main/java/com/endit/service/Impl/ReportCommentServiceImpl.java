@@ -6,6 +6,7 @@
  *               - upApproveReport: 승인 = 신고 상태만 ACCEPTED로 저장(팀 결정: 데이터 삭제 없음).
  *                 코멘트는 그대로 두고, 코멘트 조회가 "승인된 신고 존재"를 blindReason으로
  *                 실어 화면에서 사유별 안내 문구로 가린다
+ *               - 완료(ACCEPTED/REJECTED)된 신고는 재처리 금지 — 처리자·처리내용 이력 보호
  *               - 검색조건은 10=처리상태/20=사유(문자), 30=코멘트ID(숫자) — 30만 숫자 검증
  *
  * Modification Information
@@ -87,11 +88,14 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 		log.debug("{}()", "doUpdate");
 		log.debug("=============================");
 
-		// 승인(ACCEPTED)은 코멘트 삭제까지 묶인 upApproveReport로만 한다 —
-		// 일반 doUpdate로 ACCEPTED가 들어오면 "코멘트가 남는 승인"이 생겨 ⓑ안 불변식이 깨진다
+		// 승인(ACCEPTED)은 upApproveReport로만 한다 —
+		// 처리자·메모 검증과 상태 전이를 한 경로로 일원화하기 위해서다
 		if (ReportCommentVO.STATUS_ACCEPTED.equals(param.getStatus())) {
 			throw new IllegalArgumentException("승인 처리는 upApproveReport로만 할 수 있습니다.");
 		}
+
+		// 이미 완료된 신고는 재처리 금지 — 처리자·처리내용 이력이 덮어써지는 것을 막는다
+		checkAlreadyCompleted(reportCommentMapper.doSelectOne(param));
 
 		// 신고 처리(반려 등) — 상태·처리자·메모·처리일시가 한 UPDATE로 갱신된다
 		return reportCommentMapper.doUpdate(param);
@@ -138,6 +142,9 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 			throw new ReportNotFoundException("신고가 존재하지 않습니다. reportId=" + param.getReportId());
 		}
 
+		// 1-1. 이미 완료된 신고는 재승인 금지 — 처리자·처리내용 이력이 덮어써지는 것을 막는다
+		checkAlreadyCompleted(outVO);
+
 		// 2. 승인 처리 — 신고 상태만 ACCEPTED로 저장한다 (팀 결정: 데이터 삭제 없음.
 		//    삭제하면 처리자·처리내용 기록이 무의미해지고, soft delete 미구현 상태의
 		//    관리자 임의 hard delete는 위험하기 때문). 코멘트는 그대로 남고,
@@ -166,6 +173,22 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 		if (SEARCH_DIV_COMMENT_ID.equals(param.getSearchDiv())
 				&& false == param.getSearchWord().matches(NUMERIC_PATTERN)) {
 			throw new IllegalArgumentException("코멘트 번호 검색은 숫자만 입력할 수 있습니다: " + param.getSearchWord());
+		}
+	}
+
+	/**
+	 * 이미 완료(ACCEPTED/REJECTED)된 신고면 재처리를 거부한다.
+	 * 완료 신고를 다시 승인·반려하면 처리자·처리일시·처리내용 이력이 덮어써지기 때문이다.
+	 *
+	 * @param existing 현재 DB의 신고 (null이면 존재 검증은 호출부 몫이라 통과)
+	 */
+	private void checkAlreadyCompleted(ReportCommentVO existing) {
+		if (null == existing) {
+			return;
+		}
+		if (ReportCommentVO.STATUS_ACCEPTED.equals(existing.getStatus())
+				|| ReportCommentVO.STATUS_REJECTED.equals(existing.getStatus())) {
+			throw new IllegalArgumentException("이미 처리 완료된 신고입니다.");
 		}
 	}
 

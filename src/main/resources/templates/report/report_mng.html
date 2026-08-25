@@ -72,8 +72,9 @@ layout:decorate="~{layout/layout}">
         </div>
         <!--//신고 정보-->
 
-        <!--처리 입력: 완료(승인/반려)는 처리자·처리 내용 필수 (CK_REPORT_PROCESS_COMPLETE)-->
-        <div class="comment-card">
+        <!--처리 입력: 미처리(RECEIVED·PROCESSING)일 때만 노출 — 완료된 신고는 이력만 남는다.
+            완료(승인/반려)는 처리자·처리 내용 필수 (CK_REPORT_PROCESS_COMPLETE)-->
+        <div class="comment-card" th:if="${outVO.status == 'RECEIVED' or outVO.status == 'PROCESSING'}">
             <div class="row g-2 mb-2">
                 <div class="col-md-3">
                     <label for="processorId" class="form-label filter-bar">처리 관리자 회원ID (로그인 연동 전)</label>
@@ -95,6 +96,13 @@ layout:decorate="~{layout/layout}">
             </p>
         </div>
         <!--//처리 입력-->
+
+        <!--완료된 신고: 처리 이력만 — 재승인·재반려는 서비스에서도 거부한다-->
+        <div class="comment-card filter-bar text-muted"
+             th:unless="${outVO.status == 'RECEIVED' or outVO.status == 'PROCESSING'}">
+            처리가 완료된 신고입니다. 처리자·처리 내용은 위 신고 정보에서 확인하십시오.
+        </div>
+        <!--//완료 안내-->
     </div>
 </div>
 
