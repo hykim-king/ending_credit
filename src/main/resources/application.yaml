@@ -58,5 +58,11 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-   
+
+# TMDB Read Access Token. 말이 어렵지 유저가 읽어올 권한이 있는지 검사하는 개념임. JWT- Json Web Token을 넣는다 - 라이브러리 요구 사항임.
+tmdb:
+  api-key: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyOGFjMTFlOTI1ZjA0ZTgwZjNkYmJkY2NjOTBlNjM2MyIsIm5iZiI6MTc4NDc4MTg3Ny4wMTEwMDAyLCJzdWIiOiI2YTYxOWMzNTlhNjc5OTliN2Y3NDJiMjUiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.ew-nUnepgSbhPWV6wldelfQqf1mcQDZHVBWN0hCsqEI"
+  language: ko-KR
+  image-size: w500
+ 
 
