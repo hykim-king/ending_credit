@@ -133,6 +133,7 @@ class UserCommentMapperDaoTest {
 		assertEquals("ENDIT수석관리자", outVO.getNickname());
 		assertEquals(0, outVO.getLikeCnt());
 		assertNull(outVO.getRatingScore());
+		assertNull(outVO.getBlindReason()); // 승인된 신고가 없으면 가림 사유도 없다
 
 		// 5.
 		flag = mapper.doSave(comment02);
@@ -371,6 +372,17 @@ class UserCommentMapperDaoTest {
 				UserCommentVO.SPOILER_NO, null, null);
 		flag = mapper.doSave(otherMember);
 		assertEquals(1, flag);
+	}
+
+	@Test
+	public void getTargetTitle() {
+		log.debug("---------------------------");
+		log.debug("*getTargetTitle()*");
+		log.debug("---------------------------");
+		// 화면 헤더용 대상 제목 조회 — 공용 더미 실제 값과 대조 (C-04·D-07)
+		assertEquals("어벤져스: 인피니티 워", mapper.getContentTitle(CONTENT_A));
+		assertEquals("인생 SF 영화 모음집", mapper.getCollectionTitle(COLLECTION_A));
+		assertNull(mapper.getContentTitle(999_999_999L)); // 없는 대상은 null
 	}
 
 	@Test
