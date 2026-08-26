@@ -1,17 +1,17 @@
 package com.endit.cmn;
-import java.util.List;
 
-import org.springframework.dao.EmptyResultDataAccessException;
+import java.util.List;
 
 public interface WorkDiv<T> {
 
 	/**
 	 * 목록조회
+	 *
 	 * @param param
 	 * @return List<T>
 	 */
 	List<T> doRetrieve(DTO param);
-	
+
 	/**
 	 * 수정
 	 * 
@@ -42,6 +42,6 @@ public interface WorkDiv<T> {
 	 * @param param
 	 * @return T(성공)/null(실패)
 	 */
-	T doSelectOne(T param) ;
+	T doSelectOne(T param);
 
 }
