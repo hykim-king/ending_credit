@@ -5,6 +5,22 @@
 
 <mapper namespace="com.endit.mapper.PersonLikeMapper">
 
+    <!-- searchDiv: 10(회원 번호), 20(인물 번호) -->
+    <sql id="personLikeWhere">
+        <where>
+            <if test="searchWord != null and searchWord != ''">
+                <choose>
+                    <when test="searchDiv == '10'">
+                        AND PL.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                    <when test="searchDiv == '20'">
+                        AND PL.PERSON_ID = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
     <!-- 인물 좋아요 등록 -->
     <insert id="doSave" parameterType="PersonLikeVO">
         INSERT INTO PERSON_LIKE (
@@ -35,7 +51,6 @@
            AND PERSON_ID = #{personId}
     </delete>
 
-    <!-- searchDiv: 10(회원 번호), 20(인물 번호) -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="PersonLikeVO">
         SELECT MEMBER_ID,
                PERSON_ID,
@@ -58,18 +73,7 @@
               FROM PERSON_LIKE PL
               JOIN PERSON P
                 ON P.PERSON_ID = PL.PERSON_ID
-            <where>
-                <if test="searchWord != null and searchWord != ''">
-                    <choose>
-                        <when test="searchDiv == '10'">
-                            AND PL.MEMBER_ID = #{searchWord}
-                        </when>
-                        <when test="searchDiv == '20'">
-                            AND PL.PERSON_ID = #{searchWord}
-                        </when>
-                    </choose>
-                </if>
-            </where>
+            <include refid="personLikeWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
          WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
@@ -87,6 +91,12 @@
     <select id="totalCnt" resultType="int">
         SELECT COUNT(*)
           FROM PERSON_LIKE
+    </select>
+
+    <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
+        SELECT COUNT(*)
+          FROM PERSON_LIKE PL
+        <include refid="personLikeWhere"/>
     </select>
 
 </mapper>
