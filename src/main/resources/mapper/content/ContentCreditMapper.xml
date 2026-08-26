@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.endit.mapper.ContentCreditMapper">
 
 	<sql id="contentCreditWhere">
@@ -8,10 +8,10 @@
 			<if test="searchWord != null and searchWord != ''">
 				<choose>
 					<when test="searchDiv == '10'">
-						cc.content_id = #{searchNumber,jdbcType=NUMERIC}
+						cc.content_id = #{searchWord}
 					</when>
 					<when test="searchDiv == '20'">
-						cc.person_id = #{searchNumber,jdbcType=NUMERIC}
+						cc.person_id = #{searchWord}
 					</when>
 					<when test="searchDiv == '30'">
 						cc.role = #{searchWord}

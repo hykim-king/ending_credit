@@ -21,33 +21,41 @@ public class MessageVO {
 		this.detailMessage = detailMessage;
 	}
 
+
 	public String getId() {
 		return id;
 	}
+
 
 	public void setId(String id) {
 		this.id = id;
 	}
 
+
 	public String getMessage() {
 		return message;
 	}
+
 
 	public void setMessage(String message) {
 		this.message = message;
 	}
 
+
 	public String getDetailMessage() {
 		return detailMessage;
 	}
+
 
 	public void setDetailMessage(String detailMessage) {
 		this.detailMessage = detailMessage;
 	}
 
+
 	@Override
 	public String toString() {
 		return "MessageVO [id=" + id + ", message=" + message + ", detailMessage=" + detailMessage + "]";
 	}
+
 	
 }

@@ -7,7 +7,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -18,10 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentGenreVO;
+import com.endit.mapper.ContentGenreMapper;
 
 @SpringBootTest
 @Transactional
-@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
 class ContentGenreMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());

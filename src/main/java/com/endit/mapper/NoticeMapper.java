@@ -25,15 +25,6 @@ public interface NoticeMapper {
     /** 전체 공지 개수 조회 */
     int countNoticeList();
 
-    /** 공개된 공지 목록 조회 - 페이징 */
-    List<NoticeVO> selectPublishedNoticeList(
-            @Param("page") int page,
-            @Param("size") int size
-    );
-
-    /** 공개된 공지 개수 조회 */
-    int countPublishedNoticeList();
-
     /** 공지 수정 */
     int updateNotice(NoticeVO notice);
 

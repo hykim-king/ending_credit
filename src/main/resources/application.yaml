@@ -1,41 +1,56 @@
 spring:
   application:
     name: ending_credit
-
-  # --------------------------------------
-  # Thymeleaf
-  # 개발: cache: false
-  # --------------------------------------
+#--------------------------------------
+# dev/run
+#-------------------------------------- 
+  profiles:
+    active: app
+              
+#--------------------------------------
+# Mybatis
+#-------------------------------------- 
+mybatis:
+  mapper-locations: classpath:/mapper/**/*.xml
+  type-aliases-package: com.endit.domain     
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    
+#--------------------------------------
+# Thymeleaf
+# 개발: cache: false
+#--------------------------------------      
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
     cache: false
     encoding: UTF-8
-
-# --------------------------------------
-# Mybatis
-# --------------------------------------
-mybatis:
-  mapper-locations: classpath:/mapper/**/*.xml
-  type-aliases-package: com.endit.domain
-
-  configuration:
-    map-underscore-to-camel-case: true
-    cache-enabled: false
-
-# --------------------------------------
+#--------------------------------------
 # server
-# --------------------------------------
+#--------------------------------------     
 server:
-  port: 8080
-
-# --------------------------------------
+  port: 8080 
+      
+#--------------------------------------
 # logging
-# --------------------------------------
+#-------------------------------------- 
 logging:
   level:
     root: info
-    com.endit: INFO
+    com.endit: DEBUG
+    # Transaction
+    org.springframework.transaction: DEBUG
+    org.springframework.transaction.interceptor: DEBUG
+
+    # DataSource TransactionManager
+    org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
+
+    # MyBatis
+    org.mybatis: DEBUG
+
+    # SQL
+    org.springframework.jdbc.core: DEBUG    
 
   file:
     name: logs/application.log
@@ -43,3 +58,5 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+   
+

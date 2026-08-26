@@ -109,13 +109,6 @@ local.properties
 logs/
 *.log
 
-### Local Spring profile ###
-src/main/resources/application-liy.yaml
-
-### Local development documents ###
-/docs/
-/AGENTS.md
-
 # BlueJ files
 *.ctxt
 
