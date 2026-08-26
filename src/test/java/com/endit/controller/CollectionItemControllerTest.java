@@ -1,10 +1,8 @@
 package com.endit.controller;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,205 +11,265 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.endit.cmn.DTO;
 import com.endit.domain.CollectionItemVO;
-import com.endit.service.CollectionItemService;
+import com.endit.domain.CollectionVO;
+import com.endit.domain.ContentVO;
+import com.endit.domain.MemberVO;
+import com.endit.mapper.CollectionItemMapper;
+import com.endit.mapper.CollectionMapper;
+import com.endit.mapper.ContentMapper;
+import com.endit.mapper.MemberMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * <pre>
  * Class Name  : CollectionItemControllerTest
- * Description : 컬렉션 작품 REST API의 응답과 예외 변환을 검증하는 단위 테스트
+ * Description : 실제 Controller, Service, Mapper와 DB를 사용해 컬렉션 작품 REST API를 검증하는 통합 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
+ * 2026. 8. 26. jinyoung    실제 Spring Bean과 DB 기반 통합 테스트로 변경
  * ------------------------------------------------------------
  * </pre>
  *
  * @author jinyoung
  * @since 2026. 8. 26.
  */
-@ExtendWith(MockitoExtension.class)
-@DisplayName("CollectionItemController 테스트")
+@SpringBootTest
+@AutoConfigureMockMvc(addFilters = false)
+@Transactional
+@DisplayName("CollectionItemController 통합 테스트")
 class CollectionItemControllerTest {
 
-	// 이 테스트의 대상은 HTTP 계층이므로 실제 Service 대신 Mock을 사용한다.
-	// Service 내부 로직은 CollectionItemServiceTest에서 별도로 검증한다.
-	@Mock
-	private CollectionItemService collectionItemService;
+	private static final int MISSING_CONTENT_ID = Integer.MAX_VALUE;
 
+	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
 	private ObjectMapper objectMapper;
 
-	/** Mock CollectionItemService를 사용하는 독립형 MockMvc 환경 준비 */
-	@BeforeEach
-	void setUp() {
-		// standaloneSetup은 전체 Spring Boot Context와 DB를 띄우지 않고
-		// 지정한 Controller의 매핑과 @ExceptionHandler만 빠르게 테스트한다.
-		CollectionItemController controller =
-				new CollectionItemController(collectionItemService);
+	@Autowired
+	private CollectionItemMapper collectionItemMapper;
 
-		mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
-		// Java 요청 객체를 실제 HTTP 요청에 넣을 JSON 문자열로 바꿀 때 사용한다.
-		objectMapper = new ObjectMapper();
-	}
+	@Autowired
+	private CollectionMapper collectionMapper;
 
-	/** 컬렉션 작품 목록과 페이징 정보 응답 검증 */
+	@Autowired
+	private ContentMapper contentMapper;
+
+	@Autowired
+	private MemberMapper memberMapper;
+
+	/** 실제 DB 컬렉션 작품 목록과 페이징 정보의 HTTP 응답 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 목록과 페이징 정보 반환")
 	void retrieve() throws Exception {
-		// Given: Service가 반환할 작품 한 건을 준비한다.
-		CollectionItemVO item = createItem(1, 100);
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		CollectionItemVO item = createItem(
+				collection.getCollectionId(), content.getContentId());
+		assertEquals(1, collectionItemMapper.doSave(item));
 
-		// thenAnswer를 사용하면 Controller가 만든 DTO 인스턴스를 직접 꺼내 수정할 수 있다.
-		// 실제 Service도 동일한 DTO에 totalCnt를 기록하므로 운영 흐름을 흉내 낸다.
-		when(collectionItemService.retrieve(anyInt(), any(DTO.class)))
-				.thenAnswer(invocation -> {
-					DTO param = invocation.getArgument(1);
-					param.setTotalCnt(1);
-					return List.of(item);
-				});
-
-		// When, Then: GET 요청 후 상태 코드, 목록 크기, JSON 필드를 확인한다.
-		mockMvc.perform(get("/api/collections/1/items")
+		mockMvc.perform(get("/api/collections/{collectionId}/items",
+					collection.getCollectionId())
 					.param("pageNo", "1")
 					.param("pageSize", "12"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items", hasSize(1)))
-				.andExpect(jsonPath("$.items[0].collectionId").value(1))
-				.andExpect(jsonPath("$.items[0].contentId").value(100))
+				.andExpect(jsonPath("$.items[0].collectionId")
+						.value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.items[0].contentId")
+						.value(content.getContentId()))
+				.andExpect(jsonPath("$.items[0].titleKo")
+						.value(content.getTitleKo()))
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
-	/** 컬렉션 작품 단건 응답 검증 */
+	/** 실제 DB 컬렉션 작품 단건의 HTTP 응답 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 단건 반환")
 	void getItem() throws Exception {
-		// Given: 두 경로 변수로 조회하면 준비한 작품을 반환하도록 설정한다.
-		when(collectionItemService.get(1, 100))
-				.thenReturn(createItem(1, 100));
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		CollectionItemVO item = createItem(
+				collection.getCollectionId(), content.getContentId());
+		assertEquals(1, collectionItemMapper.doSave(item));
 
-		// When, Then: Service 결과가 JSON 응답으로 직렬화되는지 확인한다.
-		mockMvc.perform(get("/api/collections/1/items/100"))
+		mockMvc.perform(get(
+					"/api/collections/{collectionId}/items/{contentId}",
+					collection.getCollectionId(), content.getContentId()))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.collectionId").value(1))
-				.andExpect(jsonPath("$.contentId").value(100));
+				.andExpect(jsonPath("$.collectionId")
+						.value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.contentId")
+						.value(content.getContentId()))
+				.andExpect(jsonPath("$.addedDt").isNotEmpty());
 	}
 
-	/** 컬렉션 작품 추가 성공 상태와 접근 URI 검증 */
+	/** JSON 요청부터 실제 DB 추가까지 성공 상태와 접근 URI 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 추가 후 201과 Location 반환")
 	void create() throws Exception {
-		// Given: 클라이언트 요청 객체와 저장 후 반환 객체를 나누어 준비한다.
-		CollectionItemVO request = createItem(0, 100);
-		CollectionItemVO created = createItem(1, 100);
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		CollectionItemVO request = createItem(0, content.getContentId());
 
-		when(collectionItemService.create(
-				anyInt(), any(CollectionItemVO.class)))
-				.thenReturn(created);
-
-		// When, Then: JSON POST 결과가 201이며 Location에 복합 키 주소가 있는지 확인한다.
-		mockMvc.perform(post("/api/collections/1/items")
+		mockMvc.perform(post("/api/collections/{collectionId}/items",
+					collection.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string(
-						"Location", "/api/collections/1/items/100"))
-				.andExpect(jsonPath("$.contentId").value(100));
+						"Location",
+						"/api/collections/" + collection.getCollectionId()
+								+ "/items/" + content.getContentId()))
+				.andExpect(jsonPath("$.collectionId")
+						.value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.contentId")
+						.value(content.getContentId()))
+				.andExpect(jsonPath("$.addedDt").isNotEmpty());
 	}
 
-	/** 컬렉션 작품 삭제 성공 상태 검증 */
+	/** HTTP 삭제 요청의 실제 DB 반영 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 삭제 후 204 반환")
 	void deleteItem() throws Exception {
-		// When, Then: 삭제 성공은 응답 본문 없이 204를 반환해야 한다.
-		mockMvc.perform(delete("/api/collections/1/items/100"))
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		CollectionItemVO item = createItem(
+				collection.getCollectionId(), content.getContentId());
+		assertEquals(1, collectionItemMapper.doSave(item));
+
+		mockMvc.perform(delete(
+					"/api/collections/{collectionId}/items/{contentId}",
+					collection.getCollectionId(), content.getContentId()))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
-		// 경로의 collectionId/contentId가 Service 인자로 정확히 전달됐는지도 확인한다.
-		verify(collectionItemService).delete(1, 100);
+		assertNull(collectionItemMapper.doSelectOne(item));
 	}
 
-	/** 잘못된 요청값 예외의 HTTP 400 변환 검증 */
+	/** 실제 Service 입력 검증 예외의 HTTP 400 변환 검증 */
 	@Test
 	@DisplayName("잘못된 요청은 400으로 변환")
 	void badRequest() throws Exception {
-		// Given: Service 입력 검증 실패 상황을 의도적으로 만든다.
-		when(collectionItemService.get(0, 100)).thenThrow(
-				new IllegalArgumentException("올바른 컬렉션 번호가 필요합니다."));
-
-		// When, Then: IllegalArgumentException이 400 상태의 MessageVO JSON으로 변환된다.
-		mockMvc.perform(get("/api/collections/0/items/100"))
+		mockMvc.perform(get("/api/collections/0/items/1"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 컬렉션 작품 미존재 예외의 HTTP 404 변환 검증 */
+	/** 실제 DB 미조회 결과의 HTTP 404 변환 검증 */
 	@Test
 	@DisplayName("존재하지 않는 컬렉션 작품은 404로 변환")
 	void notFound() throws Exception {
-		// Given: Service의 미존재 예외를 준비해 404 Handler만 분리해서 확인한다.
-		when(collectionItemService.get(1, 999)).thenThrow(
-				new NoSuchElementException("컬렉션에 포함되지 않은 작품입니다."));
+		CollectionVO collection = createCollection();
 
-		mockMvc.perform(get("/api/collections/1/items/999"))
+		mockMvc.perform(get(
+					"/api/collections/{collectionId}/items/{contentId}",
+					collection.getCollectionId(), MISSING_CONTENT_ID))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.id").value("404"));
 	}
 
-	/** 중복 작품 예외의 HTTP 409 변환 검증 */
+	/** 실제 DB 중복 데이터에 대한 HTTP 409 변환 검증 */
 	@Test
 	@DisplayName("중복 작품 추가는 409로 변환")
 	void conflict() throws Exception {
-		// Given: 중복 추가 상황을 나타내는 IllegalStateException을 준비한다.
-		when(collectionItemService.create(
-				anyInt(), any(CollectionItemVO.class)))
-				.thenThrow(new IllegalStateException("이미 컬렉션에 추가된 작품입니다."));
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		CollectionItemVO item = createItem(
+				collection.getCollectionId(), content.getContentId());
+		assertEquals(1, collectionItemMapper.doSave(item));
 
-		mockMvc.perform(post("/api/collections/1/items")
+		mockMvc.perform(post("/api/collections/{collectionId}/items",
+					collection.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(createItem(0, 100))))
+					.content(objectMapper.writeValueAsString(item)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.id").value("409"));
 	}
 
-	/** 데이터 무결성 예외의 HTTP 400 변환 검증 */
+	/** 실제 외래 키 위반에 대한 HTTP 400 변환 검증 */
 	@Test
 	@DisplayName("존재하지 않는 참조 번호는 400으로 변환")
 	void dataIntegrityViolation() throws Exception {
-		// Given: COLLECTION 또는 CONTENT 외래 키 위반 상황을 Spring 예외로 흉내 낸다.
-		when(collectionItemService.create(
-				anyInt(), any(CollectionItemVO.class)))
-				.thenThrow(new DataIntegrityViolationException("FK 오류"));
+		CollectionVO collection = createCollection();
+		CollectionItemVO request = createItem(0, MISSING_CONTENT_ID);
 
-		mockMvc.perform(post("/api/collections/1/items")
+		mockMvc.perform(post("/api/collections/{collectionId}/items",
+					collection.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
-					.content(objectMapper.writeValueAsString(createItem(0, 999))))
+					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 테스트에 사용할 컬렉션 작품 정보 생성 */
+	/** 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록 */
+	private CollectionVO createCollection() {
+		String token = createToken();
+		MemberVO member = new MemberVO();
+		member.setEmail("item-api-" + token + "@test.local");
+		member.setPassword("encoded-password");
+		member.setNickname("작품API" + token.substring(0, 8));
+		member.setIntroduction("컬렉션 작품 API 통합 테스트 회원");
+		member.setRole("USER");
+		assertEquals(1, memberMapper.insertMember(member));
+
+		CollectionVO collection = new CollectionVO(
+				0,
+				member.getMemberId().intValue(),
+				"작품 API 통합 테스트 컬렉션",
+				"컬렉션 작품 Controller 통합 테스트",
+				"Y",
+				null,
+				null);
+		assertEquals(1, collectionMapper.doSave(collection));
+
+		return collection;
+	}
+
+	/** 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록 */
+	private ContentVO createContent() {
+		String token = createToken();
+		ContentVO content = new ContentVO(
+				0,
+				"API_INTEGRATION_" + token,
+				"API 통합 테스트 콘텐츠",
+				"API Integration Test Content",
+				"컬렉션 작품 Controller 통합 테스트 콘텐츠",
+				"2026-08-26",
+				120,
+				"Korea",
+				"https://example.com/poster.jpg",
+				"https://example.com/backdrop.jpg",
+				null);
+		assertEquals(1, contentMapper.doSave(content));
+
+		return content;
+	}
+
+	/** 컬렉션 작품 데이터 생성 */
 	private CollectionItemVO createItem(int collectionId, int contentId) {
-		// 모든 테스트가 동일한 최소 객체 생성 규칙을 사용하도록 도우미로 분리한다.
 		return new CollectionItemVO(collectionId, contentId, null);
+	}
+
+	/** DB 고유 제약조건 충돌을 피할 테스트 식별자 생성 */
+	private String createToken() {
+		return UUID.randomUUID().toString().replace("-", "");
 	}
 }

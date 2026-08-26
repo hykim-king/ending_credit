@@ -1,206 +1,240 @@
 package com.endit.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionItemVO;
-import com.endit.mapper.CollectionItemMapper;
-import com.endit.service.impl.CollectionItemServiceImpl;
+import com.endit.domain.CollectionVO;
+import com.endit.domain.ContentVO;
+import com.endit.domain.MemberVO;
+import com.endit.mapper.CollectionMapper;
+import com.endit.mapper.ContentMapper;
+import com.endit.mapper.MemberMapper;
 
 /**
  * <pre>
  * Class Name  : CollectionItemServiceTest
- * Description : 컬렉션 작품 Service의 검증, 페이징 및 Mapper 호출을 검증하는 단위 테스트
+ * Description : 실제 Spring Bean과 DB를 사용해 컬렉션 작품 Service를 검증하는 통합 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
+ * 2026. 8. 26. jinyoung    실제 Spring Bean과 DB 기반 통합 테스트로 변경
  * ------------------------------------------------------------
  * </pre>
  *
  * @author jinyoung
  * @since 2026. 8. 26.
  */
-@ExtendWith(MockitoExtension.class)
-@DisplayName("CollectionItemService 테스트")
+@SpringBootTest
+@Transactional
+@DisplayName("CollectionItemService 통합 테스트")
 class CollectionItemServiceTest {
 
-	// 실제 DB Mapper 대신 반환값과 호출 여부를 제어할 수 있는 가짜 객체를 사용한다.
-	@Mock
-	private CollectionItemMapper collectionItemMapper;
+	private static final int MISSING_CONTENT_ID = Integer.MAX_VALUE;
 
+	@Autowired
 	private CollectionItemService collectionItemService;
 
-	/** Mock CollectionItemMapper를 사용하는 Service 구현체 준비 */
-	@BeforeEach
-	void setUp() {
-		collectionItemService = new CollectionItemServiceImpl(collectionItemMapper);
-	}
+	@Autowired
+	private CollectionMapper collectionMapper;
 
-	/** 컬렉션 번호 조건과 기본 페이징값을 적용한 목록 조회 검증 */
+	@Autowired
+	private ContentMapper contentMapper;
+
+	@Autowired
+	private MemberMapper memberMapper;
+
+	/** 실제 DB 목록 조회와 컬렉션 조건 및 기본 페이징값 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 목록 조회 시 컬렉션 조건과 페이징 설정")
 	void retrieve() {
-		// Given: 기본값 DTO와 Mapper가 반환할 작품 한 건을 준비한다.
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		collectionItemService.create(
+				collection.getCollectionId(), createItem(content.getContentId()));
 		DTO param = new DTO();
-		CollectionItemVO item = createItem(1, 100);
 
-		// Mock 메서드가 반환할 값을 미리 지정한다.
-		when(collectionItemMapper.count(param)).thenReturn(1);
-		when(collectionItemMapper.doRetrieve(param)).thenReturn(List.of(item));
+		List<CollectionItemVO> result = collectionItemService.retrieve(
+				collection.getCollectionId(), param);
 
-		// When: 테스트 대상인 Service 메서드를 실제로 호출한다.
-		List<CollectionItemVO> result = collectionItemService.retrieve(1, param);
-
-		// Then: 목록 결과와 Service가 DTO에 계산해 넣은 값들을 함께 확인한다.
 		assertEquals(1, result.size());
-		assertEquals(item, result.get(0));
+		assertEquals(collection.getCollectionId(), result.get(0).getCollectionId());
+		assertEquals(content.getContentId(), result.get(0).getContentId());
+		assertEquals(content.getTitleKo(), result.get(0).getTitleKo());
 		assertEquals(1, param.getPageNo());
 		assertEquals(12, param.getPageSize());
 		assertEquals(1, param.getTotalCnt());
 		assertEquals("10", param.getSearchDiv());
-		assertEquals("1", param.getSearchWord());
+		assertEquals(String.valueOf(collection.getCollectionId()), param.getSearchWord());
 	}
 
-	/** 컬렉션 작품이 없을 때 빈 목록 반환 검증 */
+	/** 작품이 없는 컬렉션의 실제 DB 목록 조회 결과 검증 */
 	@Test
-	@DisplayName("컬렉션 작품이 없으면 목록 쿼리를 실행하지 않음")
+	@DisplayName("컬렉션 작품이 없으면 빈 목록 반환")
 	void retrieveEmpty() {
-		// Given: 전체 건수가 0인 상황을 만든다.
+		CollectionVO collection = createCollection();
 		DTO param = new DTO();
 
-		when(collectionItemMapper.count(param)).thenReturn(0);
+		List<CollectionItemVO> result = collectionItemService.retrieve(
+				collection.getCollectionId(), param);
 
-		// When: 작품 목록을 조회한다.
-		List<CollectionItemVO> result = collectionItemService.retrieve(1, param);
-
-		// Then: 빈 목록을 반환하고 무거운 목록 SQL은 호출하지 않아야 한다.
 		assertTrue(result.isEmpty());
-		// 해당 Mock 메서드가 한 번도 호출되지 않았음을 검증한다.
-		verify(collectionItemMapper, never()).doRetrieve(any(DTO.class));
+		assertEquals(0, param.getTotalCnt());
 	}
 
-	/** 복합 키를 이용한 컬렉션 작품 단건 조회 검증 */
+	/** 실제 DB에 추가한 컬렉션 작품 단건 조회 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 단건 조회")
 	void get() {
-		// Given: Service 내부에서 어떤 조회 키 객체를 만들더라도 준비한 작품을 반환한다.
-		CollectionItemVO item = createItem(1, 100);
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		collectionItemService.create(
+				collection.getCollectionId(), createItem(content.getContentId()));
 
-		when(collectionItemMapper.doSelectOne(any(CollectionItemVO.class)))
-				.thenReturn(item);
+		CollectionItemVO result = collectionItemService.get(
+				collection.getCollectionId(), content.getContentId());
 
-		// When: 복합 키인 컬렉션 번호와 콘텐츠 번호로 조회한다.
-		CollectionItemVO result = collectionItemService.get(1, 100);
-
-		// Then: Mapper 조회 결과가 Service 결과로 반환되는지 확인한다.
-		assertEquals(item, result);
+		assertEquals(collection.getCollectionId(), result.getCollectionId());
+		assertEquals(content.getContentId(), result.getContentId());
+		assertNotNull(result.getAddedDt());
 	}
 
 	/** 존재하지 않는 컬렉션 작품 조회 결과 검증 */
 	@Test
 	@DisplayName("존재하지 않는 컬렉션 작품 조회 시 예외 발생")
 	void getNotFound() {
-		// Given: Mapper의 null은 복합 키에 해당하는 행이 없다는 의미다.
-		when(collectionItemMapper.doSelectOne(any(CollectionItemVO.class)))
-				.thenReturn(null);
+		CollectionVO collection = createCollection();
 
-		// When, Then: Service가 null을 404 처리용 NoSuchElementException으로 변환한다.
 		assertThrows(
 				NoSuchElementException.class,
-				() -> collectionItemService.get(1, 999));
+				() -> collectionItemService.get(
+						collection.getCollectionId(), MISSING_CONTENT_ID));
 	}
 
-	/** 중복 확인 후 컬렉션 작품 추가 결과 검증 */
+	/** 실제 DB 중복 확인과 컬렉션 작품 추가 결과 검증 */
 	@Test
 	@DisplayName("중복 확인 후 컬렉션 작품 추가")
 	void create() {
-		// Given: 요청 객체와 DB 저장 후 조회될 결과 객체를 준비한다.
-		CollectionItemVO param = createItem(0, 100);
-		CollectionItemVO created = createItem(1, 100);
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
 
-		// 같은 메서드의 첫 호출은 중복 확인용 null, 두 번째는 저장 결과를 반환한다.
-		when(collectionItemMapper.doSelectOne(param)).thenReturn(null, created);
-		when(collectionItemMapper.doSave(param)).thenReturn(1);
+		CollectionItemVO result = collectionItemService.create(
+				collection.getCollectionId(), createItem(content.getContentId()));
 
-		// When: URL에서 전달됐다고 가정한 컬렉션 번호 1에 작품을 추가한다.
-		CollectionItemVO result = collectionItemService.create(1, param);
-
-		// Then: 저장 결과와 URL의 collectionId가 요청 객체에 반영됐는지 확인한다.
-		assertEquals(created, result);
-		assertEquals(1, param.getCollectionId());
-		verify(collectionItemMapper).doSave(param);
+		assertEquals(collection.getCollectionId(), result.getCollectionId());
+		assertEquals(content.getContentId(), result.getContentId());
+		assertNotNull(result.getAddedDt());
 	}
 
-	/** 이미 포함된 작품의 중복 추가 방지 검증 */
+	/** 실제 DB에 이미 포함된 작품의 중복 추가 방지 검증 */
 	@Test
 	@DisplayName("이미 포함된 작품은 추가하지 않음")
 	void createDuplicate() {
-		// Given: 중복 확인 조회에서 기존 행을 반환한다.
-		CollectionItemVO param = createItem(0, 100);
-		when(collectionItemMapper.doSelectOne(param)).thenReturn(createItem(1, 100));
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		collectionItemService.create(
+				collection.getCollectionId(), createItem(content.getContentId()));
 
-		// When, Then: 중복 예외가 발생하고 INSERT Mapper는 호출되지 않아야 한다.
 		assertThrows(
 				IllegalStateException.class,
-				() -> collectionItemService.create(1, param));
-
-		verify(collectionItemMapper, never())
-				.doSave(any(CollectionItemVO.class));
+				() -> collectionItemService.create(
+						collection.getCollectionId(), createItem(content.getContentId())));
 	}
 
-	/** 존재하는 컬렉션 작품 조회 후 삭제 검증 */
+	/** 실제 DB에서 컬렉션 작품 삭제 결과 검증 */
 	@Test
-	@DisplayName("컬렉션 작품을 조회한 후 삭제")
+	@DisplayName("컬렉션 작품 삭제")
 	void delete() {
-		// Given: 삭제 대상 조회 결과와 삭제 성공 행 수 1을 준비한다.
-		CollectionItemVO existing = createItem(1, 100);
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		collectionItemService.create(
+				collection.getCollectionId(), createItem(content.getContentId()));
 
-		when(collectionItemMapper.doSelectOne(any(CollectionItemVO.class)))
-				.thenReturn(existing);
-		when(collectionItemMapper.doDelete(existing)).thenReturn(1);
+		collectionItemService.delete(
+				collection.getCollectionId(), content.getContentId());
 
-		// When: 복합 키로 작품 삭제를 요청한다.
-		collectionItemService.delete(1, 100);
-
-		// Then: 실제로 조회된 객체가 삭제 Mapper에 전달됐는지 확인한다.
-		verify(collectionItemMapper).doDelete(existing);
+		assertThrows(
+				NoSuchElementException.class,
+				() -> collectionItemService.get(
+						collection.getCollectionId(), content.getContentId()));
 	}
 
 	/** 잘못된 컬렉션 번호에 대한 입력값 검증 */
 	@Test
-	@DisplayName("잘못된 컬렉션 번호이면 Mapper를 호출하지 않음")
+	@DisplayName("잘못된 컬렉션 번호이면 예외 발생")
 	void invalidCollectionId() {
-		// When, Then: 입력값 검증이 Mapper 호출보다 먼저 실행되는지 확인한다.
 		assertThrows(
 				IllegalArgumentException.class,
 				() -> collectionItemService.retrieve(0, new DTO()));
-
-		// Mock의 어떤 메서드도 호출되지 않아야 입력 검증의 위치가 올바른 것이다.
-		verifyNoInteractions(collectionItemMapper);
 	}
 
-	/** 테스트에 사용할 컬렉션 작품 정보 생성 */
-	private CollectionItemVO createItem(int collectionId, int contentId) {
-		return new CollectionItemVO(collectionId, contentId, null);
+	/** 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록 */
+	private CollectionVO createCollection() {
+		String token = createToken();
+		MemberVO member = new MemberVO();
+		member.setEmail("item-service-" + token + "@test.local");
+		member.setPassword("encoded-password");
+		member.setNickname("작품서비스" + token.substring(0, 8));
+		member.setIntroduction("컬렉션 작품 통합 테스트 회원");
+		member.setRole("USER");
+		assertEquals(1, memberMapper.insertMember(member));
+
+		CollectionVO collection = new CollectionVO(
+				0,
+				member.getMemberId().intValue(),
+				"작품 통합 테스트 컬렉션",
+				"컬렉션 작품 Service 통합 테스트",
+				"Y",
+				null,
+				null);
+		assertEquals(1, collectionMapper.doSave(collection));
+
+		return collection;
+	}
+
+	/** 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록 */
+	private ContentVO createContent() {
+		String token = createToken();
+		ContentVO content = new ContentVO(
+				0,
+				"INTEGRATION_" + token,
+				"통합 테스트 콘텐츠",
+				"Integration Test Content",
+				"컬렉션 작품 Service 통합 테스트 콘텐츠",
+				"2026-08-26",
+				120,
+				"Korea",
+				"https://example.com/poster.jpg",
+				"https://example.com/backdrop.jpg",
+				null);
+		assertEquals(1, contentMapper.doSave(content));
+
+		return content;
+	}
+
+	/** 컬렉션 작품 등록 요청 생성 */
+	private CollectionItemVO createItem(int contentId) {
+		return new CollectionItemVO(0, contentId, null);
+	}
+
+	/** DB 고유 제약조건 충돌을 피할 테스트 식별자 생성 */
+	private String createToken() {
+		return UUID.randomUUID().toString().replace("-", "");
 	}
 }
