@@ -1,6 +1,6 @@
 package com.endit.controller;
 
-import java.util.Map;
+import java.util.Map; 
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.DeleteMapping;
 import com.endit.domain.NoticeSearchVO;
 import com.endit.domain.NoticeVO;
 import com.endit.domain.PageResponse;
@@ -86,6 +86,18 @@ public class AdminNoticeApiController {
     ) {
         Long adminId = NoticeSessionSupport.requireAdminId(session);
         noticeService.updateNotice(noticeId, notice, adminId);
+
+        return ResponseEntity.noContent().build();
+    }
+    @DeleteMapping("/{noticeId}")
+    public ResponseEntity<Void> deleteNotice(
+            @PathVariable Long noticeId,
+            HttpSession session
+    ) {
+
+        Long adminId = NoticeSessionSupport.requireAdminId(session);
+
+        noticeService.deleteNotice(noticeId, adminId);
 
         return ResponseEntity.noContent().build();
     }

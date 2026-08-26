@@ -15,6 +15,7 @@ import com.endit.domain.PageResponse;
 import com.endit.mapper.NoticeMapper;
 import com.endit.service.NoticeService;
 
+
 @Service
 @Transactional(readOnly = true)
 public class NoticeServiceImpl implements NoticeService {
@@ -251,6 +252,23 @@ public class NoticeServiceImpl implements NoticeService {
     private void validateAdminId(Long adminId) {
         if (adminId == null || adminId <= 0) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "관리자 인증이 필요합니다.");
+        }
+    }
+    
+    @Override
+    @Transactional
+    public void deleteNotice(Long noticeId, Long adminId) {
+
+        validateNoticeId(noticeId);
+        validateAdminId(adminId);
+
+        int flag = noticeMapper.deleteNotice(noticeId);
+
+        if (flag != 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "삭제할 공지사항을 찾을 수 없습니다."
+            );
         }
     }
 }

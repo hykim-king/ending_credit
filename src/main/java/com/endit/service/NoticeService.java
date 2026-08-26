@@ -1,6 +1,6 @@
 package com.endit.service;
 
-import com.endit.domain.NoticeSearchVO;
+import com.endit.domain.NoticeSearchVO; 
 import com.endit.domain.NoticeVO;
 import com.endit.domain.PageResponse;
 
@@ -17,4 +17,6 @@ public interface NoticeService {
     Long createNotice(NoticeVO notice, Long adminId);
 
     void updateNotice(Long noticeId, NoticeVO notice, Long adminId);
+    
+    void deleteNotice(Long noticeId, Long adminId);
 }
