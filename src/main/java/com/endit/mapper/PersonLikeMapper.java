@@ -72,4 +72,12 @@ public interface PersonLikeMapper {
 	 * @return 인물 좋아요 전체 건수
 	 */
 	int totalCnt();
+
+	/**
+	 * 검색 조건을 반영한 건수 조회
+	 *
+	 * @param param 검색 조건
+	 * @return 검색된 인물 좋아요 건수
+	 */
+	int count(DTO param);
 }

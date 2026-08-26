@@ -2,6 +2,7 @@ package com.endit.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 
+import com.endit.cmn.DTO;
 import com.endit.cmn.WorkDiv;
 import com.endit.domain.CollectionVO;
 
@@ -38,4 +39,12 @@ public interface CollectionMapper extends WorkDiv<CollectionVO> {
 	 * @return 컬렉션 전체 건수
 	 */
 	int totalCnt();
+
+	/**
+	 * 검색 조건을 반영한 건수 조회
+	 *
+	 * @param param 검색 조건
+	 * @return 검색된 컬렉션 건수
+	 */
+	int count(DTO param);
 }

@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ import com.endit.domain.CollectionItemVO;
  * 2026. 8. 13. jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
+ * 2026. 8. 19. jinyoung    목록 조회 콘텐츠 조인 및 페이징 검증 보완
  * ------------------------------------------------------------
  * </pre>
  *
@@ -42,6 +44,7 @@ import com.endit.domain.CollectionItemVO;
  */
 @SpringBootTest
 @Transactional
+//@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
 @DisplayName("CollectionItem 테스트")
 class CollectionItemMapperDaoTest {
 
@@ -195,13 +198,15 @@ class CollectionItemMapperDaoTest {
 		log.debug("retrievedCount: {}건", list.size());
 
 		list.forEach(item ->
-			log.debug("* retrievedData: collectionId-{}, contentId-{}, addedDt-{}",
-					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+			log.debug("* retrievedData: collectionId-{}, contentId-{}, titleKo-{}, releaseYear-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getTitleKo(), item.getReleaseYear(),
+					item.getAddedDt()));
 
 		assertTrue(list.stream()
 				.anyMatch(item ->
 						item.getCollectionId() == testData.getCollectionId()	// 컬렉션 번호 일치 검증
 						&& item.getContentId() == testData.getContentId()		// 콘텐츠 번호 일치 검증
+						&& item.getExternalId() != null							// 콘텐츠 조인 결과 검증
 				));
 	}
 
@@ -304,12 +309,15 @@ class CollectionItemMapperDaoTest {
 		log.debug("* secondPageCount: {}건", secondPage.size());
 
 		firstPage.forEach(item ->
-			log.debug("* firstPageData: collectionId-{}, contentId-{}, addedDt-{}",
-					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+			log.debug("* firstPageData: collectionId-{}, contentId-{}, titleKo-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getTitleKo(), item.getAddedDt()));
 
 		secondPage.forEach(item ->
-			log.debug("* secondPageData: collectionId-{}, contentId-{}, addedDt-{}",
-					item.getCollectionId(), item.getContentId(), item.getAddedDt()));
+			log.debug("* secondPageData: collectionId-{}, contentId-{}, titleKo-{}, addedDt-{}",
+					item.getCollectionId(), item.getContentId(), item.getTitleKo(), item.getAddedDt()));
+
+		assertTrue(firstPage.stream().allMatch(item -> item.getExternalId() != null));
+		assertTrue(secondPage.stream().allMatch(item -> item.getExternalId() != null));
 
 		assertTrue(firstPage.stream()
 				.noneMatch(firstItem ->

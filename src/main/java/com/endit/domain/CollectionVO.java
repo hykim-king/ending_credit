@@ -10,6 +10,7 @@ package com.endit.domain;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 12.	jinyoung    최초 생성
+ * 2026. 8. 19. jinyoung    조회용 작성자 및 집계 정보 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -25,6 +26,10 @@ public class CollectionVO {
 	private String isPublic;       // 공개 여부(Y: 공개, N: 비공개)
 	private String createdDt;      // 생성 일시
 	private String updatedDt;      // 최종 수정 일시
+	private String nickname;       // 작성자 닉네임
+	private int itemCount;         // 포함 작품 수
+	private int likeCount;         // 좋아요 수
+	private int commentCount;      // 코멘트 수
 
 	public CollectionVO() {
 		super();
@@ -98,10 +103,43 @@ public class CollectionVO {
 		this.updatedDt = updatedDt;
 	}
 
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	public int getItemCount() {
+		return itemCount;
+	}
+
+	public void setItemCount(int itemCount) {
+		this.itemCount = itemCount;
+	}
+
+	public int getLikeCount() {
+		return likeCount;
+	}
+
+	public void setLikeCount(int likeCount) {
+		this.likeCount = likeCount;
+	}
+
+	public int getCommentCount() {
+		return commentCount;
+	}
+
+	public void setCommentCount(int commentCount) {
+		this.commentCount = commentCount;
+	}
+
 	@Override
 	public String toString() {
 		return "CollectionVO [collectionId=" + collectionId + ", memberId=" + memberId + ", title=" + title
 				+ ", description=" + description + ", isPublic=" + isPublic + ", createdDt=" + createdDt
-				+ ", updatedDt=" + updatedDt + "]";
+				+ ", updatedDt=" + updatedDt + ", nickname=" + nickname + ", itemCount=" + itemCount
+				+ ", likeCount=" + likeCount + ", commentCount=" + commentCount + "]";
 	}
 }

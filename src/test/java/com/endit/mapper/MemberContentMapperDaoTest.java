@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ import com.endit.domain.MemberContentVO;
  * 2026. 8. 13. jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
+ * 2026. 8. 19. jinyoung    화면 목록용 콘텐츠 JOIN 및 조건 조회 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -42,6 +44,7 @@ import com.endit.domain.MemberContentVO;
  */
 @SpringBootTest
 @Transactional
+@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
 @DisplayName("MemberContentMapper 테스트")
 class MemberContentMapperDaoTest {
 
@@ -224,10 +227,10 @@ class MemberContentMapperDaoTest {
 	}
 
 	/**
-	 * 회원 번호 조건을 이용한 콘텐츠 목록 조회 검증
+	 * 회원별 평가 목록과 콘텐츠 JOIN 결과 검증
 	 */
 	@Test
-	@DisplayName("회원별 콘텐츠 목록 조회")
+	@DisplayName("회원별 평가 콘텐츠 목록 조회")
 	void doRetrieve() {
 		log.debug("┌──────────────────────────────┐");
 		log.debug("│ doRetrieve()                 │");
@@ -236,16 +239,21 @@ class MemberContentMapperDaoTest {
 		// Given: 목록에서 조회할 회원별 콘텐츠와 검색 조건을 준비
 		assertEquals(1, mapper.doSave(testData));
 
+		MemberContentVO unratedData = new MemberContentVO(
+				testData.getMemberId(), SECOND_CONTENT_ID, null, CODE_YES, null, null, null);
+
+		assertEquals(1, mapper.doSave(unratedData));
+
 		DTO search = new DTO();
 		search.setPageNo(1);
 		search.setPageSize(10);
-		search.setSearchDiv("10");
+		search.setSearchDiv("50");
 		search.setSearchWord(String.valueOf(testData.getMemberId()));
 
-		// When: 회원 번호를 조건으로 콘텐츠 목록을 조회
+		// When: 회원 번호를 조건으로 평가가 등록된 콘텐츠 목록을 조회
 		List<MemberContentVO> list = mapper.doRetrieve(search);
 
-		// Then: 등록한 회원별 콘텐츠가 조회 결과에 포함되어야 함
+		// Then: 등록한 평가와 JOIN된 콘텐츠 정보가 조회되어야 함
 		assertNotNull(list);
 		assertFalse(list.isEmpty());
 
@@ -260,7 +268,47 @@ class MemberContentMapperDaoTest {
 				.anyMatch(item ->
 						item.getMemberId() == testData.getMemberId()		// 회원 번호 일치 검증
 						&& item.getContentId() == testData.getContentId()	// 콘텐츠 번호 일치 검증
+						&& item.getRatingScore() != null
+						&& item.getTitleKo() != null
 				));
+
+		assertFalse(list.stream()
+				.anyMatch(item -> item.getContentId() == unratedData.getContentId()));
+	}
+
+	/**
+	 * 회원별 보고 싶어요 목록과 콘텐츠 JOIN 결과 검증
+	 */
+	@Test
+	@DisplayName("회원별 보고 싶어요 콘텐츠 목록 조회")
+	void doRetrieveMemberWatchlist() {
+		log.debug("┌──────────────────────────────┐");
+		log.debug("│ doRetrieveMemberWatchlist()  │");
+		log.debug("└──────────────────────────────┘");
+
+		// Given: 같은 회원의 보고 싶어요 Y와 N 데이터를 각각 등록
+		assertEquals(1, mapper.doSave(testData));
+
+		MemberContentVO comparisonData = new MemberContentVO(
+				testData.getMemberId(), SECOND_CONTENT_ID, 3, CODE_NO, null, null, null);
+
+		assertEquals(1, mapper.doSave(comparisonData));
+
+		DTO search = new DTO();
+		search.setPageNo(1);
+		search.setPageSize(10);
+		search.setSearchDiv("60");
+		search.setSearchWord(String.valueOf(testData.getMemberId()));
+
+		// When: 회원별 보고 싶어요 콘텐츠 목록을 조회
+		List<MemberContentVO> list = mapper.doRetrieve(search);
+
+		// Then: Y인 콘텐츠와 JOIN 정보만 조회되어야 함
+		assertNotNull(list);
+		assertEquals(1, list.size());
+		assertEquals(testData.getContentId(), list.get(0).getContentId());
+		assertEquals(CODE_YES, list.get(0).getWatchlist());
+		assertNotNull(list.get(0).getTitleKo());
 	}
 
 	/**

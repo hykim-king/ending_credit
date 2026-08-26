@@ -5,6 +5,22 @@
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
 
+    <!-- searchDiv: 10(제목), 20(회원 번호) -->
+    <sql id="collectionWhere">
+        <where>
+            <if test="searchWord != null and searchWord != ''">
+                <choose>
+                    <when test="searchDiv == '10'">
+                        AND C.TITLE LIKE '%' || #{searchWord} || '%'
+                    </when>
+                    <when test="searchDiv == '20'">
+                        AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                    </when>
+                </choose>
+            </if>
+        </where>
+    </sql>
+
     <!-- 컬렉션 등록 -->
     <insert id="doSave" parameterType="CollectionVO">
         <selectKey keyProperty="collectionId" resultType="int" order="BEFORE">
@@ -30,15 +46,43 @@
 
     <!-- 컬렉션 단건 조회 -->
     <select id="doSelectOne" parameterType="CollectionVO" resultType="CollectionVO">
-        SELECT COLLECTION_ID,
-               MEMBER_ID,
-               TITLE,
-               DESCRIPTION,
-               IS_PUBLIC,
-               TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-               TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
-          FROM COLLECTION
-         WHERE COLLECTION_ID = #{collectionId}
+        SELECT C.COLLECTION_ID,
+               C.MEMBER_ID,
+               C.TITLE,
+               C.DESCRIPTION,
+               C.IS_PUBLIC,
+               TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+               TO_CHAR(C.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
+               M.NICKNAME,
+               NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
+               NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
+               NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT
+          FROM COLLECTION C
+         INNER JOIN MEMBER M
+            ON M.MEMBER_ID = C.MEMBER_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       COUNT(*) AS ITEM_COUNT
+                  FROM COLLECTION_ITEM
+                 GROUP BY COLLECTION_ID
+          ) CI
+            ON CI.COLLECTION_ID = C.COLLECTION_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       COUNT(*) AS LIKE_COUNT
+                  FROM COLLECTION_LIKE
+                 GROUP BY COLLECTION_ID
+          ) CL
+            ON CL.COLLECTION_ID = C.COLLECTION_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       COUNT(*) AS COMMENT_COUNT
+                  FROM USER_COMMENT
+                 WHERE COLLECTION_ID IS NOT NULL
+                 GROUP BY COLLECTION_ID
+          ) UC
+            ON UC.COLLECTION_ID = C.COLLECTION_ID
+         WHERE C.COLLECTION_ID = #{collectionId}
     </select>
 
     <!-- 컬렉션 수정 -->
@@ -57,7 +101,6 @@
          WHERE COLLECTION_ID = #{collectionId}
     </delete>
 
-    <!-- searchDiv: 10(제목), 20(회원 번호) -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionVO">
         SELECT COLLECTION_ID,
                MEMBER_ID,
@@ -65,7 +108,11 @@
                DESCRIPTION,
                IS_PUBLIC,
                CREATED_DT,
-               UPDATED_DT
+               UPDATED_DT,
+               NICKNAME,
+               ITEM_COUNT,
+               LIKE_COUNT,
+               COMMENT_COUNT
           FROM (
             SELECT C.COLLECTION_ID,
                    C.MEMBER_ID,
@@ -73,23 +120,40 @@
                    C.DESCRIPTION,
                    C.IS_PUBLIC,
                    TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-                   TO_CHAR(C.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
+                   TO_CHAR(NVL(C.UPDATED_DT, C.CREATED_DT), 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
+                   M.NICKNAME,
+                   NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
+                   NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
+                   NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
                    ROW_NUMBER() OVER (
-                       ORDER BY C.CREATED_DT DESC, C.COLLECTION_ID DESC
+                       ORDER BY NVL(C.UPDATED_DT, C.CREATED_DT) DESC, C.COLLECTION_ID DESC
                    ) AS RNUM
               FROM COLLECTION C
-            <where>
-                <if test="searchWord != null and searchWord != ''">
-                    <choose>
-                        <when test="searchDiv == '10'">
-                            AND C.TITLE LIKE '%' || #{searchWord} || '%'
-                        </when>
-                        <when test="searchDiv == '20'">
-                            AND C.MEMBER_ID = #{searchWord}
-                        </when>
-                    </choose>
-                </if>
-            </where>
+             INNER JOIN MEMBER M
+                ON M.MEMBER_ID = C.MEMBER_ID
+              LEFT JOIN (
+                    SELECT COLLECTION_ID,
+                           COUNT(*) AS ITEM_COUNT
+                      FROM COLLECTION_ITEM
+                     GROUP BY COLLECTION_ID
+              ) CI
+                ON CI.COLLECTION_ID = C.COLLECTION_ID
+              LEFT JOIN (
+                    SELECT COLLECTION_ID,
+                           COUNT(*) AS LIKE_COUNT
+                      FROM COLLECTION_LIKE
+                     GROUP BY COLLECTION_ID
+              ) CL
+                ON CL.COLLECTION_ID = C.COLLECTION_ID
+              LEFT JOIN (
+                    SELECT COLLECTION_ID,
+                           COUNT(*) AS COMMENT_COUNT
+                      FROM USER_COMMENT
+                     WHERE COLLECTION_ID IS NOT NULL
+                     GROUP BY COLLECTION_ID
+              ) UC
+                ON UC.COLLECTION_ID = C.COLLECTION_ID
+            <include refid="collectionWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
          WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
@@ -107,6 +171,12 @@
     <select id="totalCnt" resultType="int">
         SELECT COUNT(*)
           FROM COLLECTION
+    </select>
+
+    <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION C
+        <include refid="collectionWhere"/>
     </select>
 
 </mapper>

@@ -1,4 +1,4 @@
-package com.endit.group1;
+package com.endit.mapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -17,21 +17,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
-import com.endit.domain.GenreVO;
-import com.endit.mapper.GenreMapper;
+import com.endit.domain.ContentVO;
+import com.endit.mapper.ContentMapper;
 
 @SpringBootTest
 @Transactional
-class GenreMapperDaoTest {
+class ContentMapperDaoTest {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
 
 	@Autowired
-	private GenreMapper mapper;
+	private ContentMapper mapper;
 
-	private GenreVO genre01;
-	private GenreVO genre02;
-	private GenreVO genre03;
+	private ContentVO content01;
+	private ContentVO content02;
+	private ContentVO content03;
 
 	private DTO dto;
 
@@ -44,9 +44,12 @@ class GenreMapperDaoTest {
 		int seq = 0;
 		dto = new DTO();
 
-		genre01 = new GenreVO(seq, "T_28", "테스트액션");
-		genre02 = new GenreVO(seq, "T_35", "테스트코미디");
-		genre03 = new GenreVO(seq, "T_18", "테스트드라마");
+		content01 = new ContentVO(seq, "TMDB_TEST_1001", "테스트영화1", "Test Movie 1", "줄거리1",
+				"2024-01-01", 120, "Korea", "http://poster1", "http://backdrop1", "사용않함");
+		content02 = new ContentVO(seq, "TMDB_TEST_1002", "테스트영화2", "Test Movie 2", "줄거리2",
+				"2024-02-01", 110, "USA", "http://poster2", "http://backdrop2", "사용않함");
+		content03 = new ContentVO(seq, "TMDB_TEST_1003", "테스트영화3", "Test Movie 3", "줄거리3",
+				"2024-03-01", 100, "Japan", "http://poster3", "http://backdrop3", "사용않함");
 	}
 
 	@AfterEach
@@ -68,16 +71,16 @@ class GenreMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		mapper.doSave(genre01);
-		mapper.doSave(genre02);
-		mapper.doSave(genre03);
+		mapper.doSave(content01);
+		mapper.doSave(content02);
+		mapper.doSave(content03);
 		assertEquals(3, mapper.totalCnt());
 
 		dto.setPageNo(1);
 		dto.setPageSize(10);
 
-		List<GenreVO> list = mapper.doRetrieve(dto);
-		for (GenreVO vo : list) {
+		List<ContentVO> list = mapper.doRetrieve(dto);
+		for (ContentVO vo : list) {
 			log.debug("{}", vo);
 		}
 		assertEquals(3, list.size());
@@ -89,27 +92,32 @@ class GenreMapperDaoTest {
 		log.debug("*doUpdate()*");
 		log.debug("---------------------------");
 		// 1. 전체삭제
-		// 2. 단건등록
-		// 3. 단건조회 후 수정
-		// 4. update
-		// 5. 재조회 후 비교
+		// 2. 단건등록(content01)
+		// 3. 단건조회
+		// 4. 조회 결과 수정
+		// 5. update
+		// 6. 재조회 후 비교
 
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		int flag = mapper.doSave(genre01);
+		int flag = mapper.doSave(content01);
 		assertEquals(1, flag);
 		assertEquals(1, mapper.totalCnt());
 
-		GenreVO updateVO = mapper.doSelectOne(genre01);
+		ContentVO updateVO = mapper.doSelectOne(content01);
 		assertNotNull(updateVO);
 
-		updateVO.setName(updateVO.getName() + "_U");
+		String updateStr = "_U";
+		updateVO.setTitleKo(updateVO.getTitleKo() + updateStr);
+		updateVO.setTitleOrg(updateVO.getTitleOrg() + updateStr);
+		updateVO.setOverview(updateVO.getOverview() + updateStr);
+		updateVO.setCountry(updateVO.getCountry() + updateStr);
 
 		flag = mapper.doUpdate(updateVO);
 		assertEquals(1, flag);
 
-		GenreVO outVO = mapper.doSelectOne(updateVO);
+		ContentVO outVO = mapper.doSelectOne(updateVO);
 		assertNotNull(outVO);
 		isSameData(updateVO, outVO);
 	}
@@ -127,11 +135,11 @@ class GenreMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		int flag = mapper.doSave(genre01);
+		int flag = mapper.doSave(content01);
 		assertEquals(1, flag);
 		assertEquals(1, mapper.totalCnt());
 
-		flag = mapper.doDelete(genre01);
+		flag = mapper.doDelete(content01);
 		assertEquals(1, flag);
 		assertEquals(0, mapper.totalCnt());
 	}
@@ -148,23 +156,23 @@ class GenreMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		int flag = mapper.doSave(genre01);
+		int flag = mapper.doSave(content01);
 		assertEquals(1, flag);
 		assertEquals(1, mapper.totalCnt());
-		assertEquals(true, genre01.getGenreId() > 0);
-		log.debug("saved genreId(genre01)={}", genre01.getGenreId());
+		assertEquals(true, content01.getContentId() > 0);
+		log.debug("saved contentId(content01)={}", content01.getContentId());
 
-		flag = mapper.doSave(genre02);
+		flag = mapper.doSave(content02);
 		assertEquals(1, flag);
 		assertEquals(2, mapper.totalCnt());
 
-		flag = mapper.doSave(genre03);
+		flag = mapper.doSave(content03);
 		assertEquals(1, flag);
 		assertEquals(3, mapper.totalCnt());
 
-		Integer foundId = mapper.findGenreIdByExternal(genre01.getExternalGenreId());
-		assertEquals(genre01.getGenreId(), foundId.intValue());
-		assertNull(mapper.findGenreIdByExternal("NOT_EXISTS"));
+		Integer foundId = mapper.findContentIdByExternal(content01.getExternalId());
+		assertEquals(content01.getContentId(), foundId.intValue());
+		assertNull(mapper.findContentIdByExternal("NOT_EXISTS"));
 	}
 
 	@Test
@@ -179,29 +187,36 @@ class GenreMapperDaoTest {
 		mapper.deleteAll();
 		assertEquals(0, mapper.totalCnt());
 
-		mapper.doSave(genre01);
-		mapper.doSave(genre02);
-		mapper.doSave(genre03);
+		mapper.doSave(content01);
+		mapper.doSave(content02);
+		mapper.doSave(content03);
 		assertEquals(3, mapper.totalCnt());
 
-		GenreVO outVO01 = mapper.doSelectOne(genre01);
+		ContentVO outVO01 = mapper.doSelectOne(content01);
 		assertNotNull(outVO01);
 
-		GenreVO outVO02 = mapper.doSelectOne(genre02);
+		ContentVO outVO02 = mapper.doSelectOne(content02);
 		assertNotNull(outVO02);
 
-		GenreVO outVO03 = mapper.doSelectOne(genre03);
+		ContentVO outVO03 = mapper.doSelectOne(content03);
 		assertNotNull(outVO03);
 
-		isSameData(genre01, outVO01);
-		isSameData(genre02, outVO02);
-		isSameData(genre03, outVO03);
+		isSameData(content01, outVO01);
+		isSameData(content02, outVO02);
+		isSameData(content03, outVO03);
 	}
 
-	private void isSameData(GenreVO expected, GenreVO actual) {
-		assertEquals(expected.getGenreId(), actual.getGenreId());
-		assertEquals(expected.getExternalGenreId(), actual.getExternalGenreId());
-		assertEquals(expected.getName(), actual.getName());
+	private void isSameData(ContentVO expected, ContentVO actual) {
+		assertEquals(expected.getContentId(), actual.getContentId());
+		assertEquals(expected.getExternalId(), actual.getExternalId());
+		assertEquals(expected.getTitleKo(), actual.getTitleKo());
+		assertEquals(expected.getTitleOrg(), actual.getTitleOrg());
+		assertEquals(expected.getOverview(), actual.getOverview());
+		assertEquals(expected.getReleaseYear(), actual.getReleaseYear());
+		assertEquals(expected.getRuntimeMin(), actual.getRuntimeMin());
+		assertEquals(expected.getCountry(), actual.getCountry());
+		assertEquals(expected.getPosterUrl(), actual.getPosterUrl());
+		assertEquals(expected.getBackdropUrl(), actual.getBackdropUrl());
 	}
 
 	@Test

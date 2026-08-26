@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta th:if="${_csrf != null}" name="_csrf" th:content="${_csrf.token}">
+<meta th:if="${_csrf != null}" name="_csrf_header" th:content="${_csrf.headerName}">
+<title>컬렉션 등록·수정</title>
+<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
+</head>
+<!-- formMode와 collectionId는 등록·수정 공용 JavaScript가 동작을 구분하는 값이다. -->
+<body class="bg-light"
+      th:attr="data-form-mode=${formMode},data-collection-id=${collectionId}">
+    <header class="border-bottom bg-white">
+        <div class="container py-3">
+            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
+                Ending Credit
+            </a>
+        </div>
+    </header>
+
+    <main class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h1 id="formTitle" class="h3 mb-4">컬렉션 등록</h1>
+
+                        <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+
+                        <!-- submit은 JavaScript가 가로채 등록 시 POST, 수정 시 PUT으로 전송 -->
+                        <form id="collectionForm">
+                            <div class="mb-3">
+                                <label class="form-label" for="memberId">회원 번호</label>
+                                <!-- 로그인 파트 병합 전 컬렉션 기능을 독립적으로 확인하기 위한 임시 입력값이다. -->
+                                <input id="memberId" class="form-control" type="number" min="1" required>
+                                <div class="form-text">
+                                    DB에 존재하는 회원 번호를 입력해 주세요. 로그인 연동 후 제거합니다.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="title">제목</label>
+                                <input id="title" class="form-control" type="text"
+                                       maxlength="100" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="description">설명</label>
+                                <textarea id="description" class="form-control" rows="7"
+                                          maxlength="1000"></textarea>
+                                <div class="form-text text-end">
+                                    <span id="descriptionLength">0</span>/1000
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label" for="isPublic">공개 여부</label>
+                                <select id="isPublic" class="form-select">
+                                    <option value="Y">공개</option>
+                                    <option value="N">비공개</option>
+                                </select>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <a id="cancelLink" class="btn btn-outline-secondary"
+                                   th:href="@{/collections}">취소</a>
+                                <button id="submitButton" class="btn btn-dark" type="submit">
+                                    등록
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
+    <script th:src="@{/assets/js/collection/collection-form.js}"></script>
+</body>
+</html>

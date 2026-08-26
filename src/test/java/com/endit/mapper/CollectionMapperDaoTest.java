@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -18,6 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
+import com.endit.domain.CollectionItemVO;
+import com.endit.domain.CollectionLikeVO;
 import com.endit.domain.CollectionVO;
 
 /**
@@ -32,6 +35,7 @@ import com.endit.domain.CollectionVO;
  * 2026. 8. 13. jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    공용 DB 더미 데이터 기반 테스트 구조로 변경
  * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
+ * 2026. 8. 19. jinyoung    작성자 조인 및 작품·좋아요·코멘트 집계 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -40,6 +44,7 @@ import com.endit.domain.CollectionVO;
  */
 @SpringBootTest
 @Transactional
+@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
 @DisplayName("CollectionMapper 테스트")
 class CollectionMapperDaoTest {
 
@@ -55,6 +60,12 @@ class CollectionMapperDaoTest {
 
 	@Autowired
 	private CollectionMapper mapper;
+
+	@Autowired
+	private CollectionItemMapper collectionItemMapper;
+
+	@Autowired
+	private CollectionLikeMapper collectionLikeMapper;
 
 	// 각 테스트에서 사용하는 컬렉션 데이터
 	private CollectionVO testData;
@@ -124,6 +135,13 @@ class CollectionMapperDaoTest {
 		// Given: 조회할 컬렉션을 등록
 		assertEquals(1, mapper.doSave(testData));
 
+		CollectionItemVO item = new CollectionItemVO(testData.getCollectionId(), 1, null);
+		assertEquals(1, collectionItemMapper.doSave(item));
+
+		CollectionLikeVO like = new CollectionLikeVO(
+				testData.getMemberId(), testData.getCollectionId(), null);
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(like));
+
 		// When: 컬렉션 번호로 단건 조회
 		CollectionVO outVO = mapper.doSelectOne(testData);
 
@@ -140,6 +158,10 @@ class CollectionMapperDaoTest {
 		assertEquals(testData.getDescription(), outVO.getDescription());
 		assertEquals(testData.getIsPublic(), outVO.getIsPublic());
 		assertNotNull(outVO.getCreatedDt());
+		assertNotNull(outVO.getNickname());
+		assertEquals(1, outVO.getItemCount());
+		assertEquals(1, outVO.getLikeCount());
+		assertEquals(0, outVO.getCommentCount());
 	}
 
 	/**
@@ -241,13 +263,16 @@ class CollectionMapperDaoTest {
 		log.debug("retrievedCount: {}건", list.size());
 
 		list.forEach(item ->
-			log.debug("* retrievedData: collectionId-{}, memberId-{}, title-{}, description-{}, isPublic-{}, createdDt-{}, updatedDt-{}",
-					item.getCollectionId(), item.getMemberId(), item.getTitle(), item.getDescription(),
-					item.getIsPublic(), item.getCreatedDt(), item.getUpdatedDt()));
+			log.debug("* retrievedData: collectionId-{}, memberId-{}, title-{}, nickname-{}, itemCount-{}, likeCount-{}, description-{}, isPublic-{}, createdDt-{}, updatedDt-{}",
+					item.getCollectionId(), item.getMemberId(), item.getTitle(), item.getNickname(),
+					item.getItemCount(), item.getLikeCount(), item.getDescription(), item.getIsPublic(),
+					item.getCreatedDt(), item.getUpdatedDt()));
 
 		assertTrue(list.stream()
 				.anyMatch(item ->
 						item.getCollectionId() == testData.getCollectionId()	// 컬렉션 번호 일치 검증
+						&& item.getNickname() != null							// 작성자 조인 결과 검증
+						&& item.getUpdatedDt() != null							// 목록 표시용 최근 수정일 검증
 				));
 	}
 	

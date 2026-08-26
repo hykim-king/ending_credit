@@ -14,6 +14,7 @@
  * 2026. 8. 12.  홍선기   최초 생성
  * 2026. 8. 13.  홍선기   @Transactional 적용(종료 시 롤백)
  * 2026. 8. 14.  홍선기   픽스처 제거, 공용 더미 기반으로 재작성(팀 테스트 규칙)
+ * 2026. 8. 19.  홍선기   join 필드(닉네임·좋아요수·별점)·정렬 4종 검증 추가 — 8/18 공지 보완점2
  * </pre>
  *
  * @author 홍선기
@@ -37,9 +38,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
+import com.endit.domain.CommentLikeVO;
 import com.endit.domain.UserCommentVO;
 
 @SpringBootTest
@@ -63,6 +66,12 @@ class UserCommentMapperDaoTest {
 
 	@Autowired
 	UserCommentMapper mapper;
+
+	@Autowired
+	CommentLikeMapper likeMapper; // 정렬(likes) 검증용 — 좋아요 생성
+
+	@Autowired
+	JdbcTemplate jdbcTemplate; // 정렬(rating) 검증용 별점 심기 — 트랜잭션 롤백으로 흔적 없음
 
 	private UserCommentVO comment01; // 회원A → 영화A
 	private UserCommentVO comment02; // 회원A → 영화B (스포일러)
@@ -120,6 +129,10 @@ class UserCommentMapperDaoTest {
 		isSameComment(comment01, outVO);
 		assertNotNull(outVO.getCreatedDt());
 		assertNull(outVO.getUpdatedDt()); // 등록 직후에는 수정일이 없다
+		// join 필드 — 작성자 닉네임(더미 회원9), 좋아요 0, 별점 없음(회원9는 별점 더미가 없다)
+		assertEquals("ENDIT수석관리자", outVO.getNickname());
+		assertEquals(0, outVO.getLikeCnt());
+		assertNull(outVO.getRatingScore());
 
 		// 5.
 		flag = mapper.doSave(comment02);
@@ -218,11 +231,65 @@ class UserCommentMapperDaoTest {
 		}
 		assertEquals(PAGE_SIZE, list.size());
 		assertEquals(TOTAL_COUNT, list.get(0).getTotalCnt());
+		assertNotNull(list.get(0).getNickname()); // join으로 작성자 닉네임이 실려 온다
 
 		// 3.
 		dto.setPageNo(3);
 		list = mapper.doRetrieve(dto);
 		assertEquals(TOTAL_COUNT - PAGE_SIZE * 2, list.size());
+	}
+
+	@Test
+	public void doRetrieveSort() {
+		log.debug("---------------------------");
+		log.debug("*doRetrieveSort()*");
+		log.debug("---------------------------");
+		// C-04 정렬 4종 — 회원A(9) 범위로만 검색해 더미와 안 섞이게 검증한다
+		// 준비: 영화1(별점 5)·영화2(별점 3) 코멘트 2건, 영화2 코멘트에만 좋아요 1개
+		//       회원9는 별점 더미가 없으므로 트랜잭션 안에서 직접 심는다(종료 시 롤백)
+		// 1. 기본(latest): 나중에 등록한 영화2 코멘트가 먼저 (같은 초 → comment_id DESC)
+		// 2. likes: 좋아요 있는 영화2 코멘트가 먼저
+		// 3. rating_desc: 별점 5(영화1)가 먼저
+		// 4. rating_asc: 별점 3(영화2)가 먼저 (NULLS LAST는 별점 없는 행이 뒤로)
+
+		UserCommentVO c1 = new UserCommentVO(0, MEMBER_A, 1L, null, "별점5 영화 한줄평", UserCommentVO.SPOILER_NO,
+				null, null);
+		UserCommentVO c2 = new UserCommentVO(0, MEMBER_A, 2L, null, "별점3 영화 한줄평", UserCommentVO.SPOILER_NO,
+				null, null);
+		mapper.doSave(c1);
+		mapper.doSave(c2);
+		likeMapper.doSave(new CommentLikeVO(MEMBER_B, c2.getCommentId(), null));
+		jdbcTemplate.update("INSERT INTO member_content (member_id, content_id, rating_score) VALUES (?, ?, ?)",
+				MEMBER_A, 1L, 5);
+		jdbcTemplate.update("INSERT INTO member_content (member_id, content_id, rating_score) VALUES (?, ?, ?)",
+				MEMBER_A, 2L, 3);
+
+		dto.setPageNo(1);
+		dto.setPageSize(PAGE_SIZE);
+		dto.setSearchDiv("10");
+		dto.setSearchWord(String.valueOf(MEMBER_A));
+
+		// 1.
+		List<UserCommentVO> list = mapper.doRetrieve(dto);
+		assertEquals(c2.getCommentId(), list.get(0).getCommentId());
+
+		// 2.
+		dto.getSearchMap().put("sort", "likes");
+		list = mapper.doRetrieve(dto);
+		assertEquals(c2.getCommentId(), list.get(0).getCommentId());
+		assertEquals(1, list.get(0).getLikeCnt());
+
+		// 3.
+		dto.getSearchMap().put("sort", "rating_desc");
+		list = mapper.doRetrieve(dto);
+		assertEquals(c1.getCommentId(), list.get(0).getCommentId());
+		assertEquals(Integer.valueOf(5), list.get(0).getRatingScore());
+
+		// 4.
+		dto.getSearchMap().put("sort", "rating_asc");
+		list = mapper.doRetrieve(dto);
+		assertEquals(c2.getCommentId(), list.get(0).getCommentId());
+		assertEquals(Integer.valueOf(3), list.get(0).getRatingScore());
 	}
 
 	@Test

@@ -8,6 +8,7 @@
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
+ * 2026. 8. 19.  홍선기   조회 전용 join 필드 추가(작성자 닉네임·좋아요 수·별점) — 8/18 공지 보완점2
  * </pre>
  *
  * @author 홍선기
@@ -31,6 +32,11 @@ public class UserCommentVO extends DTO {
 	private String spoiler;       // 스포일러 여부 'Y'/'N'
 	private String createdDt;     // 등록일
 	private String updatedDt;     // 수정일
+
+	// ── 조회 전용(join 결과) — 목록/단건조회에서만 채워진다. 등록·수정 파라미터로는 쓰지 않는다 ──
+	private String nickname;      // 작성자 닉네임 (MEMBER join)
+	private int likeCnt;          // 좋아요 수 (COMMENT_LIKE 집계, 없으면 0)
+	private Integer ratingScore;  // 작성자가 그 영화에 준 별점 (MEMBER_CONTENT join — 없거나 컬렉션 코멘트면 null)
 
 	public UserCommentVO() {
 		super();
@@ -113,11 +119,36 @@ public class UserCommentVO extends DTO {
 		this.updatedDt = updatedDt;
 	}
 
+	public String getNickname() {
+		return nickname;
+	}
+
+	public void setNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	public int getLikeCnt() {
+		return likeCnt;
+	}
+
+	public void setLikeCnt(int likeCnt) {
+		this.likeCnt = likeCnt;
+	}
+
+	public Integer getRatingScore() {
+		return ratingScore;
+	}
+
+	public void setRatingScore(Integer ratingScore) {
+		this.ratingScore = ratingScore;
+	}
+
 	@Override
 	public String toString() {
 		return "UserCommentVO [commentId=" + commentId + ", memberId=" + memberId + ", contentId=" + contentId
 				+ ", collectionId=" + collectionId + ", commentDetail=" + commentDetail + ", spoiler=" + spoiler
-				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", toString()=" + super.toString() + "]";
+				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", nickname=" + nickname
+				+ ", likeCnt=" + likeCnt + ", ratingScore=" + ratingScore + ", toString()=" + super.toString() + "]";
 	}
 
 }
