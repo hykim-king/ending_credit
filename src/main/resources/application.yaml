@@ -61,7 +61,7 @@ logging:
 
 # TMDB Read Access Token. 말이 어렵지 유저가 읽어올 권한이 있는지 검사하는 개념임. JWT- Json Web Token을 넣는다 - 라이브러리 요구 사항임.
 tmdb:
-  api-key: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiIyOGFjMTFlOTI1ZjA0ZTgwZjNkYmJkY2NjOTBlNjM2MyIsIm5iZiI6MTc4NDc4MTg3Ny4wMTEwMDAyLCJzdWIiOiI2YTYxOWMzNTlhNjc5OTliN2Y3NDJiMjUiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.ew-nUnepgSbhPWV6wldelfQqf1mcQDZHVBWN0hCsqEI"
+  api-key: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4NTA4NjI4YjcwZjNiMzNiMmQ3NWE3Yjc3YWE2YzkzNCIsIm5iZiI6MTc4NzgxODcyMi4zMTksInN1YiI6IjZhOGZmMmUyMTllMWJiZjgwYzNjZWEzZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.r17zMgOys95XGC0ux2AO1LI1wU8JFM0FQKK-IiYWJS4"
   language: ko-KR
   image-size: w500
  
