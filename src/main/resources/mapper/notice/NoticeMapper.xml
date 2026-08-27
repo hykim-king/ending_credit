@@ -94,12 +94,23 @@
 <select id="selectPublicNoticeById"
         parameterType="long"
         resultType="NoticeVO">
-    
-    <!-- 전체 공지 개수 -->
-    <select id="countNoticeList" resultType="int">
-        SELECT COUNT(*)
-        FROM NOTICE
-    </select>
+
+    SELECT
+        NOTICE_ID,
+        TITLE,
+        CONTENT,
+        IMPORTANT,
+        STATUS,
+        VIEW_COUNT,
+        CREATED_ID,
+        TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+        UPDATED_ID,
+        TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+    FROM NOTICE
+    WHERE NOTICE_ID = #{noticeId}
+      AND STATUS = 'PUBLISHED'
+
+</select>
 
     <!-- 공지 목록 조회 (중요 공지 우선, 최신순) -->
     <select id="selectNoticeList" resultType="NoticeVO">
@@ -203,9 +214,6 @@
             AND IMPORTANT = #{important}
         </if>
     </where>
-    ORDER BY IMPORTANT DESC, NOTICE_ID DESC
-    OFFSET #{offset} ROWS
-    FETCH NEXT #{size} ROWS ONLY
 
 </select>
 
