@@ -1,4 +1,4 @@
-package com.endit.cofig;
+package com.endit.config;
 
 import javax.sql.DataSource;
 
