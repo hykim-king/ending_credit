@@ -1,4 +1,4 @@
-package com.endit.service.impl;
+package com.endit.service.Impl;
 
 import java.util.Collections;
 import java.util.List;
