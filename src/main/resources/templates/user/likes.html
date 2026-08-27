@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>회원 좋아요</title>
+<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
+</head>
+<!-- 회원 번호와 최초 유형은 View Controller가 전달하고 목록은 REST API로 조회한다. -->
+<body class="bg-light"
+      th:attr="data-member-id=${memberId},data-initial-type=${type}">
+
+    <header class="border-bottom bg-white">
+        <div class="container py-3 d-flex justify-content-between align-items-center">
+            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/}">
+                Ending Credit
+            </a>
+            <a class="btn btn-outline-dark"
+               th:href="@{/users/{id}(id=${memberId})}">
+                프로필로 돌아가기
+            </a>
+        </div>
+    </header>
+
+    <main class="container py-4">
+        <section class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <p class="text-secondary mb-1">프로필 좋아요</p>
+                <h1 class="h3 mb-0"
+                    th:text="|회원 #${memberId}의 좋아요|">
+                    회원의 좋아요
+                </h1>
+            </div>
+        </section>
+
+        <!-- U-07은 같은 화면에서 인물과 컬렉션 좋아요 유형을 전환한다. -->
+        <nav class="mb-4" aria-label="회원 좋아요 유형">
+            <div id="likeTabs" class="nav nav-tabs">
+                <a id="personLikeTab"
+                   class="nav-link"
+                   data-type="person"
+                   th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
+                    인물
+                </a>
+                <a class="nav-link disabled"
+                   href="#"
+                   tabindex="-1"
+                   aria-disabled="true"
+                   title="컬렉션 좋아요 API 연동 후 제공">
+                    컬렉션
+                </a>
+            </div>
+        </nav>
+
+        <section class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="d-flex flex-column flex-sm-row justify-content-between
+                            align-items-sm-center gap-3 mb-4">
+                    <div>
+                        <h2 id="likeTitle" class="h4 mb-1">좋아한 인물</h2>
+                        <span id="likeTotalCount" class="text-secondary small">0명</span>
+                    </div>
+
+                    <div>
+                        <label class="visually-hidden" for="likeSort">정렬</label>
+                        <select id="likeSort"
+                                class="form-select form-select-sm"
+                                disabled>
+                            <option value="latest">최신순</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="likeLoading"
+                     class="py-5 text-center text-secondary"
+                     role="status"
+                     aria-live="polite">
+                    좋아요 목록을 불러오는 중입니다.
+                </div>
+
+                <div id="likeError"
+                     class="alert alert-danger d-none"
+                     role="alert">
+                    <p id="likeErrorMessage" class="mb-3"></p>
+                    <button id="likeRetryButton"
+                            class="btn btn-outline-danger btn-sm"
+                            type="button">
+                        다시 시도
+                    </button>
+                </div>
+
+                <div id="likeEmpty"
+                     class="alert alert-secondary text-center d-none"
+                     role="status">
+                    아직 좋아요한 인물이 없습니다.
+                </div>
+
+                <!-- GET /api/users/{memberId}/likes?type=person 응답으로 생성한다. -->
+                <div id="likeList"
+                     class="row row-cols-2 row-cols-md-3 row-cols-lg-4
+                            row-cols-xl-5 g-3 d-none"
+                     aria-live="polite">
+                </div>
+
+                <nav class="mt-4" aria-label="회원 좋아요 페이지">
+                    <ul id="likePagination"
+                        class="pagination pagination-sm justify-content-center mb-0">
+                    </ul>
+                </nav>
+            </div>
+        </section>
+    </main>
+
+    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
+    <script th:src="@{/assets/js/user/member-likes.js}"></script>
+</body>
+</html>
