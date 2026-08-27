@@ -1,4 +1,4 @@
-package com.endit.serviceImpl;
+package com.endit.service.impl;
 
 import java.util.List;
 import java.util.Set;
