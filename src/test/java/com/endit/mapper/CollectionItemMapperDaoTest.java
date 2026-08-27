@@ -44,7 +44,7 @@ import com.endit.domain.CollectionItemVO;
  */
 @SpringBootTest
 @Transactional
-//@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
+@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
 @DisplayName("CollectionItem 테스트")
 class CollectionItemMapperDaoTest {
 

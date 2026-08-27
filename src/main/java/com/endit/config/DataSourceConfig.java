@@ -38,7 +38,9 @@ public class DataSourceConfig {
 		ds.setConnectionTimeout(30000);
 		ds.setValidationTimeout(5000);
 		ds.setAutoCommit(true);
+		
 		log.debug("DataSouceConfig dataSource: {}", ds);
+		
 		return ds;
 	}
 

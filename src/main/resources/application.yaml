@@ -1,44 +1,54 @@
 spring:
+  # =========================================================
+  # Application
+  # =========================================================
   application:
     name: ending_credit
-#--------------------------------------
-# dev/run
-#-------------------------------------- 
+
+  # =========================================================
+  # Profile
+  # =========================================================
   profiles:
     active: app
-              
-#--------------------------------------
-# Mybatis
-#-------------------------------------- 
-mybatis:
-  mapper-locations: classpath:/mapper/**/*.xml
-  type-aliases-package: com.endit.domain     
-  configuration:
-    map-underscore-to-camel-case: true
-    cache-enabled: false
-    
-#--------------------------------------
-# Thymeleaf
-# 개발: cache: false
-#--------------------------------------      
+
+  # =========================================================
+  # Thymeleaf
+  # 개발 환경에서는 cache 비활성화
+  # =========================================================
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
     cache: false
     encoding: UTF-8
-#--------------------------------------
-# server
-#--------------------------------------     
+
+
+# =========================================================
+# MyBatis
+# =========================================================
+mybatis:
+  mapper-locations: classpath:/mapper/**/*.xml
+  type-aliases-package: com.endit.domain
+
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+
+
+# =========================================================
+# Server
+# =========================================================
 server:
-  port: 8080 
-      
-#--------------------------------------
-# logging
-#-------------------------------------- 
+  port: 8080
+
+
+# =========================================================
+# Logging
+# =========================================================
 logging:
   level:
-    root: info
+    root: INFO
     com.endit: DEBUG
+
     # Transaction
     org.springframework.transaction: DEBUG
     org.springframework.transaction.interceptor: DEBUG
@@ -50,13 +60,13 @@ logging:
     org.mybatis: DEBUG
 
     # SQL
-    org.springframework.jdbc.core: DEBUG    
+    org.springframework.jdbc.core: DEBUG
 
+  # Log File
   file:
     name: logs/application.log
 
+  # Log Pattern
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-   
-

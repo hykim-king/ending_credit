@@ -17,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentCreditVO;
-import com.endit.mapper.ContentCreditMapper;
 
 @SpringBootTest
 @Transactional
