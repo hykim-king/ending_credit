@@ -13,7 +13,26 @@ public class NoticeVO {
     private Long updatedId;
     private String updatedDt;
 
+    // 기본 생성자
     public NoticeVO() {
+    }
+
+    // 전체 필드 생성자
+    public NoticeVO(Long noticeId, String title, String content,
+            String important, String status, int viewCount,
+            Long createdId, String createdDt,
+            Long updatedId, String updatedDt) {
+
+        this.noticeId = noticeId;
+        this.title = title;
+        this.content = content;
+        this.important = important;
+        this.status = status;
+        this.viewCount = viewCount;
+        this.createdId = createdId;
+        this.createdDt = createdDt;
+        this.updatedId = updatedId;
+        this.updatedDt = updatedDt;
     }
 
     public Long getNoticeId() {

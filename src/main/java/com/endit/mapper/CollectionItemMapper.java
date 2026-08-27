@@ -72,4 +72,12 @@ public interface CollectionItemMapper {
 	 * @return 컬렉션 콘텐츠 전체 건수
 	 */
 	int totalCnt();
+
+	/**
+	 * 검색 조건을 반영한 건수 조회
+	 *
+	 * @param param 검색 조건
+	 * @return 검색된 컬렉션 콘텐츠 건수
+	 */
+	int count(DTO param);
 }
