@@ -1,4 +1,4 @@
-package com.endit.service.Impl;
+package com.endit.service.impl;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -43,15 +43,18 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-// TMDB에서 영화, 인물, 이미지, 장르를 받아 Oracle에 저장하는 서비스
 public class ContentServiceImpl implements ContentService {
 
 	private static final String ROLE_ACTOR = "ACTOR";
 	private static final String ROLE_DIRECTOR = "DIRECTOR";
 	// 한 영화에서 저장할 배우 수
 	private static final int MAX_CAST_COUNT = 10;
+	// 신규 저장 없이 skip만 나는 페이지가 이만큼 연속되면 조기 종료
+	private static final int SKIP_PAGE_LIMIT = 5;
 	// 배경 이미지와 포스터를 각각 최대 몇 장까지 저장할지
 	private static final int MAX_GALLERY_PER_TYPE = 10;
+	// 국제코드 미국인 영화만 DB에 넣기
+	private static final String TARGET_PRODUCTION_COUNTRY = "US";
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -63,13 +66,11 @@ public class ContentServiceImpl implements ContentService {
 	private final ContentGenreMapper contentGenreMapper;
 
 	
-	// 라이브러리 진입점. movies, genre, images 호출할 때 이 객체 씀. configuration은 안 침
+	// 라이브러리 진입점.
 	private final TmdbApi tmdbApi;
 	private final TmdbProperties tmdbProperties;
 
-	// 인기 영화 목록을 limit건까지 훑고, 우리 db에 없는 영화만 상세 조회해서 넣음.
-	// 이미 있는 영화는 skip. skip해도 processedCount는 올라감. 반환값은 진짜 새로 넣은 건수.
-	// 장르 코드표를 영화보다 먼저 넣고, 전체 import는 트랜잭션 한 방임
+	// 인기 영화 목록을 훑어서, 우리 db에 없는 영화를 limit건 새로 저장할 때까지 계속 조회함.
 	@Override
 	@Transactional
 	public int importPopular(int limit) {
@@ -86,33 +87,49 @@ public class ContentServiceImpl implements ContentService {
 		int insertedCount = 0;
 		// TMDB 인기 목록은 한 페이지에 20건이다
 		int page = 1;
+		// 신규 저장이 하나도 없었던 페이지가 연속으로 몇 번째인지
+		int EmptyPage = 0;
 
 		try {
-			// 최대 조회가 되기 전까지, skip 해도 카운트는 오름 
-			while (processedCount < limit) {
-				// HTTP GET /movie/popular 로 인기 영화 목록 조회 하기 
+			// 신규 저장 건수(insertedCount)가 limit을 채울 때까지 돈다. skip된 건 다음 페이지로 보충한다
+			while (insertedCount < limit) {
+				// HTTP GET /movie/popular 로 인기 영화 목록 조회 하기
 				MovieResultsPage results = tmdbApi.getMovieLists().getPopular(
 						tmdbProperties.getLanguage(), page, null);
-				// 결과 값이 비어 있다면 break 
+				// 결과 값이 비어 있다면 break
 				if (results.getResults() == null || results.getResults().isEmpty()) {
 					break;
 				}
+				int insertedBeforePage = insertedCount;
 				// 가져온 영화 목록 순회
 				for (Movie movie : results.getResults()) {
-					if (processedCount >= limit) {
+					if (insertedCount >= limit) {
 						break;
 					}
 					processedCount++;
-					// 이미 기존에 있는 영화(영화 ID) 라면, 상세 조회 하지 않고 넘어가기 
+					// 이미 기존에 있는 영화(영화 ID) 라면, 상세 조회 하지 않고 넘어가기
 					if (existsTmdbContent(movie.getId())) {
 						log.debug("TMDB 영화 skip. 기존 데이터: externalId={}", movie.getId());
 						continue;
 					}
-					// 기존에 없는 영화를 상세조회하고, 콘텐츠(CONTENT) 테이블 및 하위 테이블, 기타 테이블에 데이터를 집어옇는 메서드 
-					saveFromTmdb(movie.getId());
-					insertedCount++;
+					// 제작국가가 TARGET_PRODUCTION_COUNTRY가 아니면 상세조회만 하고 저장은 하지 않는다
+					if (saveFromTmdb(movie.getId())) {
+						insertedCount++;
+					}
 				}
-				
+
+				// 이 페이지에서 신규 저장이 하나도 없었다면 연속 카운트 증가, 하나라도 있었다면 리셋
+				if (insertedCount == insertedBeforePage) {
+					EmptyPage++;
+					if (EmptyPage >= SKIP_PAGE_LIMIT) {
+						log.warn("TMDB 인기 영화 import 조기 종료: 신규 없는 페이지 {}회 연속. processed={}, inserted={}",
+								EmptyPage, processedCount, insertedCount);
+						break;
+					}
+				} else {
+					EmptyPage = 0;
+				}
+
 				if (results.getTotalPages() == null || page >= results.getTotalPages()) {
 					break;
 				}
@@ -148,7 +165,9 @@ public class ContentServiceImpl implements ContentService {
 					continue;
 				}
 				// 말그대로 업서트. 있으면 업데이트 없으면 인서트 ㅋㅋ 업 + 서트 ㅋㅋ
-				upsertGenre(genre);
+				String externalGenreId = String.valueOf(genre.getId());
+				Integer genreId = genreMapper.findGenreIdByExternal(externalGenreId);
+				upsertGenre(genre, genreId);
 				saved++;
 			}
 			log.info("TMDB 장르 마스터 동기화: count={}", saved);
@@ -157,27 +176,43 @@ public class ContentServiceImpl implements ContentService {
 		}
 	}
 
-	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다
-	private void saveFromTmdb(int tmdbMovieId) {
+	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다. 제작국가가 TARGET_PRODUCTION_COUNTRY가 아니면 저장하지 않고 false를 반환한다
+	private boolean saveFromTmdb(int tmdbMovieId) {
 		try {
-			// HTTP GET /movie/영화id + append_to_response=credits 로 영화 상세보기에 CREDIT 정보를 함께 호출함 
-			// 이유는 API 호출 횟수를 줄이기 위해서 
+			// HTTP GET /movie/영화id + append_to_response=credits 로 영화 상세보기에 CREDIT 정보를 함께 호출함
+			// 이유는 API 호출 횟수를 줄이기 위해서
 			// 여기서 보면 영화 상세 (.getdetails) 랑 MovieAppendToResponse.CREDITS 로 크레딧 정보 받아오고 있음.
 			MovieDb movie = tmdbApi.getMovies().getDetails(
 					tmdbMovieId, tmdbProperties.getLanguage(), MovieAppendToResponse.CREDITS);
 
+			// popular API에는 제작국가 필터가 없어서, 상세조회 응답을 받은 뒤 여기서 걸러낸다
+			if (!isProducedIn(movie, TARGET_PRODUCTION_COUNTRY)) {
+				log.debug("TMDB 영화 skip. 제작국가 불일치: externalId={}", tmdbMovieId);
+				return false;
+			}
+
 			ContentVO content = toContentVO(movie);
-			
+
 			int contentId = saveContent(content);
-			// 받은 데이터를 content 하위 테이블 "크레딧" 에 넣는 로직  
+			// 받은 데이터를 content 하위 테이블 "크레딧" 에 넣는 로직
 			syncCredits(contentId, movie.getCredits());
-			// syncImages 안에 호출해서 이미지 집어넣는거 다 포함 되어 있음. 
+			// syncImages 안에 호출해서 이미지 집어넣는거 다 포함 되어 있음.
 			syncImages(contentId, tmdbMovieId);
 			// 장르는 credits가 아님. 상세 JSON에 이미 들어있는 genres로 CONTENT_GENRE만 연결
 			syncContentGenres(contentId, movie);
+			return true;
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 영화 조회 실패: " + tmdbMovieId, e);
 		}
+	}
+
+	// 제작국가 목록에 미국 국제 코드가가 있는지 확인
+	private boolean isProducedIn(MovieDb movie, String isoCode) {
+		if (movie.getProductionCountries() == null) {
+			return false;
+		}
+		return movie.getProductionCountries().stream()
+				.anyMatch(country -> isoCode.equalsIgnoreCase(country.getIsoCode()));
 	}
 
 	// 컨텐츠 저장 
@@ -303,16 +338,13 @@ public class ContentServiceImpl implements ContentService {
 	private int resolveGenreId(Genre genre) {
 		String externalGenreId = String.valueOf(genre.getId());
 		Integer genreId = genreMapper.findGenreIdByExternal(externalGenreId);
-		if (genreId != null) {
-			return genreId;
-		}
-		return upsertGenre(genre);
+		return upsertGenre(genre, genreId);
 	}
 
-	// 장르가 없으면 insert, 있으면 이름만 update한다
-	private int upsertGenre(Genre genre) {
+	// 장르가 없으면 insert, 있으면 이름만 update한다.
+	// genreId는 호출부가 이미 조회해둔 값(없으면 null)을 그대로 받는다.
+	private int upsertGenre(Genre genre, Integer genreId) {
 		String externalGenreId = String.valueOf(genre.getId());
-		Integer genreId = genreMapper.findGenreIdByExternal(externalGenreId);
 
 		GenreVO vo = new GenreVO();
 		vo.setExternalGenreId(externalGenreId);

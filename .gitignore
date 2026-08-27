@@ -4,6 +4,12 @@ target/
 # Local-only reference docs (not shared with team)
 /docs/
 /CLAUDE.md
+
+# Local-only verification scaffolding (not shared with team)
+/src/main/java/com/endit/controller/TestContentController.java
+/src/main/java/com/endit/service/TestContentService.java
+/src/main/java/com/endit/service/impl/TestContentServiceImpl.java
+/src/main/resources/templates/test/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
