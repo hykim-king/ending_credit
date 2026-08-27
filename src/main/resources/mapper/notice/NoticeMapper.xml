@@ -94,7 +94,7 @@
 <select id="selectPublicNoticeById"
         parameterType="long"
         resultType="NoticeVO">
-    
+</select>    
     <!-- 전체 공지 개수 -->
     <select id="countNoticeList" resultType="int">
         SELECT COUNT(*)
