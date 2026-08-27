@@ -1,0 +1,150 @@
+package com.endit.controller;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.endit.cmn.DTO;
+import com.endit.cmn.MessageVO;
+import com.endit.domain.CollectionLikeItemVO;
+import com.endit.domain.CollectionLikeVO;
+import com.endit.service.CollectionLikeService;
+
+/**
+ * <pre>
+ * Class Name  : CollectionLikeController
+ * Description : 컬렉션 좋아요의 등록, 취소 및 회원별 좋아요 컬렉션 목록 조회 요청을 처리하는 REST Controller
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 8. 27. gunwoo      최초 생성
+ * ------------------------------------------------------------
+ * </pre>
+ *
+ * @author gunwoo
+ * @since 2026. 8. 27.
+ */
+@RestController
+public class CollectionLikeController {
+
+	private static final String TYPE_COLLECTION = "collections";
+
+	private final CollectionLikeService collectionLikeService;
+
+	/**
+	 * CollectionLikeService를 주입받아 Controller 생성
+	 *
+	 * @param collectionLikeService 컬렉션 좋아요 Service
+	 */
+	public CollectionLikeController(CollectionLikeService collectionLikeService) {
+		this.collectionLikeService = collectionLikeService;
+	}
+
+	/**
+	 * 컬렉션 좋아요 등록 (D-01 좋아요 토글)
+	 *
+	 * 정책(POL-010) · 이미 좋아요를 누른 상태에서 재요청해도 오류 없이
+	 * 현재 좋아요 정보를 그대로 응답하는 멱등 처리를 한다.
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @param param 회원 번호를 담은 요청 정보
+	 * @return 등록된(또는 이미 등록되어 있던) 컬렉션 좋아요 정보
+	 */
+	@PostMapping("/api/collections/{collectionId}/likes")
+	public ResponseEntity<CollectionLikeVO> like(
+			@PathVariable int collectionId,
+			@RequestBody CollectionLikeVO param) {
+
+		// 로그인 기능이 병합되기 전에는 화면에서 입력한 임시 회원 번호를 사용한다.
+		// 최종 통합 시 이 값은 로그인 Principal의 MEMBER_ID로 교체해야 한다.
+		int memberId = param.getMemberId();
+
+		CollectionLikeVO like;
+
+		try {
+			like = collectionLikeService.create(memberId, collectionId);
+		} catch (IllegalStateException alreadyLiked) {
+			like = collectionLikeService.get(memberId, collectionId);
+		}
+
+		return ResponseEntity.status(HttpStatus.CREATED).body(like);
+	}
+
+	/**
+	 * 컬렉션 좋아요 취소 (D-01 좋아요 토글)
+	 *
+	 * 정책(POL-011) · 이미 좋아요가 없는 상태에서 취소 요청이 와도 오류 없이
+	 * 204 응답으로 처리하는 멱등 처리를 한다.
+	 */
+	@DeleteMapping("/api/collections/{collectionId}/likes")
+	public ResponseEntity<Void> unlike(
+			@PathVariable int collectionId,
+			@RequestBody CollectionLikeVO param) {
+
+		int memberId = param.getMemberId();
+
+		try {
+			collectionLikeService.delete(memberId, collectionId);
+		} catch (NoSuchElementException alreadyUnliked) {
+		
+		}
+
+		return ResponseEntity.noContent().build();
+	}
+
+	/**특정 회원이 좋아요를 누른 컬렉션 목록 조회 (U-07 좋아요 목록 · 컬렉션 탭)*/
+	@GetMapping("/api/users/{memberId}/likes")
+	public ResponseEntity<Map<String, Object>> retrieveByMember(
+			@PathVariable int memberId,
+			@RequestParam(defaultValue = TYPE_COLLECTION) String type,
+			@RequestParam(defaultValue = "1") int pageNo,
+			@RequestParam(defaultValue = "10") int pageSize) {
+
+		if (!TYPE_COLLECTION.equals(type)) {
+			throw new IllegalArgumentException(
+					"이 API는 type=" + TYPE_COLLECTION + " 요청만 처리합니다.");
+		}
+
+		DTO param = new DTO();
+		param.setPageNo(pageNo);
+		param.setPageSize(pageSize);
+
+		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(memberId, param);
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("page", param);
+
+		return ResponseEntity.ok(response);
+	}
+
+	/**잘못된 요청값 예외를 HTTP 400 응답으로 변환*/
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<MessageVO> handleBadRequest(
+			IllegalArgumentException exception) {
+
+		MessageVO message = new MessageVO(
+				"400",
+				exception.getMessage(),
+				"컬렉션 좋아요 요청값을 확인해 주세요.");
+
+		return ResponseEntity
+				.status(HttpStatus.BAD_REQUEST)
+				.body(message);
+	}
+
+}
