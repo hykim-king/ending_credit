@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" " http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
 <mapper namespace="com.endit.mapper.NoticeMapper">
 
     <!-- 공지 등록 -->
@@ -7,6 +9,7 @@
         <selectKey keyProperty="noticeId" resultType="long" order="BEFORE">
             SELECT SEQ_NOTICE.NEXTVAL FROM DUAL
         </selectKey>
+
         INSERT INTO NOTICE (
             NOTICE_ID,
             TITLE,
@@ -15,7 +18,7 @@
             STATUS,
             CREATED_ID,
             CREATED_DT,
-            UPDATED_ID       
+            UPDATED_ID
         ) VALUES (
             #{noticeId},
             #{title},
@@ -28,8 +31,12 @@
         )
     </insert>
 
+
     <!-- 공지 단건 조회 -->
-    <select id="selectNoticeById" parameterType="long" resultType="NoticeVO">
+    <select id="selectNoticeById"
+            parameterType="long"
+            resultType="NoticeVO">
+
         SELECT
             NOTICE_ID,
             TITLE,
@@ -43,24 +50,15 @@
             TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
         FROM NOTICE
         WHERE NOTICE_ID = #{noticeId}
+
     </select>
 
-<!-- 일반 사용자 공지 목록 -->
-<select id="selectPublicNoticeList"
-        parameterType="NoticeSearchVO"
-        resultType="NoticeVO">
 
-    SELECT
-        NOTICE_ID,
-        TITLE,
-        IMPORTANT,
-        STATUS,
-        VIEW_COUNT,
-        CREATED_ID,
-        TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-        UPDATED_ID,
-        TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
-    FROM (
+    <!-- 일반 사용자 공지 목록 -->
+    <select id="selectPublicNoticeList"
+            parameterType="NoticeSearchVO"
+            resultType="NoticeVO">
+
         SELECT
             NOTICE_ID,
             TITLE,
@@ -68,85 +66,118 @@
             STATUS,
             VIEW_COUNT,
             CREATED_ID,
-            CREATED_DT,
+            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
             UPDATED_ID,
-            UPDATED_DT,
-            ROW_NUMBER() OVER (
-                ORDER BY IMPORTANT DESC, NOTICE_ID DESC
-            ) AS RN
-        FROM NOTICE
-        WHERE STATUS = 'PUBLISHED'
-    )
-    WHERE RN BETWEEN (#{offset} + 1)
-                 AND (#{offset} + #{pageSize})
-    ORDER BY RN
+            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+        FROM (
+            SELECT
+                NOTICE_ID,
+                TITLE,
+                IMPORTANT,
+                STATUS,
+                VIEW_COUNT,
+                CREATED_ID,
+                CREATED_DT,
+                UPDATED_ID,
+                UPDATED_DT,
+                ROW_NUMBER() OVER (
+                    ORDER BY IMPORTANT DESC, NOTICE_ID DESC
+                ) AS RN
+            FROM NOTICE
+            WHERE STATUS = 'PUBLISHED'
+        )
+        WHERE RN BETWEEN (#{offset} + 1)
+                     AND (#{offset} + #{pageSize})
+        ORDER BY RN
 
-</select>
+    </select>
 
-<!-- 일반 사용자 공개 공지 개수 -->
-<select id="countPublicNoticeList" resultType="int">
-    SELECT COUNT(*)
-    FROM NOTICE
-    WHERE STATUS = 'PUBLISHED'
-</select>
 
-<!-- 일반 사용자 공지 단건 조회 -->
-<select id="selectPublicNoticeById"
-        parameterType="long"
-        resultType="NoticeVO">
-    
-    <!-- 전체 공지 개수 -->
-    <select id="countNoticeList" resultType="int">
+    <!-- 일반 사용자 공개 공지 개수 -->
+    <select id="countPublicNoticeList"
+            resultType="int">
+
         SELECT COUNT(*)
         FROM NOTICE
+        WHERE STATUS = 'PUBLISHED'
+
     </select>
 
+
+    <!-- 일반 사용자 공지 단건 조회 -->
+    <select id="selectPublicNoticeById"
+            parameterType="long"
+            resultType="NoticeVO">
+
+        SELECT
+            NOTICE_ID,
+            TITLE,
+            CONTENT,
+            IMPORTANT,
+            STATUS,
+            VIEW_COUNT,
+            CREATED_ID,
+            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+            UPDATED_ID,
+            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+        FROM NOTICE
+        WHERE NOTICE_ID = #{noticeId}
+          AND STATUS = 'PUBLISHED'
+
+    </select>
+
+
+    <!-- 전체 공지 개수 -->
+    <select id="countNoticeList"
+            resultType="int">
+
+        SELECT COUNT(*)
+        FROM NOTICE
+
+    </select>
+
+
     <!-- 공지 목록 조회 (중요 공지 우선, 최신순) -->
-    <select id="selectNoticeList" resultType="NoticeVO">
+    <select id="selectNoticeList"
+            resultType="NoticeVO">
 
-    <bind name="offset" value="(page - 1) * size"/>
+        <bind name="offset" value="(page - 1) * size"/>
 
-    SELECT
-        NOTICE_ID,
-        TITLE,
-        CONTENT,
-        IMPORTANT,
-        STATUS,
-        VIEW_COUNT,
-        CREATED_ID,
-        TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-        UPDATED_ID,
-        TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
-    FROM NOTICE
-    WHERE NOTICE_ID = #{noticeId}
-      AND STATUS = 'PUBLISHED'
+        SELECT
+            NOTICE_ID,
+            TITLE,
+            CONTENT,
+            IMPORTANT,
+            STATUS,
+            VIEW_COUNT,
+            CREATED_ID,
+            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
+            UPDATED_ID,
+            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+        FROM NOTICE
+        WHERE NOTICE_ID = #{noticeId}
+          AND STATUS = 'PUBLISHED'
 
-</select>
+    </select>
 
-<!-- 일반 사용자 공개 공지 조회수 증가 -->
-<update id="increasePublicViewCount" parameterType="long">
-    UPDATE NOTICE
-    SET VIEW_COUNT = VIEW_COUNT + 1
-    WHERE NOTICE_ID = #{noticeId}
-      AND STATUS = 'PUBLISHED'
-</update>
 
-<!-- 관리자 공지 목록 조회 -->
-<select id="selectAdminNoticeList"
-        parameterType="NoticeSearchVO"
-        resultType="NoticeVO">
+    <!-- 일반 사용자 공개 공지 조회수 증가 -->
+    <update id="increasePublicViewCount"
+            parameterType="long">
 
-    SELECT
-        NOTICE_ID,
-        TITLE,
-        IMPORTANT,
-        STATUS,
-        VIEW_COUNT,
-        CREATED_ID,
-        TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
-        UPDATED_ID,
-        TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
-    FROM (
+        UPDATE NOTICE
+        SET VIEW_COUNT = VIEW_COUNT + 1
+        WHERE NOTICE_ID = #{noticeId}
+          AND STATUS = 'PUBLISHED'
+
+    </update>
+
+
+    <!-- 관리자 공지 목록 조회 -->
+    <select id="selectAdminNoticeList"
+            parameterType="NoticeSearchVO"
+            resultType="NoticeVO">
+
         SELECT
             NOTICE_ID,
             TITLE,
@@ -154,12 +185,52 @@
             STATUS,
             VIEW_COUNT,
             CREATED_ID,
-            CREATED_DT,
+            TO_CHAR(CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
             UPDATED_ID,
-            UPDATED_DT,
-            ROW_NUMBER() OVER (
-                ORDER BY IMPORTANT DESC, NOTICE_ID DESC
-            ) AS RN
+            TO_CHAR(UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT
+        FROM (
+            SELECT
+                NOTICE_ID,
+                TITLE,
+                IMPORTANT,
+                STATUS,
+                VIEW_COUNT,
+                CREATED_ID,
+                CREATED_DT,
+                UPDATED_ID,
+                UPDATED_DT,
+                ROW_NUMBER() OVER (
+                    ORDER BY IMPORTANT DESC, NOTICE_ID DESC
+                ) AS RN
+            FROM NOTICE
+
+            <where>
+                <if test="searchWord != null and searchWord != ''">
+                    TITLE LIKE '%' || #{searchWord} || '%'
+                </if>
+
+                <if test="status != null and status != ''">
+                    AND STATUS = #{status}
+                </if>
+
+                <if test="important != null and important != ''">
+                    AND IMPORTANT = #{important}
+                </if>
+            </where>
+        )
+        WHERE RN BETWEEN (#{offset} + 1)
+                     AND (#{offset} + #{pageSize})
+        ORDER BY RN
+
+    </select>
+
+
+    <!-- 관리자 공지 전체 개수 조회 -->
+    <select id="countAdminNoticeList"
+            parameterType="NoticeSearchVO"
+            resultType="int">
+
+        SELECT COUNT(*)
         FROM NOTICE
 
         <where>
@@ -175,42 +246,18 @@
                 AND IMPORTANT = #{important}
             </if>
         </where>
-    )
-    WHERE RN BETWEEN (#{offset} + 1)
-                 AND (#{offset} + #{pageSize})
-    ORDER BY RN
 
-</select>
+        ORDER BY IMPORTANT DESC, NOTICE_ID DESC
+        OFFSET #{offset} ROWS
+        FETCH NEXT #{size} ROWS ONLY
 
-<!-- 관리자 공지 전체 개수 조회 -->
-<select id="countAdminNoticeList"
-        parameterType="NoticeSearchVO"
-        resultType="int">
+    </select>
 
-    SELECT COUNT(*)
-    FROM NOTICE
-
-    <where>
-        <if test="searchWord != null and searchWord != ''">
-            TITLE LIKE '%' || #{searchWord} || '%'
-        </if>
-
-        <if test="status != null and status != ''">
-            AND STATUS = #{status}
-        </if>
-
-        <if test="important != null and important != ''">
-            AND IMPORTANT = #{important}
-        </if>
-    </where>
-    ORDER BY IMPORTANT DESC, NOTICE_ID DESC
-    OFFSET #{offset} ROWS
-    FETCH NEXT #{size} ROWS ONLY
-
-</select>
 
     <!-- 공지 수정 -->
-    <update id="updateNotice" parameterType="NoticeVO">
+    <update id="updateNotice"
+            parameterType="NoticeVO">
+
         UPDATE NOTICE
         SET
             TITLE      = #{title},
@@ -220,30 +267,46 @@
             UPDATED_ID = #{updatedId},
             UPDATED_DT = SYSDATE
         WHERE NOTICE_ID = #{noticeId}
+
     </update>
 
+
     <!-- 조회수 1 증가 -->
-    <update id="increaseViewCount" parameterType="long">
+    <update id="increaseViewCount"
+            parameterType="long">
+
         UPDATE NOTICE
         SET VIEW_COUNT = VIEW_COUNT + 1
         WHERE NOTICE_ID = #{noticeId}
+
     </update>
 
+
     <!-- 공지 삭제 -->
-    <delete id="deleteNotice" parameterType="long">
+    <delete id="deleteNotice"
+            parameterType="long">
+
         DELETE FROM NOTICE
         WHERE NOTICE_ID = #{noticeId}
+
     </delete>
 
-<!-- 테스트용 전체 공지 개수 -->
-<select id="totalCnt" resultType="int">
-    SELECT COUNT(*)
-    FROM NOTICE
-</select>
 
-<!-- 테스트용 전체 공지 삭제 -->
+    <!-- 테스트용 전체 공지 개수 -->
+    <select id="totalCnt"
+            resultType="int">
+
+        SELECT COUNT(*)
+        FROM NOTICE
+
+    </select>
+
+
+    <!-- 테스트용 전체 공지 삭제 -->
     <delete id="deleteAll">
+
         DELETE FROM NOTICE
+
     </delete>
 
 </mapper>
