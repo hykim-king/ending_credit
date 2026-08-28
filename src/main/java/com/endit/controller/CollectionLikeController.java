@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,6 +33,7 @@ import com.endit.service.CollectionLikeService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
+ * 2026. 8. 28. jinyoung    조회 규격 및 예외 처리 보완
  * ------------------------------------------------------------
  * </pre>
  *
@@ -41,7 +43,7 @@ import com.endit.service.CollectionLikeService;
 @RestController
 public class CollectionLikeController {
 
-	private static final String TYPE_COLLECTION = "collections";
+	private static final String TYPE_COLLECTION = "collection";
 
 	private final CollectionLikeService collectionLikeService;
 
@@ -73,13 +75,8 @@ public class CollectionLikeController {
 		// 최종 통합 시 이 값은 로그인 Principal의 MEMBER_ID로 교체해야 한다.
 		int memberId = param.getMemberId();
 
-		CollectionLikeVO like;
-
-		try {
-			like = collectionLikeService.create(memberId, collectionId);
-		} catch (IllegalStateException alreadyLiked) {
-			like = collectionLikeService.get(memberId, collectionId);
-		}
+		CollectionLikeVO like =
+				collectionLikeService.create(memberId, collectionId);
 
 		return ResponseEntity.status(HttpStatus.CREATED).body(like);
 	}
@@ -100,7 +97,7 @@ public class CollectionLikeController {
 		try {
 			collectionLikeService.delete(memberId, collectionId);
 		} catch (NoSuchElementException alreadyUnliked) {
-		
+
 		}
 
 		return ResponseEntity.noContent().build();
@@ -111,8 +108,8 @@ public class CollectionLikeController {
 	public ResponseEntity<Map<String, Object>> retrieveByMember(
 			@PathVariable int memberId,
 			@RequestParam(defaultValue = TYPE_COLLECTION) String type,
-			@RequestParam(defaultValue = "1") int pageNo,
-			@RequestParam(defaultValue = "10") int pageSize) {
+			@RequestParam(name = "page", defaultValue = "1") int pageNo,
+			@RequestParam(name = "size", defaultValue = "12") int pageSize) {
 
 		if (!TYPE_COLLECTION.equals(type)) {
 			throw new IllegalArgumentException(
@@ -144,6 +141,36 @@ public class CollectionLikeController {
 
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
+				.body(message);
+	}
+
+	/**존재하지 않는 회원 또는 컬렉션 등의 데이터 무결성 예외를 HTTP 400 응답으로 변환*/
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<MessageVO> handleDataIntegrityViolation(
+			DataIntegrityViolationException exception) {
+
+		MessageVO message = new MessageVO(
+				"400",
+				"존재하는 회원과 컬렉션 번호를 입력해 주세요.",
+				"컬렉션 좋아요 데이터의 참조 관계를 확인해 주세요.");
+
+		return ResponseEntity
+				.status(HttpStatus.BAD_REQUEST)
+				.body(message);
+	}
+
+	/**저장 및 상태 변경 실패를 HTTP 409 응답으로 변환*/
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<MessageVO> handleConflict(
+			IllegalStateException exception) {
+
+		MessageVO message = new MessageVO(
+				"409",
+				exception.getMessage(),
+				"컬렉션 좋아요의 현재 상태를 확인해 주세요.");
+
+		return ResponseEntity
+				.status(HttpStatus.CONFLICT)
 				.body(message);
 	}
 

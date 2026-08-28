@@ -16,6 +16,7 @@ import com.endit.domain.CollectionLikeVO;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. gunwoo      최초 생성
+ * 2026. 8. 28. jinyoung    멱등 등록 반환 계약 반영
  * ------------------------------------------------------------
  * </pre>
  *
@@ -29,7 +30,7 @@ public interface CollectionLikeService {
 	 *
 	 * @param memberId 회원 번호
 	 * @param collectionId 컬렉션 번호
-	 * @return 등록된 컬렉션 좋아요 정보
+	 * @return 등록되었거나 이미 존재하는 컬렉션 좋아요 정보
 	 */
 	CollectionLikeVO create(int memberId, int collectionId);
 
