@@ -49,19 +49,19 @@
             <artifactId>thymeleaf-layout-dialect</artifactId>
         </dependency>
 
-        <!-- Thymeleaf + Spring Security -->
+        <!-- Thymeleaf + Spring Security 
         <dependency>
             <groupId>org.thymeleaf.extras</groupId>
             <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-        </dependency>
+        </dependency> -->
 
         <!-- ===================== Security ===================== -->
 
-        <!-- Spring Security -->
+        <!-- Spring Security 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
+        </dependency> -->
 
         <!-- ===================== Database ===================== -->
 
