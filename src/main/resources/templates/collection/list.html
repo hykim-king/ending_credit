@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>컬렉션 목록</title>
+<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
+</head>
+<body class="bg-light">
+    <!-- 공통 레이아웃이 아직 없어 이 화면 안에 최소 헤더를 직접 배치 -->
+    <header class="border-bottom bg-white">
+        <div class="container py-3 d-flex justify-content-between align-items-center">
+            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
+                Ending Credit
+            </a>
+            <a class="btn btn-dark" th:href="@{/collections/new}">새 컬렉션</a>
+        </div>
+    </header>
+
+    <main class="container py-4">
+        <div class="mb-4">
+            <h1 class="h3 mb-1">컬렉션</h1>
+            <p class="text-secondary mb-0">회원들이 만든 작품 컬렉션을 확인할 수 있습니다.</p>
+        </div>
+
+        <!-- JavaScript가 id로 값을 읽어 GET /api/collections의 쿼리 파라미터로 전달 -->
+        <form id="searchForm" class="row g-2 mb-4">
+            <div class="col-12 col-md-3">
+                <label class="visually-hidden" for="searchDiv">검색 구분</label>
+                <select id="searchDiv" class="form-select">
+                    <option value="10">제목</option>
+                    <option value="20">회원 번호</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="visually-hidden" for="searchWord">검색어</label>
+                <input id="searchWord" class="form-control" type="search"
+                       placeholder="검색어를 입력하세요">
+            </div>
+            <div class="col-7 col-md-2">
+                <label class="visually-hidden" for="pageSize">페이지 크기</label>
+                <select id="pageSize" class="form-select">
+                    <option value="6">6개씩</option>
+                    <option value="12" selected>12개씩</option>
+                    <option value="24">24개씩</option>
+                </select>
+            </div>
+            <div class="col-5 col-md-1 d-grid">
+                <button class="btn btn-outline-dark" type="submit">검색</button>
+            </div>
+        </form>
+
+        <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <strong>검색 결과</strong>
+            <span id="resultCount" class="text-secondary small">0개</span>
+        </div>
+
+        <!-- API 결과 카드가 동적으로 들어가는 영역. aria-live는 갱신 내용을 보조기기에 알림. -->
+        <div id="collectionList" class="row g-3" aria-live="polite"></div>
+
+        <nav class="mt-4" aria-label="컬렉션 목록 페이지">
+            <ul id="pagination" class="pagination justify-content-center"></ul>
+        </nav>
+    </main>
+
+    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
+    <script th:src="@{/assets/js/collection/collection-list.js}"></script>
+</body>
+</html>

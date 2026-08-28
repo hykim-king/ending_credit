@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -43,6 +44,7 @@ import com.endit.domain.CollectionItemVO;
  */
 @SpringBootTest
 @Transactional
+//@Disabled("deleteAll() 전체 삭제를 제거하고 테스트 데이터를 격리할 때까지 비활성화")
 @DisplayName("CollectionItem 테스트")
 class CollectionItemMapperDaoTest {
 
