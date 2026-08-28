@@ -10,13 +10,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 /**
  * <pre>
  * Class Name  : PersonLikeViewController
- * Description : 회원이 좋아요한 인물 목록 화면의 View 경로를 처리하는 Controller
+ * Description : 회원이 좋아요한 인물 및 컬렉션 목록 화면의 View 경로를 처리하는 Controller
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 8. 28. jinyoung    컬렉션 좋아요 유형 지원
  * ------------------------------------------------------------
  * </pre>
  *
@@ -28,12 +29,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class PersonLikeViewController {
 
 	private static final String TYPE_PERSON = "person";
+	private static final String TYPE_COLLECTION = "collection";
 
 	/**
 	 * 회원 좋아요 화면 반환
 	 *
-	 * 현재는 인물 좋아요만 연결되어 있으며 실제 목록 데이터는
-	 * JavaScript가 PersonLikeController의 REST API로 조회한다.
+	 * 실제 목록 데이터는 JavaScript가 유형별 REST API로 조회한다.
 	 *
 	 * @param memberId 조회할 회원 번호
 	 * @param type 최초 표시할 좋아요 유형
@@ -53,12 +54,20 @@ public class PersonLikeViewController {
 	}
 
 	/**
-	 * 현재 구현된 인물 좋아요 외의 유형은 person으로 보정
+	 * 지원하는 좋아요 유형을 보정하고 그 외의 값은 person으로 처리
 	 */
 	private String normalizeType(String type) {
-		if (type != null
-				&& TYPE_PERSON.equalsIgnoreCase(
-						type.trim())) {
+		if (type == null) {
+			return TYPE_PERSON;
+		}
+
+		String normalizedType = type.trim();
+
+		if (TYPE_COLLECTION.equalsIgnoreCase(normalizedType)) {
+			return TYPE_COLLECTION;
+		}
+
+		if (TYPE_PERSON.equalsIgnoreCase(normalizedType)) {
 
 			return TYPE_PERSON;
 		}

@@ -1,13 +1,27 @@
-// View Controller가 body의 data-collection-id에 넣은 값을 모든 상세 API 요청에 사용한다.
+// View Controller가 전달한 컬렉션 번호와 임시 회원 번호를 상세 API 요청에 사용한다.
 const collectionId = Number(document.body.dataset.collectionId);
+const memberId = Number(document.body.dataset.memberId);
+
+let collectionLiked = false;
+let likeRequestPending = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.querySelector("#editLink").href = `/collections/${collectionId}/edit`;
-    document.querySelector("#addItemForm").addEventListener("submit", addItem);
-    document.querySelector("#confirmDeleteButton").addEventListener("click", deleteCollection);
+    const errorMessage = document.querySelector("#errorMessage");
 
-    // 컬렉션 기본 정보와 작품 목록은 서로 다른 API이므로 각각 조회한다.
+    document.querySelector("#editLink").href =
+        `/collections/${collectionId}/edit?memberId=${memberId}`;
+    document.querySelector("#collectionLikeButton")
+        .addEventListener("click", toggleCollectionLike);
+
+    if (!Number.isInteger(collectionId) || collectionId <= 0
+            || !Number.isInteger(memberId) || memberId <= 0) {
+        showDetailError(errorMessage, "올바른 컬렉션 번호와 회원 번호가 필요합니다.");
+        return;
+    }
+
+    // 컬렉션 기본 정보, 좋아요 상태와 작품 목록은 각각 조회한다.
     loadCollection();
+    loadLikeStatus();
     loadItems(1);
 });
 
@@ -37,6 +51,70 @@ async function loadCollection() {
             : "badge text-bg-secondary";
     } catch (error) {
         showDetailError(errorMessage, error.message);
+    }
+}
+
+/** 임시 회원의 현재 컬렉션 좋아요 상태를 조회한다. */
+async function loadLikeStatus() {
+    const errorMessage = document.querySelector("#errorMessage");
+    const likeButton = document.querySelector("#collectionLikeButton");
+    likeButton.disabled = true;
+
+    try {
+        const data = await requestGet(
+            `/api/collections/${collectionId}/likes`,
+            { memberId }
+        );
+
+        collectionLiked = data.liked === true;
+        renderCollectionLikeButton();
+    } catch (error) {
+        showDetailError(errorMessage, error.message);
+    }
+}
+
+/** 현재 좋아요 상태에 맞게 버튼 문구와 스타일을 변경한다. */
+function renderCollectionLikeButton() {
+    const likeButton = document.querySelector("#collectionLikeButton");
+
+    likeButton.className = collectionLiked
+        ? "btn btn-danger"
+        : "btn btn-outline-danger";
+    likeButton.textContent = collectionLiked
+        ? "♥ 좋아요 취소"
+        : "♡ 좋아요";
+    likeButton.setAttribute("aria-pressed", String(collectionLiked));
+    likeButton.disabled = likeRequestPending;
+}
+
+/** 임시 회원 번호로 컬렉션 좋아요를 등록하거나 취소한다. */
+async function toggleCollectionLike() {
+    if (likeRequestPending) {
+        return;
+    }
+
+    const errorMessage = document.querySelector("#errorMessage");
+    likeRequestPending = true;
+    hideDetailError(errorMessage);
+    renderCollectionLikeButton();
+
+    try {
+        const url = `/api/collections/${collectionId}/likes`;
+
+        if (collectionLiked) {
+            await requestDelete(url, { memberId });
+            collectionLiked = false;
+        } else {
+            await requestPost(url, { memberId });
+            collectionLiked = true;
+        }
+
+        await loadCollection();
+    } catch (error) {
+        showDetailError(errorMessage, error.message);
+    } finally {
+        likeRequestPending = false;
+        renderCollectionLikeButton();
     }
 }
 
@@ -88,94 +166,40 @@ function renderItems(items) {
         }
 
         const body = document.createElement("div");
-        body.className = "card-body d-flex flex-column";
+        body.className = "card-body";
 
         const title = document.createElement("h3");
         title.className = "h6 card-title";
         title.textContent = item.titleKo || item.titleOrg || `콘텐츠 ${item.contentId}`;
 
         const info = document.createElement("p");
-        info.className = "card-text text-secondary small flex-grow-1";
+        info.className = "card-text text-secondary small mb-0";
         info.textContent = item.releaseYear || item.titleOrg || "";
 
-        const deleteButton = document.createElement("button");
-        deleteButton.className = "btn btn-sm btn-outline-danger align-self-end";
-        deleteButton.type = "button";
-        deleteButton.textContent = "삭제";
-        deleteButton.addEventListener("click", () => deleteItem(item.contentId));
-
-        body.append(title, info, deleteButton);
+        body.append(title, info);
         card.append(body);
         column.append(card);
         itemList.append(column);
     });
 }
 
-async function addItem(event) {
-    // 입력 폼의 기본 submit을 막고 contentId를 JSON으로 전송한다.
-    event.preventDefault();
-
-    const errorMessage = document.querySelector("#errorMessage");
-    const contentIdInput = document.querySelector("#contentId");
-
-    hideDetailError(errorMessage);
-
-    try {
-        await requestPost(`/api/collections/${collectionId}/items`, {
-            contentId: Number(contentIdInput.value)
-        });
-
-        contentIdInput.value = "";
-        // 작품 추가 후 상세 집계(itemCount)와 작품 목록을 동시에 새로고침한다.
-        await Promise.all([loadCollection(), loadItems(1)]);
-    } catch (error) {
-        showDetailError(errorMessage, error.message);
-    }
-}
-
-async function deleteItem(contentId) {
-    // 작품 삭제는 즉시 되돌릴 수 없으므로 브라우저 확인창을 한 번 거친다.
-    if (!window.confirm("컬렉션에서 이 작품을 삭제하시겠습니까?")) {
-        return;
-    }
-
-    const errorMessage = document.querySelector("#errorMessage");
-    hideDetailError(errorMessage);
-
-    try {
-        await requestDelete(`/api/collections/${collectionId}/items/${contentId}`);
-        // 삭제 후 작품 수와 목록을 함께 갱신해 화면과 DB 상태를 맞춘다.
-        await Promise.all([loadCollection(), loadItems(1)]);
-    } catch (error) {
-        showDetailError(errorMessage, error.message);
-    }
-}
-
-async function deleteCollection() {
-    const errorMessage = document.querySelector("#errorMessage");
-    const deleteButton = document.querySelector("#confirmDeleteButton");
-
-    // 모달의 삭제 버튼을 잠가 같은 DELETE 요청이 중복 전송되는 것을 막는다.
-    deleteButton.disabled = true;
-
-    try {
-        await requestDelete(`/api/collections/${collectionId}`);
-        window.location.href = "/collections";
-    } catch (error) {
-        showDetailError(errorMessage, error.message);
-        deleteButton.disabled = false;
-    }
-}
-
-function requestDelete(url) {
+function requestDelete(url, data = null) {
     // 공통 requestFetch를 사용하면 204 응답과 오류 JSON 처리를 다시 작성하지 않아도 된다.
-    return requestFetch(url, {
+    const headers = {
+        "Accept": "application/json",
+        ...getCsrfHeaders()
+    };
+    const options = {
         method: "DELETE",
-        headers: {
-            "Accept": "application/json",
-            ...getCsrfHeaders()
-        }
-    });
+        headers
+    };
+
+    if (data) {
+        headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(data);
+    }
+
+    return requestFetch(url, options);
 }
 
 function renderItemPagination(page, currentPage) {

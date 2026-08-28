@@ -1,14 +1,17 @@
 package com.endit.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.endit.domain.ContentVO;
 import com.endit.service.ContentService;
 
 @RestController
@@ -27,6 +30,15 @@ public class ContentController {
 		Map<String, Object> result = new HashMap<>();
 		result.put("insertedCount", insertedCount);
 		return result;
+	}
+
+	/** 컬렉션 작품 추가 모달에서 사용할 영화 제목 검색 */
+	@GetMapping("/search")
+	public List<ContentVO> search(
+			@RequestParam(defaultValue = "") String searchWord,
+			@RequestParam(defaultValue = "20") int limit) {
+
+		return contentService.search(searchWord, limit);
 	}
 
 }

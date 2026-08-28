@@ -1,5 +1,6 @@
 package com.endit.controller;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -24,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 26. jinyoung    실제 Spring MVC와 View 기반 통합 테스트로 변경
+ * 2026. 8. 28. jinyoung    상세 화면 임시 회원 번호 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -64,10 +66,14 @@ class CollectionViewControllerTest {
 	@Test
 	@DisplayName("컬렉션 상세 화면 반환")
 	void detail() throws Exception {
-		mockMvc.perform(get("/collections/1"))
+		mockMvc.perform(get("/collections/1")
+					.param("memberId", "10"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("collection/detail"))
 				.andExpect(model().attribute("collectionId", 1))
+				.andExpect(model().attribute("memberId", 10))
+				.andExpect(content().string(
+						containsString("data-member-id=\"10\"")))
 				.andExpect(content().contentTypeCompatibleWith("text/html"));
 	}
 

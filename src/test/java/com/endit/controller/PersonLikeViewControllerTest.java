@@ -17,13 +17,14 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * <pre>
  * Class Name  : PersonLikeViewControllerTest
- * Description : 실제 Spring MVC와 Thymeleaf로 인물 좋아요 화면 경로를 검증하는 통합 테스트
+ * Description : 실제 Spring MVC와 Thymeleaf로 회원 좋아요 화면 경로를 검증하는 통합 테스트
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 8. 28. jinyoung    컬렉션 좋아요 유형 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -71,11 +72,24 @@ class PersonLikeViewControllerTest {
 	}
 
 	@Test
-	@DisplayName("지원하지 않는 유형은 인물로 보정")
-	void invalidType() throws Exception {
-		// 아직 연결되지 않은 collection이나 잘못된 유형은 person으로 보정한다.
+	@DisplayName("컬렉션 유형 좋아요 화면 반환")
+	void collectionType() throws Exception {
 		mockMvc.perform(get("/users/{memberId}/likes", 10)
 					.param("type", "collection"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("user/likes"))
+				.andExpect(model().attribute("memberId", 10))
+				.andExpect(model().attribute("type", "collection"))
+				.andExpect(content().string(
+						containsString(
+								"data-initial-type=\"collection\"")));
+	}
+
+	@Test
+	@DisplayName("지원하지 않는 유형은 인물로 보정")
+	void invalidType() throws Exception {
+		mockMvc.perform(get("/users/{memberId}/likes", 10)
+					.param("type", "unknown"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("user/likes"))
 				.andExpect(model().attribute("type", "person"))

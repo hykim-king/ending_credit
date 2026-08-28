@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.endit.cmn.DTO;
 import com.endit.config.TmdbProperties;
 import com.endit.domain.ContentCreditVO;
 import com.endit.domain.ContentGenreVO;
@@ -151,6 +152,18 @@ public class ContentServiceImpl implements ContentService {
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 인기 영화 조회 실패", e);
 		}
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ContentVO> search(String searchWord, int limit) {
+		DTO param = new DTO();
+		param.setPageNo(1);
+		param.setPageSize(Math.max(1, Math.min(limit, 50)));
+		param.setSearchDiv("10");
+		param.setSearchWord(searchWord == null ? "" : searchWord.trim());
+
+		return contentMapper.doRetrieve(param);
 	}
 
 	// 외부 영화 id (TMDB에서 제공하는 영화 ID값)가 이미 우리 테이블에 있는지 확인하는 메서드 

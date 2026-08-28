@@ -2,6 +2,15 @@
 document.addEventListener("DOMContentLoaded", () => {
     const searchForm = document.querySelector("#searchForm");
     const pageSize = document.querySelector("#pageSize");
+    const query = new URLSearchParams(window.location.search);
+
+    // 삭제 완료 후 작성자의 컬렉션 목록으로 돌아올 수 있도록 URL 검색 조건을 반영한다.
+    if (query.has("searchDiv")) {
+        document.querySelector("#searchDiv").value = query.get("searchDiv");
+    }
+    if (query.has("searchWord")) {
+        document.querySelector("#searchWord").value = query.get("searchWord");
+    }
 
     searchForm.addEventListener("submit", (event) => {
         event.preventDefault();

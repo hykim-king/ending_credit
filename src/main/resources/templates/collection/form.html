@@ -8,9 +8,9 @@
 <title>컬렉션 등록·수정</title>
 <link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
 </head>
-<!-- formMode와 collectionId는 등록·수정 공용 JavaScript가 동작을 구분하는 값이다. -->
+<!-- formMode, collectionId, 임시 memberId는 등록·수정 공용 JavaScript가 사용하는 값이다. -->
 <body class="bg-light"
-      th:attr="data-form-mode=${formMode},data-collection-id=${collectionId}">
+      th:attr="data-form-mode=${formMode},data-collection-id=${collectionId},data-member-id=${memberId}">
     <header class="border-bottom bg-white">
         <div class="container py-3">
             <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
@@ -62,12 +62,40 @@
                                 </select>
                             </div>
 
-                            <div class="d-flex justify-content-end gap-2">
+                            <section class="mb-4" aria-labelledby="selectedItemsTitle">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div>
+                                        <h2 id="selectedItemsTitle" class="h5 mb-1">선택한 작품</h2>
+                                        <span id="selectedItemCount" class="text-secondary small">0개</span>
+                                    </div>
+                                    <button class="btn btn-outline-dark" type="button"
+                                            data-bs-toggle="modal" data-bs-target="#addCollectionItemModal">
+                                        작품 추가
+                                    </button>
+                                </div>
+                                <div id="selectedItemMessage"
+                                     class="alert alert-danger d-none" role="alert"></div>
+                                <div id="selectedItemList" class="list-group" aria-live="polite">
+                                    <div class="list-group-item text-secondary text-center py-4">
+                                        선택한 작품이 없습니다.
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div class="d-flex justify-content-between gap-2">
+                                <button th:if="${formMode == 'update'}"
+                                        class="btn btn-outline-danger" type="button"
+                                        data-bs-toggle="modal" data-bs-target="#deleteCollectionModal">
+                                    컬렉션 삭제
+                                </button>
+                                <span th:unless="${formMode == 'update'}"></span>
+                                <div class="d-flex gap-2">
                                 <a id="cancelLink" class="btn btn-outline-secondary"
                                    th:href="@{/collections}">취소</a>
                                 <button id="submitButton" class="btn btn-dark" type="submit">
                                     등록
                                 </button>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -76,6 +104,69 @@
         </div>
     </main>
 
+    <!-- MOD-07: 등록·수정 화면에서 영화를 검색해 컬렉션에 추가한다. -->
+    <div class="modal fade" id="addCollectionItemModal" tabindex="-1"
+         aria-labelledby="addCollectionItemModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="addCollectionItemModalLabel">컬렉션 작품 추가</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="닫기"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="movieSearchForm" class="input-group mb-3" role="search">
+                        <label class="visually-hidden" for="movieSearchWord">영화 제목</label>
+                        <input id="movieSearchWord" class="form-control" type="search"
+                               maxlength="100" placeholder="영화 제목을 입력하세요">
+                        <button id="movieSearchButton" class="btn btn-dark" type="submit">검색</button>
+                    </form>
+                    <div id="movieSearchMessage"
+                         class="alert alert-danger d-none" role="alert"></div>
+                    <div id="movieSearchResults" class="list-group" aria-live="polite">
+                        <div class="list-group-item text-secondary text-center py-4">
+                            제목을 검색해 작품을 추가할 수 있습니다.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOD-08: 수정 화면에서 컬렉션명과 삭제 영향을 확인한 뒤 삭제한다. -->
+    <div th:if="${formMode == 'update'}" class="modal fade"
+         id="deleteCollectionModal" tabindex="-1"
+         aria-labelledby="deleteCollectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteCollectionModalLabel">컬렉션 삭제</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="닫기"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        <strong id="deleteCollectionTitle">이 컬렉션</strong>을 삭제하시겠습니까?
+                    </p>
+                    <p class="text-danger small mb-0">
+                        포함된 작품과 좋아요 등 연결된 정보도 함께 삭제되며 되돌릴 수 없습니다.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">취소</button>
+                    <button id="confirmDeleteButton" type="button"
+                            class="btn btn-danger">삭제</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/assets/js/bootstrap.js}"></script>
     <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
     <script th:src="@{/assets/js/collection/collection-form.js}"></script>
 </body>

@@ -10,10 +10,7 @@ let currentPage = 1;
 let requestSequence = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.querySelector("#personLikeTab")
-        .classList.add("active");
-    document.querySelector("#personLikeTab")
-        .setAttribute("aria-current", "page");
+    configureLikeTypeView();
 
     document.querySelector("#likeRetryButton")
         .addEventListener("click", () => {
@@ -28,12 +25,39 @@ document.addEventListener("DOMContentLoaded", () => {
     loadLikes(1);
 });
 
-/** 현재 구현된 인물 좋아요 외의 값은 person으로 보정한다. */
+/** 지원하는 좋아요 유형을 보정하고 그 외의 값은 person으로 처리한다. */
 function normalizeLikeType(type) {
-    return type === "person" ? "person" : "person";
+    return String(type || "").trim().toLowerCase()
+        === "collection"
+        ? "collection"
+        : "person";
 }
 
-/** 지정한 페이지의 회원 인물 좋아요 목록을 조회한다. */
+/** 현재 유형에 맞는 탭과 화면 문구를 설정한다. */
+function configureLikeTypeView() {
+    const isCollection = likeType === "collection";
+    const activeTab = document.querySelector(
+        isCollection
+            ? "#collectionLikeTab"
+            : "#personLikeTab"
+    );
+
+    activeTab.classList.add("active");
+    activeTab.setAttribute("aria-current", "page");
+
+    document.querySelector("#likeTitle")
+        .textContent = isCollection
+            ? "좋아한 컬렉션"
+            : "좋아한 인물";
+    document.querySelector("#likeTotalCount")
+        .textContent = isCollection ? "0개" : "0명";
+    document.querySelector("#likeEmpty")
+        .textContent = isCollection
+            ? "아직 좋아요한 컬렉션이 없습니다."
+            : "아직 좋아요한 인물이 없습니다.";
+}
+
+/** 지정한 페이지의 회원 좋아요 목록을 조회한다. */
 async function loadLikes(pageNo) {
     const requestId = ++requestSequence;
     currentPage = pageNo;
@@ -41,14 +65,19 @@ async function loadLikes(pageNo) {
     showLikeLoading();
 
     try {
+        const requestParam = {
+            type: likeType,
+            page: pageNo,
+            size: LIKE_PAGE_SIZE
+        };
+
+        if (likeType === "person") {
+            requestParam.sort = "latest";
+        }
+
         const data = await requestGet(
             `/api/users/${memberId}/likes`,
-            {
-                type: likeType,
-                page: pageNo,
-                size: LIKE_PAGE_SIZE,
-                sort: "latest"
-            }
+            requestParam
         );
 
         // 빠른 페이지 이동으로 이전 요청이 늦게 끝난 경우 화면을 덮지 않는다.
@@ -64,7 +93,7 @@ async function loadLikes(pageNo) {
     }
 }
 
-/** 인물 좋아요 목록, 전체 건수와 페이지 정보를 화면에 표시한다. */
+/** 좋아요 목록, 전체 건수와 페이지 정보를 화면에 표시한다. */
 function renderLikes(data) {
     const items = Array.isArray(data.items) ? data.items : [];
     const page = data.page || {};
@@ -73,7 +102,9 @@ function renderLikes(data) {
     hideLikeStatus();
 
     document.querySelector("#likeTotalCount")
-        .textContent = `${totalCount}명`;
+        .textContent = likeType === "collection"
+            ? `${totalCount}개`
+            : `${totalCount}명`;
 
     if (items.length === 0) {
         document.querySelector("#likeEmpty")
@@ -83,7 +114,12 @@ function renderLikes(data) {
         return;
     }
 
-    renderPersonCards(items);
+    if (likeType === "collection") {
+        renderCollectionCards(items);
+    } else {
+        renderPersonCards(items);
+    }
+
     renderPagination(
         page,
         Number(page.pageNo || currentPage)
@@ -132,6 +168,58 @@ function renderPersonCards(items) {
 
         body.append(name, originalName);
         card.append(image, body);
+        link.append(card);
+        column.append(link);
+        likeList.append(column);
+    });
+
+    likeList.classList.remove("d-none");
+}
+
+/** 컬렉션 좋아요 응답을 컬렉션 카드 목록으로 생성한다. */
+function renderCollectionCards(items) {
+    const likeList = document.querySelector("#likeList");
+    likeList.replaceChildren();
+
+    items.forEach((item) => {
+        const column = document.createElement("div");
+        const link = document.createElement("a");
+        const card = document.createElement("article");
+        const body = document.createElement("div");
+        const header = document.createElement("div");
+        const title = document.createElement("h3");
+        const visibility = document.createElement("span");
+        const description = document.createElement("p");
+        const likedDate = document.createElement("p");
+
+        link.className = "text-decoration-none text-dark h-100";
+        link.href =
+            `/collections/${item.collectionId}?memberId=${memberId}`;
+
+        card.className = "card h-100 border-0 shadow-sm";
+        body.className = "card-body d-flex flex-column";
+        header.className =
+            "d-flex justify-content-between align-items-start gap-2";
+        title.className = "h6 card-title mb-2";
+        visibility.className = "badge text-bg-light border";
+        description.className =
+            "card-text text-secondary small mb-3";
+        likedDate.className =
+            "card-text text-secondary small mt-auto mb-0";
+
+        title.textContent =
+            item.title || `컬렉션 ${item.collectionId}`;
+        visibility.textContent =
+            item.isPublic === "Y" ? "공개" : "비공개";
+        description.textContent =
+            item.description || "설명이 없습니다.";
+        likedDate.textContent = item.likedDt
+            ? `좋아요 ${item.likedDt}`
+            : "";
+
+        header.append(title, visibility);
+        body.append(header, description, likedDate);
+        card.append(body);
         link.append(card);
         column.append(link);
         likeList.append(column);
@@ -229,7 +317,7 @@ function renderPagination(page, selectedPage) {
     );
 }
 
-/** 인물 좋아요 목록의 단일 페이지 버튼을 생성한다. */
+/** 좋아요 목록의 단일 페이지 버튼을 생성한다. */
 function createPageButton(
     label,
     pageNo,
@@ -267,7 +355,7 @@ function createPageButton(
     return item;
 }
 
-/** 인물 좋아요 목록 요청 중 상태를 표시한다. */
+/** 좋아요 목록 요청 중 상태를 표시한다. */
 function showLikeLoading() {
     hideLikeStatus();
 
@@ -275,7 +363,7 @@ function showLikeLoading() {
         .classList.remove("d-none");
 }
 
-/** 인물 좋아요 목록 조회 오류를 표시한다. */
+/** 좋아요 목록 조회 오류를 표시한다. */
 function showLikeError(message) {
     hideLikeStatus();
 

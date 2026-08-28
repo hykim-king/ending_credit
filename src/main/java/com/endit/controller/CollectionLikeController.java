@@ -34,6 +34,7 @@ import com.endit.service.CollectionLikeService;
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 규격 및 예외 처리 보완
+ * 2026. 8. 28. jinyoung    상세 좋아요 상태 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -101,6 +102,27 @@ public class CollectionLikeController {
 		}
 
 		return ResponseEntity.noContent().build();
+	}
+
+	/**컬렉션 상세 화면에서 임시 회원의 좋아요 상태 조회*/
+	@GetMapping("/api/collections/{collectionId}/likes")
+	public ResponseEntity<Map<String, Boolean>> getLikeStatus(
+			@PathVariable int collectionId,
+			@RequestParam int memberId) {
+
+		boolean liked;
+
+		try {
+			collectionLikeService.get(memberId, collectionId);
+			liked = true;
+		} catch (NoSuchElementException notLiked) {
+			liked = false;
+		}
+
+		Map<String, Boolean> response = new LinkedHashMap<>();
+		response.put("liked", liked);
+
+		return ResponseEntity.ok(response);
 	}
 
 	/**특정 회원이 좋아요를 누른 컬렉션 목록 조회 (U-07 좋아요 목록 · 컬렉션 탭)*/

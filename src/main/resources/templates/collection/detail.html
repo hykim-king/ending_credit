@@ -8,8 +8,9 @@
 <title>컬렉션 상세</title>
 <link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
 </head>
-<!-- 서버는 조회 키만 data-* 속성에 넣고 실제 상세 데이터는 REST API로 가져온다. -->
-<body class="bg-light" th:attr="data-collection-id=${collectionId}">
+<!-- 서버는 조회 키와 임시 회원 번호만 전달하고 실제 상세 데이터는 REST API로 가져온다. -->
+<body class="bg-light"
+      th:attr="data-collection-id=${collectionId},data-member-id=${memberId}">
     <header class="border-bottom bg-white">
         <div class="container py-3 d-flex justify-content-between align-items-center">
             <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
@@ -39,11 +40,18 @@
                         </div>
                     </div>
                     <div class="d-flex align-items-start gap-2">
-                        <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
-                        <button class="btn btn-outline-danger" type="button"
-                                data-bs-toggle="modal" data-bs-target="#deleteCollectionModal">
-                            삭제
+                        <span class="badge text-bg-light border align-self-center"
+                              th:text="|임시 회원 #${memberId}|">
+                            임시 회원
+                        </span>
+                        <button id="collectionLikeButton"
+                                class="btn btn-outline-danger"
+                                type="button"
+                                aria-pressed="false"
+                                disabled>
+                            ♡ 좋아요
                         </button>
+                        <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
                     </div>
                 </div>
 
@@ -52,26 +60,6 @@
                     <span>좋아요 <strong id="likeCount">0</strong></span>
                     <span>댓글 <strong id="commentCount">0</strong></span>
                 </div>
-            </div>
-        </section>
-
-        <!-- 콘텐츠 검색 API가 연결되기 전까지 contentId로 작품을 추가하는 최소 기능 영역 -->
-        <section class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-4">
-                <h2 class="h5 mb-3">작품 추가</h2>
-                <form id="addItemForm" class="row g-2">
-                    <div class="col-12 col-md-9">
-                        <label class="visually-hidden" for="contentId">콘텐츠 번호</label>
-                        <input id="contentId" class="form-control" type="number" min="1"
-                               placeholder="추가할 콘텐츠 번호" required>
-                    </div>
-                    <div class="col-12 col-md-3 d-grid">
-                        <button class="btn btn-dark" type="submit">컬렉션에 추가</button>
-                    </div>
-                </form>
-                <p class="form-text mb-0">
-                    콘텐츠 검색 화면이 연결되기 전까지 콘텐츠 번호를 직접 입력합니다.
-                </p>
             </div>
         </section>
 
@@ -90,30 +78,6 @@
         </section>
     </main>
 
-    <!-- 컬렉션 전체 삭제 전에 사용자의 최종 확인을 받는 Bootstrap 모달 -->
-    <div class="modal fade" id="deleteCollectionModal" tabindex="-1"
-         aria-labelledby="deleteCollectionModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="deleteCollectionModalLabel">컬렉션 삭제</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                            aria-label="닫기"></button>
-                </div>
-                <div class="modal-body">
-                    컬렉션을 삭제하면 되돌릴 수 없습니다. 삭제하시겠습니까?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">취소</button>
-                    <button id="confirmDeleteButton" type="button"
-                            class="btn btn-danger">삭제</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script th:src="@{/assets/js/bootstrap.js}"></script>
     <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
     <script th:src="@{/assets/js/collection/collection-detail.js}"></script>
 </body>

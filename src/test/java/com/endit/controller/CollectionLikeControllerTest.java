@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 API 규격 변경 반영
+ * 2026. 8. 28. jinyoung    상세 좋아요 상태 조회 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -166,6 +167,24 @@ class CollectionLikeControllerTest {
 				.andExpect(status().isNoContent());
 
 		log.debug("* result: 멱등 처리로 204 응답 확인");
+	}
+
+	/**컬렉션 상세 화면용 좋아요 상태 조회 API 검증*/
+	@Test
+	@DisplayName("컬렉션 상세 좋아요 상태 조회 API")
+	void testGetLikeStatus() throws Exception {
+		mockMvc.perform(get("/api/collections/{collectionId}/likes", COLLECTION_ID)
+				.param("memberId", String.valueOf(MEMBER_ID)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.liked").value(false));
+
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(
+				new CollectionLikeVO(MEMBER_ID, COLLECTION_ID, null)));
+
+		mockMvc.perform(get("/api/collections/{collectionId}/likes", COLLECTION_ID)
+				.param("memberId", String.valueOf(MEMBER_ID)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.liked").value(true));
 	}
 
 	/**회원별 좋아요 컬렉션 목록 조회 API 검증*/
