@@ -28,6 +28,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- TMDB JSON API를 Java 객체로 바꿔 주는 래퍼 라이브러리 -->
+        <dependency>
+            <groupId>uk.co.conoregan</groupId>
+            <artifactId>themoviedbapi</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
         <!-- ===================== View ===================== -->
 
         <!-- Thymeleaf -->
@@ -42,19 +49,19 @@
             <artifactId>thymeleaf-layout-dialect</artifactId>
         </dependency>
 
-        <!-- Thymeleaf + Spring Security -->
+        <!-- Thymeleaf + Spring Security 
         <dependency>
             <groupId>org.thymeleaf.extras</groupId>
             <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-        </dependency>
+        </dependency> -->
 
         <!-- ===================== Security ===================== -->
 
-        <!-- Spring Security -->
+        <!-- Spring Security 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
+        </dependency> -->
 
         <!-- ===================== Database ===================== -->
 
