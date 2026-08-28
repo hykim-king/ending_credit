@@ -33,6 +33,7 @@ import com.endit.mapper.MemberMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
+ * 2026. 8. 28. jinyoung    중복 등록 멱등 처리 검증 반영
  * ------------------------------------------------------------
  * </pre>
  *
@@ -70,17 +71,21 @@ class CollectionLikeServiceTest {
 		assertNotNull(result.getCreatedDt());
 	}
 
-	/** 실제 DB에 이미 등록된 좋아요의 중복 등록 방지 검증 */
+	/** 실제 DB에 이미 등록된 좋아요의 멱등 처리 검증 */
 	@Test
-	@DisplayName("이미 좋아요를 누른 컬렉션은 다시 등록하지 않음")
+	@DisplayName("이미 좋아요를 누른 컬렉션은 기존 정보를 반환")
 	void createDuplicate() {
 		int memberId = createMemberId();
 		CollectionVO collection = createCollection(memberId);
-		collectionLikeService.create(memberId, collection.getCollectionId());
+		CollectionLikeVO created =
+				collectionLikeService.create(memberId, collection.getCollectionId());
 
-		assertThrows(
-				IllegalStateException.class,
-				() -> collectionLikeService.create(memberId, collection.getCollectionId()));
+		CollectionLikeVO duplicate =
+				collectionLikeService.create(memberId, collection.getCollectionId());
+
+		assertEquals(created.getMemberId(), duplicate.getMemberId());
+		assertEquals(created.getCollectionId(), duplicate.getCollectionId());
+		assertEquals(created.getCreatedDt(), duplicate.getCreatedDt());
 	}
 
 	/** 잘못된 회원 번호에 대한 입력값 검증 */
@@ -164,7 +169,7 @@ class CollectionLikeServiceTest {
 
 		assertEquals(2, result.size());
 		assertEquals(1, param.getPageNo());
-		assertEquals(10, param.getPageSize());
+		assertEquals(12, param.getPageSize());
 		assertEquals(2, param.getTotalCnt());
 	}
 

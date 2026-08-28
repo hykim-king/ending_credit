@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import com.endit.service.CollectionLikeService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. gunwoo      최초 생성
+ * 2026. 8. 28. jinyoung    중복 등록 및 페이징 처리 보완
  * ------------------------------------------------------------
  * </pre>
  *
@@ -48,12 +50,25 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 	@Transactional
 	public CollectionLikeVO create(int memberId, int collectionId) {
 		CollectionLikeVO key = createKey(memberId, collectionId);
+		CollectionLikeVO existing = collectionLikeMapper.selectCollectionLike(key);
 
-		if (collectionLikeMapper.selectCollectionLike(key) != null) {
-			throw new IllegalStateException("이미 좋아요를 누른 컬렉션입니다.");
+		if (existing != null) {
+			return existing;
 		}
 
-		int result = collectionLikeMapper.insertCollectionLike(key);
+		int result;
+
+		try {
+			result = collectionLikeMapper.insertCollectionLike(key);
+		} catch (DuplicateKeyException duplicate) {
+			existing = collectionLikeMapper.selectCollectionLike(key);
+
+			if (existing != null) {
+				return existing;
+			}
+
+			throw duplicate;
+		}
 
 		if (result != 1) {
 			throw new IllegalStateException("컬렉션 좋아요 등록에 실패했습니다.");
@@ -138,7 +153,7 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 		}
 
 		if (param.getPageSize() <= 0) {
-			param.setPageSize(10);
+			param.setPageSize(12);
 		} else if (param.getPageSize() > 100) {
 			param.setPageSize(100);
 		}

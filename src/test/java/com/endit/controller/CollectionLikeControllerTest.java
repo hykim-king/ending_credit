@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
+ * 2026. 8. 28. jinyoung    조회 API 규격 변경 반영
  * ------------------------------------------------------------
  * </pre>
  *
@@ -181,9 +182,9 @@ class CollectionLikeControllerTest {
 				new CollectionLikeVO(MEMBER_ID, OTHER_COLLECTION_ID, null)));
 
 		mockMvc.perform(get("/api/users/{memberId}/likes", MEMBER_ID)
-				.param("type", "collections")
-				.param("pageNo", "1")
-				.param("pageSize", "10"))
+				.param("type", "collection")
+				.param("page", "1")
+				.param("size", "12"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items.length()").value(2))
 				.andExpect(jsonPath("$.page.totalCnt").value(2));
@@ -200,16 +201,16 @@ class CollectionLikeControllerTest {
 		log.debug("└──────────────────────────────┘");
 
 		mockMvc.perform(get("/api/users/{memberId}/likes", MEMBER_ID)
-				.param("type", "collections"))
+				.param("type", "collection"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items.length()").value(0));
 
 		log.debug("* emptyResult 확인");
 	}
 
-	/**type=collections가 아닌 요청은 400으로 응답되는지 검증*/
+	/**type=collection이 아닌 요청은 400으로 응답되는지 검증*/
 	@Test
-	@DisplayName("type=collections가 아니면 400 응답")
+	@DisplayName("type=collection이 아니면 400 응답")
 	void testRetrieveByMember_invalidType() throws Exception {
 		log.debug("┌──────────────────────────────┐");
 		log.debug("│ retrieveByMember_invalidType()│");
