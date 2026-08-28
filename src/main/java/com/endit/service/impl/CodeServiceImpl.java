@@ -12,7 +12,7 @@
  * @author 홍선기
  * @since 2026. 8. 25.
  */
-package com.endit.service.Impl;
+package com.endit.service.impl;
 
 import java.util.List;
 import java.util.Map;
