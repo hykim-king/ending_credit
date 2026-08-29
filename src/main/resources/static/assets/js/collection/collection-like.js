@@ -92,7 +92,7 @@
         }
     }
 
-    /**버튼/아이콘을 좋아요 상태에 맞게 갱신*/
+    /** 버튼/아이콘을 좋아요 상태에 맞게 갱신*/
     function applyLikedState(button, icon, liked) {
         button.setAttribute('aria-pressed', String(liked));
         icon.innerHTML = liked ? '&#9829;' : '&#9825;';
