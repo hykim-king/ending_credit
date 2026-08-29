@@ -9,10 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     personTabButton.addEventListener('click', () => activateTab('person'));
     collectionTabButton.addEventListener('click', () => activateTab('collection'));
 
-  
+    
     loadCollectionCount();
-  
-    activateTab('collection');
+   
+    activateTab('person');
 });
 
 /**탭 전환 후 해당 유형의 첫 페이지를 조회한다.*/
@@ -48,8 +48,7 @@ async function loadCollectionCount() {
     }
 }
 
-/**
- * 좋아한 컬렉션 목록을 조회해 카드로 표시한다.*/
+/**좋아한 컬렉션 목록을 조회해 카드로 표시한다.*/
 async function loadCollectionTab(pageNo) {
     const memberId = Number(document.body.dataset.memberId);
 
@@ -161,6 +160,7 @@ function loadPersonTab(pageNo) {
     document.querySelector('#likeEmpty').classList.add('d-none');
     document.querySelector('#likeResultCount').textContent = '';
     document.querySelector('#likePagination').replaceChildren();
+    
 }
 
 /**좋아요 목록 공통 페이지네이션 렌더링*/
