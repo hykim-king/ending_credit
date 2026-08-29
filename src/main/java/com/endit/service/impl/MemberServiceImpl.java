@@ -113,14 +113,14 @@ public class MemberServiceImpl implements MemberService {
 				member.getEmail(), member.getNickname(), providerCode);
 
 		// 1) 필수값 (소셜은 비번이 없으므로 이메일/닉네임만 확인)
-		if (!StringUtils.hasText(member.getEmail())) {
+		if (member.getEmail() == null || member.getEmail().trim().isEmpty()) {
 			throw new IllegalArgumentException("이메일은 필수입니다.");
 		}
-		if (!StringUtils.hasText(member.getNickname())) {
+		if (member.getNickname() == null || member.getNickname().trim().isEmpty()) {
 			throw new IllegalArgumentException("닉네임은 필수입니다.");
 		}
 
-		// 2) 중복 검사 (MEMBER.EMAIL은 NOT NULL이라, 이미 쓰는 이메일이면 가입 불가 → 자동 병합 금지 정책)
+		// 2) 중복 검사 (MEMBER.EMAIL은 NOT NULL이라, 이미 쓰는 이메일이면 가입 불가)
 		if (isEmailUsed(member.getEmail())) {
 			throw new IllegalStateException("EMAIL_DUPLICATED");
 		}
@@ -130,11 +130,11 @@ public class MemberServiceImpl implements MemberService {
 
 		// 3) 소셜 회원은 비밀번호 없음
 		member.setPassword(null);
-		if (!StringUtils.hasText(member.getRole())) {
+		if (member.getRole() == null || member.getRole().trim().isEmpty()) {
 			member.setRole("USER");
 		}
 
-		// 4) MEMBER insert (memberId 채번)
+		// 4) MEMBER insert
 		memberMapper.insertMember(member);
 		long memberId = member.getMemberId();
 
@@ -162,8 +162,7 @@ public class MemberServiceImpl implements MemberService {
 
 	@Override
 	public MemberVO getMember(long memberId) {
-		// 주의: 결과에 PASSWORD 해시가 포함되므로 화면(뷰)으로 그대로 넘기지 말 것.
-		//       로그인 방식(Email/Google) 판별은 password가 null인지로 구분 가능(소셜=null).
+		// 로그인 방식(Email/Google) 판별은 password가 null인지로 구분 가능(소셜=null).
 		return memberMapper.selectMemberById(memberId);
 	}
 
@@ -175,7 +174,7 @@ public class MemberServiceImpl implements MemberService {
 		if (current == null) {
 			throw new IllegalArgumentException("회원을 찾을 수 없습니다.");
 		}
-		if (!StringUtils.hasText(member.getNickname())) {
+		if (member.getNickname() == null || member.getNickname().trim().isEmpty()) {
 			throw new IllegalArgumentException("닉네임은 필수입니다.");
 		}
 
@@ -195,7 +194,7 @@ public class MemberServiceImpl implements MemberService {
 		if (member == null) {
 			throw new IllegalArgumentException("회원을 찾을 수 없습니다.");
 		}
-		// 소셜 전용 회원(비번 없음)은 비밀번호 변경 불가 (T-03: 비번 영역 숨김)
+		// 소셜 전용 회원(비번 없음)은 비밀번호 변경 불가
 		if (member.getPassword() == null) {
 			throw new IllegalStateException("SOCIAL_ONLY_NO_PASSWORD");
 		}
@@ -204,7 +203,7 @@ public class MemberServiceImpl implements MemberService {
 			throw new IllegalStateException("PASSWORD_MISMATCH");
 		}
 
-		// 새 비밀번호 해시 후 변경 (updatePassword는 @Param(memberId, password) 시그니처)
+		// 새 비밀번호 해시 후 변경 (updatePassword는 @Param(memberId, password))
 		String newHashed = passwordEncoder.encode(newPassword);
 		memberMapper.updatePassword(memberId, newHashed);
 	}
@@ -217,7 +216,7 @@ public class MemberServiceImpl implements MemberService {
 		if (member == null) {
 			throw new IllegalStateException("이미 없는 회원입니다.");
 		}
-		// 확인용 닉네임 일치 검사 (T-08)
+		// 확인용 닉네임 일치 검사
 		if (confirmNickname == null || !confirmNickname.trim().equals(member.getNickname())) {
 			throw new IllegalStateException("NICKNAME_CONFIRM_MISMATCH");
 		}

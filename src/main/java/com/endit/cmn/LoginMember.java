@@ -5,16 +5,11 @@ package com.endit.cmn;
  * Class Name : LoginMember
  * Description : "지금 로그인한 사람이 누구인지"를 담아두는 정보 묶음.
  *
- *  [이게 뭐냐]
  *   - 로그인에 성공하면 이 객체가 하나 만들어진다.
  *   - 이 객체가 세션(로그인 상태를 서버가 기억하는 통) 안에 보관되어,
  *     로그아웃하기 전까지 "이 사용자는 로그인된 상태"라는 게 유지된다.
  *
- *  [누가 쓰냐]
- *   - 팀원들은 LoginMemberHelper.getLoginMember() 한 줄로 이 객체를 꺼내 쓴다.
- *     예) 코멘트 담당자 → getMemberId() 로 작성자 연결
- *         관리자 담당자 → isAdmin() 으로 관리자 여부 확인
- *         헤더 화면     → getNickname(), getProfileImgUrl() 로 화면 표시
+ *   - LoginMemberHelper.getLoginMember() 한 줄로 이 객체를 꺼내 쓴다.
  */
 public class LoginMember {
 
