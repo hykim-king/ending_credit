@@ -67,6 +67,10 @@
 		)
 	</insert>
 
+	<!-- CONTENT_GENRE는 (content_id, genre_id) 복합 PK뿐이라 갱신할 컬럼이 없다.
+	     SET 대상과 WHERE 조건이 같은 컬럼이라 실행해도 아무것도 바뀌지 않는다. <- 뭔가 이상한 구문이긴 하지만, MyBatis는 update 구문이 있어야 한다고 요구한다..(강은후)
+	     연결 변경은 doDelete 후 doSave로 처리한다(ContentGenreService에 update가 없는 이유).
+	     이 구문은 WorkDiv 계약을 채우기 위한 자리이며 운영 호출자가 없다. -->
 	<update id="doUpdate" parameterType="ContentGenreVO">
 		UPDATE content_genre
 		   SET genre_id = #{genreId}
