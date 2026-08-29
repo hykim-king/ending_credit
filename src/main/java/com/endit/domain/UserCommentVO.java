@@ -37,6 +37,7 @@ public class UserCommentVO extends DTO {
 	private String nickname;      // 작성자 닉네임 (MEMBER join)
 	private int likeCnt;          // 좋아요 수 (COMMENT_LIKE 집계, 없으면 0)
 	private Integer ratingScore;  // 작성자가 그 영화에 준 별점 (MEMBER_CONTENT join — 없거나 컬렉션 코멘트면 null)
+	private String blindReason;   // 승인(ACCEPTED)된 신고의 사유 — 값이 있으면 화면에서 안내 문구로 가린다(팀 결정: 삭제 없음)
 
 	public UserCommentVO() {
 		super();
@@ -143,12 +144,21 @@ public class UserCommentVO extends DTO {
 		this.ratingScore = ratingScore;
 	}
 
+	public String getBlindReason() {
+		return blindReason;
+	}
+
+	public void setBlindReason(String blindReason) {
+		this.blindReason = blindReason;
+	}
+
 	@Override
 	public String toString() {
 		return "UserCommentVO [commentId=" + commentId + ", memberId=" + memberId + ", contentId=" + contentId
 				+ ", collectionId=" + collectionId + ", commentDetail=" + commentDetail + ", spoiler=" + spoiler
 				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", nickname=" + nickname
-				+ ", likeCnt=" + likeCnt + ", ratingScore=" + ratingScore + ", toString()=" + super.toString() + "]";
+				+ ", likeCnt=" + likeCnt + ", ratingScore=" + ratingScore + ", blindReason=" + blindReason
+				+ ", toString()=" + super.toString() + "]";
 	}
 
 }
