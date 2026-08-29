@@ -68,7 +68,7 @@
 
     /** 좋아요 등록/취소 요청을 보내고 결과에 따라 화면을 갱신 */
     async function toggleLike(collectionId, button, icon) {
-        const currentlyLiked = button.classList.contains('active');
+        const currentlyLiked = button.classList.contains('like-liked');
         const method = currentlyLiked ? 'DELETE' : 'POST';
 
         button.disabled = true;
@@ -94,9 +94,15 @@
 
     /**버튼/아이콘을 좋아요 상태에 맞게 갱신*/
     function applyLikedState(button, icon, liked) {
-        button.classList.toggle('active', liked);
         button.setAttribute('aria-pressed', String(liked));
         icon.innerHTML = liked ? '&#9829;' : '&#9825;';
+        icon.style.color = liked ? '#dc3545' : '';
+
+        if (liked) {
+            button.classList.add('like-liked');
+        } else {
+            button.classList.remove('like-liked');
+        }
     }
 
     /** #likeCount 표시 값을 delta만큼 조정 */
