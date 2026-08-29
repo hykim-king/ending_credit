@@ -1,27 +1,24 @@
 /**
  * <pre>
- * Class Name : UserCommentMapper
- * Description : 코멘트 Mapper
+ * Class Name : UserCommentService
+ * Description : 코멘트 Service 인터페이스
+ *               CRUD 계약은 WorkDiv를 그대로 상속한다(학원 표준).
  *
  * Modification Information
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * 2026. 8. 14.  홍선기   deleteAll 제거(테스트가 @Transactional 롤백 방식으로 바뀌어 미사용·전체삭제 위험만 남음)
+ * 2026. 8. 18.  홍선기   최초 생성
  * </pre>
  *
  * @author 홍선기
- * @since 2026. 8. 12.
+ * @since 2026. 8. 18.
  */
-package com.endit.mapper;
-
-import org.apache.ibatis.annotations.Mapper;
+package com.endit.service;
 
 import com.endit.cmn.WorkDiv;
 import com.endit.domain.UserCommentVO;
 
-@Mapper // MyBatis 매퍼 인터페이스임을 선언(구현체는 MyBatis가 자동 생성)
-public interface UserCommentMapper extends WorkDiv<UserCommentVO> {
+public interface UserCommentService extends WorkDiv<UserCommentVO> {
 
 	/**
 	 *
@@ -39,7 +36,7 @@ public interface UserCommentMapper extends WorkDiv<UserCommentVO> {
 	 *
 	 * <pre>
 	 * Method Name : getContentTitle
-	 * Description : 코멘트 화면(C-04) 헤더용 영화 제목 (한글명 없으면 원제)
+	 * Description : 코멘트 화면(C-04) 헤더용 영화 제목
 	 *
 	 * </pre>
 	 *
@@ -60,4 +57,5 @@ public interface UserCommentMapper extends WorkDiv<UserCommentVO> {
 	 * @return String(없으면 null)
 	 */
 	String getCollectionTitle(long collectionId);
+
 }

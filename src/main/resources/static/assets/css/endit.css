@@ -1,0 +1,232 @@
+/**
+ * endit.css — 화면설계서 v3.0 Design System 토큰 (p.4)
+ * Primary #6550C8 / Hover #5841B4 / Active #49339E / Star #FFB800
+ * Border #E4E2E9 / Focus ring #D8D1FF / Radius 8·12·16 / 헤더 64px / 본문 1200px
+ * 부트스트랩 5.3 변수 오버라이드 + 설계서 컴포넌트(CommentCard·AdminSide) 최소 정의
+ */
+:root {
+    --endit-primary: #6550C8;
+    --endit-hover: #5841B4;
+    --endit-active: #49339E;
+    --endit-star: #FFB800;
+    --endit-border: #E4E2E9;
+    --endit-focus: #D8D1FF;
+    --bs-body-font-family: "Wanted Sans", "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    --bs-link-color: var(--endit-primary);
+    --bs-link-hover-color: var(--endit-hover);
+}
+
+body {
+    background: #FBFAFD;
+}
+
+/* Primary 버튼을 설계서 보라로 */
+.btn-primary {
+    --bs-btn-bg: var(--endit-primary);
+    --bs-btn-border-color: var(--endit-primary);
+    --bs-btn-hover-bg: var(--endit-hover);
+    --bs-btn-hover-border-color: var(--endit-hover);
+    --bs-btn-active-bg: var(--endit-active);
+    --bs-btn-active-border-color: var(--endit-active);
+    --bs-btn-disabled-bg: var(--endit-focus);
+    --bs-btn-disabled-border-color: var(--endit-focus);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--endit-primary);
+    --bs-btn-border-color: var(--endit-primary);
+    --bs-btn-hover-bg: var(--endit-primary);
+    --bs-btn-hover-border-color: var(--endit-primary);
+    --bs-btn-active-bg: var(--endit-active);
+    --bs-btn-active-border-color: var(--endit-active);
+}
+
+.pagination {
+    --bs-pagination-color: var(--endit-primary);
+    --bs-pagination-hover-color: var(--endit-hover);
+    --bs-pagination-active-bg: var(--endit-primary);
+    --bs-pagination-active-border-color: var(--endit-primary);
+    --bs-pagination-focus-box-shadow: 0 0 0 .25rem var(--endit-focus);
+}
+
+.form-control:focus, .form-select:focus, .btn:focus-visible {
+    border-color: var(--endit-primary);
+    box-shadow: 0 0 0 .25rem var(--endit-focus);
+}
+
+/* GlobalHeader (CMP-01): 64px · END IT 로고 · 중앙 검색 · 우측 프로필 */
+.endit-header {
+    height: 64px;
+    background: #fff;
+    border-bottom: 1px solid var(--endit-border);
+}
+
+.endit-brand {
+    color: var(--endit-primary);
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: .04em;
+    text-decoration: none;
+}
+
+.endit-brand:hover {
+    color: var(--endit-hover);
+}
+
+.endit-search {
+    max-width: 420px;
+    background: #F4F3F8;
+    border: 1px solid var(--endit-border);
+    border-radius: 12px;
+}
+
+.endit-nav-link {
+    color: #4A4655;
+    text-decoration: none;
+    font-size: .95rem;
+}
+
+.endit-nav-link:hover, .endit-nav-link.active {
+    color: var(--endit-primary);
+    font-weight: 700;
+}
+
+/* 본문 폭 1200px (설계서 p.5) */
+.endit-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* CommentCard (CMP-10): radius 12 · 아바타 · 별점 · ♡ · 신고 */
+.comment-card {
+    background: #fff;
+    border: 1px solid var(--endit-border);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+}
+
+.comment-card + .comment-card {
+    margin-top: .75rem;
+}
+
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--endit-focus);
+    color: var(--endit-active);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+}
+
+.star {
+    color: var(--endit-star);
+    font-weight: 700;
+}
+
+.comment-card .like-btn {
+    border: 0;
+    background: none;
+    color: #6B6577;
+    padding: 0;
+}
+
+.comment-card .like-btn:hover {
+    color: var(--endit-primary);
+}
+
+.card-action {
+    border: 0;
+    background: none;
+    color: #6B6577;
+    font-size: .875rem;
+    padding: 0;
+}
+
+.card-action:hover {
+    color: var(--endit-primary);
+}
+
+.card-action.danger:hover {
+    color: #C0392B;
+}
+
+/* FilterSortBar (CMP-14): 보조 14px */
+.filter-bar {
+    font-size: .875rem;
+}
+
+/* AdminDataTable + 사이드바 (AD 화면) */
+.admin-side {
+    width: 190px;
+    flex: none;
+    background: #F7F6FA;
+    border: 1px solid var(--endit-border);
+    border-radius: 12px;
+    padding: 1rem .75rem;
+    height: fit-content;
+}
+
+.admin-side .side-label {
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    color: #8A8496;
+    padding: 0 .5rem .4rem;
+}
+
+.admin-side a, .admin-side span {
+    display: block;
+    padding: .45rem .6rem;
+    border-radius: 8px;
+    font-size: .95rem;
+    color: #4A4655;
+    text-decoration: none;
+}
+
+.admin-side span {
+    color: #B4AFC0;
+}
+
+.admin-side a.active {
+    background: var(--endit-focus);
+    color: var(--endit-active);
+    font-weight: 700;
+}
+
+.admin-side a:hover {
+    background: #EFEDF6;
+}
+
+.admin-table thead th {
+    background: #F7F6FA;
+    font-size: .82rem;
+    letter-spacing: .04em;
+    color: #6B6577;
+}
+
+.admin-table tbody tr {
+    cursor: pointer;
+}
+
+/* 상태 배지 — 색상만으로 구분하지 않도록 텍스트 병기(설계서 접근성 원칙) */
+.badge-received, .badge-processing {
+    background: #FFF4D6;
+    color: #8A6A1F;
+}
+
+.badge-accepted, .badge-rejected {
+    background: #ECEAF2;
+    color: #555062;
+}
+
+/* GlobalFooter */
+.endit-footer {
+    background: #221F2B;
+    color: #B4AFC0;
+    font-size: .85rem;
+}
