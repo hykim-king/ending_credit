@@ -65,6 +65,8 @@
 		CROSS JOIN (
 			SELECT COUNT(*) total_cnt
 			  FROM content_credit cc
+			  JOIN person p ON cc.person_id = p.person_id
+			  JOIN content c ON cc.content_id = c.content_id
 			 <include refid="contentCreditWhere"/>
 		) B
 	</select>
