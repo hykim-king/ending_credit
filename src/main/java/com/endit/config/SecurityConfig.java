@@ -10,7 +10,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.endit.security.CustomOAuth2UserService;
 import com.endit.security.CustomUserDetailsService;
+import com.endit.security.OAuth2FailureHandler;
+import com.endit.security.OAuth2SuccessHandler;
 
 /**
  * <pre>
@@ -25,9 +28,25 @@ public class SecurityConfig {
 
 	/** 이메일로 회원을 찾아 주는 서비스 (com.endit.security). 시큐리티가 로그인 검증 중 사용한다. */
 	private final CustomUserDetailsService userDetailsService;
-
-	public SecurityConfig(CustomUserDetailsService userDetailsService) {
-		this.userDetailsService = userDetailsService;
+	
+	/** 구글 정보를 받아 회원을 찾거나 신규 판단하는 서비스 */
+	private final CustomOAuth2UserService customOAuth2UserService;
+ 
+	/** 구글 로그인 성공 처리(기존 회원 → 홈) */
+	private final OAuth2SuccessHandler oAuth2SuccessHandler;
+ 
+	/** 구글 로그인 실패/신규/중복 분기 처리 */
+	private final OAuth2FailureHandler oAuth2FailureHandler;
+ 
+	public SecurityConfig(
+			CustomUserDetailsService userDetailsService,
+			CustomOAuth2UserService customOAuth2UserService,
+			OAuth2SuccessHandler oAuth2SuccessHandler,
+			OAuth2FailureHandler oAuth2FailureHandler) {
+		this.userDetailsService      = userDetailsService;
+		this.customOAuth2UserService = customOAuth2UserService;
+		this.oAuth2SuccessHandler    = oAuth2SuccessHandler;
+		this.oAuth2FailureHandler    = oAuth2FailureHandler;
 	}
 
 	/**
@@ -56,13 +75,23 @@ public class SecurityConfig {
 
 			// ── 2) 이메일 로그인(formLogin) ──
 			.formLogin(form -> form
-				.loginPage("/login/email")           // GET: 로그인 화면
+				.loginPage("/login")                 // GET: 로그인 화면
 				.loginProcessingUrl("/login/email")  // POST: 이 URL로 폼 제출 → 시큐리티가 가로채 검증
 				.usernameParameter("email")          // 아이디 입력칸 name="email" (기본은 username)
 				.passwordParameter("password")       // 비번 입력칸 name="password"
 				.defaultSuccessUrl("/")              // 성공 시 홈으로 (원래 가려던 보호페이지 있으면 그쪽으로)
-				.failureUrl("/login/email?error")    // 실패 시 다시 로그인 화면
+				.failureUrl("/login?error")          // 실패 시 다시 로그인 화면
 				.permitAll()
+			)
+			
+			// ── 2-2) 구글 로그인(oauth2Login) ──
+			.oauth2Login(oauth -> oauth
+				.loginPage("/login")                          // 로그인 화면 (이메일이랑 공유)
+				.userInfoEndpoint(userInfo -> userInfo
+					.userService(customOAuth2UserService)     // 구글 정보 받아 회원 찾기/신규판단
+				)
+				.successHandler(oAuth2SuccessHandler)          // 기존 회원 로그인 성공 → 홈
+				.failureHandler(oAuth2FailureHandler)          // 신규/이메일중복/오류 → 화면 분기
 			)
 
 			// ── 3) 로그아웃 ──

@@ -61,7 +61,7 @@ public class MemberApiController {
 	 * @param nickname 확인할 닉네임
 	 * @return {"used": 사용중이면 true}
 	 */
-	@GetMapping("/ninkname-check")
+	@GetMapping("/nickname-check")
 	public ResponseEntity<Map<String, Boolean>> checkNickname(
 			@RequestParam String nickname) {
 		

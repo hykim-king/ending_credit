@@ -133,7 +133,7 @@ public class MemberPageController {
 	 * @param model 실패 메시지를 담을 모델
 	 * @return member/login
 	 */
-	@GetMapping({ "/login", "/login/email" })
+	@GetMapping("/login")
 	public String loginForm(
 			@RequestParam(required = false) String error,
 			Model model) {
@@ -141,8 +141,19 @@ public class MemberPageController {
 		log.debug("loginForm(error={})", error);
 
 		if (error != null) {
-			// 이메일이 없는 것인지 비밀번호가 틀린 것인지는 보안상 구분해서 알리지 않는다.
-			model.addAttribute("errorMessage", "이메일 또는 비밀번호가 올바르지 않습니다.");
+			
+			String message;
+			
+			if("oauth".equals(error))
+			{
+				message = "구글 로그인에 실패했습니다. 다시 시도해 주세요";
+			} else {
+
+				// 이메일이 없는 것인지 비밀번호가 틀린 것인지는 보안상 구분해서 알리지 않는다.
+				message = "이메일 또는 비밀번호가 올바르지 않습니다.";				
+			}
+			
+			model.addAttribute("errorMessage", message);
 		}
 
 		return "member/login";

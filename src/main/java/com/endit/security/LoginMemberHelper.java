@@ -32,16 +32,16 @@ public class LoginMemberHelper {
 		}
 		
 		Object principal = auth.getPrincipal();
-		
-		// 이메일 로그인 사용자는 principal이 CustomUserDetails 다.
-		// (비로그인/익명 사용자는 principal이 "anonymousUser" 문자열이라 아래 조건에 안 걸려 null 반환)
-		if(principal instanceof CustomUserDetails)
-		{
+		 
+		// 이메일 로그인 사용자
+		if (principal instanceof CustomUserDetails) {
 			return ((CustomUserDetails) principal).getLoginMember();
 		}
-		
-		// TODO(구글 OAuth): 구글 로그인 사용자는 principal이 CustomUserDetails가 아니라
-		//   OAuth2User(커스텀)라서, 구글 파트 만들 때 여기에 그 케이스를 한 줄 추가한다.
+ 
+		// 구글 로그인 사용자
+		if (principal instanceof CustomOAuth2User) {
+			return ((CustomOAuth2User) principal).getLoginMember();
+		}
 		
 		return null; // 그 외는 로그인 안 한 것으로 취급
 	}
@@ -56,7 +56,6 @@ public class LoginMemberHelper {
 	
 	/**
 	 * 현재 로그인한 회원 번호(memberId).
-	 *  - 반드시 로그인해야만 하는 곳(코멘트 작성, 프로필 수정, 탈퇴 등)에서 편하게 쓰기 위한 것.
 	 * @return memberId
 	 * @throws IllegalStateException 비로그인 상태
 	 */

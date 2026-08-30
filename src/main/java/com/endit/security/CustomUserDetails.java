@@ -58,34 +58,10 @@ public class CustomUserDetails implements UserDetails {
 		return password;
 	}
 
-	/** 로그인 아이디 역할. 우리 서비스는 이메일을 아이디로 쓴다. */
+	/** 로그인 아이디 역할. 이메일을 아이디로 쓴다. */
 	@Override
 	public String getUsername() {
 		return loginMember.getEmail();
 	}
-
-	// ─── 계정 상태 플래그 (지금은 전부 true) ───
-	// ※ 나중에 MEMBER.STATUS(ACTIVE/SUSPENDED)를 도입하면,
-	//    isEnabled() 를 (status == "ACTIVE") 로 바꿔 정지 회원의 로그인을 막을 수 있다.
-	//    그때 CustomUserDetails 생성자에서 status 값도 함께 받으면 된다.
-
-	@Override
-	public boolean isAccountNonExpired() {
-		return true;
-	}
-
-	@Override
-	public boolean isAccountNonLocked() {
-		return true;
-	}
-
-	@Override
-	public boolean isCredentialsNonExpired() {
-		return true;
-	}
-
-	@Override
-	public boolean isEnabled() {
-		return true;
-	}
+	
 }
