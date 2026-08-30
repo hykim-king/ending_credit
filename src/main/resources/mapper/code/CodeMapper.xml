@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.endit.mapper.CodeMapper">
+
+    <!-- 코드 그룹 여러 개를 IN절로 한 번에 조회 (학원 27장 <foreach> 패턴)
+         ※ 학원 CMN_CODE의 use_yn 조건은 팀 COMMON_CODE에 컬럼이 없어 제외 -->
+    <select id="doRetrieve" resultType="CodeVO">
+        SELECT
+            group_code,
+            code,
+            code_name,
+            sort_order,
+            TO_CHAR(created_dt,'YYYY/MM/DD') created_dt
+        FROM
+            common_code
+        WHERE group_code IN
+        <foreach item="item" index="index" collection="code"
+            open=" (" separator="," close=")">
+            #{item}
+        </foreach>
+        ORDER BY group_code ASC, sort_order ASC
+    </select>
+
+</mapper>

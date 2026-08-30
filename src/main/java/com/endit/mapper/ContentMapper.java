@@ -10,7 +10,7 @@ import com.endit.domain.ContentVO;
 public interface ContentMapper extends WorkDiv<ContentVO> {
 
 	// 외부 API가 제공해주는 영화 ID로 이미 있는지 없는지 찾는 쿼리,,
-	// 영화 테이블 삽입용 
+	// 영화 테이블 select 
 	Integer findContentIdByExternal(@Param("externalId") String externalId);
 
 	//테스트용

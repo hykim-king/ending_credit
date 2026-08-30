@@ -45,14 +45,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.thymeleaf.extras</groupId>
-            <artifactId>thymeleaf-extras-springsecurity6</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -88,6 +80,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- TMDB JSON API를 Java 객체로 바꿔 주는 래퍼 라이브러리 -->
+        <dependency>
+            <groupId>uk.co.conoregan</groupId>
+            <artifactId>themoviedbapi</artifactId>
+            <version>2.1.0</version>
         </dependency>
 
         <dependency>

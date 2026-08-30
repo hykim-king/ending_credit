@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>header</title>
+</head>
+<body>
+    <!--GlobalHeader (CMP-01, 설계서 p.5): END IT · 중앙 검색 · 우측 메뉴/프로필-->
+    <header th:fragment="header" class="endit-header">
+        <div class="endit-main d-flex align-items-center gap-4 h-100 px-3">
+            <a class="endit-brand" th:href="@{/comment/doRetrieve}">END IT</a>
+            <input type="text" class="form-control endit-search d-none d-md-block"
+                   placeholder="영화, 인물, 컬렉션 검색" disabled
+                   title="검색은 담당 조 구현 예정">
+            <nav class="ms-auto d-flex align-items-center gap-3">
+                <a class="endit-nav-link" th:href="@{/comment/doRetrieve}">코멘트</a>
+                <a class="endit-nav-link" th:href="@{/report/doRetrieve}">신고 관리</a>
+                <!-- 로그인/프로필: 회원(2조) 시큐리티 연동 시 교체 -->
+                <span class="avatar-circle" title="로그인 연동 전"><i class="bi bi-person"></i></span>
+            </nav>
+        </div>
+    </header>
+</body>
+</html>

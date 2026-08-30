@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
-  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  " http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.endit.mapper.ContentCreditMapper">
 
 	<sql id="contentCreditWhere">
@@ -65,6 +65,8 @@
 		CROSS JOIN (
 			SELECT COUNT(*) total_cnt
 			  FROM content_credit cc
+			  JOIN person p ON cc.person_id = p.person_id
+			  JOIN content c ON cc.content_id = c.content_id
 			 <include refid="contentCreditWhere"/>
 		) B
 	</select>
