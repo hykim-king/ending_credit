@@ -61,19 +61,20 @@ public class MemberApiController {
 	 * @param nickname 확인할 닉네임
 	 * @return {"used": 사용중이면 true}
 	 */
-	@GetMapping("/nickname-check")
+	@GetMapping("/ninkname-check")
 	public ResponseEntity<Map<String, Boolean>> checkNickname(
 			@RequestParam String nickname) {
-
+		
 		log.debug("checkNickname(nickname={})", nickname);
-
+		
 		if (nickname == null || nickname.trim().isEmpty()) {
 			throw new IllegalArgumentException("닉네임을 입력해 주세요.");
 		}
 
 		boolean used = memberService.isNicknameUsed(nickname.trim());
 
-		return ResponseEntity.ok(Map.of("used", used));
+		return ResponseEntity.ok(Map.of("used", used));		
+	
 	}
 
 	/** 잘못된 요청값 예외를 HTTP 400 응답으로 변환 */
