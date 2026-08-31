@@ -18,6 +18,7 @@ import com.endit.domain.CollectionItemVO;
  * ------------------------------------------------------------
  * 2026. 8. 13.	jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    전체 삭제 및 전체 건수 조회 기능 추가
+ * 2026. 8. 29. jinyoung    컬렉션 작품 전체 ID 조회 기능 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -80,4 +81,12 @@ public interface CollectionItemMapper {
 	 * @return 검색된 컬렉션 콘텐츠 건수
 	 */
 	int count(DTO param);
+
+	/**
+	 * 특정 컬렉션에 포함된 전체 콘텐츠 번호 조회
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @return 콘텐츠 번호 목록
+	 */
+	List<Integer> selectContentIdsByCollectionId(int collectionId);
 }
