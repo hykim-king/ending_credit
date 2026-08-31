@@ -230,3 +230,77 @@ body {
     color: #B4AFC0;
     font-size: .85rem;
 }
+
+/* P-01 인물 상세 */
+.person-profile-card {
+    background: #fff;
+    border: 1px solid var(--endit-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.person-profile-image-wrap {
+    width: 160px;
+    height: 160px;
+    flex: none;
+}
+
+.person-profile-image,
+.person-profile-placeholder {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.person-profile-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--endit-focus);
+    color: var(--endit-active);
+    font-size: 4rem;
+}
+
+.filmography-card {
+    background: #fff;
+    border: 1px solid var(--endit-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.filmography-poster-wrap {
+    aspect-ratio: 2 / 3;
+    background: #F4F3F8;
+}
+
+.filmography-poster,
+.filmography-poster-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.filmography-poster-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #B4AFC0;
+    font-size: 2rem;
+}
+
+.filmography-body {
+    padding: .85rem;
+}
+
+.filmography-title {
+    font-size: .95rem;
+    font-weight: 700;
+    margin-bottom: .25rem;
+    line-height: 1.35;
+}
+
+.filmography-meta {
+    font-size: .82rem;
+    color: #6B6577;
+}
