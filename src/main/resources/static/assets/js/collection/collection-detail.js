@@ -1,15 +1,29 @@
-// View Controller가 body의 data-collection-id에 넣은 값을 모든 상세 API 요청에 사용한다.
+/**
+ * Modification History
+ * 2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 및 포스터 적용
+ * 2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 연결·작품 평균 별점 적용
+ */
+// View Controller가 body의 data-* 속성에 넣은 값을 상세 조회와 권한 표시에 사용한다.
 const collectionId = Number(document.body.dataset.collectionId);
+const currentMemberId = Number(document.body.dataset.currentMemberId || 0);
+let isOwner = false;
+let isLiked = false;
+let isPublicCollection = false;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", initializeDetail);
+
+async function initializeDetail() {
     document.querySelector("#editLink").href = `/collections/${collectionId}/edit`;
-    document.querySelector("#addItemForm").addEventListener("submit", addItem);
+    document.querySelector("#commentsLink").href =
+        `/comment/doRetrieve?collectionId=${collectionId}`;
     document.querySelector("#confirmDeleteButton").addEventListener("click", deleteCollection);
+    document.querySelector("#likeButton").addEventListener("click", toggleLike);
+    document.querySelector("#copyLinkButton").addEventListener("click", copyCollectionLink);
 
-    // 컬렉션 기본 정보와 작품 목록은 서로 다른 API이므로 각각 조회한다.
-    loadCollection();
-    loadItems(1);
-});
+    // 소유자 여부를 먼저 확정한 뒤 상세 화면의 버튼 노출을 결정한다.
+    await loadCollection();
+    await loadItems(1);
+}
 
 /** 컬렉션 제목, 설명, 작성자와 집계 정보를 화면에 표시한다. */
 async function loadCollection() {
@@ -35,8 +49,105 @@ async function loadCollection() {
         publicBadge.className = collection.isPublic === "Y"
             ? "badge text-bg-success"
             : "badge text-bg-secondary";
+
+        isPublicCollection = collection.isPublic === "Y";
+        isOwner = currentMemberId > 0 && currentMemberId === Number(collection.memberId);
+        applyActionVisibility();
+
+        if (currentMemberId > 0 && !isOwner) {
+            await loadLikeStatus();
+        }
     } catch (error) {
         showDetailError(errorMessage, error.message);
+    }
+}
+
+/** 인증 여부와 소유자 여부에 따라 변경·좋아요 동작을 구분해 노출한다. */
+function applyActionVisibility() {
+    document.querySelector("#ownerActions").classList.toggle("d-none", !isOwner);
+    document.querySelector("#copyLinkButton").classList.toggle(
+        "d-none",
+        !isPublicCollection
+    );
+    document.querySelector("#likeButton").classList.toggle(
+        "d-none",
+        currentMemberId <= 0 || isOwner
+    );
+}
+
+/** 공개 컬렉션의 현재 상세 URL을 클립보드에 복사한다. */
+async function copyCollectionLink() {
+    const errorMessage = document.querySelector("#errorMessage");
+    const feedback = document.querySelector("#copyLinkFeedback");
+    hideDetailError(errorMessage);
+    feedback.classList.add("d-none");
+
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(window.location.href);
+        } else {
+            copyLinkWithTemporaryInput(window.location.href);
+        }
+
+        feedback.classList.remove("d-none");
+    } catch (error) {
+        showDetailError(errorMessage, "링크를 복사하지 못했습니다.");
+    }
+}
+
+/** Clipboard API를 사용할 수 없는 환경을 위한 복사 대체 처리다. */
+function copyLinkWithTemporaryInput(link) {
+    const input = document.createElement("textarea");
+    input.value = link;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.append(input);
+    input.select();
+
+    const copied = document.execCommand("copy");
+    input.remove();
+
+    if (!copied) {
+        throw new Error("클립보드 복사 실패");
+    }
+}
+
+/** 현재 회원의 좋아요 여부를 조회해 토글 버튼 상태를 맞춘다. */
+async function loadLikeStatus() {
+    const status = await requestGet(`/api/collections/${collectionId}/likes`);
+    isLiked = status.liked === true;
+    renderLikeButton();
+}
+
+function renderLikeButton() {
+    const likeButton = document.querySelector("#likeButton");
+    likeButton.textContent = isLiked ? "좋아요 취소" : "좋아요";
+    likeButton.className = isLiked
+        ? "btn btn-danger"
+        : "btn btn-outline-danger";
+    likeButton.setAttribute("aria-pressed", String(isLiked));
+}
+
+/** 현재 상태에 따라 좋아요 등록 또는 취소 요청을 전송한다. */
+async function toggleLike() {
+    const errorMessage = document.querySelector("#errorMessage");
+    const likeButton = document.querySelector("#likeButton");
+    likeButton.disabled = true;
+    hideDetailError(errorMessage);
+
+    try {
+        if (isLiked) {
+            await requestDelete(`/api/collections/${collectionId}/likes`);
+        } else {
+            await requestPost(`/api/collections/${collectionId}/likes`, {});
+        }
+
+        await loadCollection();
+    } catch (error) {
+        showDetailError(errorMessage, error.message);
+    } finally {
+        likeButton.disabled = false;
     }
 }
 
@@ -82,7 +193,7 @@ function renderItems(items) {
         if (item.posterUrl) {
             const poster = document.createElement("img");
             poster.className = "card-img-top";
-            poster.src = item.posterUrl;
+            poster.src = resolveDetailPosterUrl(item.posterUrl);
             poster.alt = `${item.titleKo || item.titleOrg || "작품"} 포스터`;
             card.append(poster);
         }
@@ -96,59 +207,18 @@ function renderItems(items) {
 
         const info = document.createElement("p");
         info.className = "card-text text-secondary small flex-grow-1";
-        info.textContent = item.releaseYear || item.titleOrg || "";
+        const releaseYear = item.releaseYear || "개봉연도 정보 없음";
+        const averageRating = item.averageRating == null
+            ? "평가 없음"
+            : `평균 별점 ${Number(item.averageRating).toFixed(1)}`;
+        info.textContent = `${releaseYear} · ${averageRating}`;
 
-        const deleteButton = document.createElement("button");
-        deleteButton.className = "btn btn-sm btn-outline-danger align-self-end";
-        deleteButton.type = "button";
-        deleteButton.textContent = "삭제";
-        deleteButton.addEventListener("click", () => deleteItem(item.contentId));
+        body.append(title, info);
 
-        body.append(title, info, deleteButton);
         card.append(body);
         column.append(card);
         itemList.append(column);
     });
-}
-
-async function addItem(event) {
-    // 입력 폼의 기본 submit을 막고 contentId를 JSON으로 전송한다.
-    event.preventDefault();
-
-    const errorMessage = document.querySelector("#errorMessage");
-    const contentIdInput = document.querySelector("#contentId");
-
-    hideDetailError(errorMessage);
-
-    try {
-        await requestPost(`/api/collections/${collectionId}/items`, {
-            contentId: Number(contentIdInput.value)
-        });
-
-        contentIdInput.value = "";
-        // 작품 추가 후 상세 집계(itemCount)와 작품 목록을 동시에 새로고침한다.
-        await Promise.all([loadCollection(), loadItems(1)]);
-    } catch (error) {
-        showDetailError(errorMessage, error.message);
-    }
-}
-
-async function deleteItem(contentId) {
-    // 작품 삭제는 즉시 되돌릴 수 없으므로 브라우저 확인창을 한 번 거친다.
-    if (!window.confirm("컬렉션에서 이 작품을 삭제하시겠습니까?")) {
-        return;
-    }
-
-    const errorMessage = document.querySelector("#errorMessage");
-    hideDetailError(errorMessage);
-
-    try {
-        await requestDelete(`/api/collections/${collectionId}/items/${contentId}`);
-        // 삭제 후 작품 수와 목록을 함께 갱신해 화면과 DB 상태를 맞춘다.
-        await Promise.all([loadCollection(), loadItems(1)]);
-    } catch (error) {
-        showDetailError(errorMessage, error.message);
-    }
 }
 
 async function deleteCollection() {
@@ -232,4 +302,13 @@ function showDetailError(element, message) {
 function hideDetailError(element) {
     element.textContent = "";
     element.classList.add("d-none");
+}
+
+/** DB의 TMDB 상대 경로와 완전한 외부 URL을 모두 포스터로 표시한다. */
+function resolveDetailPosterUrl(posterUrl) {
+    if (/^https?:\/\//i.test(posterUrl)) {
+        return posterUrl;
+    }
+
+    return `https://image.tmdb.org/t/p/w500${posterUrl}`;
 }
