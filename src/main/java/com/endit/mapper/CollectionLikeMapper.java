@@ -23,6 +23,7 @@ import com.endit.domain.CollectionLikeVO;
  * 2026. 8. 18. gunwoo      회원별 좋아요 컬렉션 목록에 페이징 + COLLECTION JOIN 추가
  *                          (selectCollectionLikeListByCollection은 화면에 회원목록 UI가
  *                           없어 페이징 미적용, 기존 count 방식 유지)
+ * 2026. 8. 29. jinyoung    회원별 목록에 현재 조회자 기준 공개 범위 조건 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -69,12 +70,14 @@ public interface CollectionLikeMapper {
 	 * 프로필 화면의 "좋아요한 컬렉션" 목록에서 사용
 	 *
 	 * @param memberId 회원 번호
+	 * @param currentMemberId 현재 조회 회원 번호 또는 null
 	 * @param pageNo   페이지 번호 (1부터 시작)
 	 * @param pageSize 페이지당 건수
 	 * @return 화면 표시용 컬렉션 좋아요 목록
 	 */
 	List<CollectionLikeItemVO> selectLikedCollectionListByMember(
 			@Param("memberId") int memberId,
+			@Param("currentMemberId") Long currentMemberId,
 			@Param("pageNo") int pageNo,
 			@Param("pageSize") int pageSize);
 
@@ -82,9 +85,12 @@ public interface CollectionLikeMapper {
 	 * 특정 회원이 좋아요를 누른 컬렉션 전체 건수 조회 (페이징 total count용)
 	 *
 	 * @param memberId 회원 번호
+	 * @param currentMemberId 현재 조회 회원 번호 또는 null
 	 * @return 전체 건수
 	 */
-	int selectLikedCollectionCountByMember(int memberId);
+	int selectLikedCollectionCountByMember(
+			@Param("memberId") int memberId,
+			@Param("currentMemberId") Long currentMemberId);
 
 	/**
 	 * 특정 컬렉션에 좋아요를 누른 회원 목록 조회

@@ -1,6 +1,7 @@
 package com.endit.service;
 
 import java.util.List;
+import java.util.OptionalLong;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionLikeItemVO;
@@ -17,6 +18,7 @@ import com.endit.domain.CollectionLikeVO;
  * ------------------------------------------------------------
  * 2026. 8. 26. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    멱등 등록 반환 계약 반영
+ * 2026. 8. 29. jinyoung    인증·공개 범위·본인 제한 및 상태 조회 계약 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -32,7 +34,7 @@ public interface CollectionLikeService {
 	 * @param collectionId 컬렉션 번호
 	 * @return 등록되었거나 이미 존재하는 컬렉션 좋아요 정보
 	 */
-	CollectionLikeVO create(int memberId, int collectionId);
+	CollectionLikeVO create(long memberId, int collectionId);
 
 	/**
 	 * 컬렉션 좋아요 취소
@@ -40,7 +42,7 @@ public interface CollectionLikeService {
 	 * @param memberId 회원 번호
 	 * @param collectionId 컬렉션 번호
 	 */
-	void delete(int memberId, int collectionId);
+	void delete(long memberId, int collectionId);
 
 	/**
 	 * 회원의 특정 컬렉션에 대한 좋아요 정보 조회
@@ -49,16 +51,27 @@ public interface CollectionLikeService {
 	 * @param collectionId 컬렉션 번호
 	 * @return 컬렉션 좋아요 정보
 	 */
-	CollectionLikeVO get(int memberId, int collectionId);
+	CollectionLikeVO get(long memberId, int collectionId);
+
+	/**
+	 * 회원의 특정 컬렉션 좋아요 여부 조회
+	 *
+	 * @param memberId 회원 번호
+	 * @param collectionId 컬렉션 번호
+	 * @return 좋아요가 등록되어 있으면 true
+	 */
+	boolean isLiked(long memberId, int collectionId);
 
 	/**
 	 * 특정 회원이 좋아요를 누른 컬렉션 목록 조회 (화면 표시용, COLLECTION JOIN + 페이징)
 	 *
 	 * @param memberId 회원 번호
 	 * @param param 페이징 조건
+	 * @param currentMemberId 현재 조회 회원 번호 또는 빈 값
 	 * @return 좋아요한 컬렉션 목록
 	 */
-	List<CollectionLikeItemVO> retrieveByMember(int memberId, DTO param);
+	List<CollectionLikeItemVO> retrieveByMember(
+			int memberId, DTO param, OptionalLong currentMemberId);
 
 	/**
 	 * 특정 컬렉션에 좋아요를 누른 회원 목록 조회
