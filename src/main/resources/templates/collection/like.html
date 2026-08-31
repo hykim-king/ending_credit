@@ -1,62 +1,85 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta th:if="${_csrf != null}" name="_csrf" th:content="${_csrf.token}">
-<meta th:if="${_csrf != null}" name="_csrf_header" th:content="${_csrf.headerName}">
 <title>좋아요 목록</title>
-<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
+<style>
+    /* U-07 좋아요 목록 */
+    .like-tab {
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: none;
+        color: #6B6577;
+        font-size: .95rem;
+        padding: .5rem 0;
+    }
+    .like-tab.active {
+        color: var(--endit-primary);
+        font-weight: 700;
+        border-bottom-color: var(--endit-primary);
+    }
+    .like-tab:focus-visible {
+        outline: 2px solid var(--endit-focus);
+        outline-offset: 2px;
+    }
+    .like-card {
+        background: #fff;
+        border: 1px solid var(--endit-border);
+        border-radius: 12px;
+        height: 100%;
+    }
+    .like-heart-btn {
+        border: 0;
+        background: none;
+        color: var(--endit-primary);
+        padding: 0;
+        min-width: 44px;
+        min-height: 44px;
+    }
+    .like-heart-btn:focus-visible {
+        outline: 2px solid var(--endit-focus);
+        outline-offset: 2px;
+    }
+</style>
 </head>
-<!-- 서버는 조회 대상 회원 번호만 data-* 속성에 넣고, 목록 데이터는 REST API로 가져온다. -->
-<body class="bg-light" th:attr="data-member-id=${memberId}">
-    <header class="border-bottom bg-white">
-        <div class="container py-3 d-flex justify-content-between align-items-center">
-            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
-                Ending Credit
-            </a>
-        </div>
-    </header>
+<body>
 
-    <main class="container py-4">
-        <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+<div layout:fragment="content" id="likesRoot" th:attr="data-member-id=${memberId}">
 
-        <!-- 프로필 요약 영역 닉네임은 서버가 내려주는 값을 그대로 사용한다. -->
-        <div class="mb-4">
-            <h1 id="profileNickname" class="h4 mb-1">사용자 닉네임</h1>
-            <a id="backToProfileLink" class="text-secondary small" href="#">프로필로 돌아가기</a>
-        </div>
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
 
-        <!-- 인물/컬렉션 두 탭 type 쿼리 파라미터로 전환하며 각 탭 수는 API 응답으로 갱신한다. -->
-        <ul class="nav nav-tabs mb-4" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button id="personTabButton" class="nav-link" type="button"
-                        role="tab" aria-selected="false">
-                    좋아한 인물 <span id="personCount">0</span>
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button id="collectionTabButton" class="nav-link" type="button"
-                        role="tab" aria-selected="false">
-                    좋아한 컬렉션 <span id="collectionCount">0</span>
-                </button>
-            </li>
-        </ul>
+    <!-- 프로필 요약 영역.-->
+    <div class="mb-4">
+        <h1 id="profileNickname" class="h4 mb-1">사용자 닉네임</h1>
+        <a id="backToProfileLink" class="text-secondary small" href="#">프로필로 돌아가기</a>
+    </div>
 
-        <!-- GET /api/users/{memberId}/likes?type=... 결과 카드가 JavaScript로 채워진다. -->
-        <div id="likeResultCount" class="text-secondary small mb-2"></div>
-        <div id="likeList" class="row g-3" aria-live="polite"></div>
+    <!-- 인물/컬렉션 두 탭. -->
+    <div class="d-flex gap-4 border-bottom mb-4">
+        <button id="personTabButton" class="like-tab" type="button" role="tab" aria-selected="false">
+            좋아한 인물 <span id="personCount">0</span>
+        </button>
+        <button id="collectionTabButton" class="like-tab" type="button" role="tab" aria-selected="false">
+            좋아한 컬렉션 <span id="collectionCount">0</span>
+        </button>
+    </div>
 
-        <div id="likeEmpty" class="alert alert-secondary text-center d-none">
-            좋아요한 항목이 없습니다.
-        </div>
+    <div id="likeResultCount" class="text-secondary small mb-2"></div>
+    <div id="likeList" class="row g-3" aria-live="polite"></div>
 
-        <nav class="mt-4" aria-label="좋아요 목록 페이지">
-            <ul id="likePagination" class="pagination justify-content-center"></ul>
-        </nav>
-    </main>
+    <div id="likeEmpty" class="alert alert-secondary text-center d-none">
+        좋아요한 항목이 없습니다.
+    </div>
 
-    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
-    <script th:src="@{/assets/js/user/user-likes.js}"></script>
+    <nav class="mt-4" aria-label="좋아요 목록 페이지">
+        <ul id="likePagination" class="pagination justify-content-center"></ul>
+    </nav>
+
+</div>
+
+<script th:src="@{/assets/js/collection/collection-userlike.js}"></script>
 </body>
 </html>

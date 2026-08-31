@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const memberId = Number(document.body.dataset.memberId);
+    // <body>는 layout.html이 소유하므로 회원 번호는 #likesRoot에서 읽는다.
+    const memberId = Number(document.getElementById('likesRoot').dataset.memberId);
 
     const personTabButton = document.querySelector('#personTabButton');
     const collectionTabButton = document.querySelector('#collectionTabButton');
@@ -11,10 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadCollectionCount();
 
+    // U-07 개발 명세 2번 · 진입 URL 기본값이 type=person이므로 기본 탭은 인물이다.
     activateTab('person');
 });
 
-/**탭 전환 후 해당 유형의 첫 페이지를 조회*/
+/**탭 전환 후 해당 유형의 첫 페이지를 조회한다.*/
 function activateTab(type) {
     const personTabButton = document.querySelector('#personTabButton');
     const collectionTabButton = document.querySelector('#collectionTabButton');
@@ -31,10 +33,10 @@ function activateTab(type) {
     }
 }
 
-/** 좋아한 컬렉션 탭 수 조회*/
+/** 좋아한 컬렉션 탭 수 조회 (목록 조회 시 함께 받는 totalCnt로 갱신) */
 async function loadCollectionCount() {
     try {
-        const memberId = Number(document.body.dataset.memberId);
+        const memberId = Number(document.getElementById('likesRoot').dataset.memberId);
         const data = await requestGet(`/api/users/${memberId}/likes`, {
             type: 'collection',
             page: 1,
@@ -47,9 +49,9 @@ async function loadCollectionCount() {
     }
 }
 
-/**좋아한 컬렉션 목록을 조회해 카드로 표시*/
+/**좋아한 컬렉션 목록을 조회해 카드로 표시한다.*/
 async function loadCollectionTab(pageNo) {
-    const memberId = Number(document.body.dataset.memberId);
+    const memberId = Number(document.getElementById('likesRoot').dataset.memberId);
 
     hideLikeError();
 
@@ -71,7 +73,7 @@ async function loadCollectionTab(pageNo) {
     }
 }
 
-/** 좋아한 컬렉션 카드 목록을 렌더링 */
+/** 좋아한 컬렉션 카드 목록을 렌더링한다. */
 function renderCollectionCards(items) {
     const likeList = document.querySelector('#likeList');
     const likeEmpty = document.querySelector('#likeEmpty');
@@ -86,18 +88,15 @@ function renderCollectionCards(items) {
     likeEmpty.classList.add('d-none');
 
     items.forEach((item) => {
-        // 서버 데이터는 innerHTML이 아닌 textContent로 넣어 XSS를 방지
+        // 서버 데이터는 innerHTML이 아닌 textContent로 넣어 XSS를 방지한다.
         const column = document.createElement('div');
         column.className = 'col-6 col-md-4 col-lg-3';
 
         const card = document.createElement('article');
-        card.className = 'card h-100 border-0 shadow-sm';
-
-        const body = document.createElement('div');
-        body.className = 'card-body d-flex flex-column';
+        card.className = 'like-card p-3 d-flex flex-column';
 
         const title = document.createElement('h2');
-        title.className = 'h6 card-title';
+        title.className = 'h6';
 
         const link = document.createElement('a');
         link.className = 'stretched-link text-decoration-none text-dark';
@@ -106,7 +105,7 @@ function renderCollectionCards(items) {
         title.append(link);
 
         const description = document.createElement('p');
-        description.className = 'card-text text-secondary small flex-grow-1';
+        description.className = 'text-secondary small flex-grow-1';
         description.textContent = item.description || '';
 
         const visibility = document.createElement('span');
@@ -118,7 +117,7 @@ function renderCollectionCards(items) {
         // 본인 프로필일 때만 하트 선택으로 좋아요 해제 가능
         const heartButton = document.createElement('button');
         heartButton.type = 'button';
-        heartButton.className = 'btn btn-link text-warning p-0 mt-2 align-self-start';
+        heartButton.className = 'like-heart-btn mt-2 align-self-start';
         heartButton.setAttribute('aria-label', '좋아요 취소');
         heartButton.innerHTML = '&#9829;';
         heartButton.addEventListener('click', (event) => {
@@ -126,8 +125,7 @@ function renderCollectionCards(items) {
             unlikeCollection(item.collectionId);
         });
 
-        body.append(title, description, visibility, heartButton);
-        card.append(body);
+        card.append(title, description, visibility, heartButton);
         column.append(card);
         likeList.append(column);
     });
@@ -135,7 +133,7 @@ function renderCollectionCards(items) {
 
 /**카드의 하트 버튼으로 좋아요를 취소하고 현재 페이지를 다시 불러온다.*/
 async function unlikeCollection(collectionId) {
-    const memberId = Number(document.body.dataset.memberId);
+    const memberId = Number(document.getElementById('likesRoot').dataset.memberId);
 
     try {
         await requestFetch(`/api/collections/${collectionId}/likes`, {
@@ -153,7 +151,7 @@ async function unlikeCollection(collectionId) {
     }
 }
 
-/**좋아한 인물 탭 조회*/
+/**좋아한 인물 탭 조회 (TODO: PersonLikeController 나오면 연동)*/
 function loadPersonTab(pageNo) {
     document.querySelector('#likeList').replaceChildren();
     document.querySelector('#likeEmpty').classList.add('d-none');

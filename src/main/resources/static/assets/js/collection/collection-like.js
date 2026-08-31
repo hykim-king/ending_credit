@@ -92,11 +92,14 @@
         }
     }
 
-    /** 버튼/아이콘을 좋아요 상태에 맞게 갱신*/
+    /**
+     * 버튼/아이콘을 좋아요 상태에 맞게 갱신
+     * U-07 카드 하트(collection-userlike.js)와 동일하게 --endit-primary(보라색)로 통일한다.
+     */
     function applyLikedState(button, icon, liked) {
         button.setAttribute('aria-pressed', String(liked));
         icon.innerHTML = liked ? '&#9829;' : '&#9825;';
-        icon.style.color = liked ? '#dc3545' : '';
+        icon.style.color = liked ? 'var(--endit-primary)' : '';
 
         if (liked) {
             button.classList.add('like-liked');
