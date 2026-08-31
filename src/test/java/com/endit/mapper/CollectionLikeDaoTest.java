@@ -35,6 +35,7 @@ import com.endit.domain.CollectionLikeVO;
  * 2026. 8. 14. jinyoung    테스트 시작 전 전체 삭제 및 건수 검증 추가
  * 2026. 8. 18. gunwoo      회원별 좋아요 컬렉션 목록 JOIN/페이징 테스트 추가
  * 2026. 8. 19. jinyoung    페이징 동률 정렬 및 페이지 간 비중복 검증 추가
+ * 2026. 8. 29. jinyoung    현재 조회 회원 공개 범위 Mapper 인자 반영
  * ------------------------------------------------------------
  * </pre>
  *
@@ -276,7 +277,8 @@ class CollectionLikeDaoTest {
 
 		// When: 회원별 좋아요 컬렉션 목록(JOIN)을 1페이지, 페이지당 10건으로 조회
 		List<CollectionLikeItemVO> list =
-				collectionLikeMapper.selectLikedCollectionListByMember(like01.getMemberId(), 1, 10);
+				collectionLikeMapper.selectLikedCollectionListByMember(
+						like01.getMemberId(), 1L, 1, 10);
 
 		// Then: COLLECTION 테이블과 조인되어 title이 채워져 있어야 함 (COLLECTION_LIKE만으로는 얻을 수 없는 정보)
 		assertNotNull(list);
@@ -306,7 +308,7 @@ class CollectionLikeDaoTest {
 
 		// When: pageSize=1로 1페이지 조회
 		List<CollectionLikeItemVO> firstPage =
-				collectionLikeMapper.selectLikedCollectionListByMember(1, 1, 1);
+				collectionLikeMapper.selectLikedCollectionListByMember(1, 1L, 1, 1);
 
 		// Then: 정확히 1건만 조회되어야 함
 		assertNotNull(firstPage);
@@ -331,9 +333,9 @@ class CollectionLikeDaoTest {
 
 		// When: pageSize=1로 2페이지(마지막 페이지) 조회
 		List<CollectionLikeItemVO> lastPage =
-				collectionLikeMapper.selectLikedCollectionListByMember(1, 2, 1);
+				collectionLikeMapper.selectLikedCollectionListByMember(1, 1L, 2, 1);
 		List<CollectionLikeItemVO> firstPage =
-				collectionLikeMapper.selectLikedCollectionListByMember(1, 1, 1);
+				collectionLikeMapper.selectLikedCollectionListByMember(1, 1L, 1, 1);
 
 		// Then: 각 페이지에 한 건씩 조회되고 페이지 간 데이터가 중복되지 않아야 함
 		assertNotNull(lastPage);
@@ -368,7 +370,7 @@ class CollectionLikeDaoTest {
 
 		// When: 좋아요를 누른 적 없는 회원 번호로 조회
 		List<CollectionLikeItemVO> list =
-				collectionLikeMapper.selectLikedCollectionListByMember(1, 1, 10);
+				collectionLikeMapper.selectLikedCollectionListByMember(1, 1L, 1, 10);
 
 		// Then: null이 아니라 빈 리스트여야 함
 		assertNotNull(list, "결과가 없어도 null이 아니라 빈 리스트여야 합니다.");
@@ -393,8 +395,8 @@ class CollectionLikeDaoTest {
 
 		// When: 페이지 크기를 충분히 크게 잡아 전체를 한 번에 조회 + count 쿼리도 함께 조회
 		List<CollectionLikeItemVO> list =
-				collectionLikeMapper.selectLikedCollectionListByMember(1, 1, 10);
-		int totalCount = collectionLikeMapper.selectLikedCollectionCountByMember(1);
+				collectionLikeMapper.selectLikedCollectionListByMember(1, 1L, 1, 10);
+		int totalCount = collectionLikeMapper.selectLikedCollectionCountByMember(1, 1L);
 
 		// Then: 목록 건수와 count 쿼리 결과가 같아야 함
 		assertEquals(totalCount, list.size(), "목록 조회 건수와 count 쿼리 결과가 일치해야 합니다.");

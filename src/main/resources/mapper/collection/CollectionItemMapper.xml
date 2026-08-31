@@ -3,6 +3,12 @@
     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
+<!--
+Modification History
+2026. 8. 29. jinyoung - 컬렉션 수정용 작품 ID 전체 조회 추가
+2026. 8. 31. jinyoung - MEMBER_CONTENT 기반 작품 평균 별점 조회 추가
+-->
+
 <mapper namespace="com.endit.mapper.CollectionItemMapper">
 
     <!-- searchDiv: 10(컬렉션 번호), 20(콘텐츠 번호) -->
@@ -59,7 +65,8 @@
                TITLE_KO,
                TITLE_ORG,
                RELEASE_YEAR,
-               POSTER_URL
+               POSTER_URL,
+               AVERAGE_RATING
           FROM (
             SELECT CI.COLLECTION_ID,
                    CI.CONTENT_ID,
@@ -69,12 +76,21 @@
                    C.TITLE_ORG,
                    TO_CHAR(C.RELEASE_YEAR, 'YYYY') AS RELEASE_YEAR,
                    C.POSTER_URL,
+                   MR.AVERAGE_RATING,
                    ROW_NUMBER() OVER (
                        ORDER BY CI.ADDED_DT DESC, CI.COLLECTION_ID DESC, CI.CONTENT_ID DESC
                    ) AS RNUM
               FROM COLLECTION_ITEM CI
              INNER JOIN CONTENT C
                 ON C.CONTENT_ID = CI.CONTENT_ID
+              LEFT JOIN (
+                    SELECT CONTENT_ID,
+                           ROUND(AVG(RATING_SCORE), 1) AS AVERAGE_RATING
+                      FROM MEMBER_CONTENT
+                     WHERE RATING_SCORE IS NOT NULL
+                     GROUP BY CONTENT_ID
+              ) MR
+                ON MR.CONTENT_ID = CI.CONTENT_ID
             <include refid="collectionItemWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
@@ -99,6 +115,14 @@
         SELECT COUNT(*)
           FROM COLLECTION_ITEM CI
         <include refid="collectionItemWhere"/>
+    </select>
+
+    <!-- 컬렉션 수정 시 전체 스냅샷 diff 계산에 사용하는 콘텐츠 번호 목록 -->
+    <select id="selectContentIdsByCollectionId" parameterType="int" resultType="int">
+        SELECT CONTENT_ID
+          FROM COLLECTION_ITEM
+         WHERE COLLECTION_ID = #{collectionId}
+         ORDER BY ADDED_DT, CONTENT_ID
     </select>
 
 </mapper>
