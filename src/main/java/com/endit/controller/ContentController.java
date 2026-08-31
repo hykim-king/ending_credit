@@ -14,15 +14,15 @@ import com.endit.service.ContentService;
 @RestController
 @RequestMapping("/content")
 public class ContentController {
-	
-	// autowired 방식임. 생성자 주입 아님 
+
+	// Attired 방식임. 생성자 주입 아님
 	@Autowired
 	private ContentService contentService;
 
-	// TMDB 인기 영화를 가져와 DB에 없는 건만 저장-> 동작 방식 컨텐츠 서비스 인터페이스에 주석으로 엄청 설명해놨으요. 
+	// TMDB 인기 영화를 가져와 DB에 없는 건만 저장-> 동작 방식 컨텐츠 서비스 인터페이스에 주석으로 엄청 설명해놨으요.
 	@RequestMapping(value = "/tmdb/popular", method = {RequestMethod.GET, RequestMethod.POST})
-	public Map<String, Object> importPopular(@RequestParam(defaultValue = "50") int limit) {
-		int insertedCount = contentService.importPopular(limit);
+	public Map<String, Object> sync(@RequestParam(defaultValue = "50") int limit) {
+		int insertedCount = contentService.sync(limit);
 
 		Map<String, Object> result = new HashMap<>();
 		result.put("insertedCount", insertedCount);

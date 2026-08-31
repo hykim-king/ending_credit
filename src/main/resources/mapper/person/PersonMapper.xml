@@ -22,6 +22,10 @@
 					<when test="searchDiv == '30'">
 						external_id = #{searchWord}
 					</when>
+					<otherwise>
+						( name_ko LIKE '%' || #{searchWord} || '%'
+						   OR name_org LIKE '%' || #{searchWord} || '%' )
+					</otherwise>
 				</choose>
 			</if>
 		</where>
