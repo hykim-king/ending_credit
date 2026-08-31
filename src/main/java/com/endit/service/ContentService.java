@@ -1,6 +1,13 @@
 package com.endit.service;
 
+import java.util.List;
+
+import com.endit.cmn.DTO;
+import com.endit.domain.ContentVO;
+
 public interface ContentService {
+
+	List<ContentVO> retrieve(DTO param);
 
 	// TMDB 인기 목록을 limit건까지 보고, 우리 db에 없는 영화만 저장. 
 	// 신규 저장 건수 반환 -> 이미 있는 영화는 업데이트 하지 않는다(importPopular에서 영화 아이디 받아와서, 우리 db 에 있는지

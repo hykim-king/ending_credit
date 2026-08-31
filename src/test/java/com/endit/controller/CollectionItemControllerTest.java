@@ -16,6 +16,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -25,11 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.endit.domain.CollectionItemVO;
 import com.endit.domain.CollectionVO;
 import com.endit.domain.ContentVO;
-import com.endit.domain.MemberVO;
+import com.endit.domain.MemberContentVO;
 import com.endit.mapper.CollectionItemMapper;
 import com.endit.mapper.CollectionMapper;
 import com.endit.mapper.ContentMapper;
-import com.endit.mapper.MemberMapper;
+import com.endit.mapper.MemberContentMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -42,7 +43,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
- * 2026. 8. 26. jinyoung    실제 Spring Bean과 DB 기반 통합 테스트로 변경
+ * 2026. 8. 29. jinyoung    개발 인증 회원 소유 컬렉션 기준 테스트로 변경
+ * 2026. 8. 31. jinyoung    작품 평균 별점 응답 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -73,7 +75,10 @@ class CollectionItemControllerTest {
 	private ContentMapper contentMapper;
 
 	@Autowired
-	private MemberMapper memberMapper;
+	private MemberContentMapper memberContentMapper;
+
+	@Value("${endit.dev-auth.member-id}")
+	private long authenticatedMemberId;
 
 	/** 실제 DB 컬렉션 작품 목록과 페이징 정보의 HTTP 응답 검증 */
 	@Test
@@ -84,6 +89,14 @@ class CollectionItemControllerTest {
 		CollectionItemVO item = createItem(
 				collection.getCollectionId(), content.getContentId());
 		assertEquals(1, collectionItemMapper.doSave(item));
+		assertEquals(1, memberContentMapper.doSave(new MemberContentVO(
+				Math.toIntExact(authenticatedMemberId),
+				content.getContentId(),
+				4,
+				"N",
+				null,
+				null,
+				null)));
 
 		mockMvc.perform(get("/api/collections/{collectionId}/items",
 					collection.getCollectionId())
@@ -97,6 +110,7 @@ class CollectionItemControllerTest {
 						.value(content.getContentId()))
 				.andExpect(jsonPath("$.items[0].titleKo")
 						.value(content.getTitleKo()))
+				.andExpect(jsonPath("$.items[0].averageRating").value(4.0))
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
@@ -219,20 +233,11 @@ class CollectionItemControllerTest {
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록 */
+	/** 개발 인증 회원 소유 컬렉션을 현재 트랜잭션에 등록 */
 	private CollectionVO createCollection() {
-		String token = createToken();
-		MemberVO member = new MemberVO();
-		member.setEmail("item-api-" + token + "@test.local");
-		member.setPassword("encoded-password");
-		member.setNickname("작품API" + token.substring(0, 8));
-		member.setIntroduction("컬렉션 작품 API 통합 테스트 회원");
-		member.setRole("USER");
-		assertEquals(1, memberMapper.insertMember(member));
-
 		CollectionVO collection = new CollectionVO(
 				0,
-				member.getMemberId().intValue(),
+				Math.toIntExact(authenticatedMemberId),
 				"작품 API 통합 테스트 컬렉션",
 				"컬렉션 작품 Controller 통합 테스트",
 				"Y",
