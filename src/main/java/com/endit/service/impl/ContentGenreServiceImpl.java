@@ -3,6 +3,8 @@ package com.endit.service.impl;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,11 @@ public class ContentGenreServiceImpl implements ContentGenreService {
 	private static final String SEARCH_BY_CONTENT = "10";
 	// 페이징 없이 "전체 조회"를 흉내낼 때 쓰는 페이지 크기 - 콘텐츠 하나가 가질 수 있는 장르 수보다 넉넉하게 잡음
 	private static final int RETRIEVE_ALL_PAGE_SIZE = 100;
+	private static final int FIRST_PAGE_NO = 1;
+	private static final int DEFAULT_PAGE_SIZE = 12;
+	private static final int MAX_PAGE_SIZE = 100;
+
+	private static final Logger log = LoggerFactory.getLogger(ContentGenreServiceImpl.class);
 
 	private final ContentGenreMapper contentGenreMapper;
 
@@ -25,9 +32,9 @@ public class ContentGenreServiceImpl implements ContentGenreService {
 		this.contentGenreMapper = contentGenreMapper;
 	}
 
-	// 콘텐츠 하나에 연결된 장르 목록 조회 - CONTENT_GENRE + GENRE 조인, genre_id/genre_name 반환
-	@Override
-	public List<ContentGenreVO> retrieve(int contentId, DTO param) {
+	// 콘텐츠 하나에 연결된 장르 목록 조회 - CONTENT_GENRE + GENRE 조인, genre_id/genre_name 반환.
+	// 한 영화의 장르에는 페이징 화면이 없어 인터페이스에 열지 않고 retrieveAll의 내부 구현으로만 쓴다
+	private List<ContentGenreVO> retrieve(int contentId, DTO param) {
 		validateContentId(contentId);
 
 		if (param == null) {
@@ -51,9 +58,18 @@ public class ContentGenreServiceImpl implements ContentGenreService {
 	@Override
 	public List<ContentGenreVO> retrieveAll(int contentId) {
 		DTO param = new DTO();
-		param.setPageNo(1);
+		param.setPageNo(FIRST_PAGE_NO);
 		param.setPageSize(RETRIEVE_ALL_PAGE_SIZE);
-		return retrieve(contentId, param);
+
+		List<ContentGenreVO> genres = retrieve(contentId, param);
+
+		// "전체"는 실제로 한 페이지 상한이다. 초과분이 말없이 잘리지 않도록 남겨 둔다
+		if (genres.size() == RETRIEVE_ALL_PAGE_SIZE) {
+			log.warn("장르 연결 전체 조회가 페이지 상한에 도달했습니다. 초과분이 잘렸을 수 있습니다. contentId={}, size={}",
+					contentId, genres.size());
+		}
+
+		return genres;
 	}
 
 	// 콘텐츠-장르 연결 단건 조회
@@ -101,20 +117,20 @@ public class ContentGenreServiceImpl implements ContentGenreService {
 		}
 	}
 
-	/** 페이지 번호와 페이지 크기를 허용 범위의 기본값으로 보정 */
+	// 페이지 번호와 페이지 크기를 허용 범위의 기본값으로 보정
 	private void normalizePaging(DTO param) {
 		if (param.getPageNo() <= 0) {
-			param.setPageNo(1);
+			param.setPageNo(FIRST_PAGE_NO);
 		}
 
 		if (param.getPageSize() <= 0) {
-			param.setPageSize(12);
-		} else if (param.getPageSize() > 100) {
-			param.setPageSize(100);
+			param.setPageSize(DEFAULT_PAGE_SIZE);
+		} else if (param.getPageSize() > MAX_PAGE_SIZE) {
+			param.setPageSize(MAX_PAGE_SIZE);
 		}
 	}
 
-	/** 콘텐츠 번호와 장르 번호를 담은 조회 키 생성 */
+	// 콘텐츠 번호와 장르 번호를 담은 조회 키 생성
 	private ContentGenreVO createKey(int contentId, int genreId) {
 		validateContentId(contentId);
 		validateGenreId(genreId);
@@ -126,14 +142,14 @@ public class ContentGenreServiceImpl implements ContentGenreService {
 		return key;
 	}
 
-	/** 콘텐츠 번호가 유효한 양수인지 검증 */
+	// 콘텐츠 번호가 유효한 양수인지 검증
 	private void validateContentId(int contentId) {
 		if (contentId <= 0) {
 			throw new IllegalArgumentException("올바른 콘텐츠 번호가 필요합니다.");
 		}
 	}
 
-	/** 장르 번호가 유효한 양수인지 검증 */
+	// 장르 번호가 유효한 양수인지 검증
 	private void validateGenreId(int genreId) {
 		if (genreId <= 0) {
 			throw new IllegalArgumentException("올바른 장르 번호가 필요합니다.");
