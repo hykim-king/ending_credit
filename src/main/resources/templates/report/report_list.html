@@ -65,10 +65,10 @@ layout:decorate="~{layout/layout}">
                     <th style="width:7%;">유형</th>
                     <th>대상</th>
                     <th style="width:13%;">신고자</th>
-                    <th style="width:13%;">사유</th>
+                    <th style="width:15%;">사유</th>
                     <th style="width:8%;">누적신고</th>
-                    <th style="width:16%;">상태</th>
-                    <th style="width:15%;">접수일</th>
+                    <th style="width:17%;">상태</th>
+                    <th style="width:12%;">접수일</th>
                 </tr>
             </thead>
             <tbody id="reportTbody">
@@ -96,7 +96,9 @@ layout:decorate="~{layout/layout}">
                               th:if="${vo.status == 'ACCEPTED' or vo.status == 'REJECTED'}"
                               th:text="|완료 · ${vo.status}|">완료</span>
                     </td>
-                    <td th:text="${vo.createdDt}">2026/08/25</td>
+                    <!--목록은 날짜만(시각은 상세에서 확인) — 좁은 칸에 밀려 겹치지 않게-->
+                    <td th:title="${vo.createdDt}"
+                        th:text="${#strings.substring(vo.createdDt, 0, 10)}">2026/08/25</td>
                 </tr>
             </tbody>
         </table>

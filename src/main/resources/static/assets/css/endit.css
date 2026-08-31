@@ -209,6 +209,12 @@ body {
     width: 100%;
 }
 
+/* 칸보다 긴 내용은 칸 안에서 잘라 옆 칸을 침범하지 않게 한다 */
+.admin-table tbody td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .admin-table thead th {
     background: #F7F6FA;
     font-size: .82rem;
