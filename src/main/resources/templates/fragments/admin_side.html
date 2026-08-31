@@ -14,7 +14,7 @@
         <a th:href="@{/admin/content}"   th:classappend="${active == 'content'} ? 'active'">영화</a>
         <a th:href="@{/admin/person}"    th:classappend="${active == 'person'} ? 'active'">인물</a>
         <a th:href="@{/admin/member}"    th:classappend="${active == 'member'} ? 'active'">회원</a>
-        <a th:href="@{/report/doRetrieve}" th:classappend="${active == 'report'} ? 'active'">신고</a>
+        <a th:href="@{/admin/report/doRetrieve}" th:classappend="${active == 'report'} ? 'active'">신고</a>
         <a th:href="@{/admin/notice}"    th:classappend="${active == 'notice'} ? 'active'">공지</a>
     </aside>
 </body>

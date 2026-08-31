@@ -3,8 +3,10 @@
  * Class Name : ReportCommentController
  * Description : 코멘트 신고 Controller
  *               접수/처리(반려)/승인은 fetch(AJAX)용 MessageVO, 관리자 목록(AD-09)은 화면 반환.
+ *               경로 규칙(2조 SecurityConfig): 관리자 기능은 /admin/** 아래여야 ADMIN 보호를 받는다
+ *               → 접수(doSave)만 회원 경로(/report), 목록·상세·처리·승인은 /admin/report/**.
  *               ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 신고자·처리자 ID는 폼 값으로 받는다.
- *                  시큐리티 도입 후 Authentication 기반으로 교체할 것.
+ *                  시큐리티 도입 후 LoginMemberHelper 기반으로 교체할 것.
  *
  * Modification Information
  * 수정일        수정자     수정내용
@@ -27,7 +29,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
@@ -41,7 +42,6 @@ import com.endit.service.CodeService;
 import com.endit.service.ReportCommentService;
 
 @Controller
-@RequestMapping("/report")
 public class ReportCommentController {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
@@ -72,7 +72,7 @@ public class ReportCommentController {
 	 * @param model
 	 * @return report/report_list
 	 */
-	@GetMapping("/doRetrieve")
+	@GetMapping("/admin/report/doRetrieve")
 	public String doRetrieve(
 			@RequestParam(required = false, name = "searchDiv", defaultValue = "") String searchDiv,
 			@RequestParam(required = false, name = "searchWord", defaultValue = "") String searchWord,
@@ -128,7 +128,7 @@ public class ReportCommentController {
 	 * @param model
 	 * @return report/report_mng
 	 */
-	@GetMapping("/doSelectOne")
+	@GetMapping("/admin/report/doSelectOne")
 	public String doSelectOne(@RequestParam(name = "reportId") long reportId, Model model) {
 		String viewName = "report/report_mng";
 		log.debug("=============================");
@@ -161,7 +161,7 @@ public class ReportCommentController {
 	 * @param param (reportMemberId, commentId, reason, detail)
 	 * @return MessageVO(id: 1성공/0실패)
 	 */
-	@PostMapping("/doSave")
+	@PostMapping("/report/doSave")
 	@ResponseBody
 	public MessageVO doSave(ReportCommentVO param) {
 		log.debug("=============================");
@@ -187,7 +187,7 @@ public class ReportCommentController {
 	 * @param param (reportId, status, processedByMemberId, processNote)
 	 * @return MessageVO(id: 1성공/0실패)
 	 */
-	@PostMapping("/doUpdate")
+	@PostMapping("/admin/report/doUpdate")
 	@ResponseBody
 	public MessageVO doUpdate(ReportCommentVO param) {
 		log.debug("=============================");
@@ -213,7 +213,7 @@ public class ReportCommentController {
 	 * @param param (reportId, processedByMemberId, processNote)
 	 * @return MessageVO(id: 1성공/0실패)
 	 */
-	@PostMapping("/upApproveReport")
+	@PostMapping("/admin/report/upApproveReport")
 	@ResponseBody
 	public MessageVO upApproveReport(ReportCommentVO param) {
 		log.debug("=============================");

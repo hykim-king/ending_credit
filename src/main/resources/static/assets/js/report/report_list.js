@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!tr || !tr.dataset.reportId) {
             return;
         }
-        location.href = '/report/doSelectOne?reportId=' + tr.dataset.reportId;
+        location.href = '/admin/report/doSelectOne?reportId=' + tr.dataset.reportId;
     });
 });
 

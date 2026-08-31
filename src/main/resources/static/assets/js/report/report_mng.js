@@ -1,6 +1,6 @@
 /**
  * report_mng.js — 신고 상세·처리 (AD-10)
- * 반려 = /report/doUpdate(REJECTED) · 승인 = /report/upApproveReport(상태만 ACCEPTED — 삭제 없음, 팀 결정)
+ * 반려 = /admin/report/doUpdate(REJECTED) · 승인 = /admin/report/upApproveReport(상태만 ACCEPTED — 삭제 없음, 팀 결정)
  */
 document.addEventListener('DOMContentLoaded', () => {
     const btnReject = document.getElementById('btnReject');
@@ -41,10 +41,10 @@ async function doReject() {
     param.status = 'REJECTED';
 
     try {
-        const result = await requestPostForm('/report/doUpdate', param);
+        const result = await requestPostForm('/admin/report/doUpdate', param);
         alert(result.message);
         if ('1' === String(result.id)) {
-            location.href = '/report/doRetrieve';
+            location.href = '/admin/report/doRetrieve';
         }
     } catch (e) {
         alert(e.message);
@@ -62,10 +62,10 @@ async function doApprove() {
     }
 
     try {
-        const result = await requestPostForm('/report/upApproveReport', param);
+        const result = await requestPostForm('/admin/report/upApproveReport', param);
         alert(result.message);
         if ('1' === String(result.id)) {
-            location.href = '/report/doRetrieve';
+            location.href = '/admin/report/doRetrieve';
         }
     } catch (e) {
         alert(e.message);
