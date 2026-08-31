@@ -58,30 +58,30 @@ layout:decorate="~{layout/layout}">
 
         <!--AdminDataTable (CMP-20): 행 클릭 → 상세·처리(AD-10)-->
         <table class="table table-sm table-hover align-middle admin-table bg-white">
+            <!--열 폭 고정(table-layout:fixed) — 대상만 남는 폭을 쓰고 나머지는 줄바꿈 없이 한 줄로-->
             <thead>
-                <tr>
-                    <th style="width:7%;">ID</th>
+                <tr class="text-nowrap">
+                    <th style="width:6%;">ID</th>
                     <th style="width:7%;">유형</th>
-                    <!--대상(코멘트 요약)은 남는 폭을 다 쓰고, 길면 한 줄로 잘라 말줄임 처리-->
-                    <th style="min-width:220px;">대상</th>
-                    <th style="width:11%;">신고자</th>
-                    <th style="width:12%;">사유</th>
-                    <th style="width:7%;">누적신고</th>
-                    <th style="width:12%;">상태</th>
-                    <th style="width:13%;">접수일</th>
+                    <th>대상</th>
+                    <th style="width:13%;">신고자</th>
+                    <th style="width:13%;">사유</th>
+                    <th style="width:8%;">누적신고</th>
+                    <th style="width:16%;">상태</th>
+                    <th style="width:15%;">접수일</th>
                 </tr>
             </thead>
             <tbody id="reportTbody">
                 <tr th:if="${#lists.isEmpty(list)}">
                     <td colspan="8" class="text-center text-muted py-4">신고가 없습니다.</td>
                 </tr>
-                <tr th:each="vo : ${list}" th:attr="data-report-id=${vo.reportId}">
+                <tr th:each="vo : ${list}" th:attr="data-report-id=${vo.reportId}" class="text-nowrap">
                     <td th:text="|R-${vo.reportId}|">R-1</td>
                     <td>코멘트</td>
-                    <td class="text-truncate" style="max-width:0;"
-                        th:title="${vo.commentDetail}"
+                    <!--내용이 길면 잘라서 한 줄로, 전문은 마우스를 올리면 보인다-->
+                    <td class="text-truncate" th:title="${vo.commentDetail}"
                         th:text="${vo.commentDetail}">신고된 코멘트 내용(200자 요약)</td>
-                    <td th:text="${vo.reporterNickname}">신고자</td>
+                    <td class="text-truncate" th:text="${vo.reporterNickname}">신고자</td>
                     <td th:text="${vo.reason}">SPOILER</td>
                     <!--같은 코멘트의 누적 신고 건수 — 2건 이상이면 중복 신고로 강조-->
                     <td class="text-center">
