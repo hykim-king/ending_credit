@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>로그인</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        
+        <!-- 로그인 선택 -->
+        <div id="selectView" th:style="${errorMessage} ? 'display:none' : 'display:block'">
+            <a href="/oauth2/authorization/google" class="btn btn-danger">Google로 로그인</a>
+            <button id="emailBtn" class="btn btn-primary">이메일로 로그인</button>
+            <a href="/signup">회원가입</a>
+        </div>
+        
+        <!-- 이메일 폼 (처음엔 숨김) -->
+        <div id="emailView" th:style="${errorMessage} ? 'display:block' : 'display:none'">
+            <!-- 에러 메시지 (실패 시에만 뜸) -->
+            <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger"></div>
+            <form action="/login/email" method="post">
+                <input type="text" name="email" class="form-control" placeholder="이메일">
+                <input type="password" name="password" class="form-control" placeholder="비밀번호">
+                <button type="submit" class="btn btn-primary">로그인</button>
+            </form>
+            <button id="backBtn">뒤로</button>
+        </div>
+        <script>
+		// "이메일로 로그인" 버튼 누르면 -> 이메일 폼 보이기
+		document.getElementById('emailBtn').addEventListener('click', function() {
+		    document.getElementById('selectView').style.display = 'none';
+		    document.getElementById('emailView').style.display = 'block';
+		});
+		
+		// "뒤로" 누르면 -> 다시 로그인 선택
+		document.getElementById('backBtn').addEventListener('click', function() {
+		    document.getElementById('selectView').style.display = 'block';
+		    document.getElementById('emailView').style.display = 'none';
+		});
+		</script>
+    </div>
+</body>
+</html>

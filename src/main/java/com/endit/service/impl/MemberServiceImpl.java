@@ -2,6 +2,7 @@ package com.endit.service.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ public class MemberServiceImpl implements MemberService {
 
 	public MemberServiceImpl(MemberMapper memberMapper,
 			MemberSocialAccountMapper memberSocialAccountMapper,
-			PasswordEncoder passwordEncoder) {
+			@Lazy PasswordEncoder passwordEncoder) {
 		this.memberMapper              = memberMapper;
 		this.memberSocialAccountMapper = memberSocialAccountMapper;
 		this.passwordEncoder           = passwordEncoder;

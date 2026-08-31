@@ -69,6 +69,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> auth
 				// 관리자 영역만 ADMIN 권한 필요 (role "ADMIN" → 권한 "ROLE_ADMIN")
 				.requestMatchers("/admin/**").hasRole("ADMIN")
+				.requestMatchers("/api/admin/**").hasRole("ADMIN")
 				// 그 외 모든 요청은 개발 편의상 일단 전부 허용
 				.anyRequest().permitAll()
 			)

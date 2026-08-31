@@ -46,11 +46,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 		String providerCode = userRequest.getClientRegistration().getRegistrationId().toUpperCase();
 
 		// 3) 구글이 준 정보 꺼내기
-		String sub   = String.valueOf(oAuth2User.getAttribute("sub"));
+		String sub   = oAuth2User.getAttribute("sub");
 		String email = oAuth2User.getAttribute("email");
 		String name  = oAuth2User.getAttribute("name");
 
-		log.debug("loadUser(provider={}, sub={}, email={})", providerCode, sub, email);
+		log.debug("loadUser(provider={}, sub={}, email={}, name={})", providerCode, sub, email, name);
 
 		// 4) 기존 소셜 회원인지 확인
 		MemberVO member = memberService.findBySocial(providerCode, sub);

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>회원가입</title>
+</head>
+<body>
+    <div layout:fragment="content">
+
+        <!-- 에러 메시지 (실패 시) -->
+        
+
+        <!-- 회원가입 폼 -->
+        <form action="/signup/email" method="post" th:object="${member}">
+            <input type="text" name="email" placeholder="name@example.com">
+            <input type="password" name="password" placeholder="8자 이상">
+            <input type="password" name="email" placeholder="비밀번호 재입력">
+            <input type="text" name="email" placeholder="2 ~ 15자">
+            <button type="submit">가입하기</button>   
+        </form>
+
+        <!-- (script는 여기 content 안에!) -->
+
+    </div>
+</body>
+</html>
