@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.endit.auth.CurrentMemberProvider;
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CollectionLikeItemVO;
@@ -34,7 +34,7 @@ import com.endit.service.CollectionLikeService;
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 규격 및 예외 처리 보완
- * 2026. 8. 28. jinyoung    상세 좋아요 상태 조회 추가
+ * 2026. 8. 29. jinyoung    인증·공개 범위·본인 제한 및 좋아요 상태 조회 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -47,14 +47,20 @@ public class CollectionLikeController {
 	private static final String TYPE_COLLECTION = "collection";
 
 	private final CollectionLikeService collectionLikeService;
+	private final CurrentMemberProvider currentMemberProvider;
 
 	/**
 	 * CollectionLikeService를 주입받아 Controller 생성
 	 *
 	 * @param collectionLikeService 컬렉션 좋아요 Service
+	 * @param currentMemberProvider 현재 로그인 회원 Provider
 	 */
-	public CollectionLikeController(CollectionLikeService collectionLikeService) {
+	public CollectionLikeController(
+			CollectionLikeService collectionLikeService,
+			CurrentMemberProvider currentMemberProvider) {
+
 		this.collectionLikeService = collectionLikeService;
+		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/**
@@ -64,20 +70,15 @@ public class CollectionLikeController {
 	 * 현재 좋아요 정보를 그대로 응답하는 멱등 처리를 한다.
 	 *
 	 * @param collectionId 컬렉션 번호
-	 * @param param 회원 번호를 담은 요청 정보
 	 * @return 등록된(또는 이미 등록되어 있던) 컬렉션 좋아요 정보
 	 */
 	@PostMapping("/api/collections/{collectionId}/likes")
 	public ResponseEntity<CollectionLikeVO> like(
-			@PathVariable int collectionId,
-			@RequestBody CollectionLikeVO param) {
+			@PathVariable int collectionId) {
 
-		// 로그인 기능이 병합되기 전에는 화면에서 입력한 임시 회원 번호를 사용한다.
-		// 최종 통합 시 이 값은 로그인 Principal의 MEMBER_ID로 교체해야 한다.
-		int memberId = param.getMemberId();
-
-		CollectionLikeVO like =
-				collectionLikeService.create(memberId, collectionId);
+		long memberId = currentMemberProvider.requireMemberId();
+		CollectionLikeVO like = collectionLikeService.create(
+				memberId, collectionId);
 
 		return ResponseEntity.status(HttpStatus.CREATED).body(like);
 	}
@@ -90,39 +91,23 @@ public class CollectionLikeController {
 	 */
 	@DeleteMapping("/api/collections/{collectionId}/likes")
 	public ResponseEntity<Void> unlike(
-			@PathVariable int collectionId,
-			@RequestBody CollectionLikeVO param) {
+			@PathVariable int collectionId) {
 
-		int memberId = param.getMemberId();
-
-		try {
-			collectionLikeService.delete(memberId, collectionId);
-		} catch (NoSuchElementException alreadyUnliked) {
-
-		}
+		long memberId = currentMemberProvider.requireMemberId();
+		collectionLikeService.delete(memberId, collectionId);
 
 		return ResponseEntity.noContent().build();
 	}
 
-	/**컬렉션 상세 화면에서 임시 회원의 좋아요 상태 조회*/
+	/** 현재 인증 회원의 컬렉션 좋아요 여부 조회 */
 	@GetMapping("/api/collections/{collectionId}/likes")
-	public ResponseEntity<Map<String, Boolean>> getLikeStatus(
-			@PathVariable int collectionId,
-			@RequestParam int memberId) {
+	public ResponseEntity<Map<String, Boolean>> likeStatus(
+			@PathVariable int collectionId) {
 
-		boolean liked;
+		long memberId = currentMemberProvider.requireMemberId();
+		boolean liked = collectionLikeService.isLiked(memberId, collectionId);
 
-		try {
-			collectionLikeService.get(memberId, collectionId);
-			liked = true;
-		} catch (NoSuchElementException notLiked) {
-			liked = false;
-		}
-
-		Map<String, Boolean> response = new LinkedHashMap<>();
-		response.put("liked", liked);
-
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(Map.of("liked", liked));
 	}
 
 	/**특정 회원이 좋아요를 누른 컬렉션 목록 조회 (U-07 좋아요 목록 · 컬렉션 탭)*/
@@ -142,7 +127,10 @@ public class CollectionLikeController {
 		param.setPageNo(pageNo);
 		param.setPageSize(pageSize);
 
-		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(memberId, param);
+		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(
+				memberId,
+				param,
+				currentMemberProvider.findCurrentMemberId());
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("items", items);
@@ -178,6 +166,21 @@ public class CollectionLikeController {
 
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
+				.body(message);
+	}
+
+	/** 존재하지 않거나 접근할 수 없는 컬렉션을 HTTP 404 응답으로 변환 */
+	@ExceptionHandler(NoSuchElementException.class)
+	public ResponseEntity<MessageVO> handleNotFound(
+			NoSuchElementException exception) {
+
+		MessageVO message = new MessageVO(
+				"404",
+				exception.getMessage(),
+				"요청한 컬렉션을 찾을 수 없습니다.");
+
+		return ResponseEntity
+				.status(HttpStatus.NOT_FOUND)
 				.body(message);
 	}
 

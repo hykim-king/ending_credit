@@ -8,26 +8,28 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.util.UUID;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.domain.CollectionLikeVO;
+import com.endit.domain.CollectionVO;
+import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionLikeMapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.endit.mapper.CollectionMapper;
+import com.endit.mapper.MemberMapper;
 
 /**
  * <pre>
  * Class Name  : CollectionLikeControllerTest
- * Description : 컬렉션 좋아요 등록, 취소 및 회원별 좋아요 컬렉션 목록 조회 API를 검증하는 테스트
+ * Description : 컬렉션 좋아요 등록, 취소 및 회원별 좋아요 컬렉션 목록 API 테스트
  *
  * Modification History
  * ------------------------------------------------------------
@@ -35,7 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * ------------------------------------------------------------
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 API 규격 변경 반영
- * 2026. 8. 28. jinyoung    상세 좋아요 상태 조회 검증 추가
+ * 2026. 8. 29. jinyoung    인증·공개 범위·본인 제한 및 상태 조회 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -48,198 +50,204 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @DisplayName("CollectionLikeController 테스트")
 class CollectionLikeControllerTest {
 
-	private static final Logger log = LoggerFactory.getLogger(CollectionLikeControllerTest.class);
-
-	// MEMBER_ID 1, COLLECTION_ID 1·2는 공용 DB에 존재하는 부모 더미 데이터
-	private static final int MEMBER_ID = 1;
-	private static final int COLLECTION_ID = 1;
-	private static final int OTHER_COLLECTION_ID = 2;
-
 	@Autowired
 	private MockMvc mockMvc;
 
 	@Autowired
-	private ObjectMapper objectMapper;
-
-	@Autowired
 	private CollectionLikeMapper collectionLikeMapper;
 
-	/**매 테스트 전 COLLECTION_LIKE 데이터를 비운 상태로 초기화*/
-	@BeforeEach
-	void setUp() {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ setUp()                      │");
-		log.debug("└──────────────────────────────┘");
+	@Autowired
+	private CollectionMapper collectionMapper;
 
-		collectionLikeMapper.deleteAll();
-		assertEquals(0, collectionLikeMapper.totalCnt());
+	@Autowired
+	private MemberMapper memberMapper;
 
-		log.debug("* initializedData: totalCnt-{}건", collectionLikeMapper.totalCnt());
-	}
+	@Value("${endit.dev-auth.member-id}")
+	private long authenticatedMemberId;
 
-	/**컬렉션 좋아요 등록 API 검증*/
+	/** 인증 회원의 컬렉션 좋아요 등록 API 검증 */
 	@Test
 	@DisplayName("컬렉션 좋아요 등록 API")
-	void testLike() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ like()                       │");
-		log.debug("└──────────────────────────────┘");
+	void like() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "Y");
 
-		CollectionLikeVO param = new CollectionLikeVO();
-		param.setMemberId(MEMBER_ID);
-
-		mockMvc.perform(post("/api/collections/{collectionId}/likes", COLLECTION_ID)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(param)))
+		mockMvc.perform(post("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.memberId").value(MEMBER_ID))
-				.andExpect(jsonPath("$.collectionId").value(COLLECTION_ID));
-
-		assertEquals(1, collectionLikeMapper.totalCnt());
-
-		log.debug("* likedData: memberId-{}, collectionId-{}", MEMBER_ID, COLLECTION_ID);
+				.andExpect(jsonPath("$.memberId")
+						.value(Math.toIntExact(authenticatedMemberId)))
+				.andExpect(jsonPath("$.collectionId")
+						.value(collection.getCollectionId()));
 	}
 
-	/**정책(POL-010) · 이미 좋아요를 누른 상태에서 재요청 시 멱등 응답 검증*/
+	/** 이미 좋아요한 컬렉션의 멱등 등록 검증 */
 	@Test
-	@DisplayName("이미 좋아요를 누른 상태에서 재등록 요청 시 멱등 응답")
-	void testLike_alreadyLiked_idempotent() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ like_alreadyLiked()          │");
-		log.debug("└──────────────────────────────┘");
-
-		CollectionLikeVO existing = new CollectionLikeVO(MEMBER_ID, COLLECTION_ID, null);
+	@DisplayName("이미 좋아요한 컬렉션 재등록은 멱등 응답")
+	void likeIdempotent() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "Y");
+		CollectionLikeVO existing = likeKey(collection.getCollectionId());
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(existing));
 
-		CollectionLikeVO param = new CollectionLikeVO();
-		param.setMemberId(MEMBER_ID);
-
-		mockMvc.perform(post("/api/collections/{collectionId}/likes", COLLECTION_ID)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(param)))
+		mockMvc.perform(post("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.memberId").value(MEMBER_ID))
-				.andExpect(jsonPath("$.collectionId").value(COLLECTION_ID));
-
-		assertEquals(1, collectionLikeMapper.totalCnt());
-
-		log.debug("* totalCnt: {}건", collectionLikeMapper.totalCnt());
+				.andExpect(jsonPath("$.memberId")
+						.value(Math.toIntExact(authenticatedMemberId)))
+				.andExpect(jsonPath("$.collectionId")
+						.value(collection.getCollectionId()));
 	}
 
-	/**컬렉션 좋아요 취소 API 검증*/
+	/** 인증 회원의 컬렉션 좋아요 취소 API 검증 */
 	@Test
 	@DisplayName("컬렉션 좋아요 취소 API")
-	void testUnlike() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ unlike()                     │");
-		log.debug("└──────────────────────────────┘");
-
-		CollectionLikeVO existing = new CollectionLikeVO(MEMBER_ID, COLLECTION_ID, null);
+	void unlike() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "Y");
+		CollectionLikeVO existing = likeKey(collection.getCollectionId());
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(existing));
 
-		CollectionLikeVO param = new CollectionLikeVO();
-		param.setMemberId(MEMBER_ID);
-
-		mockMvc.perform(delete("/api/collections/{collectionId}/likes", COLLECTION_ID)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(param)))
+		mockMvc.perform(delete("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
 				.andExpect(status().isNoContent());
 
 		assertNull(collectionLikeMapper.selectCollectionLike(existing));
-
-		log.debug("* remainingCnt: {}건", collectionLikeMapper.totalCnt());
 	}
 
-	/** 정책(POL-011) · 좋아요가 없는 상태에서 취소 요청 시 멱등 응답 검증*/
+	/** 좋아요가 없어도 취소 요청을 멱등 처리하는지 검증 */
 	@Test
-	@DisplayName("좋아요가 없는 상태에서 취소 요청해도 멱등 응답")
-	void testUnlike_notLiked_idempotent() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ unlike_notLiked()            │");
-		log.debug("└──────────────────────────────┘");
+	@DisplayName("좋아요가 없어도 취소 요청은 204")
+	void unlikeIdempotent() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "Y");
 
-		CollectionLikeVO param = new CollectionLikeVO();
-		param.setMemberId(MEMBER_ID);
-
-		mockMvc.perform(delete("/api/collections/{collectionId}/likes", COLLECTION_ID)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(param)))
+		mockMvc.perform(delete("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
 				.andExpect(status().isNoContent());
-
-		log.debug("* result: 멱등 처리로 204 응답 확인");
 	}
 
-	/**컬렉션 상세 화면용 좋아요 상태 조회 API 검증*/
+	/** 현재 인증 회원이 좋아요한 컬렉션의 상태 조회 검증 */
 	@Test
-	@DisplayName("컬렉션 상세 좋아요 상태 조회 API")
-	void testGetLikeStatus() throws Exception {
-		mockMvc.perform(get("/api/collections/{collectionId}/likes", COLLECTION_ID)
-				.param("memberId", String.valueOf(MEMBER_ID)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.liked").value(false));
-
+	@DisplayName("좋아요한 컬렉션 상태는 true")
+	void likeStatusTrue() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "Y");
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(
-				new CollectionLikeVO(MEMBER_ID, COLLECTION_ID, null)));
+				likeKey(collection.getCollectionId())));
 
-		mockMvc.perform(get("/api/collections/{collectionId}/likes", COLLECTION_ID)
-				.param("memberId", String.valueOf(MEMBER_ID)))
+		mockMvc.perform(get("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.liked").value(true));
 	}
 
-	/**회원별 좋아요 컬렉션 목록 조회 API 검증*/
+	/** 현재 인증 회원이 좋아요하지 않은 컬렉션의 상태 조회 검증 */
+	@Test
+	@DisplayName("좋아요하지 않은 컬렉션 상태는 false")
+	void likeStatusFalse() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "Y");
+
+		mockMvc.perform(get("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.liked").value(false));
+	}
+
+	/** 특정 회원의 공개 좋아요 컬렉션 목록 조회 검증 */
 	@Test
 	@DisplayName("회원별 좋아요 컬렉션 목록 조회 API")
-	void testRetrieveByMember() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ retrieveByMember()           │");
-		log.debug("└──────────────────────────────┘");
-
+	void retrieveByMember() throws Exception {
+		int targetMemberId = createMemberId();
+		CollectionVO first = createCollection(createMemberId(), "Y");
+		CollectionVO second = createCollection(createMemberId(), "Y");
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(
-				new CollectionLikeVO(MEMBER_ID, COLLECTION_ID, null)));
+				new CollectionLikeVO(
+						targetMemberId, first.getCollectionId(), null)));
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(
-				new CollectionLikeVO(MEMBER_ID, OTHER_COLLECTION_ID, null)));
+				new CollectionLikeVO(
+						targetMemberId, second.getCollectionId(), null)));
 
-		mockMvc.perform(get("/api/users/{memberId}/likes", MEMBER_ID)
-				.param("type", "collection")
-				.param("page", "1")
-				.param("size", "12"))
+		mockMvc.perform(get("/api/users/{memberId}/likes", targetMemberId)
+					.param("type", "collection")
+					.param("page", "1")
+					.param("size", "12"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items.length()").value(2))
 				.andExpect(jsonPath("$.page.totalCnt").value(2));
-
-		log.debug("* totalCnt: {}건", collectionLikeMapper.selectLikedCollectionCountByMember(MEMBER_ID));
 	}
 
-	/**좋아요한 컬렉션이 없는 회원을 조회하면 빈 목록이 응답되는지 검증*/
+	/** 좋아요 컬렉션이 없는 회원의 빈 목록 검증 */
 	@Test
 	@DisplayName("좋아요한 컬렉션이 없으면 빈 목록 응답")
-	void testRetrieveByMember_empty() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ retrieveByMember_empty()     │");
-		log.debug("└──────────────────────────────┘");
+	void retrieveByMemberEmpty() throws Exception {
+		int targetMemberId = createMemberId();
 
-		mockMvc.perform(get("/api/users/{memberId}/likes", MEMBER_ID)
-				.param("type", "collection"))
+		mockMvc.perform(get("/api/users/{memberId}/likes", targetMemberId)
+					.param("type", "collection"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items.length()").value(0));
-
-		log.debug("* emptyResult 확인");
 	}
 
-	/**type=collection이 아닌 요청은 400으로 응답되는지 검증*/
+	/** 컬렉션 이외의 좋아요 타입 거부 검증 */
 	@Test
 	@DisplayName("type=collection이 아니면 400 응답")
-	void testRetrieveByMember_invalidType() throws Exception {
-		log.debug("┌──────────────────────────────┐");
-		log.debug("│ retrieveByMember_invalidType()│");
-		log.debug("└──────────────────────────────┘");
-
-		mockMvc.perform(get("/api/users/{memberId}/likes", MEMBER_ID)
-				.param("type", "people"))
+	void retrieveByMemberInvalidType() throws Exception {
+		mockMvc.perform(get("/api/users/{memberId}/likes", createMemberId())
+					.param("type", "people"))
 				.andExpect(status().isBadRequest());
-
-		log.debug("* result: 400 응답 확인");
 	}
 
+	/** 인증 회원 본인 컬렉션 좋아요 금지 검증 */
+	@Test
+	@DisplayName("본인 컬렉션 좋아요는 403")
+	void likeOwnCollection() throws Exception {
+		CollectionVO collection = createCollection(
+				Math.toIntExact(authenticatedMemberId), "Y");
+
+		mockMvc.perform(post("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.id").value("403"));
+	}
+
+	/** 비공개 컬렉션 비소유자의 좋아요 요청 은닉 검증 */
+	@Test
+	@DisplayName("비공개 컬렉션 비소유자 좋아요는 404")
+	void likePrivateCollection() throws Exception {
+		CollectionVO collection = createCollection(createMemberId(), "N");
+
+		mockMvc.perform(post("/api/collections/{collectionId}/likes",
+					collection.getCollectionId()))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.id").value("404"));
+	}
+
+	/** 테스트 회원 등록 */
+	private int createMemberId() {
+		String token = UUID.randomUUID().toString().replace("-", "");
+		MemberVO member = new MemberVO();
+		member.setEmail("collection-like-api-" + token + "@test.local");
+		member.setPassword("encoded-password");
+		member.setNickname("좋아요API" + token.substring(0, 8));
+		member.setIntroduction("컬렉션 좋아요 API 테스트 회원");
+		member.setRole("USER");
+		assertEquals(1, memberMapper.insertMember(member));
+		return member.getMemberId().intValue();
+	}
+
+	/** 지정한 회원 소유 테스트 컬렉션 등록 */
+	private CollectionVO createCollection(int memberId, String isPublic) {
+		CollectionVO collection = new CollectionVO(
+				0,
+				memberId,
+				"좋아요 API 컬렉션 " + UUID.randomUUID(),
+				"컬렉션 좋아요 Controller 테스트",
+				isPublic,
+				null,
+				null);
+		assertEquals(1, collectionMapper.doSave(collection));
+		return collection;
+	}
+
+	/** 인증 회원의 좋아요 복합키 생성 */
+	private CollectionLikeVO likeKey(int collectionId) {
+		return new CollectionLikeVO(
+				Math.toIntExact(authenticatedMemberId), collectionId, null);
+	}
 }

@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+Modification History
+2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 정책 적용
+2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 화면 연결·작품 평균 별점 적용
+-->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
 <meta charset="UTF-8">
@@ -8,9 +13,9 @@
 <title>컬렉션 상세</title>
 <link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
 </head>
-<!-- 서버는 조회 키와 임시 회원 번호만 전달하고 실제 상세 데이터는 REST API로 가져온다. -->
+<!-- 서버는 조회 키와 화면 권한 판별값만 넣고 실제 상세 데이터는 REST API로 가져온다. -->
 <body class="bg-light"
-      th:attr="data-collection-id=${collectionId},data-member-id=${memberId}">
+      th:attr="data-collection-id=${collectionId},data-current-member-id=${currentMemberId}">
     <header class="border-bottom bg-white">
         <div class="container py-3 d-flex justify-content-between align-items-center">
             <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
@@ -39,21 +44,26 @@
                             <span id="collectionDate"></span>
                         </div>
                     </div>
-                    <div class="d-flex align-items-start gap-2">
-                        <span class="badge text-bg-light border align-self-center"
-                              th:text="|임시 회원 #${memberId}|">
-                            임시 회원
-                        </span>
-                        <button id="collectionLikeButton"
-                                class="btn btn-outline-danger"
-                                type="button"
-                                aria-pressed="false"
-                                disabled>
-                            ♡ 좋아요
-                        </button>
-                        <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
+                    <div id="collectionActions" class="d-flex flex-wrap align-items-start gap-2">
+                        <button id="likeButton" class="btn btn-outline-danger d-none"
+                                type="button" aria-pressed="false">좋아요</button>
+                        <button id="copyLinkButton" class="btn btn-outline-secondary d-none"
+                                type="button">링크 복사</button>
+                        <a id="commentsLink" class="btn btn-outline-secondary" href="#">
+                            코멘트 보기
+                        </a>
+                        <div id="ownerActions" class="d-flex gap-2 d-none">
+                            <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
+                            <button class="btn btn-outline-danger" type="button"
+                                    data-bs-toggle="modal" data-bs-target="#deleteCollectionModal">
+                                삭제
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <p id="copyLinkFeedback" class="small text-success mt-2 mb-0 d-none"
+                   role="status" aria-live="polite">링크를 복사했습니다.</p>
 
                 <div class="mt-3 d-flex gap-3 small text-secondary">
                     <span>작품 <strong id="itemCount">0</strong></span>
@@ -78,6 +88,30 @@
         </section>
     </main>
 
+    <!-- 컬렉션 전체 삭제 전에 사용자의 최종 확인을 받는 Bootstrap 모달 -->
+    <div class="modal fade" id="deleteCollectionModal" tabindex="-1"
+         aria-labelledby="deleteCollectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteCollectionModalLabel">컬렉션 삭제</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="닫기"></button>
+                </div>
+                <div class="modal-body">
+                    컬렉션을 삭제하면 되돌릴 수 없습니다. 삭제하시겠습니까?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">취소</button>
+                    <button id="confirmDeleteButton" type="button"
+                            class="btn btn-danger">삭제</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/assets/js/bootstrap.js}"></script>
     <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
     <script th:src="@{/assets/js/collection/collection-detail.js}"></script>
 </body>
