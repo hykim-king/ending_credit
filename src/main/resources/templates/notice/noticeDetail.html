@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공지 상세 | END IT</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/notice/notice.css">
+</head>
+<body data-page="notice-detail" th:attr="data-notice-id=${noticeId}">
+
+<header class="endit-header">
+    <a href="/" class="endit-logo">END IT</a>
+    <div class="header-search">영화, 인물, 컬렉션 검색</div>
+    <div class="header-actions">
+        <a href="/login">로그인</a>
+        <a href="/signup" class="join-link">회원가입</a>
+    </div>
+</header>
+
+<main class="notice-container">
+    <button type="button" id="backButton" class="outline-button mb-3">목록으로</button>
+
+    <article class="notice-detail-card">
+        <div id="detailLoading" class="notice-state">공지사항을 불러오는 중입니다.</div>
+
+        <div id="detailContent" hidden>
+            <div class="detail-title-wrap">
+                <span id="detailImportant" class="important-label" hidden>중요</span>
+                <h1 id="detailTitle" class="detail-title"></h1>
+            </div>
+
+            <div class="detail-meta">
+                <span id="detailCreatedDt"></span>
+                <span>조회 <strong id="detailViewCount"></strong></span>
+            </div>
+
+            <div id="detailBody" class="detail-body"></div>
+        </div>
+
+        <div id="detailError" class="notice-state" hidden>
+            게시된 공지사항을 찾을 수 없습니다.
+        </div>
+    </article>
+</main>
+
+<script src="/assets/js/notice/notice.js"></script>
+</body>
+</html>
