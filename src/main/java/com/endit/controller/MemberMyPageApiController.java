@@ -260,6 +260,7 @@ public class MemberMyPageApiController {
 		response.put("createdDt",     member.getCreatedDt());
 		response.put("updatedDt",     member.getUpdatedDt());
 		response.put("socialOnly",    member.getPassword() == null);
+		response.put("stats",         toEmptyStats());
 
 		return response;
 	}
