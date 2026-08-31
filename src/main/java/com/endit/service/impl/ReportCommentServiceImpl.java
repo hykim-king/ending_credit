@@ -1,22 +1,11 @@
 /**
- * <pre>
- * Class Name : ReportCommentServiceImpl
- * Description : 코멘트 신고 Service 구현체
- *               - doSave: 사유가 OTHER면 상세 필수(CK_REPORT_OTHER_DETAIL)를 먼저 검증
- *               - upApproveReport: 승인 = 신고 상태만 ACCEPTED로 저장(팀 결정: 데이터 삭제 없음).
- *                 코멘트는 그대로 두고, 코멘트 조회가 "승인된 신고 존재"를 blindReason으로
- *                 실어 화면에서 사유별 안내 문구로 가린다
- *               - 완료(ACCEPTED/REJECTED)된 신고는 재처리 금지 — 처리자·처리내용 이력 보호
- *               - 검색조건은 10=처리상태/20=사유(문자), 30=코멘트ID(숫자) — 30만 숫자 검증
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 신고 Service 구현체
+ * - doSave: 사유가 OTHER면 상세 필수(CK_REPORT_OTHER_DETAIL)를 먼저 검증
+ * - upApproveReport: 승인 = 신고 상태만 ACCEPTED로 저장(팀 결정: 데이터 삭제 없음).
+ * 코멘트는 그대로 두고, 코멘트 조회가 "승인된 신고 존재"를 blindReason으로
+ * 실어 화면에서 사유별 안내 문구로 가린다
+ * - 완료(ACCEPTED/REJECTED)된 신고는 재처리 금지 — 처리자·처리내용 이력 보호
+ * - 검색조건은 10=처리상태/20=사유(문자), 30=코멘트ID(숫자) — 30만 숫자 검증
  */
 package com.endit.service.impl;
 

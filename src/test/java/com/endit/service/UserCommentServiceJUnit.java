@@ -1,18 +1,7 @@
 /**
- * <pre>
- * Class Name : UserCommentServiceJUnit
- * Description : 코멘트 Service JUnit
- *               서비스 고유 로직(검색어 숫자 검증)과 매퍼 위임을 검증한다.
- *               팀 테스트 규칙: 공용 더미(테이블당 10건) 위에서 @Transactional 롤백.
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 Service JUnit
+ * 서비스 고유 로직(검색어 숫자 검증)과 매퍼 위임을 검증한다.
+ * 팀 테스트 규칙: 공용 더미(테이블당 10건) 위에서 @Transactional 롤백.
  */
 package com.endit.service;
 

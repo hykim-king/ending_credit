@@ -1,16 +1,5 @@
 /**
- * <pre>
- * Class Name : AdminMapperDaoTest
- * Description : 관리자 임시 조회 Mapper JUnit (읽기 전용 — 팀 규칙: @Transactional)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성 (임시)
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * 관리자 임시 조회 Mapper JUnit (읽기 전용 — 팀 규칙: @Transactional)
  */
 package com.endit.mapper;
 

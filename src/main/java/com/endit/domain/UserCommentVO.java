@@ -1,18 +1,6 @@
 /**
- * <pre>
- * Class Name : UserCommentVO
- * Description : 코멘트(USER_COMMENT) VO
- *               영화(CONTENT) 또는 컬렉션(COLLECTION) 중 한쪽에만 다는 한줄평.
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * 2026. 8. 19.  홍선기   조회 전용 join 필드 추가(작성자 닉네임·좋아요 수·별점) — 8/18 공지 보완점2
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 12.
+ * 코멘트(USER_COMMENT) VO
+ * 영화(CONTENT) 또는 컬렉션(COLLECTION) 중 한쪽에만 다는 한줄평.
  */
 package com.endit.domain;
 

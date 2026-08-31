@@ -1,16 +1,5 @@
 /**
- * <pre>
- * Class Name : AdminService
- * Description : ⚠️ 관리자 임시 조회 전용 Service (4조 데모용 — 담당 조 구현 시 대체)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성 (임시)
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * ⚠️ 관리자 임시 조회 전용 Service (4조 데모용 — 담당 조 구현 시 대체)
  */
 package com.endit.service;
 

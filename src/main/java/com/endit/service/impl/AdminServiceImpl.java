@@ -1,16 +1,5 @@
 /**
- * <pre>
- * Class Name : AdminServiceImpl
- * Description : ⚠️ 관리자 임시 조회 전용 Service 구현체 — 매퍼 위임(읽기만, 트랜잭션 불요)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성 (임시)
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * ⚠️ 관리자 임시 조회 전용 Service 구현체 — 매퍼 위임(읽기만, 트랜잭션 불요)
  */
 package com.endit.service.impl;
 

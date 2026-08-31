@@ -1,19 +1,8 @@
 /**
- * <pre>
- * Class Name : CommentController
- * Description : 코멘트 Controller
- *               목록은 화면(뷰) 반환, 등록/수정/삭제는 fetch(AJAX)용 MessageVO 반환.
- *               ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 작성자(memberId)는 폼 값으로 받는다.
- *                  시큐리티 도입 후 Authentication.getName() 기반으로 교체할 것(학원 23장 방식).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 Controller
+ * 목록은 화면(뷰) 반환, 등록/수정/삭제는 fetch(AJAX)용 MessageVO 반환.
+ * ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 작성자(memberId)는 폼 값으로 받는다.
+ * 시큐리티 도입 후 Authentication.getName() 기반으로 교체할 것(학원 23장 방식).
  */
 package com.endit.controller;
 

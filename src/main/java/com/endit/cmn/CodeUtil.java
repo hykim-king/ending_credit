@@ -1,16 +1,5 @@
 /**
- * <pre>
- * Class Name : CodeUtil
- * Description : 여러 그룹을 한 번에 조회한 코드 목록에서 그룹별 목록을 분리 (학원 sb15 원형)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * 여러 그룹을 한 번에 조회한 코드 목록에서 그룹별 목록을 분리 (학원 sb15 원형)
  */
 package com.endit.cmn;
 

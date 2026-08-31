@@ -1,17 +1,6 @@
 /**
- * <pre>
- * Class Name : CommentLikeServiceImpl
- * Description : 코멘트 좋아요 Service 구현체
- *               핵심은 upToggleLike — 눌렀는지 확인 후 등록/취소를 한 트랜잭션으로 조합.
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 좋아요 Service 구현체
+ * 핵심은 upToggleLike — 눌렀는지 확인 후 등록/취소를 한 트랜잭션으로 조합.
  */
 package com.endit.service.impl;
 

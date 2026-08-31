@@ -1,18 +1,7 @@
 /**
- * <pre>
- * Class Name : CommentLikeService
- * Description : 코멘트 좋아요 Service 인터페이스
- *               좋아요에는 목록/수정/단건조회가 없어 WorkDiv를 상속하지 않고
- *               필요한 메서드만 직접 선언한다(학원 UserService 선례).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 좋아요 Service 인터페이스
+ * 좋아요에는 목록/수정/단건조회가 없어 WorkDiv를 상속하지 않고
+ * 필요한 메서드만 직접 선언한다(학원 UserService 선례).
  */
 package com.endit.service;
 

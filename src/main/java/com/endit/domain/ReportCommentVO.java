@@ -1,18 +1,6 @@
 /**
- * <pre>
- * Class Name : ReportCommentVO
- * Description : 코멘트 신고(REPORT_COMMENT) VO
- *               신고 대상은 코멘트뿐이다(COMMENT_ID NOT NULL).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * 2026. 8. 19.  홍선기   조회 전용 join 필드 추가(신고자·처리자 닉네임, 대상 코멘트 내용) — 8/18 공지 보완점2
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 12.
+ * 코멘트 신고(REPORT_COMMENT) VO
+ * 신고 대상은 코멘트뿐이다(COMMENT_ID NOT NULL).
  */
 package com.endit.domain;
 

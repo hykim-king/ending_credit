@@ -1,17 +1,6 @@
 /**
- * <pre>
- * Class Name : ReportCommentService
- * Description : 코멘트 신고 Service 인터페이스
- *               CRUD 계약은 WorkDiv를 그대로 상속한다(학원 표준).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 신고 Service 인터페이스
+ * CRUD 계약은 WorkDiv를 그대로 상속한다(학원 표준).
  */
 package com.endit.service;
 

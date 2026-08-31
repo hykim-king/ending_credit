@@ -1,18 +1,7 @@
 /**
- * <pre>
- * Class Name : CommentLikeServiceJUnit
- * Description : 코멘트 좋아요 Service JUnit
- *               핵심은 upToggleLike — 등록↔취소 토글이 한 번씩 번갈아 동작하는지.
- *               팀 테스트 규칙: 공용 더미(테이블당 10건) 위에서 @Transactional 롤백.
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 좋아요 Service JUnit
+ * 핵심은 upToggleLike — 등록↔취소 토글이 한 번씩 번갈아 동작하는지.
+ * 팀 테스트 규칙: 공용 더미(테이블당 10건) 위에서 @Transactional 롤백.
  */
 package com.endit.service;
 

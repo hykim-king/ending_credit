@@ -1,16 +1,5 @@
 /**
- * <pre>
- * Class Name : CodeMapper
- * Description : 공통코드 조회 Mapper (학원 27장 패턴 — 조회 전용이라 WorkDiv 미상속)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * 공통코드 조회 Mapper (학원 27장 패턴 — 조회 전용이라 WorkDiv 미상속)
  */
 package com.endit.mapper;
 
