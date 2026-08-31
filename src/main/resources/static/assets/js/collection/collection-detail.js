@@ -2,6 +2,7 @@
  * Modification History
  * 2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 및 포스터 적용
  * 2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 연결·작품 평균 별점 적용
+ * 2026. 8. 31. jinyoung - 컬렉션 작품 카드를 영화 상세 화면과 연결
  */
 // View Controller가 body의 data-* 속성에 넣은 값을 상세 조회와 권한 표시에 사용한다.
 const collectionId = Number(document.body.dataset.collectionId);
@@ -187,6 +188,10 @@ function renderItems(items) {
         const column = document.createElement("div");
         column.className = "col-12 col-sm-6 col-lg-4 col-xl-3";
 
+        const link = document.createElement("a");
+        link.className = "text-decoration-none text-dark h-100 d-block";
+        link.href = `/movies/${item.contentId}`;
+
         const card = document.createElement("article");
         card.className = "card h-100 border-0 shadow-sm";
 
@@ -216,7 +221,8 @@ function renderItems(items) {
         body.append(title, info);
 
         card.append(body);
-        column.append(card);
+        link.append(card);
+        column.append(link);
         itemList.append(column);
     });
 }

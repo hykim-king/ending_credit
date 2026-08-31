@@ -1,3 +1,7 @@
+/**
+ * Modification History
+ * 2026. 8. 31. jinyoung - TMDB 상대 경로의 인물 프로필 이미지 표시 지원
+ */
 const LIKE_PAGE_SIZE = 12;
 
 const memberId = Number(document.body.dataset.memberId);
@@ -233,7 +237,7 @@ function createPersonImage(imageUrl, personName) {
     const image = document.createElement("img");
 
     image.className = "card-img-top bg-secondary-subtle";
-    image.src = imageUrl;
+    image.src = resolveTmdbImageUrl(imageUrl, "w500");
     image.alt = `${personName} 프로필`;
     image.style.aspectRatio = "1 / 1";
     image.style.objectFit = "cover";
@@ -245,6 +249,15 @@ function createPersonImage(imageUrl, personName) {
     });
 
     return image;
+}
+
+/** TMDB 상대 경로와 이미 완성된 외부 이미지 URL을 모두 표시한다. */
+function resolveTmdbImageUrl(imageUrl, size) {
+    if (/^https?:\/\//i.test(imageUrl)) {
+        return imageUrl;
+    }
+
+    return `https://image.tmdb.org/t/p/${size}${imageUrl}`;
 }
 
 /** 프로필 이미지가 없는 인물의 대체 영역을 생성한다. */

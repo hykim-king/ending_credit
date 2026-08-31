@@ -1,3 +1,7 @@
+/**
+ * Modification History
+ * 2026. 8. 31. jinyoung - 컬렉션 목록 검색을 제목 전용으로 단일화
+ */
 // HTML 문서가 모두 만들어진 뒤 이벤트를 연결해야 querySelector 결과가 null이 되지 않는다.
 document.addEventListener("DOMContentLoaded", () => {
     const searchForm = document.querySelector("#searchForm");
@@ -5,9 +9,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const query = new URLSearchParams(window.location.search);
 
     // 삭제 완료 후 작성자의 컬렉션 목록으로 돌아올 수 있도록 URL 검색 조건을 반영한다.
-    if (query.has("searchDiv")) {
-        document.querySelector("#searchDiv").value = query.get("searchDiv");
-    }
     if (query.has("searchWord")) {
         document.querySelector("#searchWord").value = query.get("searchWord");
     }
@@ -37,7 +38,7 @@ async function loadCollections(pageNo) {
         const data = await requestGet("/api/collections", {
             pageNo,
             pageSize: document.querySelector("#pageSize").value,
-            searchDiv: document.querySelector("#searchDiv").value,
+            searchDiv: "10",
             searchWord: document.querySelector("#searchWord").value.trim()
         });
 

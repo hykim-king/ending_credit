@@ -1,3 +1,7 @@
+/**
+ * Modification History
+ * 2026. 8. 31. jinyoung - 평가·보고싶어요 카드의 TMDB 포스터 상대 경로 표시 지원
+ */
 const RECORD_PAGE_SIZE = 12;
 const RECORD_TABS = ["ratings", "watchlist"];
 
@@ -243,7 +247,7 @@ function createPosterImage(posterUrl, movieTitle) {
     const image = document.createElement("img");
 
     image.className = "card-img-top bg-secondary-subtle";
-    image.src = posterUrl;
+    image.src = resolveTmdbPosterUrl(posterUrl);
     image.alt = `${movieTitle} 포스터`;
     image.style.aspectRatio = "2 / 3";
     image.style.objectFit = "cover";
@@ -253,6 +257,15 @@ function createPosterImage(posterUrl, movieTitle) {
     });
 
     return image;
+}
+
+/** TMDB 상대 경로와 이미 완성된 외부 포스터 URL을 모두 표시한다. */
+function resolveTmdbPosterUrl(posterUrl) {
+    if (/^https?:\/\//i.test(posterUrl)) {
+        return posterUrl;
+    }
+
+    return `https://image.tmdb.org/t/p/w500${posterUrl}`;
 }
 
 /** 포스터가 없거나 로드에 실패한 영화의 대체 영역을 생성한다. */
