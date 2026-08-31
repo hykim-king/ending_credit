@@ -49,16 +49,18 @@ public class NoticeServiceImpl implements NoticeService {
 
     @Override
     @Transactional
-    public NoticeVO getPublicNotice(Long noticeId) {
+    public NoticeVO getPublicNotice(Long noticeId, boolean increaseViewCount) {
         validateNoticeId(noticeId);
 
-        // PUBLISHED가 아니거나 없는 공지는 0건 -> 404
-        int flag = noticeMapper.increasePublicViewCount(noticeId);
-        if (flag != 1) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "게시된 공지사항을 찾을 수 없습니다."
-            );
+        if (increaseViewCount) {
+            // PUBLISHED가 아니거나 없는 공지는 0건 -> 404
+            int flag = noticeMapper.increasePublicViewCount(noticeId);
+            if (flag != 1) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "게시된 공지사항을 찾을 수 없습니다."
+                );
+            }
         }
 
         NoticeVO notice = noticeMapper.selectPublicNoticeById(noticeId);
