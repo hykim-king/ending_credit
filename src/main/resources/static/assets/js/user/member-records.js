@@ -1,6 +1,7 @@
 /**
  * Modification History
  * 2026. 8. 31. jinyoung - 평가·보고싶어요 카드의 TMDB 포스터 상대 경로 표시 지원
+ * 2026. 8. 31. jinyoung - 이미지 URL·페이지네이션 공통 UI 사용
  */
 const RECORD_PAGE_SIZE = 12;
 const RECORD_TABS = ["ratings", "watchlist"];
@@ -247,7 +248,7 @@ function createPosterImage(posterUrl, movieTitle) {
     const image = document.createElement("img");
 
     image.className = "card-img-top bg-secondary-subtle";
-    image.src = resolveTmdbPosterUrl(posterUrl);
+    image.src = UserListUi.resolveTmdbImageUrl(posterUrl, "w500");
     image.alt = `${movieTitle} 포스터`;
     image.style.aspectRatio = "2 / 3";
     image.style.objectFit = "cover";
@@ -257,15 +258,6 @@ function createPosterImage(posterUrl, movieTitle) {
     });
 
     return image;
-}
-
-/** TMDB 상대 경로와 이미 완성된 외부 포스터 URL을 모두 표시한다. */
-function resolveTmdbPosterUrl(posterUrl) {
-    if (/^https?:\/\//i.test(posterUrl)) {
-        return posterUrl;
-    }
-
-    return `https://image.tmdb.org/t/p/w500${posterUrl}`;
 }
 
 /** 포스터가 없거나 로드에 실패한 영화의 대체 영역을 생성한다. */
@@ -292,92 +284,19 @@ function formatReleaseYear(releaseYear) {
 
 /** 전체 건수와 페이지 크기를 이용해 페이지 버튼을 생성한다. */
 function renderPagination(page, currentPage) {
-    const pagination = document.querySelector("#recordPagination");
-    const pageSize = Number(page.pageSize || RECORD_PAGE_SIZE);
-    const totalCount = Number(page.totalCnt || 0);
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    pagination.replaceChildren();
-
-    if (totalPages <= 1) {
-        return;
-    }
-
-    const startPage =
-        Math.floor((currentPage - 1) / 10) * 10 + 1;
-    const endPage =
-        Math.min(startPage + 9, totalPages);
-
-    pagination.append(
-        createPageButton(
-            "이전",
-            startPage - 1,
-            startPage === 1,
-            false
-        )
-    );
-
-    for (
-        let pageNo = startPage;
-        pageNo <= endPage;
-        pageNo += 1
-    ) {
-        pagination.append(
-            createPageButton(
-                String(pageNo),
-                pageNo,
-                false,
-                pageNo === currentPage
-            )
-        );
-    }
-
-    pagination.append(
-        createPageButton(
-            "다음",
-            endPage + 1,
-            endPage === totalPages,
-            false
-        )
-    );
-}
-
-/** 기록 목록의 단일 페이지 버튼을 생성한다. */
-function createPageButton(
-    label,
-    pageNo,
-    disabled,
-    selected
-) {
-    const item = document.createElement("li");
-    const button = document.createElement("button");
-
-    item.className =
-        `page-item${disabled ? " disabled" : ""}`
-        + `${selected ? " active" : ""}`;
-
-    button.className = "page-link";
-    button.type = "button";
-    button.textContent = label;
-    button.disabled = disabled;
-
-    if (selected) {
-        button.setAttribute("aria-current", "page");
-    }
-
-    button.addEventListener("click", () => {
-        loadRecords(activeTab, pageNo);
-
-        document.querySelector("#recordTitle")
-            .scrollIntoView({
+    UserListUi.renderPagination({
+        container: document.querySelector("#recordPagination"),
+        page,
+        currentPage,
+        defaultPageSize: RECORD_PAGE_SIZE,
+        onPageChange: (pageNo) => {
+            loadRecords(activeTab, pageNo);
+            document.querySelector("#recordTitle").scrollIntoView({
                 behavior: "smooth",
                 block: "start"
             });
+        }
     });
-
-    item.append(button);
-
-    return item;
 }
 
 /** 목록 요청 중 상태만 표시한다. */

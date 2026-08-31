@@ -1,5 +1,7 @@
 package com.endit.service;
 
+import static com.endit.support.CollectionRequestFixtures.createRequest;
+import static com.endit.support.CollectionRequestFixtures.updateRequest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -43,6 +45,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 8. 21. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    요청 DTO·공개 여부·전체 공개 목록·U-05·소유권 정책 검증 추가
  * 2026. 8. 31. jinyoung    입력 정규화·작품 distinct·수정 diff 정책 검증 추가
+ * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -536,51 +539,4 @@ class CollectionServiceTest {
 		return param;
 	}
 
-	/** 테스트에 사용할 등록 요청 생성 */
-	private CollectionCreateRequest createRequest(
-			String title,
-			String description,
-			List<Integer> contentIds) {
-
-		return createRequest(title, description, null, contentIds);
-	}
-
-	/** 공개 여부를 포함한 등록 요청 생성 */
-	private CollectionCreateRequest createRequest(
-			String title,
-			String description,
-			String isPublic,
-			List<Integer> contentIds) {
-
-		CollectionCreateRequest request = new CollectionCreateRequest();
-		request.setTitle(title);
-		request.setDescription(description);
-		request.setIsPublic(isPublic);
-		request.setContentIds(contentIds);
-		return request;
-	}
-
-	/** 테스트에 사용할 수정 요청 생성 */
-	private CollectionUpdateRequest updateRequest(
-			String title,
-			String description,
-			List<Integer> contentIds) {
-
-		return updateRequest(title, description, null, contentIds);
-	}
-
-	/** 공개 여부를 포함한 수정 요청 생성 */
-	private CollectionUpdateRequest updateRequest(
-			String title,
-			String description,
-			String isPublic,
-			List<Integer> contentIds) {
-
-		CollectionUpdateRequest request = new CollectionUpdateRequest();
-		request.setTitle(title);
-		request.setDescription(description);
-		request.setIsPublic(isPublic);
-		request.setContentIds(contentIds);
-		return request;
-	}
 }

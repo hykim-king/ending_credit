@@ -1,6 +1,8 @@
 /**
  * Modification History
  * 2026. 8. 31. jinyoung - TMDB 상대 경로의 인물 프로필 이미지 표시 지원
+ * 2026. 8. 31. jinyoung - 이미지 URL·페이지네이션 공통 UI 사용
+ * 2026. 8. 31. jinyoung - 미구현 인물 상세 링크와 불필요한 회원 쿼리 제거
  */
 const LIKE_PAGE_SIZE = 12;
 
@@ -137,14 +139,10 @@ function renderPersonCards(items) {
 
     items.forEach((item) => {
         const column = document.createElement("div");
-        const link = document.createElement("a");
         const card = document.createElement("article");
         const body = document.createElement("div");
         const name = document.createElement("h3");
         const originalName = document.createElement("p");
-
-        link.className = "text-decoration-none text-dark h-100";
-        link.href = `/people/${item.personId}`;
 
         card.className = "card h-100 border-0 shadow-sm";
         body.className = "card-body text-center";
@@ -172,8 +170,7 @@ function renderPersonCards(items) {
 
         body.append(name, originalName);
         card.append(image, body);
-        link.append(card);
-        column.append(link);
+        column.append(card);
         likeList.append(column);
     });
 
@@ -197,8 +194,7 @@ function renderCollectionCards(items) {
         const likedDate = document.createElement("p");
 
         link.className = "text-decoration-none text-dark h-100";
-        link.href =
-            `/collections/${item.collectionId}?memberId=${memberId}`;
+        link.href = `/collections/${item.collectionId}`;
 
         card.className = "card h-100 border-0 shadow-sm";
         body.className = "card-body d-flex flex-column";
@@ -237,7 +233,7 @@ function createPersonImage(imageUrl, personName) {
     const image = document.createElement("img");
 
     image.className = "card-img-top bg-secondary-subtle";
-    image.src = resolveTmdbImageUrl(imageUrl, "w500");
+    image.src = UserListUi.resolveTmdbImageUrl(imageUrl, "w500");
     image.alt = `${personName} 프로필`;
     image.style.aspectRatio = "1 / 1";
     image.style.objectFit = "cover";
@@ -249,15 +245,6 @@ function createPersonImage(imageUrl, personName) {
     });
 
     return image;
-}
-
-/** TMDB 상대 경로와 이미 완성된 외부 이미지 URL을 모두 표시한다. */
-function resolveTmdbImageUrl(imageUrl, size) {
-    if (/^https?:\/\//i.test(imageUrl)) {
-        return imageUrl;
-    }
-
-    return `https://image.tmdb.org/t/p/${size}${imageUrl}`;
 }
 
 /** 프로필 이미지가 없는 인물의 대체 영역을 생성한다. */
@@ -276,96 +263,19 @@ function createPersonPlaceholder(personName) {
 
 /** 전체 건수와 페이지 크기를 이용해 페이지 버튼을 생성한다. */
 function renderPagination(page, selectedPage) {
-    const pagination =
-        document.querySelector("#likePagination");
-    const pageSize =
-        Number(page.pageSize || LIKE_PAGE_SIZE);
-    const totalCount =
-        Number(page.totalCnt || 0);
-    const totalPages =
-        Math.ceil(totalCount / pageSize);
-
-    pagination.replaceChildren();
-
-    if (totalPages <= 1) {
-        return;
-    }
-
-    const startPage =
-        Math.floor((selectedPage - 1) / 10) * 10 + 1;
-    const endPage =
-        Math.min(startPage + 9, totalPages);
-
-    pagination.append(
-        createPageButton(
-            "이전",
-            startPage - 1,
-            startPage === 1,
-            false
-        )
-    );
-
-    for (
-        let pageNo = startPage;
-        pageNo <= endPage;
-        pageNo += 1
-    ) {
-        pagination.append(
-            createPageButton(
-                String(pageNo),
-                pageNo,
-                false,
-                pageNo === selectedPage
-            )
-        );
-    }
-
-    pagination.append(
-        createPageButton(
-            "다음",
-            endPage + 1,
-            endPage === totalPages,
-            false
-        )
-    );
-}
-
-/** 좋아요 목록의 단일 페이지 버튼을 생성한다. */
-function createPageButton(
-    label,
-    pageNo,
-    disabled,
-    selected
-) {
-    const item = document.createElement("li");
-    const button = document.createElement("button");
-
-    item.className =
-        `page-item${disabled ? " disabled" : ""}`
-        + `${selected ? " active" : ""}`;
-
-    button.className = "page-link";
-    button.type = "button";
-    button.textContent = label;
-    button.disabled = disabled;
-
-    if (selected) {
-        button.setAttribute("aria-current", "page");
-    }
-
-    button.addEventListener("click", () => {
-        loadLikes(pageNo);
-
-        document.querySelector("#likeTitle")
-            .scrollIntoView({
+    UserListUi.renderPagination({
+        container: document.querySelector("#likePagination"),
+        page,
+        currentPage: selectedPage,
+        defaultPageSize: LIKE_PAGE_SIZE,
+        onPageChange: (pageNo) => {
+            loadLikes(pageNo);
+            document.querySelector("#likeTitle").scrollIntoView({
                 behavior: "smooth",
                 block: "start"
             });
+        }
     });
-
-    item.append(button);
-
-    return item;
 }
 
 /** 좋아요 목록 요청 중 상태를 표시한다. */
