@@ -65,13 +65,14 @@ layout:decorate="~{layout/layout}">
                     <th>대상</th>
                     <th style="width:12%;">신고자</th>
                     <th style="width:12%;">사유</th>
+                    <th style="width:7%;">누적신고</th>
                     <th style="width:12%;">상태</th>
                     <th style="width:13%;">접수일</th>
                 </tr>
             </thead>
             <tbody id="reportTbody">
                 <tr th:if="${#lists.isEmpty(list)}">
-                    <td colspan="7" class="text-center text-muted py-4">신고가 없습니다.</td>
+                    <td colspan="8" class="text-center text-muted py-4">신고가 없습니다.</td>
                 </tr>
                 <tr th:each="vo : ${list}" th:attr="data-report-id=${vo.reportId}">
                     <td th:text="|R-${vo.reportId}|">R-1</td>
@@ -79,6 +80,11 @@ layout:decorate="~{layout/layout}">
                     <td th:text="${vo.commentDetail}">신고된 코멘트 내용(200자 요약)</td>
                     <td th:text="${vo.reporterNickname}">신고자</td>
                     <td th:text="${vo.reason}">SPOILER</td>
+                    <!--같은 코멘트의 누적 신고 건수 — 2건 이상이면 중복 신고로 강조-->
+                    <td class="text-center">
+                        <span th:text="|${vo.reportCnt}건|"
+                              th:classappend="${vo.reportCnt > 1} ? 'fw-bold text-danger'">1건</span>
+                    </td>
                     <td>
                         <span class="badge badge-received"
                               th:if="${vo.status == 'RECEIVED' or vo.status == 'PROCESSING'}"

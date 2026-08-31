@@ -47,6 +47,7 @@ public class ReportCommentVO extends DTO {
 	private String reporterNickname;   // 신고자 닉네임 (MEMBER join)
 	private String processorNickname;  // 처리 관리자 닉네임 (MEMBER join — 처리 전이면 null)
 	private String commentDetail;      // 신고 대상 코멘트 내용 (USER_COMMENT join — 목록은 200자 요약)
+	private int reportCnt;             // 같은 코멘트의 누적 신고 건수 (목록 파생컬럼 — 중복 신고 판단용)
 
 	public ReportCommentVO() {
 		super();
@@ -171,6 +172,14 @@ public class ReportCommentVO extends DTO {
 		this.commentDetail = commentDetail;
 	}
 
+	public int getReportCnt() {
+		return reportCnt;
+	}
+
+	public void setReportCnt(int reportCnt) {
+		this.reportCnt = reportCnt;
+	}
+
 	@Override
 	public String toString() {
 		return "ReportCommentVO [reportId=" + reportId + ", reportMemberId=" + reportMemberId + ", commentId="
@@ -178,7 +187,7 @@ public class ReportCommentVO extends DTO {
 				+ ", processedByMemberId=" + processedByMemberId + ", processNote=" + processNote + ", createdDt="
 				+ createdDt + ", processedDt=" + processedDt + ", reporterNickname=" + reporterNickname
 				+ ", processorNickname=" + processorNickname + ", commentDetail=" + commentDetail
-				+ ", toString()=" + super.toString() + "]";
+				+ ", reportCnt=" + reportCnt + ", toString()=" + super.toString() + "]";
 	}
 
 }

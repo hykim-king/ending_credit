@@ -295,6 +295,9 @@ class ReportCommentMapperDaoTest {
 		assertEquals(2, list.get(0).getTotalCnt());
 		assertNotNull(list.get(0).getReporterNickname()); // join — 신고자 닉네임
 		assertNotNull(list.get(0).getCommentDetail());    // join — 대상 코멘트 요약(200자)
+		// 파생컬럼 — 같은 코멘트에 2건을 넣었으므로 누적 신고 건수도 2건이다
+		assertEquals(2, list.get(0).getReportCnt());
+		assertEquals(2, list.get(1).getReportCnt());
 
 		// 3.
 		dto.setSearchDiv("20"); // 신고 사유 검색
