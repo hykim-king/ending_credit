@@ -21,7 +21,7 @@ public class DataSourceConfig {
 		ds.setDriverClassName("oracle.jdbc.OracleDriver");
 		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
 		ds.setUsername("endit_test");
-		ds.setPassword("qwer1234");
+		ds.setPassword("endit_test");
 
 		// Oracle datasource-공용
 //		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
