@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.endit.cmn.DTO;
 import com.endit.config.TmdbProperties;
 import com.endit.domain.ContentCreditVO;
 import com.endit.domain.ContentGenreVO;
@@ -41,7 +42,20 @@ import info.movito.themoviedbapi.model.movies.MovieDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import info.movito.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse;
 
-
+/**
+ * <pre>
+ * Class Name  : ContentServiceImpl
+ * Description : 콘텐츠 조회 및 TMDB 콘텐츠 적재 기능을 처리하는 Service 구현체
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 8. 29. jinyoung    컬렉션 작품 선택용 제목 검색·페이징 조회 추가
+ * 2026. 8. 31. jinyoung    영화 상세용 sync·get 및 이미지 서비스 구조와 통합
+ * ------------------------------------------------------------
+ * </pre>
+ */
 @Service
 public class ContentServiceImpl implements ContentService {
 
@@ -92,6 +106,36 @@ public class ContentServiceImpl implements ContentService {
 		this.contentImageService = contentImageService;
 		this.tmdbApi = tmdbApi;
 		this.tmdbProperties = tmdbProperties;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ContentVO> retrieve(DTO param) {
+		if (param == null) {
+			throw new IllegalArgumentException("콘텐츠 조회 조건은 null일 수 없습니다.");
+		}
+
+		if (param.getPageNo() <= 0) {
+			param.setPageNo(1);
+		}
+		if (param.getPageSize() <= 0) {
+			param.setPageSize(8);
+		} else if (param.getPageSize() > 50) {
+			param.setPageSize(50);
+		}
+
+		if (StringUtils.hasText(param.getSearchWord())) {
+			param.setSearchDiv("50");
+			param.setSearchWord(param.getSearchWord().trim());
+		} else {
+			param.setSearchDiv(null);
+			param.setSearchWord(null);
+		}
+
+		List<ContentVO> contents = contentMapper.doRetrieve(param);
+		param.setTotalCnt(contents.isEmpty() ? 0 : contents.get(0).getTotalCnt());
+
+		return contents;
 	}
 
 	// 인기 영화 목록을 훑어서, 우리 db에 없는 영화를 limit건 새로 저장할 때까지 계속 조회함.

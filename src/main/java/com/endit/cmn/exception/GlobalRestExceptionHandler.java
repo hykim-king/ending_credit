@@ -9,10 +9,11 @@
  *               ※ @Order(1): 화면용 advice와 둘 다 전역이라 스프링이 순서로 하나만 고른다 —
  *                 순서를 명시해 동작을 결정적으로 고정(현 단계는 AJAX 우선. 화면 단계에서 재설계 예정).
  *
- * Modification Information
+ * Modification History
  * 수정일        수정자     수정내용
  * ----------  --------  ---------------------------
  * 2026. 8. 18.  홍선기   최초 생성
+ * 2026. 8. 29.  이진영   인증 필요(401) 및 권한 없음(403) 응답 처리 추가
  * </pre>
  *
  * @author 홍선기
@@ -29,6 +30,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.endit.auth.AuthenticationRequiredException;
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.MessageVO;
 
 @Order(1)
@@ -36,6 +39,41 @@ import com.endit.cmn.MessageVO;
 public class GlobalRestExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
+
+	/**
+	 * 로그인 필요 — 401
+	 *
+	 * @param e 인증 회원 없음 예외
+	 * @return ResponseEntity<MessageVO>
+	 */
+	@ExceptionHandler(AuthenticationRequiredException.class)
+	public ResponseEntity<MessageVO> handlerAuthenticationRequiredException(
+			AuthenticationRequiredException e) {
+
+		log.debug("handlerAuthenticationRequiredException: {}", e.getMessage());
+
+		MessageVO messageVO = new MessageVO();
+		messageVO.setId("401");
+		messageVO.setMessage(e.getMessage());
+		messageVO.setDetailMessage("인증된 회원 정보를 확인할 수 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(messageVO);
+	}
+
+	/** 인증된 회원에게 요청 작업 권한이 없음 — 403 */
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<MessageVO> handlerForbiddenOperationException(
+			ForbiddenOperationException e) {
+
+		log.debug("handlerForbiddenOperationException: {}", e.getMessage());
+
+		MessageVO messageVO = new MessageVO();
+		messageVO.setId("403");
+		messageVO.setMessage(e.getMessage());
+		messageVO.setDetailMessage("요청한 작업을 수행할 권한이 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(messageVO);
+	}
 
 	/**
 	 * 신고 없음 — 404

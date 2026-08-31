@@ -1,8 +1,28 @@
 package com.endit.service;
 
+import java.util.List;
+
+import com.endit.cmn.DTO;
 import com.endit.domain.ContentVO;
 
+/**
+ * <pre>
+ * Class Name  : ContentService
+ * Description : 콘텐츠 조회 및 TMDB 콘텐츠 적재 기능을 정의하는 Service
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 8. 29. jinyoung    컬렉션 작품 선택용 콘텐츠 조회 계약 추가
+ * 2026. 8. 31. jinyoung    영화 상세용 sync·get 계약과 통합
+ * ------------------------------------------------------------
+ * </pre>
+ */
 public interface ContentService {
+
+	/** 제목 검색과 페이징 조건으로 저장된 콘텐츠를 조회한다. */
+	List<ContentVO> retrieve(DTO param);
 
 	// TMDB 인기 목록을 limit건까지 보고, 우리 db에 없는 영화만 저장.
 	// 신규 저장 건수 반환 -> 이미 있는 영화는 업데이트 하지 않는다(sync에서 영화 아이디 받아와서, 우리 db 에 있는지
