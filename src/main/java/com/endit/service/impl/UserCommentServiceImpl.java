@@ -1,19 +1,8 @@
 /**
- * <pre>
- * Class Name : UserCommentServiceImpl
- * Description : 코멘트 Service 구현체
- *               - CRUD는 매퍼 위임, 쓰기 메서드에만 @Transactional(rollbackFor)
- *               - 목록 검색어는 전부 숫자 컬럼(회원/영화/컬렉션 ID)이라
- *                 여기서 숫자 검증을 해 ORA-01722(수치 부적합)를 DB 전에 차단한다
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 Service 구현체
+ * - CRUD는 매퍼 위임, 쓰기 메서드에만 @Transactional(rollbackFor)
+ * - 목록 검색어는 전부 숫자 컬럼(회원/영화/컬렉션 ID)이라
+ * 여기서 숫자 검증을 해 ORA-01722(수치 부적합)를 DB 전에 차단한다
  */
 package com.endit.service.impl;
 
@@ -103,6 +92,19 @@ public class UserCommentServiceImpl implements UserCommentService {
 		log.debug("=============================");
 
 		return userCommentMapper.totalCnt();
+	}
+
+	@Override
+	public int totalCntBySearch(DTO param) {
+		log.debug("=============================");
+		log.debug("{}()", "totalCntBySearch");
+		log.debug("param: {}", param);
+		log.debug("=============================");
+
+		// 목록 조회와 같은 검증을 태운다 — 숫자 컬럼 검색에 문자가 오면 ORA-01722
+		checkNumericSearchWord(param);
+
+		return userCommentMapper.totalCntBySearch(param);
 	}
 
 	@Override
