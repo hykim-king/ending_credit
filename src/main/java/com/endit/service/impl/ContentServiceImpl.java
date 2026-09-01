@@ -80,6 +80,7 @@ public class ContentServiceImpl implements ContentService {
 	private static final String SEARCH_BY_TITLE_ORG = "20";
 	private static final String SEARCH_BY_COUNTRY = "30";
 	private static final String SEARCH_BY_EXTERNAL_ID = "40";
+	private static final String SEARCH_BY_TITLE = "50";
 
 	// limit을 안 주거나 0 이하로 준 호출의 기본 수집 건수
 	private static final int DEFAULT_SYNC_LIMIT = 100;
@@ -122,36 +123,6 @@ public class ContentServiceImpl implements ContentService {
 		this.contentImageService = contentImageService;
 		this.tmdbApi = tmdbApi;
 		this.tmdbProperties = tmdbProperties;
-	}
-
-	@Override
-	@Transactional(readOnly = true)
-	public List<ContentVO> retrieve(DTO param) {
-		if (param == null) {
-			throw new IllegalArgumentException("콘텐츠 조회 조건은 null일 수 없습니다.");
-		}
-
-		if (param.getPageNo() <= 0) {
-			param.setPageNo(1);
-		}
-		if (param.getPageSize() <= 0) {
-			param.setPageSize(8);
-		} else if (param.getPageSize() > 50) {
-			param.setPageSize(50);
-		}
-
-		if (StringUtils.hasText(param.getSearchWord())) {
-			param.setSearchDiv("50");
-			param.setSearchWord(param.getSearchWord().trim());
-		} else {
-			param.setSearchDiv(null);
-			param.setSearchWord(null);
-		}
-
-		List<ContentVO> contents = contentMapper.doRetrieve(param);
-		param.setTotalCnt(contents.isEmpty() ? 0 : contents.get(0).getTotalCnt());
-
-		return contents;
 	}
 
 	// 인기 영화 목록을 훑어서, 우리 db에 없는 영화를 limit건 새로 저장할 때까지 계속 조회함.
@@ -691,7 +662,8 @@ public class ContentServiceImpl implements ContentService {
 		if (!SEARCH_BY_TITLE_KO.equals(searchDiv)
 				&& !SEARCH_BY_TITLE_ORG.equals(searchDiv)
 				&& !SEARCH_BY_COUNTRY.equals(searchDiv)
-				&& !SEARCH_BY_EXTERNAL_ID.equals(searchDiv)) {
+				&& !SEARCH_BY_EXTERNAL_ID.equals(searchDiv)
+				&& !SEARCH_BY_TITLE.equals(searchDiv)) {
 			throw new IllegalArgumentException("지원하지 않는 검색 구분입니다. searchDiv=" + searchDiv);
 		}
 	}
