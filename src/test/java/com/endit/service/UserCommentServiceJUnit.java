@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.endit.cmn.DTO;
 import com.endit.domain.ReportCommentVO;
 import com.endit.domain.UserCommentVO;
+import com.endit.mapper.ReportCommentMapper;
 
 @SpringBootTest
 @Transactional
@@ -42,7 +43,7 @@ class UserCommentServiceJUnit {
 	UserCommentService service;
 
 	@Autowired
-	ReportCommentService reportService; // 가림 처리 후에도 건수가 유지되는지 확인용
+	ReportCommentMapper reportMapper; // 가림 처리 후에도 건수가 유지되는지 확인용
 
 	private UserCommentVO comment01; // 회원A → 영화A
 
@@ -152,10 +153,11 @@ class UserCommentServiceJUnit {
 		// 3.
 		ReportCommentVO report = new ReportCommentVO(0, MEMBER_REPORTER, comment01.getCommentId(),
 				ReportCommentVO.REASON_SPOILER, "결말 언급", null, null, null, null, null);
-		assertEquals(1, reportService.doSave(report));
+		assertEquals(1, reportMapper.doSave(report));
+		report.setStatus(ReportCommentVO.STATUS_ACCEPTED);
 		report.setProcessedByMemberId(ADMIN_PROCESSOR);
 		report.setProcessNote("승인 - 안내 문구로 가림");
-		assertEquals(1, reportService.upApproveReport(report));
+		assertEquals(1, reportMapper.doUpdate(report));
 
 		assertEquals(ReportCommentVO.REASON_SPOILER, service.doSelectOne(comment01).getBlindReason());
 		assertEquals(1, service.totalCntBySearch(dto)); // 가려져도 내 코멘트는 내 코멘트다
@@ -182,7 +184,7 @@ class UserCommentServiceJUnit {
 		log.debug("*beans()*");
 		log.debug("---------------------------");
 		assertNotNull(service);
-		assertNotNull(reportService);
+		assertNotNull(reportMapper);
 		log.debug("service: {}", service);
 	}
 
