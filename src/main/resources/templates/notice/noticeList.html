@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공지사항 | END IT</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/notice/notice.css">
+</head>
+<body data-page="notice-list">
+
+<header class="endit-header">
+    <a href="/" class="endit-logo">END IT</a>
+    <div class="header-search">영화, 인물, 컬렉션 검색</div>
+    <div class="header-actions">
+        <a href="/login">로그인</a>
+        <a href="/signup" class="join-link">회원가입</a>
+    </div>
+</header>
+
+<main class="notice-container">
+    <h1 class="page-title">공지사항</h1>
+
+    <section id="importantArea" class="important-area"></section>
+
+    <section class="notice-table-area">
+        <div class="notice-table-head">
+            <span>번호</span>
+            <span>제목</span>
+            <span>등록일</span>
+            <span>조회수</span>
+        </div>
+
+        <div id="noticeList"></div>
+
+        <div id="emptyState" class="notice-state" hidden>
+            게시된 공지사항이 없습니다.
+        </div>
+
+        <div id="errorState" class="notice-state" hidden>
+            공지사항을 불러오지 못했습니다.
+            <button type="button" id="retryButton" class="link-button">다시 시도</button>
+        </div>
+    </section>
+
+    <nav id="pagination" class="notice-pagination" aria-label="공지사항 페이지"></nav>
+</main>
+
+<script src="/assets/js/notice/notice.js"></script>
+</body>
+</html>

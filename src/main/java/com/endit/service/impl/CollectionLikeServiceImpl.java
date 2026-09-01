@@ -3,16 +3,20 @@ package com.endit.service.impl;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionLikeItemVO;
 import com.endit.domain.CollectionLikeVO;
+import com.endit.domain.CollectionVO;
 import com.endit.mapper.CollectionLikeMapper;
 import com.endit.service.CollectionLikeService;
+import com.endit.service.CollectionService;
 
 /**
  * <pre>
@@ -25,6 +29,7 @@ import com.endit.service.CollectionLikeService;
  * ------------------------------------------------------------
  * 2026. 8. 26. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    중복 등록 및 페이징 처리 보완
+ * 2026. 8. 29. jinyoung    컬렉션 접근 권한·본인 제한 및 상태 조회 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -36,19 +41,33 @@ import com.endit.service.CollectionLikeService;
 public class CollectionLikeServiceImpl implements CollectionLikeService {
 
 	private final CollectionLikeMapper collectionLikeMapper;
+	private final CollectionService collectionService;
 
 	/**
 	 * CollectionLikeMapper를 주입받아 Service 구현체 생성
 	 *
 	 * @param collectionLikeMapper 컬렉션 좋아요 Mapper
+	 * @param collectionService 컬렉션 접근 정책 Service
 	 */
-	public CollectionLikeServiceImpl(CollectionLikeMapper collectionLikeMapper) {
+	public CollectionLikeServiceImpl(
+			CollectionLikeMapper collectionLikeMapper,
+			CollectionService collectionService) {
+
 		this.collectionLikeMapper = collectionLikeMapper;
+		this.collectionService = collectionService;
 	}
 
 	@Override
 	@Transactional
-	public CollectionLikeVO create(int memberId, int collectionId) {
+	public CollectionLikeVO create(long memberId, int collectionId) {
+		CollectionVO collection = collectionService.get(
+				collectionId, OptionalLong.of(memberId));
+
+		if (collection.getMemberId() == memberId) {
+			throw new ForbiddenOperationException(
+					"본인의 컬렉션에는 좋아요를 누를 수 없습니다.");
+		}
+
 		CollectionLikeVO key = createKey(memberId, collectionId);
 		CollectionLikeVO existing = collectionLikeMapper.selectCollectionLike(key);
 
@@ -85,8 +104,14 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 
 	@Override
 	@Transactional
-	public void delete(int memberId, int collectionId) {
-		CollectionLikeVO existing = get(memberId, collectionId);
+	public void delete(long memberId, int collectionId) {
+		collectionService.get(collectionId, OptionalLong.of(memberId));
+		CollectionLikeVO key = createKey(memberId, collectionId);
+		CollectionLikeVO existing = collectionLikeMapper.selectCollectionLike(key);
+
+		if (existing == null) {
+			return;
+		}
 
 		int result = collectionLikeMapper.deleteCollectionLike(existing);
 
@@ -96,7 +121,8 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 	}
 
 	@Override
-	public CollectionLikeVO get(int memberId, int collectionId) {
+	public CollectionLikeVO get(long memberId, int collectionId) {
+		collectionService.get(collectionId, OptionalLong.of(memberId));
 		CollectionLikeVO like = collectionLikeMapper.selectCollectionLike(
 				createKey(memberId, collectionId));
 
@@ -110,16 +136,37 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 	}
 
 	@Override
-	public List<CollectionLikeItemVO> retrieveByMember(int memberId, DTO param) {
+	public boolean isLiked(long memberId, int collectionId) {
+		collectionService.get(collectionId, OptionalLong.of(memberId));
+
+		return collectionLikeMapper.selectCollectionLike(
+				createKey(memberId, collectionId)) != null;
+	}
+
+	@Override
+	public List<CollectionLikeItemVO> retrieveByMember(
+			int memberId,
+			DTO param,
+			OptionalLong currentMemberId) {
+
 		validateMemberId(memberId);
 
 		if (param == null) {
 			throw new IllegalArgumentException("조회 조건은 null일 수 없습니다.");
 		}
+		if (currentMemberId == null) {
+			throw new IllegalArgumentException("현재 회원 조회 결과가 필요합니다.");
+		}
 
 		normalizePaging(param);
+		Long viewerMemberId = null;
+		if (currentMemberId.isPresent()) {
+			validateMemberId(currentMemberId.getAsLong());
+			viewerMemberId = currentMemberId.getAsLong();
+		}
 
-		int totalCount = collectionLikeMapper.selectLikedCollectionCountByMember(memberId);
+		int totalCount = collectionLikeMapper.selectLikedCollectionCountByMember(
+				memberId, viewerMemberId);
 		param.setTotalCnt(totalCount);
 
 		if (totalCount == 0) {
@@ -128,6 +175,7 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 
 		return collectionLikeMapper.selectLikedCollectionListByMember(
 				memberId,
+				viewerMemberId,
 				param.getPageNo(),
 				param.getPageSize());
 	}
@@ -160,20 +208,20 @@ public class CollectionLikeServiceImpl implements CollectionLikeService {
 	}
 
 	/**회원 번호와 컬렉션 번호를 담은 조회 키 생성*/
-	private CollectionLikeVO createKey(int memberId, int collectionId) {
+	private CollectionLikeVO createKey(long memberId, int collectionId) {
 		validateMemberId(memberId);
 		validateCollectionId(collectionId);
 
 		CollectionLikeVO key = new CollectionLikeVO();
-		key.setMemberId(memberId);
+		key.setMemberId(Math.toIntExact(memberId));
 		key.setCollectionId(collectionId);
 
 		return key;
 	}
 
 	/**회원 번호가 유효한 양수인지 검증*/
-	private void validateMemberId(int memberId) {
-		if (memberId <= 0) {
+	private void validateMemberId(long memberId) {
+		if (memberId <= 0 || memberId > Integer.MAX_VALUE) {
 			throw new IllegalArgumentException("올바른 회원 번호가 필요합니다.");
 		}
 	}
