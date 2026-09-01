@@ -1,9 +1,12 @@
 package com.endit.service.impl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +64,8 @@ public class ContentServiceImpl implements ContentService {
 
 	private static final String ROLE_ACTOR = "ACTOR";
 	private static final String ROLE_DIRECTOR = "DIRECTOR";
+	// TMDB crew의 job 값. 우리 ROLE_DIRECTOR와 표기가 달라 따로 둔다
+	private static final String DIRECTOR_JOB = "Director";
 	// 한 영화에서 저장할 배우 수
 	private static final int MAX_CAST = 10;
 	// 신규 저장 없이 skip만 나는 페이지가 이만큼 연속되면 조기 종료
@@ -69,8 +74,20 @@ public class ContentServiceImpl implements ContentService {
 	private static final int MAX_GALLERY_PER_TYPE = 10;
 	// 국제코드 미국인 영화만 DB에 넣기
 	private static final String TARGET_PRODUCTION_COUNTRY = "US";
-	// 영화 상세 배경(backdrop) 이미지 크기 — 헤더가 뷰포트 전체 너비로 꽉 차므로 TMDB 최대 해상도 사용
-	private static final String HEADER_IMAGE_SIZE = "original";
+
+	// contentWhere가 지원하는 검색 축. 이 넷 밖의 값이 오면 WHERE 절이 통째로 빠져 전체 조회가 되므로 서비스에서 막는다
+	private static final String SEARCH_BY_TITLE_KO = "10";
+	private static final String SEARCH_BY_TITLE_ORG = "20";
+	private static final String SEARCH_BY_COUNTRY = "30";
+	private static final String SEARCH_BY_EXTERNAL_ID = "40";
+	private static final String SEARCH_BY_TITLE = "50";
+
+	// limit을 안 주거나 0 이하로 준 호출의 기본 수집 건수
+	private static final int DEFAULT_SYNC_LIMIT = 100;
+
+	private static final int FIRST_PAGE_NO = 1;
+	private static final int DEFAULT_PAGE_SIZE = 12;
+	private static final int MAX_PAGE_SIZE = 100;
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -108,36 +125,6 @@ public class ContentServiceImpl implements ContentService {
 		this.tmdbProperties = tmdbProperties;
 	}
 
-	@Override
-	@Transactional(readOnly = true)
-	public List<ContentVO> retrieve(DTO param) {
-		if (param == null) {
-			throw new IllegalArgumentException("콘텐츠 조회 조건은 null일 수 없습니다.");
-		}
-
-		if (param.getPageNo() <= 0) {
-			param.setPageNo(1);
-		}
-		if (param.getPageSize() <= 0) {
-			param.setPageSize(8);
-		} else if (param.getPageSize() > 50) {
-			param.setPageSize(50);
-		}
-
-		if (StringUtils.hasText(param.getSearchWord())) {
-			param.setSearchDiv("50");
-			param.setSearchWord(param.getSearchWord().trim());
-		} else {
-			param.setSearchDiv(null);
-			param.setSearchWord(null);
-		}
-
-		List<ContentVO> contents = contentMapper.doRetrieve(param);
-		param.setTotalCnt(contents.isEmpty() ? 0 : contents.get(0).getTotalCnt());
-
-		return contents;
-	}
-
 	// 인기 영화 목록을 훑어서, 우리 db에 없는 영화를 limit건 새로 저장할 때까지 계속 조회함.
 	@Override
 	@Transactional
@@ -148,7 +135,7 @@ public class ContentServiceImpl implements ContentService {
 		syncGenreMaster();
 
 		if (limit <= 0) {
-			limit = 100;
+			limit = DEFAULT_SYNC_LIMIT;
 		}
 
 		int processedCount = 0;
@@ -446,12 +433,11 @@ public class ContentServiceImpl implements ContentService {
 			return List.of();
 		}
 		List<Crew> directors = new ArrayList<>();
-		List<Integer> seenIds = new ArrayList<>();
+		Set<Integer> seenIds = new HashSet<>();
 		for (Crew crew : crewList) {
-			if (!"Director".equalsIgnoreCase(crew.getJob()) || seenIds.contains(crew.getId())) {
+			if (!DIRECTOR_JOB.equalsIgnoreCase(crew.getJob()) || !seenIds.add(crew.getId())) {
 				continue;
 			}
-			seenIds.add(crew.getId());
 			directors.add(crew);
 		}
 		return directors;
@@ -571,10 +557,115 @@ public class ContentServiceImpl implements ContentService {
 		}
 
 		// DB엔 TMDB 원본 경로만 저장돼 있으므로, 화면에 내려줄 때 여기서 풀 URL로 완성한다
-		content.setPosterUrl(contentImageService.toFullImageUrl(content.getPosterUrl()));
-		content.setBackdropUrl(contentImageService.toFullImageUrl(content.getBackdropUrl(), HEADER_IMAGE_SIZE));
+		applyFullImageUrl(content);
 
 		return content;
+	}
+
+	// 검색+페이징 목록 조회 - 전체 건수는 param.totalCnt에 실어 준다
+	@Override
+	@Transactional(readOnly = true)
+	public List<ContentVO> retrieve(DTO param) {
+		if (param == null) {
+			throw new IllegalArgumentException("조회 조건은 null일 수 없습니다.");
+		}
+
+		normalizePaging(param);
+		validateSearchDiv(param);
+
+		List<ContentVO> contents = contentMapper.doRetrieve(param);
+
+		if (contents == null) {
+			param.setTotalCnt(0);
+			return Collections.emptyList();
+		}
+
+		// doRetrieve가 CROSS JOIN으로 검색조건까지 걸러낸 총건수를 각 행에 실어 준다.
+		param.setTotalCnt(contents.isEmpty() ? 0 : contents.get(0).getTotalCnt());
+
+		for (ContentVO content : contents) {
+			applyFullImageUrl(content);
+		}
+
+		return contents;
+	}
+
+	// 외부 ID 중복 검사 - 이미 등록된 TMDB 영화인지 확인한다
+	@Override
+	@Transactional(readOnly = true)
+	public boolean hasExternalId(String externalId) {
+		if (!StringUtils.hasText(externalId)) {
+			throw new IllegalArgumentException("외부 ID가 필요합니다.");
+		}
+
+		return contentMapper.findContentIdByExternal(externalId) != null;
+	}
+
+	// 콘텐츠 등록
+	@Override
+	@Transactional
+	public ContentVO create(ContentVO param) {
+		if (param == null) {
+			throw new IllegalArgumentException("등록할 콘텐츠 정보가 필요합니다.");
+		}
+
+		if (!StringUtils.hasText(param.getTitleKo())) {
+			throw new IllegalArgumentException("콘텐츠 제목이 필요합니다.");
+		}
+
+		if (!StringUtils.hasText(param.getExternalId())) {
+			throw new IllegalArgumentException("외부 ID가 필요합니다.");
+		}
+
+		if (hasExternalId(param.getExternalId())) {
+			throw new IllegalStateException("이미 등록된 외부 ID입니다. externalId=" + param.getExternalId());
+		}
+
+		int result = contentMapper.doSave(param);
+
+		if (result != 1) {
+			throw new IllegalStateException("콘텐츠 등록에 실패했습니다.");
+		}
+
+		// doSave의 selectKey가 채번한 contentId를 param이 그대로 들고 있으므로 재조회에 사용한다
+		return get(param.getContentId());
+	}
+
+	// TMDB 원본 경로를 화면에 바로 쓸 수 있는 풀 URL로 완성한다.
+	// 어떤 크기를 쓸지는 ContentImageServiceImpl이 정하므로 여기서는 용도만 말한다
+	private void applyFullImageUrl(ContentVO content) {
+		content.setPosterUrl(contentImageService.toPosterUrl(content.getPosterUrl()));
+		content.setBackdropUrl(contentImageService.toBackdropUrl(content.getBackdropUrl()));
+	}
+
+	// 페이지 번호와 페이지 크기를 허용 범위의 기본값으로 보정
+	private void normalizePaging(DTO param) {
+		if (param.getPageNo() <= 0) {
+			param.setPageNo(FIRST_PAGE_NO);
+		}
+
+		if (param.getPageSize() <= 0) {
+			param.setPageSize(DEFAULT_PAGE_SIZE);
+		} else if (param.getPageSize() > MAX_PAGE_SIZE) {
+			param.setPageSize(MAX_PAGE_SIZE);
+		}
+	}
+
+	// contentWhere가 모르는 searchDiv가 오면 WHERE 절이 통째로 빠져 전체 조회가 되므로 여기서 막는다
+	private void validateSearchDiv(DTO param) {
+		if (!StringUtils.hasText(param.getSearchWord())) {
+			return;
+		}
+
+		String searchDiv = param.getSearchDiv();
+
+		if (!SEARCH_BY_TITLE_KO.equals(searchDiv)
+				&& !SEARCH_BY_TITLE_ORG.equals(searchDiv)
+				&& !SEARCH_BY_COUNTRY.equals(searchDiv)
+				&& !SEARCH_BY_EXTERNAL_ID.equals(searchDiv)
+				&& !SEARCH_BY_TITLE.equals(searchDiv)) {
+			throw new IllegalArgumentException("지원하지 않는 검색 구분입니다. searchDiv=" + searchDiv);
+		}
 	}
 
 }

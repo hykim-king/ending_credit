@@ -39,10 +39,4 @@ public interface NoticeMapper {
 
     /** 관리자 공지 개수 */
     int countAdminNoticeList(NoticeSearchVO search);
-    
-    /** 테스트용 전체 공지 개수 */
-    int totalCnt();
-
-    /** 테스트용 전체 공지 삭제 */
-    int deleteAll();
 }

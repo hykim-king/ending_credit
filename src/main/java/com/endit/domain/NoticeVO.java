@@ -9,6 +9,7 @@ public class NoticeVO {
     private String status;
     private int viewCount;
     private Long createdId;
+    private String createdNickname;
     private String createdDt;
     private Long updatedId;
     private String updatedDt;
@@ -20,7 +21,7 @@ public class NoticeVO {
     // 전체 필드 생성자
     public NoticeVO(Long noticeId, String title, String content,
             String important, String status, int viewCount,
-            Long createdId, String createdDt,
+            Long createdId, String createdNickname, String createdDt,
             Long updatedId, String updatedDt) {
 
         this.noticeId = noticeId;
@@ -30,6 +31,7 @@ public class NoticeVO {
         this.status = status;
         this.viewCount = viewCount;
         this.createdId = createdId;
+        this.createdNickname = createdNickname;
         this.createdDt = createdDt;
         this.updatedId = updatedId;
         this.updatedDt = updatedDt;
@@ -91,6 +93,15 @@ public class NoticeVO {
         this.createdId = createdId;
     }
 
+
+    public String getCreatedNickname() {
+        return createdNickname;
+    }
+
+    public void setCreatedNickname(String createdNickname) {
+        this.createdNickname = createdNickname;
+    }
+
     public String getCreatedDt() {
         return createdDt;
     }
@@ -124,6 +135,7 @@ public class NoticeVO {
                 + ", status=" + status
                 + ", viewCount=" + viewCount
                 + ", createdId=" + createdId
+                + ", createdNickname=" + createdNickname
                 + ", createdDt=" + createdDt
                 + ", updatedId=" + updatedId
                 + ", updatedDt=" + updatedDt + "]";
