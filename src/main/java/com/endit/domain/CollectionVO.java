@@ -11,6 +11,7 @@ package com.endit.domain;
  * ------------------------------------------------------------
  * 2026. 8. 12.	jinyoung    최초 생성
  * 2026. 8. 19. jinyoung    조회용 작성자 및 집계 정보 추가
+ * 2026. 9. 01. jinyoung    목록 콜라주용 대표 포스터 정보 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -30,6 +31,11 @@ public class CollectionVO {
 	private int itemCount;         // 포함 작품 수
 	private int likeCount;         // 좋아요 수
 	private int commentCount;      // 코멘트 수
+	private String previewPosterUrl1; // 목록 대표 포스터 URL 1
+	private String previewPosterUrl2; // 목록 대표 포스터 URL 2
+	private String previewPosterUrl3; // 목록 대표 포스터 URL 3
+	private String previewPosterUrl4; // 목록 대표 포스터 URL 4
+	private String previewPosterUrl5; // 목록 대표 포스터 URL 5
 
 	public CollectionVO() {
 		super();
@@ -135,11 +141,54 @@ public class CollectionVO {
 		this.commentCount = commentCount;
 	}
 
+	public String getPreviewPosterUrl1() {
+		return previewPosterUrl1;
+	}
+
+	public void setPreviewPosterUrl1(String previewPosterUrl1) {
+		this.previewPosterUrl1 = previewPosterUrl1;
+	}
+
+	public String getPreviewPosterUrl2() {
+		return previewPosterUrl2;
+	}
+
+	public void setPreviewPosterUrl2(String previewPosterUrl2) {
+		this.previewPosterUrl2 = previewPosterUrl2;
+	}
+
+	public String getPreviewPosterUrl3() {
+		return previewPosterUrl3;
+	}
+
+	public void setPreviewPosterUrl3(String previewPosterUrl3) {
+		this.previewPosterUrl3 = previewPosterUrl3;
+	}
+
+	public String getPreviewPosterUrl4() {
+		return previewPosterUrl4;
+	}
+
+	public void setPreviewPosterUrl4(String previewPosterUrl4) {
+		this.previewPosterUrl4 = previewPosterUrl4;
+	}
+
+	public String getPreviewPosterUrl5() {
+		return previewPosterUrl5;
+	}
+
+	public void setPreviewPosterUrl5(String previewPosterUrl5) {
+		this.previewPosterUrl5 = previewPosterUrl5;
+	}
+
 	@Override
 	public String toString() {
 		return "CollectionVO [collectionId=" + collectionId + ", memberId=" + memberId + ", title=" + title
 				+ ", description=" + description + ", isPublic=" + isPublic + ", createdDt=" + createdDt
 				+ ", updatedDt=" + updatedDt + ", nickname=" + nickname + ", itemCount=" + itemCount
-				+ ", likeCount=" + likeCount + ", commentCount=" + commentCount + "]";
+				+ ", likeCount=" + likeCount + ", commentCount=" + commentCount + ", previewPosterUrl1="
+				+ previewPosterUrl1 + ", previewPosterUrl2=" + previewPosterUrl2 + ", previewPosterUrl3="
+				+ previewPosterUrl3 + ", previewPosterUrl4=" + previewPosterUrl4 + ", previewPosterUrl5="
+				+ previewPosterUrl5 + "]";
 	}
 }

@@ -2,6 +2,7 @@
  * Modification History
  * 2026. 8. 29. jinyoung - 인증 요청·PATCH·공개 여부·contentIds 및 실제 콘텐츠 검색·선택 적용
  * 2026. 8. 31. jinyoung - D-04 모달·영화 검색 최종 API·미저장 변경 경고 적용
+ * 2026. 9. 01. jinyoung - D-02~D-04 본문 UI와 컬렉션 공개 정책 반영
  */
 // 등록과 수정은 필드 구성이 같으므로 하나의 form.html과 JavaScript를 재사용한다.
 let selectedContentIds = [];
@@ -11,17 +12,17 @@ let contentSearchInitialized = false;
 let initialFormState = null;
 let isFormInitialized = false;
 let isSubmitting = false;
+let originalIsPublic = "Y";
 document.addEventListener("DOMContentLoaded", () => {
-    // View Controller가 body의 data-* 속성에 넣은 모드와 컬렉션 번호를 읽는다.
-    const formMode = document.body.dataset.formMode;
-    const collectionId = Number(document.body.dataset.collectionId);
+    // 공통 layout을 사용하므로 담당 본문 루트의 data-* 속성에서 화면 정보를 읽는다.
+    const page = document.querySelector("#collectionFormPage");
+    const formMode = page.dataset.formMode;
+    const collectionId = Number(page.dataset.collectionId);
     const collectionForm = document.querySelector("#collectionForm");
     const description = document.querySelector("#description");
-    const isPublic = document.querySelector("#isPublic");
     const contentSearchInput = document.querySelector("#contentSearchInput");
 
     description.addEventListener("input", updateDescriptionLength);
-    isPublic.addEventListener("change", updatePublicHelp);
     collectionForm.addEventListener("submit", submitCollection);
     document.querySelector("#cancelLink").addEventListener(
         "click",
@@ -49,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
     renderSelectedContents();
-    updatePublicHelp();
 
     // 수정 화면에서만 기존 데이터를 API로 읽어 입력란에 채운다.
     if (formMode === "update") {
@@ -63,7 +63,9 @@ async function prepareUpdateForm(collectionId) {
     const errorMessage = document.querySelector("#errorMessage");
 
     document.querySelector("#formTitle").textContent = "컬렉션 수정";
-    document.querySelector("#submitButton").textContent = "수정";
+    document.querySelector("#formDescription").textContent =
+        "컬렉션 정보와 담긴 작품을 수정할 수 있습니다.";
+    document.querySelector("#submitButton").textContent = "수정 완료";
     document.querySelector("#cancelLink").href = `/collections/${collectionId}`;
 
     try {
@@ -74,14 +76,13 @@ async function prepareUpdateForm(collectionId) {
 
         document.querySelector("#title").value = collection.title || "";
         document.querySelector("#description").value = collection.description || "";
-        document.querySelector("#isPublic").checked = collection.isPublic === "Y";
+        originalIsPublic = collection.isPublic === "N" ? "N" : "Y";
         selectedContentIds = contents.map((content) => content.contentId);
         contents.forEach((content) => {
             selectedContentDetails.set(content.contentId, content);
         });
 
         updateDescriptionLength();
-        updatePublicHelp();
         renderSelectedContents();
         renderContentSearchResults(currentSearchContents);
         initializeFormState();
@@ -95,19 +96,30 @@ async function submitCollection(event) {
     event.preventDefault();
 
     const errorMessage = document.querySelector("#errorMessage");
-    const formMode = document.body.dataset.formMode;
-    const collectionId = Number(document.body.dataset.collectionId);
+    const page = document.querySelector("#collectionFormPage");
+    const formMode = page.dataset.formMode;
+    const collectionId = Number(page.dataset.collectionId);
+    const collectionForm = document.querySelector("#collectionForm");
     const submitButton = document.querySelector("#submitButton");
+
+    collectionForm.classList.add("was-validated");
+    if (!collectionForm.checkValidity()) {
+        document.querySelector("#title").focus();
+        return;
+    }
 
     hideFormError(errorMessage);
     // 사용자가 저장 버튼을 연속 클릭해 중복 요청하는 것을 막는다.
     submitButton.disabled = true;
+    submitButton.setAttribute("aria-busy", "true");
+    submitButton.textContent = "저장 중...";
     isSubmitting = true;
 
     const data = {
         title: document.querySelector("#title").value.trim(),
         description: document.querySelector("#description").value.trim(),
-        isPublic: document.querySelector("#isPublic").checked ? "Y" : "N",
+        // v3.0 정책: 신규는 공개, 수정은 기존 공개 상태를 유지한다.
+        isPublic: formMode === "update" ? originalIsPublic : "Y",
         contentIds: selectedContentIds
     };
 
@@ -121,6 +133,10 @@ async function submitCollection(event) {
     } catch (error) {
         showFormError(errorMessage, error.message);
         submitButton.disabled = false;
+        submitButton.removeAttribute("aria-busy");
+        submitButton.textContent = formMode === "update"
+            ? "수정 완료"
+            : "컬렉션 만들기";
         isSubmitting = false;
     }
 }
@@ -137,14 +153,6 @@ function requestPatch(url, data) {
         },
         body: JSON.stringify(data)
     });
-}
-
-/** 공개 checkbox 상태에 맞게 노출 범위 안내를 갱신한다. */
-function updatePublicHelp() {
-    const isPublic = document.querySelector("#isPublic").checked;
-    document.querySelector("#publicHelp").textContent = isPublic
-        ? "다른 사용자와 비회원도 이 컬렉션을 볼 수 있습니다."
-        : "작성자 본인만 이 컬렉션을 볼 수 있습니다.";
 }
 
 /** 수정 화면에서 전체 스냅샷과 표시 정보를 보존하도록 기존 작품을 모든 페이지에서 읽는다. */
@@ -197,9 +205,13 @@ function removeContent(contentId) {
 async function searchContents(pageNo) {
     const query = document.querySelector("#contentSearchInput").value.trim();
     const searchButton = document.querySelector("#searchContentButton");
+    const loading = document.querySelector("#contentSearchLoading");
 
     hideContentSelectionError();
     searchButton.disabled = true;
+    loading.classList.remove("d-none");
+    document.querySelector("#contentSearchResults").replaceChildren();
+    document.querySelector("#contentSearchEmpty").classList.add("d-none");
     contentSearchInitialized = true;
 
     try {
@@ -219,6 +231,7 @@ async function searchContents(pageNo) {
         showContentSelectionError(error.message);
     } finally {
         searchButton.disabled = false;
+        loading.classList.add("d-none");
     }
 }
 
@@ -233,7 +246,7 @@ function renderContentSearchResults(contents) {
         const contentId = Number(content.contentId);
         const selected = selectedContentIds.includes(contentId);
         const row = document.createElement("div");
-        row.className = "list-group-item d-flex align-items-center gap-3";
+        row.className = "collection-search-item";
 
         appendContentPoster(row, content);
 
@@ -243,7 +256,7 @@ function renderContentSearchResults(contents) {
         const addButton = document.createElement("button");
         addButton.className = selected
             ? "btn btn-sm btn-secondary flex-shrink-0"
-            : "btn btn-sm btn-outline-danger flex-shrink-0";
+            : "btn btn-sm btn-outline-primary flex-shrink-0";
         addButton.type = "button";
         addButton.disabled = selected;
         addButton.textContent = selected ? "추가됨" : "추가";
@@ -308,7 +321,7 @@ function renderSelectedContents() {
     selectedContentIds.forEach((contentId) => {
         const content = selectedContentDetails.get(contentId) || { contentId };
         const row = document.createElement("div");
-        row.className = "list-group-item d-flex align-items-center gap-3";
+        row.className = "collection-selection-item";
 
         appendContentPoster(row, content);
 
@@ -316,9 +329,13 @@ function renderSelectedContents() {
         information.classList.add("flex-grow-1");
 
         const removeButton = document.createElement("button");
-        removeButton.className = "btn btn-sm btn-outline-danger flex-shrink-0";
+        removeButton.className = "btn btn-sm btn-outline-secondary flex-shrink-0";
         removeButton.type = "button";
         removeButton.textContent = "제거";
+        removeButton.setAttribute(
+            "aria-label",
+            `${content.titleKo || content.titleOrg || "작품"} 제거`
+        );
         removeButton.addEventListener("click", () => removeContent(contentId));
 
         row.append(information, removeButton);
@@ -329,16 +346,31 @@ function renderSelectedContents() {
 /** 콘텐츠 포스터가 있으면 목록 행 앞에 작은 이미지로 추가한다. */
 function appendContentPoster(row, content) {
     if (!content.posterUrl) {
+        row.append(createPosterPlaceholder());
         return;
     }
 
     const poster = document.createElement("img");
     poster.src = resolvePosterUrl(content.posterUrl);
     poster.alt = "";
-    poster.width = 48;
-    poster.height = 72;
-    poster.className = "rounded object-fit-cover flex-shrink-0";
+    poster.className = "collection-selection-poster";
+    poster.addEventListener("error", () => {
+        poster.replaceWith(createPosterPlaceholder());
+    });
     row.append(poster);
+}
+
+function createPosterPlaceholder() {
+    const placeholder = document.createElement("div");
+    const icon = document.createElement("i");
+
+    placeholder.className =
+        "collection-selection-poster collection-selection-poster-placeholder";
+    icon.className = "bi bi-film";
+    icon.setAttribute("aria-hidden", "true");
+    placeholder.append(icon);
+
+    return placeholder;
 }
 
 /** 검색 결과와 선택 목록에서 공통으로 사용하는 제목·개봉연도 영역을 만든다. */
@@ -347,9 +379,9 @@ function createContentInformation(content) {
     const title = document.createElement("div");
     const metadata = document.createElement("div");
 
-    title.className = "fw-semibold";
+    title.className = "collection-content-title";
     title.textContent = content.titleKo || content.titleOrg || "제목 정보 없음";
-    metadata.className = "small text-secondary";
+    metadata.className = "collection-content-meta";
     metadata.textContent = content.releaseYear
         ? String(content.releaseYear).slice(0, 4)
         : "개봉연도 정보 없음";
@@ -384,7 +416,6 @@ function serializeFormState() {
     return JSON.stringify({
         title: document.querySelector("#title").value,
         description: document.querySelector("#description").value,
-        isPublic: document.querySelector("#isPublic").checked,
         contentIds: selectedContentIds
     });
 }

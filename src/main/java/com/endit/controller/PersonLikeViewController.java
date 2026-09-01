@@ -7,6 +7,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.endit.auth.CurrentMemberProvider;
+
 /**
  * <pre>
  * Class Name  : PersonLikeViewController
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 8. 28. jinyoung    컬렉션 좋아요 유형 지원
+ * 2026. 9. 01. jinyoung    U-07 본인 좋아요 취소 표시용 인증 회원 전달
  * ------------------------------------------------------------
  * </pre>
  *
@@ -30,6 +33,11 @@ public class PersonLikeViewController {
 
 	private static final String TYPE_PERSON = "person";
 	private static final String TYPE_COLLECTION = "collection";
+	private final CurrentMemberProvider currentMemberProvider;
+
+	public PersonLikeViewController(CurrentMemberProvider currentMemberProvider) {
+		this.currentMemberProvider = currentMemberProvider;
+	}
 
 	/**
 	 * 회원 좋아요 화면 반환
@@ -49,6 +57,9 @@ public class PersonLikeViewController {
 
 		model.addAttribute("memberId", memberId);
 		model.addAttribute("type", normalizeType(type));
+		model.addAttribute(
+				"currentMemberId",
+				currentMemberProvider.findCurrentMemberId().orElse(0));
 
 		return "user/likes";
 	}

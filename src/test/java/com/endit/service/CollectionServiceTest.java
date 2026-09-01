@@ -46,6 +46,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 8. 29. jinyoung    요청 DTO·공개 여부·전체 공개 목록·U-05·소유권 정책 검증 추가
  * 2026. 8. 31. jinyoung    입력 정규화·작품 distinct·수정 diff 정책 검증 추가
  * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
+ * 2026. 9. 01. jinyoung    목록 카드 대표 포스터 조회 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -93,6 +94,26 @@ class CollectionServiceTest {
 		assertEquals(1, param.getPageNo());
 		assertEquals(10, param.getPageSize());
 		assertEquals(1, param.getTotalCnt());
+	}
+
+	/** 컬렉션 목록에 내부 작품의 대표 포스터가 함께 조회되는지 검증 */
+	@Test
+	@DisplayName("목록 조회 시 내부 작품 대표 포스터 포함")
+	void retrieveWithPreviewPoster() {
+		int memberId = createMemberId();
+		ContentVO content = createContent("목록 대표 포스터");
+		CollectionVO saved = collectionService.create(
+				memberId,
+				createRequest(
+						"대표 포스터 컬렉션",
+						"컬렉션 설명",
+						List.of(content.getContentId())));
+
+		DTO param = searchByTitle(saved.getTitle());
+		List<CollectionVO> result = collectionService.retrieve(param);
+
+		assertEquals(1, result.size());
+		assertEquals(content.getPosterUrl(), result.get(0).getPreviewPosterUrl1());
 	}
 
 	/** 검색 결과가 없을 때 실제 DB 조회 결과 검증 */

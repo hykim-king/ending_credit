@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 01. jinyoung    U-03~U-06 기록 화면 4개 탭 경로 지원
  * ------------------------------------------------------------
  * </pre>
  *
@@ -28,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class MemberContentViewController {
 
 	private static final String TAB_RATINGS = "ratings";
+	private static final String TAB_COMMENTS = "comments";
+	private static final String TAB_COLLECTIONS = "collections";
 	private static final String TAB_WATCHLIST = "watchlist";
 
 	/**
@@ -54,14 +57,18 @@ public class MemberContentViewController {
 	}
 
 	/**
-	 * 현재 구현된 평가와 보고싶어요 외의 탭은 기본 평가 탭으로 보정
+	 * 화면설계서의 네 가지 기록 탭 외의 값은 기본 평가 탭으로 보정
 	 */
 	private String normalizeTab(String tab) {
-		if (tab != null
-				&& TAB_WATCHLIST.equalsIgnoreCase(
-						tab.trim())) {
+		if (tab != null) {
+			String normalizedTab = tab.trim().toLowerCase();
 
-			return TAB_WATCHLIST;
+			if (TAB_COMMENTS.equals(normalizedTab)
+					|| TAB_COLLECTIONS.equals(normalizedTab)
+					|| TAB_WATCHLIST.equals(normalizedTab)) {
+
+				return normalizedTab;
+			}
 		}
 
 		return TAB_RATINGS;

@@ -6,6 +6,7 @@
 <!--
 Modification History
 2026. 8. 29. jinyoung - 전체 공개 목록과 U-05 본인·타인 공개 범위 조회 추가
+2026. 9. 01. jinyoung - 목록 카드용 컬렉션 대표 포스터 5건 조회 추가
 -->
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
@@ -223,7 +224,12 @@ Modification History
                NICKNAME,
                ITEM_COUNT,
                LIKE_COUNT,
-               COMMENT_COUNT
+               COMMENT_COUNT,
+               PREVIEW_POSTER_URL1,
+               PREVIEW_POSTER_URL2,
+               PREVIEW_POSTER_URL3,
+               PREVIEW_POSTER_URL4,
+               PREVIEW_POSTER_URL5
           FROM (
             SELECT C.COLLECTION_ID,
                    C.MEMBER_ID,
@@ -236,6 +242,11 @@ Modification History
                    NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                    NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
                    NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
+                   CP.PREVIEW_POSTER_URL1,
+                   CP.PREVIEW_POSTER_URL2,
+                   CP.PREVIEW_POSTER_URL3,
+                   CP.PREVIEW_POSTER_URL4,
+                   CP.PREVIEW_POSTER_URL5,
                    ROW_NUMBER() OVER (
                        ORDER BY NVL(C.UPDATED_DT, C.CREATED_DT) DESC, C.COLLECTION_ID DESC
                    ) AS RNUM
@@ -264,6 +275,34 @@ Modification History
                      GROUP BY COLLECTION_ID
               ) UC
                 ON UC.COLLECTION_ID = C.COLLECTION_ID
+              LEFT JOIN (
+                    SELECT COLLECTION_ID,
+                           MAX(CASE WHEN POSTER_ORDER = 1 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL1,
+                           MAX(CASE WHEN POSTER_ORDER = 2 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL2,
+                           MAX(CASE WHEN POSTER_ORDER = 3 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL3,
+                           MAX(CASE WHEN POSTER_ORDER = 4 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL4,
+                           MAX(CASE WHEN POSTER_ORDER = 5 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL5
+                      FROM (
+                            SELECT CI.COLLECTION_ID,
+                                   C.POSTER_URL,
+                                   ROW_NUMBER() OVER (
+                                       PARTITION BY CI.COLLECTION_ID
+                                       ORDER BY CI.ADDED_DT DESC, CI.CONTENT_ID DESC
+                                   ) AS POSTER_ORDER
+                              FROM COLLECTION_ITEM CI
+                             INNER JOIN CONTENT C
+                                ON C.CONTENT_ID = CI.CONTENT_ID
+                             WHERE C.POSTER_URL IS NOT NULL
+                      )
+                     WHERE POSTER_ORDER &lt;= 5
+                     GROUP BY COLLECTION_ID
+              ) CP
+                ON CP.COLLECTION_ID = C.COLLECTION_ID
             <include refid="visibleCollectionWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">

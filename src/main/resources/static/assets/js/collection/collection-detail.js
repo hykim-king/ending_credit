@@ -3,10 +3,13 @@
  * 2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 및 포스터 적용
  * 2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 연결·작품 평균 별점 적용
  * 2026. 8. 31. jinyoung - 컬렉션 작품 카드를 영화 상세 화면과 연결
+ * 2026. 9. 01. jinyoung - D-01·D-05 본문 UI와 상태 피드백 반영
+ * 2026. 9. 01. jinyoung - 상세 상단 작품 포스터 콜라주 반영
  */
-// View Controller가 body의 data-* 속성에 넣은 값을 상세 조회와 권한 표시에 사용한다.
-const collectionId = Number(document.body.dataset.collectionId);
-const currentMemberId = Number(document.body.dataset.currentMemberId || 0);
+// 공통 layout을 사용하므로 담당 본문 루트의 값을 상세 조회와 권한 표시에 사용한다.
+const detailPage = document.querySelector("#collectionDetailPage");
+const collectionId = Number(detailPage.dataset.collectionId);
+const currentMemberId = Number(detailPage.dataset.currentMemberId || 0);
 let isOwner = false;
 let isLiked = false;
 let isPublicCollection = false;
@@ -35,6 +38,8 @@ async function loadCollection() {
 
         document.title = `${collection.title} - 컬렉션`;
         document.querySelector("#collectionTitle").textContent = collection.title;
+        document.querySelector("#deleteCollectionTitle").textContent =
+            collection.title || "이 컬렉션";
         document.querySelector("#collectionDescription").textContent =
             collection.description || "설명이 없습니다.";
         document.querySelector("#collectionAuthor").textContent =
@@ -47,9 +52,7 @@ async function loadCollection() {
 
         const publicBadge = document.querySelector("#publicBadge");
         publicBadge.textContent = collection.isPublic === "Y" ? "공개" : "비공개";
-        publicBadge.className = collection.isPublic === "Y"
-            ? "badge text-bg-success"
-            : "badge text-bg-secondary";
+        publicBadge.className = "collection-visibility-badge";
 
         isPublicCollection = collection.isPublic === "Y";
         isOwner = currentMemberId > 0 && currentMemberId === Number(collection.memberId);
@@ -91,6 +94,9 @@ async function copyCollectionLink() {
         }
 
         feedback.classList.remove("d-none");
+        window.setTimeout(() => {
+            feedback.classList.add("d-none");
+        }, 2400);
     } catch (error) {
         showDetailError(errorMessage, "링크를 복사하지 못했습니다.");
     }
@@ -123,10 +129,11 @@ async function loadLikeStatus() {
 
 function renderLikeButton() {
     const likeButton = document.querySelector("#likeButton");
-    likeButton.textContent = isLiked ? "좋아요 취소" : "좋아요";
-    likeButton.className = isLiked
-        ? "btn btn-danger"
-        : "btn btn-outline-danger";
+    const icon = likeButton.querySelector("i");
+    const label = document.querySelector("#likeButtonLabel");
+
+    label.textContent = isLiked ? "좋아요 취소" : "좋아요";
+    icon.className = isLiked ? "bi bi-heart-fill" : "bi bi-heart";
     likeButton.setAttribute("aria-pressed", String(isLiked));
 }
 
@@ -134,18 +141,28 @@ function renderLikeButton() {
 async function toggleLike() {
     const errorMessage = document.querySelector("#errorMessage");
     const likeButton = document.querySelector("#likeButton");
+    const likeCount = document.querySelector("#likeCount");
+    const previousLiked = isLiked;
+    const previousCount = Number(likeCount.textContent || 0);
+
     likeButton.disabled = true;
     hideDetailError(errorMessage);
+    isLiked = !previousLiked;
+    likeCount.textContent = String(
+        Math.max(0, previousCount + (isLiked ? 1 : -1))
+    );
+    renderLikeButton();
 
     try {
-        if (isLiked) {
+        if (previousLiked) {
             await requestDelete(`/api/collections/${collectionId}/likes`);
         } else {
             await requestPost(`/api/collections/${collectionId}/likes`, {});
         }
-
-        await loadCollection();
     } catch (error) {
+        isLiked = previousLiked;
+        likeCount.textContent = String(previousCount);
+        renderLikeButton();
         showDetailError(errorMessage, error.message);
     } finally {
         likeButton.disabled = false;
@@ -155,6 +172,11 @@ async function toggleLike() {
 /** 지정한 페이지의 컬렉션 작품을 조회하고 목록과 페이지 버튼을 갱신한다. */
 async function loadItems(pageNo) {
     const errorMessage = document.querySelector("#errorMessage");
+    const loading = document.querySelector("#itemLoading");
+
+    loading.classList.remove("d-none");
+    document.querySelector("#itemList").classList.add("d-none");
+    document.querySelector("#itemEmpty").classList.add("d-none");
 
     try {
         const data = await requestGet(`/api/collections/${collectionId}/items`, {
@@ -162,69 +184,123 @@ async function loadItems(pageNo) {
             pageSize: 12
         });
 
-        renderItems(data.items || []);
+        const items = data.items || [];
+        if (pageNo === 1) {
+            renderDetailCover(items);
+        }
+        renderItems(items);
         renderItemPagination(data.page || {}, pageNo);
         document.querySelector("#itemResultCount").textContent =
             `${data.page?.totalCnt || 0}개`;
     } catch (error) {
+        loading.classList.add("d-none");
         showDetailError(errorMessage, error.message);
     }
 }
 
+function renderDetailCover(items) {
+    const cover = document.querySelector("#collectionDetailCover");
+    const fallback = document.querySelector("#collectionDetailCoverFallback");
+    const posterItems = items
+        .filter((item) => item.posterUrl)
+        .slice(0, 5);
+
+    cover.querySelector(".collection-detail-poster-collage")?.remove();
+    fallback.classList.toggle("d-none", posterItems.length > 0);
+
+    if (posterItems.length === 0) {
+        cover.classList.remove("has-posters");
+        return;
+    }
+
+    const collage = document.createElement("div");
+    collage.className = "collection-detail-poster-collage";
+    collage.style.setProperty("--poster-count", String(posterItems.length));
+
+    posterItems.forEach((item) => {
+        const poster = document.createElement("img");
+        poster.src = resolveDetailPosterUrl(item.posterUrl);
+        poster.alt = "";
+        poster.addEventListener("error", () => {
+            poster.remove();
+            const remainingPosters = collage.querySelectorAll("img").length;
+            collage.style.setProperty("--poster-count", String(remainingPosters || 1));
+            if (remainingPosters === 0) {
+                collage.remove();
+                cover.classList.remove("has-posters");
+                fallback.classList.remove("d-none");
+            }
+        });
+        collage.append(poster);
+    });
+
+    cover.classList.add("has-posters");
+    cover.append(collage);
+}
+
 function renderItems(items) {
     const itemList = document.querySelector("#itemList");
+    const itemEmpty = document.querySelector("#itemEmpty");
+
     itemList.replaceChildren();
+    document.querySelector("#itemLoading").classList.add("d-none");
+    itemEmpty.classList.toggle("d-none", items.length > 0);
+    itemList.classList.toggle("d-none", items.length === 0);
 
     if (items.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "col-12 alert alert-secondary text-center";
-        empty.textContent = "컬렉션에 추가된 작품이 없습니다.";
-        itemList.append(empty);
         return;
     }
 
     items.forEach((item) => {
         // 서버 데이터를 innerHTML로 조합하지 않고 textContent로 넣어 안전하게 표시한다.
-        const column = document.createElement("div");
-        column.className = "col-12 col-sm-6 col-lg-4 col-xl-3";
-
         const link = document.createElement("a");
-        link.className = "text-decoration-none text-dark h-100 d-block";
+        link.className = "collection-movie-card";
         link.href = `/movies/${item.contentId}`;
-
-        const card = document.createElement("article");
-        card.className = "card h-100 border-0 shadow-sm";
 
         if (item.posterUrl) {
             const poster = document.createElement("img");
-            poster.className = "card-img-top";
+            poster.className = "collection-movie-poster";
             poster.src = resolveDetailPosterUrl(item.posterUrl);
             poster.alt = `${item.titleKo || item.titleOrg || "작품"} 포스터`;
-            card.append(poster);
+            poster.addEventListener("error", () => {
+                poster.replaceWith(createDetailPosterPlaceholder());
+            });
+            link.append(poster);
+        } else {
+            link.append(createDetailPosterPlaceholder());
         }
 
         const body = document.createElement("div");
-        body.className = "card-body d-flex flex-column";
+        body.className = "collection-movie-info";
 
         const title = document.createElement("h3");
-        title.className = "h6 card-title";
+        title.className = "collection-movie-title";
         title.textContent = item.titleKo || item.titleOrg || `콘텐츠 ${item.contentId}`;
 
         const info = document.createElement("p");
-        info.className = "card-text text-secondary small flex-grow-1";
+        info.className = "collection-movie-meta";
         const releaseYear = item.releaseYear || "개봉연도 정보 없음";
         const averageRating = item.averageRating == null
             ? "평가 없음"
-            : `평균 별점 ${Number(item.averageRating).toFixed(1)}`;
+            : `평균 ★${Number(item.averageRating).toFixed(1)}`;
         info.textContent = `${releaseYear} · ${averageRating}`;
 
         body.append(title, info);
-
-        card.append(body);
-        link.append(card);
-        column.append(link);
-        itemList.append(column);
+        link.append(body);
+        itemList.append(link);
     });
+}
+
+function createDetailPosterPlaceholder() {
+    const placeholder = document.createElement("div");
+    const icon = document.createElement("i");
+
+    placeholder.className = "collection-movie-poster-placeholder";
+    icon.className = "bi bi-film";
+    icon.setAttribute("aria-hidden", "true");
+    placeholder.append(icon);
+
+    return placeholder;
 }
 
 async function deleteCollection() {
@@ -233,13 +309,17 @@ async function deleteCollection() {
 
     // 모달의 삭제 버튼을 잠가 같은 DELETE 요청이 중복 전송되는 것을 막는다.
     deleteButton.disabled = true;
+    deleteButton.textContent = "삭제 중...";
 
     try {
         await requestDelete(`/api/collections/${collectionId}`);
-        window.location.href = "/collections";
+        window.location.href = currentMemberId > 0
+            ? `/users/${currentMemberId}/records?tab=collections`
+            : "/collections";
     } catch (error) {
         showDetailError(errorMessage, error.message);
         deleteButton.disabled = false;
+        deleteButton.textContent = "삭제";
     }
 }
 

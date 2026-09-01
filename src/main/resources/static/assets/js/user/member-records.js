@@ -2,26 +2,45 @@
  * Modification History
  * 2026. 8. 31. jinyoung - 평가·보고싶어요 카드의 TMDB 포스터 상대 경로 표시 지원
  * 2026. 8. 31. jinyoung - 이미지 URL·페이지네이션 공통 UI 사용
+ * 2026. 9. 01. jinyoung - U-03~U-06 4탭 UI와 회원 컬렉션 조회 연결
  */
 const RECORD_PAGE_SIZE = 12;
-const RECORD_TABS = ["ratings", "watchlist"];
-
-const memberId = Number(document.body.dataset.memberId);
-const recordState = {
+const RECORD_TABS = ["ratings", "comments", "collections", "watchlist"];
+const RECORD_CONFIG = Object.freeze({
     ratings: {
-        pageNo: 1,
-        data: null,
-        scrollY: 0
+        title: "평가한 영화",
+        empty: "아직 평가한 영화가 없습니다.",
+        documentTitle: "회원 평가 기록"
+    },
+    comments: {
+        title: "작성한 코멘트",
+        empty: "코멘트 API가 연결되면 작성한 코멘트가 표시됩니다.",
+        documentTitle: "회원 코멘트 기록",
+        integrationPending: true
+    },
+    collections: {
+        title: "만든 컬렉션",
+        empty: "아직 만든 컬렉션이 없습니다.",
+        documentTitle: "회원 컬렉션 기록"
     },
     watchlist: {
-        pageNo: 1,
-        data: null,
-        scrollY: 0
+        title: "보고싶어요 영화",
+        empty: "아직 보고싶어요로 등록한 영화가 없습니다.",
+        documentTitle: "회원 보고싶어요 기록"
     }
-};
+});
+
+const recordsPage = document.querySelector("#memberRecordsPage");
+const memberId = Number(recordsPage.dataset.memberId);
+const recordState = Object.fromEntries(
+    RECORD_TABS.map((tab) => [
+        tab,
+        { pageNo: 1, data: null, scrollY: 0 }
+    ])
+);
 
 let activeTab = normalizeTab(
-    document.body.dataset.initialTab
+    recordsPage.dataset.initialTab
     || new URLSearchParams(window.location.search).get("tab")
 );
 
@@ -54,20 +73,15 @@ document.addEventListener("DOMContentLoaded", () => {
     loadRecords(activeTab, 1);
 });
 
-/** 평가와 보고싶어요 외의 값은 기본 평가 탭으로 보정한다. */
 function normalizeTab(tab) {
     return RECORD_TABS.includes(tab) ? tab : "ratings";
 }
 
-/** 탭 링크의 기본 이동을 막고 같은 페이지 안에서 기록 유형을 전환한다. */
 function changeTab(event) {
     event.preventDefault();
-
-    const nextTab = normalizeTab(event.currentTarget.dataset.tab);
-    switchTab(nextTab, true);
+    switchTab(normalizeTab(event.currentTarget.dataset.tab), true);
 }
 
-/** 현재 탭의 위치를 저장한 뒤 새 탭의 데이터 또는 캐시를 표시한다. */
 function switchTab(nextTab, updateHistory) {
     if (nextTab === activeTab) {
         return;
@@ -85,15 +99,10 @@ function switchTab(nextTab, updateHistory) {
     updateTabView();
 
     const savedState = recordState[activeTab];
-
     if (savedState.data) {
         renderRecords(activeTab, savedState.data);
-
         window.requestAnimationFrame(() => {
-            window.scrollTo({
-                top: savedState.scrollY,
-                behavior: "auto"
-            });
+            window.scrollTo({ top: savedState.scrollY, behavior: "auto" });
         });
         return;
     }
@@ -101,13 +110,12 @@ function switchTab(nextTab, updateHistory) {
     loadRecords(activeTab, savedState.pageNo);
 }
 
-/** 선택된 탭의 제목과 활성 상태를 화면에 반영한다. */
 function updateTabView() {
     document.querySelectorAll("#recordTabs [data-tab]")
         .forEach((tabLink) => {
             const selected = tabLink.dataset.tab === activeTab;
-
             tabLink.classList.toggle("active", selected);
+            tabLink.setAttribute("aria-selected", String(selected));
 
             if (selected) {
                 tabLink.setAttribute("aria-current", "page");
@@ -116,37 +124,38 @@ function updateTabView() {
             }
         });
 
-    document.querySelector("#recordTitle").textContent =
-        activeTab === "ratings"
-            ? "평가한 영화"
-            : "보고싶어요 영화";
-
-    document.title =
-        activeTab === "ratings"
-            ? "회원 평가 기록"
-            : "회원 보고싶어요 기록";
+    const config = RECORD_CONFIG[activeTab];
+    document.querySelector("#recordTitle").textContent = config.title;
+    document.querySelector("#recordTotalCount").textContent = "0개";
+    document.title = config.documentTitle;
 }
 
-/** 현재 탭과 페이지에 해당하는 회원 기록을 조회한다. */
 async function loadRecords(tab, pageNo) {
     const requestTab = tab;
-    const endpoint = tab === "ratings"
-        ? `/api/users/${memberId}/ratings`
-        : `/api/users/${memberId}/watchlist`;
+    const config = RECORD_CONFIG[tab];
+
+    if (config.integrationPending) {
+        const pendingData = {
+            items: [],
+            page: { pageNo: 1, pageSize: RECORD_PAGE_SIZE, totalCnt: 0 },
+            integrationPending: true
+        };
+        recordState[tab].data = pendingData;
+        renderRecords(tab, pendingData);
+        return;
+    }
 
     showRecordLoading();
 
     try {
-        const data = await requestGet(endpoint, {
-            page: pageNo,
-            size: RECORD_PAGE_SIZE,
-            sort: "latest"
-        });
+        const data = await requestGet(
+            createRecordEndpoint(tab),
+            createRecordParams(tab, pageNo)
+        );
 
         recordState[requestTab].pageNo = pageNo;
         recordState[requestTab].data = data;
 
-        // 탭을 빠르게 전환해 이전 요청이 늦게 끝난 경우 현재 화면을 덮지 않는다.
         if (activeTab === requestTab) {
             renderRecords(requestTab, data);
         }
@@ -157,59 +166,82 @@ async function loadRecords(tab, pageNo) {
     }
 }
 
-/** API 응답의 목록, 전체 건수와 페이지 정보를 화면에 표시한다. */
+function createRecordEndpoint(tab) {
+    if (tab === "collections") {
+        return `/api/users/${memberId}/collections`;
+    }
+
+    return tab === "ratings"
+        ? `/api/users/${memberId}/ratings`
+        : `/api/users/${memberId}/watchlist`;
+}
+
+function createRecordParams(tab, pageNo) {
+    if (tab === "collections") {
+        return { pageNo, pageSize: RECORD_PAGE_SIZE };
+    }
+
+    return {
+        page: pageNo,
+        size: RECORD_PAGE_SIZE,
+        sort: "latest"
+    };
+}
+
 function renderRecords(tab, data) {
     const items = Array.isArray(data.items) ? data.items : [];
     const page = data.page || {};
     const totalCount = Number(page.totalCnt || 0);
 
     hideRecordStatus();
-    document.querySelector("#recordTotalCount").textContent =
-        `${totalCount}개`;
+    document.querySelector("#recordTotalCount").textContent = `${totalCount}개`;
+
+    if (data.integrationPending) {
+        showRecordEmpty(
+            "코멘트 연동 준비 중",
+            RECORD_CONFIG.comments.empty,
+            "bi-chat-square-text"
+        );
+        return;
+    }
 
     if (items.length === 0) {
         showRecordEmpty(
-            tab === "ratings"
-                ? "아직 평가한 영화가 없습니다."
-                : "아직 보고싶어요로 등록한 영화가 없습니다."
+            "아직 기록이 없습니다.",
+            RECORD_CONFIG[tab].empty,
+            tab === "collections" ? "bi-collection" : "bi-film"
         );
         renderPagination(page, 1);
         return;
     }
 
-    renderRecordCards(tab, items);
-    renderPagination(
-        page,
-        Number(page.pageNo || recordState[tab].pageNo)
-    );
+    if (tab === "collections") {
+        renderCollectionCards(items);
+    } else {
+        renderMovieCards(tab, items);
+    }
+
+    renderPagination(page, Number(page.pageNo || recordState[tab].pageNo));
 }
 
-/** 회원 콘텐츠 목록을 영화 카드로 생성한다. */
-function renderRecordCards(tab, items) {
+function renderMovieCards(tab, items) {
     const recordList = document.querySelector("#recordList");
     recordList.replaceChildren();
 
     items.forEach((item) => {
-        const column = document.createElement("div");
         const link = document.createElement("a");
-        const card = document.createElement("article");
         const body = document.createElement("div");
         const title = document.createElement("h3");
         const meta = document.createElement("p");
+        const movieTitle = item.titleKo || item.titleOrg || `콘텐츠 ${item.contentId}`;
 
-        link.className = "text-decoration-none text-dark h-100";
+        link.className = "member-media-card";
         link.href = `/movies/${item.contentId}`;
-
-        card.className = "card h-100 border-0 shadow-sm";
-        body.className = "card-body";
-        title.className = "h6 card-title text-truncate";
-        meta.className = "card-text text-secondary small mb-0";
-
-        const movieTitle =
-            item.titleKo
-            || item.titleOrg
-            || `콘텐츠 ${item.contentId}`;
-
+        body.className = "member-card-body";
+        title.className = "member-card-title";
+        meta.className = tab === "ratings"
+            ? "member-card-meta member-card-rating"
+            : "member-card-meta";
         title.textContent = movieTitle;
         meta.textContent = createRecordMeta(tab, item);
 
@@ -218,23 +250,55 @@ function renderRecordCards(tab, items) {
             : createPosterPlaceholder(movieTitle);
 
         body.append(title, meta);
-        card.append(poster, body);
-        link.append(card);
-        column.append(link);
-        recordList.append(column);
+        link.append(poster, body);
+        recordList.append(link);
     });
 
     recordList.classList.remove("d-none");
 }
 
-/** 영화 카드의 평가 또는 개봉 연도 정보를 구성한다. */
+function renderCollectionCards(items) {
+    const recordList = document.querySelector("#recordList");
+    recordList.replaceChildren();
+
+    items.forEach((item) => {
+        const link = document.createElement("a");
+        const cover = document.createElement("div");
+        const icon = document.createElement("i");
+        const coverTitle = document.createElement("strong");
+        const body = document.createElement("div");
+        const description = document.createElement("p");
+        const stats = document.createElement("div");
+
+        link.className = "member-collection-card";
+        link.href = `/collections/${item.collectionId}`;
+        cover.className = "member-collection-cover";
+        icon.className = "bi bi-collection";
+        icon.setAttribute("aria-hidden", "true");
+        coverTitle.textContent = item.title || `컬렉션 ${item.collectionId}`;
+        body.className = "member-card-body";
+        description.className = "member-card-meta";
+        description.textContent = item.description || "설명이 없습니다.";
+        stats.className = "member-collection-stats";
+        stats.textContent =
+            `작품 ${Number(item.itemCount || 0)} · 좋아요 ${Number(item.likeCount || 0)}`;
+
+        cover.append(icon, coverTitle);
+        body.append(description, stats);
+        link.append(cover, body);
+        recordList.append(link);
+    });
+
+    recordList.classList.remove("d-none");
+}
+
 function createRecordMeta(tab, item) {
     const year = formatReleaseYear(item.releaseYear);
 
     if (tab === "ratings") {
         const score = Number(item.ratingScore);
-        const stars = Number.isInteger(score)
-            ? "★".repeat(score) + "☆".repeat(5 - score)
+        const stars = Number.isInteger(score) && score >= 0 && score <= 5
+            ? `★ ${score}`
             : "평가 정보 없음";
 
         return year ? `${year} · ${stars}` : stars;
@@ -243,16 +307,12 @@ function createRecordMeta(tab, item) {
     return year || item.titleOrg || "";
 }
 
-/** 포스터 이미지를 생성하고 로드 실패 시 대체 영역으로 변경한다. */
 function createPosterImage(posterUrl, movieTitle) {
     const image = document.createElement("img");
 
-    image.className = "card-img-top bg-secondary-subtle";
+    image.className = "member-card-poster";
     image.src = UserListUi.resolveTmdbImageUrl(posterUrl, "w500");
     image.alt = `${movieTitle} 포스터`;
-    image.style.aspectRatio = "2 / 3";
-    image.style.objectFit = "cover";
-
     image.addEventListener("error", () => {
         image.replaceWith(createPosterPlaceholder(movieTitle));
     });
@@ -260,29 +320,17 @@ function createPosterImage(posterUrl, movieTitle) {
     return image;
 }
 
-/** 포스터가 없거나 로드에 실패한 영화의 대체 영역을 생성한다. */
 function createPosterPlaceholder(movieTitle) {
     const placeholder = document.createElement("div");
-
-    placeholder.className =
-        "card-img-top bg-secondary-subtle d-flex "
-        + "align-items-center justify-content-center text-secondary p-3";
-    placeholder.style.aspectRatio = "2 / 3";
+    placeholder.className = "member-card-poster-placeholder";
     placeholder.textContent = `${movieTitle} 포스터 없음`;
-
     return placeholder;
 }
 
-/** 날짜 문자열에서 화면에 사용할 개봉 연도만 추출한다. */
 function formatReleaseYear(releaseYear) {
-    if (!releaseYear) {
-        return "";
-    }
-
-    return String(releaseYear).substring(0, 4);
+    return releaseYear ? String(releaseYear).substring(0, 4) : "";
 }
 
-/** 전체 건수와 페이지 크기를 이용해 페이지 버튼을 생성한다. */
 function renderPagination(page, currentPage) {
     UserListUi.renderPagination({
         container: document.querySelector("#recordPagination"),
@@ -299,43 +347,30 @@ function renderPagination(page, currentPage) {
     });
 }
 
-/** 목록 요청 중 상태만 표시한다. */
 function showRecordLoading() {
     hideRecordStatus();
-
-    document.querySelector("#recordLoading")
-        .classList.remove("d-none");
+    document.querySelector("#recordLoading").classList.remove("d-none");
 }
 
-/** 조회 결과가 없는 상태를 표시한다. */
-function showRecordEmpty(message) {
+function showRecordEmpty(title, message, iconName) {
     const empty = document.querySelector("#recordEmpty");
-
-    empty.querySelector("#recordEmptyMessage")
-        .textContent = message;
+    document.querySelector("#recordEmptyTitle").textContent = title;
+    document.querySelector("#recordEmptyMessage").textContent = message;
+    document.querySelector("#recordEmptyIcon").className =
+        `bi ${iconName} member-state-icon`;
     empty.classList.remove("d-none");
 }
 
-/** 조회 오류 메시지와 재시도 버튼을 표시한다. */
 function showRecordError(message) {
     hideRecordStatus();
-
-    document.querySelector("#recordErrorMessage")
-        .textContent = message;
-    document.querySelector("#recordError")
-        .classList.remove("d-none");
+    document.querySelector("#recordErrorMessage").textContent = message;
+    document.querySelector("#recordError").classList.remove("d-none");
 }
 
-/** loading, empty, error, list 상태를 모두 숨긴다. */
 function hideRecordStatus() {
-    document.querySelector("#recordLoading")
-        .classList.add("d-none");
-    document.querySelector("#recordError")
-        .classList.add("d-none");
-    document.querySelector("#recordEmpty")
-        .classList.add("d-none");
-    document.querySelector("#recordList")
-        .classList.add("d-none");
-    document.querySelector("#recordPagination")
-        .replaceChildren();
+    document.querySelector("#recordLoading").classList.add("d-none");
+    document.querySelector("#recordError").classList.add("d-none");
+    document.querySelector("#recordEmpty").classList.add("d-none");
+    document.querySelector("#recordList").classList.add("d-none");
+    document.querySelector("#recordPagination").replaceChildren();
 }

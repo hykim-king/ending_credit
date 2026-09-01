@@ -29,6 +29,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * 2026. 8. 29. jinyoung    상세 인증 회원·조회 전용 및 공개 여부·작품 선택 영역 검증 추가
  * 2026. 8. 31. jinyoung    D-04 작품 추가 모달 렌더링 검증 추가
  * 2026. 8. 31. jinyoung    D-01 링크 복사·코멘트·삭제 모달 렌더링 검증 추가
+ * 2026. 9. 01. jinyoung    v3.0 공개 정책과 담당 본문 렌더링 검증
+ * 2026. 9. 01. jinyoung    컬렉션 검색 결과 본문 렌더링 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -53,7 +55,12 @@ class CollectionViewControllerTest {
 		mockMvc.perform(get("/collections"))
 				.andExpect(status().isOk())
 				.andExpect(view().name("collection/list"))
-				.andExpect(content().contentTypeCompatibleWith("text/html"));
+				.andExpect(content().contentTypeCompatibleWith("text/html"))
+				.andExpect(content().string(containsString(
+						"id=\"collectionListPage\"")))
+				.andExpect(content().string(containsString("id=\"searchForm\"")))
+				.andExpect(content().string(containsString("id=\"collectionLoading\"")))
+				.andExpect(content().string(containsString("id=\"collectionListEmpty\"")));
 	}
 
 	/** 컬렉션 등록 View 경로와 모델 및 실제 HTML 렌더링 검증 */
@@ -66,7 +73,7 @@ class CollectionViewControllerTest {
 				.andExpect(model().attribute("formMode", "create"))
 				.andExpect(model().attribute("collectionId", 0))
 				.andExpect(content().contentTypeCompatibleWith("text/html"))
-				.andExpect(content().string(containsString("id=\"isPublic\"")))
+				.andExpect(content().string(not(containsString("id=\"isPublic\""))))
 				.andExpect(content().string(containsString(
 						"id=\"openContentSearchButton\"")))
 				.andExpect(content().string(containsString(
