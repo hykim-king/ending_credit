@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+Modification History
+2026. 8. 31. jinyoung - 컬렉션 검색 조건을 제목으로 단일화
+-->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
 <meta charset="UTF-8">
@@ -25,17 +29,10 @@
 
         <!-- JavaScript가 id로 값을 읽어 GET /api/collections의 쿼리 파라미터로 전달 -->
         <form id="searchForm" class="row g-2 mb-4">
-            <div class="col-12 col-md-3">
-                <label class="visually-hidden" for="searchDiv">검색 구분</label>
-                <select id="searchDiv" class="form-select">
-                    <option value="10">제목</option>
-                    <option value="20">회원 번호</option>
-                </select>
-            </div>
-            <div class="col-12 col-md-6">
+            <div class="col-12 col-md-9">
                 <label class="visually-hidden" for="searchWord">검색어</label>
                 <input id="searchWord" class="form-control" type="search"
-                       placeholder="검색어를 입력하세요">
+                       placeholder="컬렉션 제목을 입력하세요">
             </div>
             <div class="col-7 col-md-2">
                 <label class="visually-hidden" for="pageSize">페이지 크기</label>

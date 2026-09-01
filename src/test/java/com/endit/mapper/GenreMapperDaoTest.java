@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.GenreVO;
-import com.endit.mapper.GenreMapper;
 
 @SpringBootTest
 @Transactional

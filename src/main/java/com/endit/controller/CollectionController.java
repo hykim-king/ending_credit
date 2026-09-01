@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,27 +14,31 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.endit.auth.CurrentMemberProvider;
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
+import com.endit.domain.CollectionCreateRequest;
+import com.endit.domain.CollectionUpdateRequest;
 import com.endit.domain.CollectionVO;
 import com.endit.service.CollectionService;
 
 /**
  * <pre>
  * Class Name  : CollectionController
- * Description : 컬렉션 목록, 단건, 등록, 수정 및 삭제 요청을 처리하는 REST Controller
+ * Description : 컬렉션 목록, U-05 회원별 목록, 단건, 등록, 수정 및 삭제 요청을 처리하는 REST Controller
  *
  * Modification History
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 21. jinyoung    최초 생성
+ * 2026. 8. 29. jinyoung    인증 회원 기반 DTO·PATCH·전체 공개 목록·U-05 접근 권한 처리 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -41,18 +46,24 @@ import com.endit.service.CollectionService;
  * @since 2026. 8. 21.
  */
 @RestController
-@RequestMapping("/api/collections")
+@RequestMapping("/api")
 public class CollectionController {
 
 	private final CollectionService collectionService;
+	private final CurrentMemberProvider currentMemberProvider;
 
 	/**
 	 * CollectionService를 주입받아 Controller 생성
 	 *
 	 * @param collectionService 컬렉션 Service
+	 * @param currentMemberProvider 현재 로그인 회원 Provider
 	 */
-	public CollectionController(CollectionService collectionService) {
+	public CollectionController(
+			CollectionService collectionService,
+			CurrentMemberProvider currentMemberProvider) {
+
 		this.collectionService = collectionService;
+		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/**
@@ -64,7 +75,7 @@ public class CollectionController {
 	 * @param searchWord 검색어
 	 * @return 컬렉션 목록과 페이징 정보
 	 */
-	@GetMapping
+	@GetMapping("/collections")
 	public ResponseEntity<Map<String, Object>> retrieve(
 			@RequestParam(defaultValue = "1") int pageNo,
 			@RequestParam(defaultValue = "10") int pageSize,
@@ -89,31 +100,68 @@ public class CollectionController {
 	}
 
 	/**
+	 * U-05 대상 회원의 컬렉션 목록 조회
+	 *
+	 * @param memberId U-05 대상 회원 번호
+	 * @param pageNo 페이지 번호
+	 * @param pageSize 페이지당 건수
+	 * @param searchDiv 검색 구분
+	 * @param searchWord 검색어
+	 * @return 대상 회원의 접근 가능한 컬렉션 목록과 페이징 정보
+	 */
+	@GetMapping("/users/{memberId}/collections")
+	public ResponseEntity<Map<String, Object>> retrieveByMember(
+			@PathVariable int memberId,
+			@RequestParam(defaultValue = "1") int pageNo,
+			@RequestParam(defaultValue = "10") int pageSize,
+			@RequestParam(defaultValue = "") String searchDiv,
+			@RequestParam(defaultValue = "") String searchWord) {
+
+		DTO param = new DTO();
+		param.setPageNo(pageNo);
+		param.setPageSize(pageSize);
+		param.setSearchDiv(searchDiv);
+		param.setSearchWord(searchWord);
+
+		List<CollectionVO> items = collectionService.retrieveByMember(
+				memberId,
+				param,
+				currentMemberProvider.findCurrentMemberId());
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("page", param);
+
+		return ResponseEntity.ok(response);
+	}
+
+	/**
 	 * 컬렉션 번호를 이용한 단건 조회
 	 *
 	 * @param collectionId 컬렉션 번호
 	 * @return 컬렉션 정보
 	 */
-	@GetMapping("/{collectionId}")
+	@GetMapping("/collections/{collectionId}")
 	public ResponseEntity<CollectionVO> get(
 			@PathVariable int collectionId) {
 
-		return ResponseEntity.ok(collectionService.get(collectionId));
+		return ResponseEntity.ok(collectionService.get(
+				collectionId,
+				currentMemberProvider.findCurrentMemberId()));
 	}
 
 	/**
 	 * 컬렉션 등록
 	 *
-	 * @param param 등록할 컬렉션 정보
+	 * @param request 등록할 컬렉션 정보
 	 * @return 등록된 컬렉션 정보와 접근 URI
 	 */
-	@PostMapping
+	@PostMapping("/collections")
 	public ResponseEntity<CollectionVO> create(
-			@RequestBody CollectionVO param) {
+			@RequestBody CollectionCreateRequest request) {
 
-		// 로그인 기능이 병합되기 전에는 화면에서 입력한 임시 회원 번호를 사용한다.
-		// 최종 통합 시 이 값은 로그인 Principal의 MEMBER_ID로 교체해야 한다.
-		CollectionVO created = collectionService.create(param);
+		long memberId = currentMemberProvider.requireMemberId();
+		CollectionVO created = collectionService.create(memberId, request);
 
 		URI location = URI.create("/api/collections/" + created.getCollectionId());
 
@@ -121,20 +169,22 @@ public class CollectionController {
 	}
 
 	/**
-	 * 컬렉션 제목, 설명 및 공개 여부 수정
+	 * 컬렉션 제목과 설명 수정
 	 *
 	 * @param collectionId 컬렉션 번호
-	 * @param param 수정할 컬렉션 정보
+	 * @param request 수정할 컬렉션 정보
 	 * @return 수정된 컬렉션 정보
 	 */
-	@PutMapping("/{collectionId}")
+	@PatchMapping("/collections/{collectionId}")
 	public ResponseEntity<CollectionVO> update(
 			@PathVariable int collectionId,
-			@RequestBody CollectionVO param) {
+			@RequestBody CollectionUpdateRequest request) {
 
+		long memberId = currentMemberProvider.requireMemberId();
 		return ResponseEntity.ok(collectionService.update(
+				memberId,
 				collectionId,
-				param));
+				request));
 	}
 
 	/**
@@ -143,11 +193,12 @@ public class CollectionController {
 	 * @param collectionId 컬렉션 번호
 	 * @return 본문이 없는 응답
 	 */
-	@DeleteMapping("/{collectionId}")
+	@DeleteMapping("/collections/{collectionId}")
 	public ResponseEntity<Void> delete(
 			@PathVariable int collectionId) {
 
-		collectionService.delete(collectionId);
+		long memberId = currentMemberProvider.requireMemberId();
+		collectionService.delete(memberId, collectionId);
 
 		return ResponseEntity.noContent().build();
 	}
@@ -166,6 +217,21 @@ public class CollectionController {
 				"400",
 				exception.getMessage(),
 				"컬렉션 요청값을 확인해 주세요.");
+
+		return ResponseEntity
+				.status(HttpStatus.BAD_REQUEST)
+				.body(message);
+	}
+
+	/** 존재하지 않는 회원·콘텐츠 참조 등 무결성 오류를 HTTP 400으로 변환 */
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<MessageVO> handleDataIntegrityViolation(
+			DataIntegrityViolationException exception) {
+
+		MessageVO message = new MessageVO(
+				"400",
+				"존재하는 회원과 작품 번호를 입력해 주세요.",
+				"컬렉션 데이터의 참조 관계를 확인해 주세요.");
 
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)

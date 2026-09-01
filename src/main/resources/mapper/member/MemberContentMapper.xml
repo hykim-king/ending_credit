@@ -83,8 +83,10 @@
            SET RATING_SCORE = #{ratingScore,jdbcType=INTEGER},
                WATCHLIST = #{watchlist},
                RATED_DT = CASE
-                   WHEN #{ratingScore,jdbcType=INTEGER} IS NOT NULL THEN SYSDATE
-                   ELSE NULL
+                   WHEN #{ratingScore,jdbcType=INTEGER} IS NULL THEN NULL
+                   WHEN RATING_SCORE IS NULL
+                        OR RATING_SCORE &lt;&gt; #{ratingScore,jdbcType=INTEGER} THEN SYSDATE
+                   ELSE RATED_DT
                END,
                WATCHLIST_DT = CASE
                    WHEN #{watchlist} = 'Y' THEN NVL(WATCHLIST_DT, SYSDATE)
