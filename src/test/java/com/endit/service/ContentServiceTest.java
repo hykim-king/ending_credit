@@ -42,7 +42,12 @@ class ContentServiceTest {
 
 	private static final String SEARCH_BY_TITLE_KO = "10";
 	private static final String SEARCH_BY_EXTERNAL_ID = "40";
+	private static final String SEARCH_BY_TITLE = "50";
 	private static final String UNSUPPORTED_SEARCH_DIV = "99";
+
+	private static final String SEARCH_KEY_SORT = "sort";
+	private static final String SORT_BOX_OFFICE = "boxoffice";
+	private static final String UNSUPPORTED_SORT = "rating";
 
 	private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/";
 	private static final int OVER_MAX_PAGE_SIZE = 500;
@@ -79,6 +84,67 @@ class ContentServiceTest {
 		contentService.retrieve(param);
 
 		assertEquals(MAX_PAGE_SIZE, param.getPageSize());
+	}
+
+	/** 박스오피스 정렬축이 콘텐츠 번호 오름차순으로 도는지 검증 - S-01 순위 */
+	@Test
+	@DisplayName("박스오피스 정렬은 콘텐츠 번호 오름차순")
+	void retrieveSortsByBoxOffice() {
+		// 검색어로 좁히지 않으면 content_id ASC 1페이지가 테이블 전체의 최저 번호 100건이라,
+		// 시퀀스에서 최고 번호를 받는 이 두 행이 결과에 들어오지 못한다. 공용 마커로 둘만 잡는다
+		String marker = UUID.randomUUID().toString().substring(0, 8);
+		ContentVO first = createContent("정렬검증-" + marker + "-A");
+		ContentVO second = createContent("정렬검증-" + marker + "-B");
+
+		assertTrue(first.getContentId() < second.getContentId(), "SEQ_CONTENT가 오름차순으로 채번해야 합니다.");
+
+		DTO param = new DTO();
+		param.setPageSize(MAX_PAGE_SIZE);
+		param.setSearchDiv(SEARCH_BY_TITLE);
+		param.setSearchWord(marker);
+		param.getSearchMap().put(SEARCH_KEY_SORT, SORT_BOX_OFFICE);
+
+		List<ContentVO> result = contentService.retrieve(param);
+
+		// 등록일 내림차순(기본)이면 나중에 만든 쪽이 먼저 오므로, 두 정렬이 서로 반대가 된다
+		assertEquals(2, result.size());
+		assertEquals(first.getContentId(), result.get(0).getContentId());
+		assertEquals(second.getContentId(), result.get(1).getContentId());
+	}
+
+	/** 모르는 정렬값이 조용히 기본 정렬로 넘어가지 않고 막히는지 검증 */
+	@Test
+	@DisplayName("허용값 밖 정렬은 거부")
+	void retrieveRejectsUnknownSort() {
+		DTO param = new DTO();
+		param.getSearchMap().put(SEARCH_KEY_SORT, UNSUPPORTED_SORT);
+
+		assertThrows(
+				IllegalArgumentException.class,
+				() -> contentService.retrieve(param));
+	}
+
+	/**
+	 * 검색어의 %가 LIKE 와일드카드가 아니라 글자로 취급되는지 검증.
+	 * 이스케이프가 없으면 "%" 하나에 전체 행이 걸린다
+	 */
+	@Test
+	@DisplayName("검색어의 %는 와일드카드가 아니라 글자로 취급")
+	void retrieveEscapesLikeWildcard() {
+		String marker = UUID.randomUUID().toString().substring(0, 8);
+		ContentVO withPercent = createContent("와일드" + marker + "%카드");
+		createContent("와일드" + marker + "X카드");
+
+		DTO param = new DTO();
+		param.setSearchDiv(SEARCH_BY_TITLE);
+		param.setSearchWord(marker + "%");
+
+		List<ContentVO> result = contentService.retrieve(param);
+
+		// 이스케이프가 없으면 marker로 시작하는 2건이 모두 걸린다
+		assertEquals(1, result.size());
+		assertEquals(withPercent.getContentId(), result.get(0).getContentId());
+		assertEquals(1, param.getTotalCnt());
 	}
 
 	/** 국문 제목 검색축의 실제 DB 조회 검증 */

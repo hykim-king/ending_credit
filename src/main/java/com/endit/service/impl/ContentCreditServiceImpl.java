@@ -1,9 +1,8 @@
 package com.endit.service.impl;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +22,16 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 
 	private static final String SEARCH_BY_CONTENT = "10";
 	private static final String SEARCH_BY_PERSON = "20";
+
+	// 역할 필터는 searchWord를 주 축이 쓰고 있어 searchMap의 이 키로 받는다
+	private static final String SEARCH_KEY_ROLE = "role";
+
+	// POL-033이 정한 크레딧 역할 4종
 	private static final String ROLE_DIRECTOR = "DIRECTOR";
+	private static final String ROLE_ACTOR = "ACTOR";
+	private static final String ROLE_WRITER = "WRITER";
+	private static final String ROLE_PRODUCER = "PRODUCER";
+
 	// 페이징 없이 "전체 조회"를 흉내낼 때 쓰는 페이지 크기 - 콘텐츠 하나가 가질 수 있는 크레딧 수보다 넉넉하게 잡음
 	private static final int RETRIEVE_ALL_PAGE_SIZE = 100;
 	private static final int FIRST_PAGE_NO = 1;
@@ -50,6 +58,7 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		}
 
 		normalizePaging(param);
+		validateRole(param);
 		param.setSearchDiv(SEARCH_BY_CONTENT);
 		param.setSearchWord(String.valueOf(contentId));
 
@@ -75,6 +84,7 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		}
 
 		normalizePaging(param);
+		validateRole(param);
 		param.setSearchDiv(SEARCH_BY_PERSON);
 		param.setSearchWord(String.valueOf(personId));
 
@@ -90,7 +100,7 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		return credits;
 	}
 
-	// 콘텐츠 하나의 출연/제작진 전체 목록 조회
+	// 콘텐츠 하나의 출연/제작진 전체 목록 조회 - 역할 우선순위 정렬은 매퍼가 한다
 	@Override
 	public List<ContentCreditVO> retrieveAll(int contentId) {
 		DTO param = new DTO();
@@ -104,16 +114,7 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 					contentId, credits.size());
 		}
 
-		List<ContentCreditVO> directors = credits.stream()
-				.filter(credit -> ROLE_DIRECTOR.equals(credit.getRole()))
-				.collect(Collectors.toList());
-		List<ContentCreditVO> others = credits.stream()
-				.filter(credit -> !ROLE_DIRECTOR.equals(credit.getRole()))
-				.collect(Collectors.toList());
-
-		List<ContentCreditVO> result = new ArrayList<>(directors);
-		result.addAll(others);
-		return result;
+		return credits;
 	}
 
 	// 크레딧 단건 조회
@@ -225,6 +226,28 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 			param.setPageSize(DEFAULT_PAGE_SIZE);
 		} else if (param.getPageSize() > MAX_PAGE_SIZE) {
 			param.setPageSize(MAX_PAGE_SIZE);
+		}
+	}
+
+	// 모르는 역할이 오면 조건이 아무것도 걸리지 않아 예외처리
+	private void validateRole(DTO param) {
+		if (param.getSearchMap() == null) {
+			// 매퍼의 searchMap.role 판정이 NPE를 내지 않도록 빈 맵으로 되돌려 준다
+			param.setSearchMap(new HashMap<>());
+			return;
+		}
+
+		String role = param.getSearchMap().get(SEARCH_KEY_ROLE);
+
+		if (!StringUtils.hasText(role)) {
+			return;
+		}
+
+		if (!ROLE_DIRECTOR.equals(role)
+				&& !ROLE_ACTOR.equals(role)
+				&& !ROLE_WRITER.equals(role)
+				&& !ROLE_PRODUCER.equals(role)) {
+			throw new IllegalArgumentException("지원하지 않는 역할입니다. role=" + role);
 		}
 	}
 

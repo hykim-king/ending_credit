@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>검색</title>
+<link rel="stylesheet" th:href="@{/assets/css/search/cards.css}">
+<style>
+	.search-hero {
+		max-width: 720px;
+		margin: 0 auto;
+		padding: 48px 16px 32px;
+	}
+	.search-hero.compact {
+		padding: 24px 16px 16px;
+	}
+	.search-box {
+		display: flex;
+		gap: 8px;
+	}
+	.search-box input {
+		flex: 1;
+		height: 52px;
+		font-size: 18px;
+		padding: 0 16px;
+		border: 1px solid #E4E2E9;
+		border-radius: 8px;
+	}
+	.search-box input:focus {
+		outline: none;
+		border-color: #6550C8;
+	}
+	.search-box button {
+		height: 52px;
+		padding: 0 24px;
+		border: none;
+		border-radius: 8px;
+		background: #6550C8;
+		color: #fff;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.search-section {
+		margin-bottom: 40px;
+	}
+	.search-section h5 {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		margin-bottom: 16px;
+	}
+	.section-count {
+		font-size: 13px;
+		color: #777;
+		font-weight: 400;
+	}
+	.section-more {
+		margin-left: auto;
+		font-size: 14px;
+		color: #6550C8;
+		text-decoration: none;
+	}
+	/* .card-row와 카드 스타일은 assets/css/search/cards.css에 있다 */
+	.search-empty {
+		padding: 48px 0;
+		text-align: center;
+		color: #777;
+	}
+	/* 한 섹션이 실패해도 나머지는 그대로 보인다 */
+	.section-error {
+		padding: 16px;
+		border: 1px solid #E4E2E9;
+		border-radius: 8px;
+		color: #777;
+		font-size: 14px;
+	}
+</style>
+</head>
+<body>
+<div layout:fragment="content">
+
+	<!-- 검색창 - 검색어가 있으면 위로 붙이고, 없으면 큰 화면 가운데에 둔다(S-01) -->
+	<div class="search-hero" th:classappend="${!#strings.isEmpty(query)} ? 'compact' : ''">
+		<form class="search-box" th:action="@{/search}" method="get">
+			<input type="text" name="query" th:value="${query}" autofocus
+			       placeholder="영화, 인물, 컬렉션 검색" aria-label="검색어">
+			<button type="submit">검색</button>
+		</form>
+	</div>
+
+	<!-- ── S-01 검색 시작: 박스오피스 순위 ───────────────────────── -->
+	<!-- 순위가 0건이거나 조회에 실패하면 섹션을 통째로 숨기고 검색창만 남긴다 -->
+	<div class="container search-section"
+	     th:if="${#strings.isEmpty(query) and rankings != null and !rankings.isEmpty()}">
+		<h5>박스오피스</h5>
+		<div class="card-row">
+			<th:block th:each="movie : ${rankings}">
+				<div th:replace="~{fragments/cards :: rankCard(${movie})}"></div>
+			</th:block>
+		</div>
+	</div>
+
+	<!-- ── S-02 통합검색: 영화 → 인물 → 컬렉션 ──────────────────── -->
+	<div th:if="${!#strings.isEmpty(query)}">
+
+		<!-- 영화 - 정의서상 영화 결과를 가장 위에 둔다 -->
+		<div class="container search-section" th:if="${movieFailed != null or !movies.isEmpty()}">
+			<h5>
+				영화
+				<span class="section-count" th:if="${movieFailed == null}"
+				      th:text="${movieTotalCnt} + '건'">0건</span>
+				<a class="section-more" th:if="${hasMoreMovies}"
+				   th:href="@{/search/movies(query=${query})}">더보기</a>
+			</h5>
+			<div class="section-error" th:if="${movieFailed != null}">
+				영화 결과를 불러오지 못했습니다.
+			</div>
+			<div class="card-row" th:if="${movieFailed == null}">
+				<th:block th:each="movie : ${movies}">
+					<div th:replace="~{fragments/cards :: movieCard(${movie})}"></div>
+				</th:block>
+			</div>
+		</div>
+
+		<!-- 인물 -->
+		<div class="container search-section" th:if="${personFailed != null or !people.isEmpty()}">
+			<h5>
+				인물
+				<span class="section-count" th:if="${personFailed == null}"
+				      th:text="${personTotalCnt} + '건'">0건</span>
+			</h5>
+			<div class="section-error" th:if="${personFailed != null}">
+				인물 결과를 불러오지 못했습니다.
+			</div>
+			<div class="card-row people" th:if="${personFailed == null}">
+				<th:block th:each="person : ${people}">
+					<div th:replace="~{fragments/cards :: personCard(${person}, ${personRoles[person.personId]})}"></div>
+				</th:block>
+			</div>
+		</div>
+
+		<!-- 컬렉션 -->
+		<div class="container search-section" th:if="${collectionFailed != null or !collections.isEmpty()}">
+			<h5>
+				컬렉션
+				<span class="section-count" th:if="${collectionFailed == null}"
+				      th:text="${collectionTotalCnt} + '건'">0건</span>
+			</h5>
+			<div class="section-error" th:if="${collectionFailed != null}">
+				컬렉션 결과를 불러오지 못했습니다.
+			</div>
+			<div class="card-row collections" th:if="${collectionFailed == null}">
+				<th:block th:each="collection : ${collections}">
+					<div th:replace="~{fragments/cards :: collectionCard(${collection})}"></div>
+				</th:block>
+			</div>
+		</div>
+
+		<!-- 세 유형 모두 0건이고 실패도 아닐 때만 빈 상태를 보여준다 -->
+		<div class="container search-empty"
+		     th:if="${movies.isEmpty() and people.isEmpty() and collections.isEmpty()
+		             and movieFailed == null and personFailed == null and collectionFailed == null}">
+			<p><b th:text="'&quot;' + ${query} + '&quot;'">검색어</b>에 대한 결과가 없습니다.</p>
+			<p>다른 검색어로 다시 시도해 보세요.</p>
+		</div>
+	</div>
+
+</div>
+</body>
+</html>

@@ -3,6 +3,7 @@ package com.endit.service.impl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -81,6 +82,14 @@ public class ContentServiceImpl implements ContentService {
 	private static final String SEARCH_BY_COUNTRY = "30";
 	private static final String SEARCH_BY_EXTERNAL_ID = "40";
 	private static final String SEARCH_BY_TITLE = "50";
+
+	// 정렬 축 - searchWord를 검색 조건이 쓰고 있어 searchMap의 이 키로 받는다
+	private static final String SEARCH_KEY_SORT = "sort";
+	private static final String SORT_LATEST = "latest";
+	private static final String SORT_BOX_OFFICE = "boxoffice";
+
+	// LIKE 이스케이프 - 매퍼의 ESCAPE '\'와 짝이다. 역슬래시를 먼저 바꿔야 이중 이스케이프가 안 난다
+	private static final String LIKE_ESCAPE_CHAR = "\\";
 
 	// limit을 안 주거나 0 이하로 준 호출의 기본 수집 건수
 	private static final int DEFAULT_SYNC_LIMIT = 100;
@@ -572,8 +581,22 @@ public class ContentServiceImpl implements ContentService {
 
 		normalizePaging(param);
 		validateSearchDiv(param);
+		ensureSearchMap(param);
+		validateSort(param);
 
-		List<ContentVO> contents = contentMapper.doRetrieve(param);
+		// 이스케이프한 검색어는 매퍼에만 넘기고 호출부 DTO는 원래 값으로 되돌린다.
+		// 안 그러면 이 DTO를 응답에 싣는 컨트롤러로 역슬래시가 새어 나가고,
+		// 같은 DTO로 다시 조회할 때 이중 이스케이프가 된다
+		String rawSearchWord = param.getSearchWord();
+		param.setSearchWord(toEscapedSearchWord(param));
+
+		List<ContentVO> contents;
+
+		try {
+			contents = contentMapper.doRetrieve(param);
+		} finally {
+			param.setSearchWord(rawSearchWord);
+		}
 
 		if (contents == null) {
 			param.setTotalCnt(0);
@@ -666,6 +689,44 @@ public class ContentServiceImpl implements ContentService {
 				&& !SEARCH_BY_TITLE.equals(searchDiv)) {
 			throw new IllegalArgumentException("지원하지 않는 검색 구분입니다. searchDiv=" + searchDiv);
 		}
+	}
+
+	// 매퍼의 searchMap.externalId 판정이 NPE를 내지 않도록 빈 맵을 보장한다
+	private void ensureSearchMap(DTO param) {
+		if (param.getSearchMap() == null) {
+			param.setSearchMap(new HashMap<>());
+		}
+	}
+
+	// 모르는 정렬 값이 오면 매퍼가 조용히 기본 정렬로 넘어가므로 여기서 막는다
+	private void validateSort(DTO param) {
+		String sort = param.getSearchMap().get(SEARCH_KEY_SORT);
+
+		if (!StringUtils.hasText(sort)) {
+			return;
+		}
+
+		if (!SORT_LATEST.equals(sort) && !SORT_BOX_OFFICE.equals(sort)) {
+			throw new IllegalArgumentException("지원하지 않는 정렬입니다. sort=" + sort);
+		}
+	}
+
+	// 검색어의 %·_는 LIKE 와일드카드라 그냥 두면 "%" 한 글자에 전체가 걸린다.
+	// 매퍼가 ESCAPE '\'를 선언해 두었으므로 앞에 역슬래시를 붙여 글자로 되돌린다.
+	// DTO를 고치지 않고 값만 돌려주므로 호출부가 넘긴 검색어는 그대로 남는다
+	private String toEscapedSearchWord(DTO param) {
+		String searchWord = param.getSearchWord();
+
+		// 외부 ID 축은 등호 비교라 이스케이프가 오히려 검색어를 망친다
+		if (!StringUtils.hasText(searchWord) || SEARCH_BY_EXTERNAL_ID.equals(param.getSearchDiv())) {
+			return searchWord;
+		}
+
+		// 역슬래시를 먼저 바꾼다. 나중에 바꾸면 앞서 붙인 이스케이프까지 다시 이스케이프된다
+		return searchWord
+				.replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR + LIKE_ESCAPE_CHAR)
+				.replace("%", LIKE_ESCAPE_CHAR + "%")
+				.replace("_", LIKE_ESCAPE_CHAR + "_");
 	}
 
 }
