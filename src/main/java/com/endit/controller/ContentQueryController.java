@@ -48,6 +48,7 @@ public class ContentQueryController {
 		DTO param = new DTO();
 		param.setPageNo(pageNo);
 		param.setPageSize(pageSize);
+		param.setSearchDiv("50");
 		param.setSearchWord(query);
 
 		List<ContentVO> items = contentService.retrieve(param);
