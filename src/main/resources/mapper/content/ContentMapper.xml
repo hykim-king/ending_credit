@@ -15,31 +15,49 @@ Modification History
 		 WHERE external_id = #{externalId}
 	</select>
 
+	<!-- choose는 축 하나만 고르므로, 제목과 외부 ID를 동시에 걸려면 외부 ID는 독립된 if여야 한다 -->
 	<sql id="contentWhere">
 		<where>
 			<if test="searchWord != null and searchWord != ''">
+				<!-- ESCAPE - 검색어의 %·_를 서비스가 \로 escape해 보내므로 와일드카드가 아닌 글자로 취급한다 -->
 				<choose>
 					<when test="searchDiv == '10'">
-						title_ko LIKE #{searchWord} || '%'
+						title_ko LIKE #{searchWord} || '%' ESCAPE '\'
 					</when>
 					<when test="searchDiv == '20'">
-						title_org LIKE #{searchWord} || '%'
+						title_org LIKE #{searchWord} || '%' ESCAPE '\'
 					</when>
 					<when test="searchDiv == '30'">
-						country LIKE #{searchWord} || '%'
+						country LIKE #{searchWord} || '%' ESCAPE '\'
 					</when>
 					<when test="searchDiv == '40'">
 						external_id = #{searchWord}
 					</when>
 					<when test="searchDiv == '50'">
 						(
-							UPPER(title_ko) LIKE '%' || UPPER(#{searchWord}) || '%'
-							OR UPPER(title_org) LIKE '%' || UPPER(#{searchWord}) || '%'
+							UPPER(title_ko) LIKE '%' || UPPER(#{searchWord}) || '%' ESCAPE '\'
+							OR UPPER(title_org) LIKE '%' || UPPER(#{searchWord}) || '%' ESCAPE '\'
 						)
 					</when>
 				</choose>
 			</if>
+			<if test="searchMap.externalId != null and searchMap.externalId != ''">
+				AND external_id = #{searchMap.externalId}
+			</if>
 		</where>
+	</sql>
+
+	<!-- 박스오피스는 적재 순서가 곧 TMDB 인기순이라 콘텐츠 번호 오름차순을 순위로 쓴다 -->
+	<sql id="contentOrderBy">
+		ORDER BY
+		<choose>
+			<when test="searchMap.sort == 'boxoffice'">
+				content_id ASC
+			</when>
+			<otherwise>
+				created_dt DESC, content_id ASC
+			</otherwise>
+		</choose>
 	</sql>
 
 	<select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="ContentVO">
@@ -63,7 +81,7 @@ Modification History
 							SELECT *
 							  FROM content
 							 <include refid="contentWhere"/>
-							 ORDER BY created_dt DESC, content_id ASC
+							 <include refid="contentOrderBy"/>
 					) t1
 					<![CDATA[ WHERE ROWNUM <= (#{pageSize} * (#{pageNo} - 1) + #{pageSize}) ]]>
 			) tt1

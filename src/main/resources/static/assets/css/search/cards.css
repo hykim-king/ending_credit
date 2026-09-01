@@ -1,0 +1,218 @@
+/*
+ * CMP-03 MovieCard / CMP-04 PersonCard 공통 스타일
+ * templates/fragments/cards.html과 짝이다. 검색 3화면이 공유하고 홈도 그대로 쓴다.
+ */
+
+/* ── 카드가 놓이는 격자 ───────────────────────────────
+ * minmax(0, 1fr)이 핵심이다. 그냥 1fr은 최소값이 콘텐츠 크기라
+ * w500 포스터가 열 너비를 500px로 밀어내 격자가 화면 밖으로 넘친다.
+ */
+.card-row {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 16px;
+}
+
+/* 인물은 카드가 아니라 목록 행이라 2열로 넓게 쓴다 */
+.card-row.people {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	column-gap: 40px;
+	row-gap: 0;
+}
+
+.card-row.collections {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.poster-grid {
+	display: grid;
+	grid-template-columns: repeat(6, minmax(0, 1fr));
+	gap: 20px;
+}
+
+@media (max-width: 900px) {
+	.card-row,
+	.poster-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+
+	.card-row.people {
+		grid-template-columns: minmax(0, 1fr);
+		column-gap: 0;
+	}
+
+	.card-row.collections {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/* ── 카드 ────────────────────────────────────────── */
+.ec-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 0;
+}
+
+/* 포스터만 링크다. 제목·연도·국가는 링크가 아니다 */
+.ec-poster-link {
+	display: block;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.ec-poster-link:focus-visible {
+	outline: 2px solid #6550C8;
+	outline-offset: 2px;
+}
+
+.ec-poster {
+	/* 포스터 비율 고정 - 이미지가 늦게 와도 격자가 흔들리지 않는다 */
+	aspect-ratio: 2 / 3;
+	background: #F4F3F7;
+}
+
+.ec-poster img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.2s ease;
+}
+
+.ec-poster-link:hover .ec-poster img {
+	transform: scale(1.03);
+}
+
+.ec-poster-empty {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	color: #999;
+}
+
+/* ── 카드 본문 ───────────────────────────────────── */
+.ec-card-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: #17171B;
+	line-height: 1.35;
+	/* 제목 두 줄까지만 */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.ec-card-meta {
+	font-size: 12px;
+	color: #777;
+	line-height: 1.4;
+}
+
+/* ── 순위 카드 (S-01 박스오피스) ──────────────────── */
+.ec-rank-card {
+	position: relative;
+}
+
+.ec-rank {
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	z-index: 1;
+	min-width: 26px;
+	height: 26px;
+	padding: 0 7px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	background: rgba(23, 23, 27, 0.82);
+	color: #fff;
+	font-size: 13px;
+	font-weight: 700;
+}
+
+/* ── 인물 행 ─────────────────────────────────────
+ * 영화 상세(detail.html)의 크레딧 줄과 같은 48px 아바타 가로 행이다.
+ * 격자 칸을 채우는 카드가 아니라 목록의 한 줄이라 세로로 커지지 않는다.
+ */
+.ec-person-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 0;
+	border-bottom: 1px solid #E4E2E9;
+	min-width: 0;
+}
+
+.ec-person-avatar,
+.ec-person-avatar-empty {
+	/* detail.html의 .cast-avatar와 같은 값 */
+	flex: 0 0 48px;
+	width: 48px;
+	height: 48px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+
+.ec-person-avatar-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #F4F3F7;
+	color: #999;
+	font-size: 11px;
+	text-align: center;
+	line-height: 1.2;
+}
+
+.ec-person-body {
+	min-width: 0;
+}
+
+.ec-person-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: #17171B;
+	line-height: 1.4;
+	/* 긴 이름이 옆 칸을 밀지 않도록 한 줄로 자른다 */
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ec-person-role {
+	font-size: 12px;
+	color: #777;
+	line-height: 1.4;
+}
+
+.ec-person-org {
+	font-size: 12px;
+	color: #A0A0A8;
+	line-height: 1.4;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* ── 컬렉션 카드 ─────────────────────────────────── */
+.ec-collection-card {
+	text-align: left;
+}
+
+.ec-collection-card .ec-card-link {
+	display: block;
+	padding: 16px;
+	border: 1px solid #E4E2E9;
+	border-radius: 8px;
+	text-decoration: none;
+}
+
+.ec-collection-card .ec-card-link:hover {
+	border-color: #6550C8;
+}

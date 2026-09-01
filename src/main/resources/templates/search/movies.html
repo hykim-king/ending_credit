@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>영화 검색 결과</title>
+<link rel="stylesheet" th:href="@{/assets/css/search/cards.css}">
+<style>
+	.result-head {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		margin-bottom: 20px;
+	}
+	.result-count {
+		font-size: 14px;
+		color: #777;
+	}
+	.result-back {
+		margin-left: auto;
+		font-size: 14px;
+		color: #6550C8;
+		text-decoration: none;
+	}
+	.search-box {
+		display: flex;
+		gap: 8px;
+		max-width: 560px;
+		margin-bottom: 28px;
+	}
+	.search-box input {
+		flex: 1;
+		height: 44px;
+		padding: 0 14px;
+		border: 1px solid #E4E2E9;
+		border-radius: 8px;
+	}
+	.search-box input:focus {
+		outline: none;
+		border-color: #6550C8;
+	}
+	.search-box button {
+		height: 44px;
+		padding: 0 20px;
+		border: none;
+		border-radius: 8px;
+		background: #6550C8;
+		color: #fff;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	/* .poster-grid와 카드 스타일은 assets/css/search/cards.css에 있다 */
+	.pager {
+		display: flex;
+		justify-content: center;
+		gap: 6px;
+		margin: 36px 0;
+	}
+	.pager a,
+	.pager span {
+		min-width: 40px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 1px solid #E4E2E9;
+		border-radius: 6px;
+		text-decoration: none;
+		color: #17171B;
+	}
+	.pager .current {
+		background: #6550C8;
+		border-color: #6550C8;
+		color: #fff;
+		font-weight: 600;
+	}
+	.search-empty {
+		padding: 48px 0;
+		text-align: center;
+		color: #777;
+	}
+</style>
+</head>
+<body>
+<div layout:fragment="content">
+<div class="container">
+
+	<!-- 검색어를 유지한 채 재입력할 수 있어야 한다 -->
+	<form class="search-box" th:action="@{/search/movies}" method="get">
+		<input type="text" name="query" th:value="${query}"
+		       placeholder="영화 제목 검색" aria-label="검색어">
+		<button type="submit">검색</button>
+	</form>
+
+	<div class="result-head">
+		<h5 th:text="'&quot;' + ${query} + '&quot; 영화 결과'">영화 결과</h5>
+		<span class="result-count" th:if="${movieFailed == null}"
+		      th:text="${paging.totalCnt} + '건'">0건</span>
+		<a class="result-back" th:href="@{/search(query=${query})}">통합검색으로</a>
+	</div>
+
+	<div class="search-empty" th:if="${movieFailed != null}">
+		영화 결과를 불러오지 못했습니다.
+	</div>
+
+	<div class="search-empty" th:if="${movieFailed == null and movies.isEmpty()}">
+		<p><b th:text="'&quot;' + ${query} + '&quot;'">검색어</b>에 대한 영화가 없습니다.</p>
+	</div>
+
+	<div class="poster-grid" th:if="${!movies.isEmpty()}">
+		<th:block th:each="movie : ${movies}">
+			<div th:replace="~{fragments/cards :: movieCard(${movie})}"></div>
+		</th:block>
+	</div>
+
+	<!-- 페이저 - startNo/endNo/pre/next는 DTO가 totalCnt를 받을 때 이미 계산해 둔 값이다.
+	     범위 밖 pageNo가 오면 DTO가 endNo만 깎고 startNo는 남겨 두어 sequence가 역순으로 돌므로,
+	     startNo <= endNo일 때만 그린다 -->
+	<nav class="pager" th:if="${paging.totalCnt > 0 and paging.startNo &lt;= paging.endNo}" aria-label="페이지">
+		<a th:if="${paging.pre}"
+		   th:href="@{/search/movies(query=${query}, pageNo=${paging.startNo - 1})}">이전</a>
+
+		<th:block th:each="page : ${#numbers.sequence(paging.startNo, paging.endNo)}">
+			<span th:if="${page == paging.pageNo}" class="current" th:text="${page}">1</span>
+			<a th:unless="${page == paging.pageNo}"
+			   th:href="@{/search/movies(query=${query}, pageNo=${page})}" th:text="${page}">2</a>
+		</th:block>
+
+		<a th:if="${paging.next}"
+		   th:href="@{/search/movies(query=${query}, pageNo=${paging.endNo + 1})}">다음</a>
+	</nav>
+
+</div>
+</div>
+</body>
+</html>
