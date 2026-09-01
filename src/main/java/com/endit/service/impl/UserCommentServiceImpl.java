@@ -95,6 +95,19 @@ public class UserCommentServiceImpl implements UserCommentService {
 	}
 
 	@Override
+	public int totalCntBySearch(DTO param) {
+		log.debug("=============================");
+		log.debug("{}()", "totalCntBySearch");
+		log.debug("param: {}", param);
+		log.debug("=============================");
+
+		// 목록 조회와 같은 검증을 태운다 — 숫자 컬럼 검색에 문자가 오면 ORA-01722
+		checkNumericSearchWord(param);
+
+		return userCommentMapper.totalCntBySearch(param);
+	}
+
+	@Override
 	public String getContentTitle(long contentId) {
 		log.debug("=============================");
 		log.debug("{}()", "getContentTitle");

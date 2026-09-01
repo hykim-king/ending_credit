@@ -22,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
+import com.endit.domain.ReportCommentVO;
 import com.endit.domain.UserCommentVO;
 
 @SpringBootTest
@@ -34,9 +35,14 @@ class UserCommentServiceJUnit {
 	// 공용 DB 더미 데이터의 실제 부모 값 (회의 규칙: 부모 값은 DB 기반 하드코딩)
 	private static final long MEMBER_A = 9L;   // admin1@endit.com — 더미 코멘트 없음
 	private static final long CONTENT_A = 9L;  // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
+	private static final long MEMBER_REPORTER = 10L; // admin2@endit.com — 신고자
+	private static final long ADMIN_PROCESSOR = 9L;  // 신고 처리 관리자 (ROLE=ADMIN)
 
 	@Autowired
 	UserCommentService service;
+
+	@Autowired
+	ReportCommentService reportService; // 가림 처리 후에도 건수가 유지되는지 확인용
 
 	private UserCommentVO comment01; // 회원A → 영화A
 
@@ -124,11 +130,59 @@ class UserCommentServiceJUnit {
 	}
 
 	@Test
+	public void totalCntBySearch() {
+		log.debug("---------------------------");
+		log.debug("*totalCntBySearch()*");
+		log.debug("---------------------------");
+		// 회원별 코멘트 개수 (2조 마이페이지 요청)
+		// 1. 등록 전 회원A 건수 — 회원A는 더미 코멘트가 없어 0건
+		// 2. 등록 → 1건
+		// 3. 신고 승인으로 가려도 건수는 그대로 (팀 결정: 삭제가 아니라 표시만 가림)
+		// 4. 조건이 없으면 전체 건수와 같다
+
+		// 1.
+		dto.setSearchDiv("10");
+		dto.setSearchWord(String.valueOf(MEMBER_A));
+		assertEquals(0, service.totalCntBySearch(dto));
+
+		// 2.
+		assertEquals(1, service.doSave(comment01));
+		assertEquals(1, service.totalCntBySearch(dto));
+
+		// 3.
+		ReportCommentVO report = new ReportCommentVO(0, MEMBER_REPORTER, comment01.getCommentId(),
+				ReportCommentVO.REASON_SPOILER, "결말 언급", null, null, null, null, null);
+		assertEquals(1, reportService.doSave(report));
+		report.setProcessedByMemberId(ADMIN_PROCESSOR);
+		report.setProcessNote("승인 - 안내 문구로 가림");
+		assertEquals(1, reportService.upApproveReport(report));
+
+		assertEquals(ReportCommentVO.REASON_SPOILER, service.doSelectOne(comment01).getBlindReason());
+		assertEquals(1, service.totalCntBySearch(dto)); // 가려져도 내 코멘트는 내 코멘트다
+
+		// 4.
+		DTO noCond = new DTO();
+		assertEquals(service.totalCnt(), service.totalCntBySearch(noCond));
+	}
+
+	@Test
+	public void totalCntBySearchMustBeNumeric() {
+		log.debug("---------------------------");
+		log.debug("*totalCntBySearchMustBeNumeric()*");
+		log.debug("---------------------------");
+		// 목록 조회와 같은 검증을 태운다 — 숫자 컬럼에 문자가 오면 거른다
+		dto.setSearchDiv("10");
+		dto.setSearchWord("abc");
+		assertThrows(IllegalArgumentException.class, () -> service.totalCntBySearch(dto));
+	}
+
+	@Test
 	void beans() {
 		log.debug("---------------------------");
 		log.debug("*beans()*");
 		log.debug("---------------------------");
 		assertNotNull(service);
+		assertNotNull(reportService);
 		log.debug("service: {}", service);
 	}
 
