@@ -9,6 +9,7 @@
  * 전역으로 두면 타 조 화면 컨트롤러의 예외까지 가로채 JSON으로 응답하려다
  * (응답이 text/html로 정해진 뒤라) 변환 실패로 백지 500이 된다.
  * 실측 2026-08-31: 2조 공지 화면(/notices) 템플릿 부재 예외를 이 advice가 가로챔.
+ * ※ 401(인증 필요)·403(권한 없음) 처리는 3조 이진영 추가(2026-08-29).
  */
 package com.endit.cmn.exception;
 
@@ -21,6 +22,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.endit.auth.AuthenticationRequiredException;
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.MessageVO;
 import com.endit.controller.CommentController;
 import com.endit.controller.CommentLikeController;
@@ -32,6 +35,41 @@ import com.endit.controller.ReportCommentController;
 public class GlobalRestExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
+
+	/**
+	 * 로그인 필요 — 401
+	 *
+	 * @param e 인증 회원 없음 예외
+	 * @return ResponseEntity<MessageVO>
+	 */
+	@ExceptionHandler(AuthenticationRequiredException.class)
+	public ResponseEntity<MessageVO> handlerAuthenticationRequiredException(
+			AuthenticationRequiredException e) {
+
+		log.debug("handlerAuthenticationRequiredException: {}", e.getMessage());
+
+		MessageVO messageVO = new MessageVO();
+		messageVO.setId("401");
+		messageVO.setMessage(e.getMessage());
+		messageVO.setDetailMessage("인증된 회원 정보를 확인할 수 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(messageVO);
+	}
+
+	/** 인증된 회원에게 요청 작업 권한이 없음 — 403 */
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<MessageVO> handlerForbiddenOperationException(
+			ForbiddenOperationException e) {
+
+		log.debug("handlerForbiddenOperationException: {}", e.getMessage());
+
+		MessageVO messageVO = new MessageVO();
+		messageVO.setId("403");
+		messageVO.setMessage(e.getMessage());
+		messageVO.setDetailMessage("요청한 작업을 수행할 권한이 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(messageVO);
+	}
 
 	/**
 	 * 신고 없음 — 404

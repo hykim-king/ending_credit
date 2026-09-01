@@ -8,6 +8,8 @@ public class ContentImageVO extends DTO {
 	private int contentId;
 	private String imageUrl;
 	private String createdDt;
+	// DB 컬럼이 아니라 서비스가 채우는 파생값 - 확대 모달용 원본 크기 URL
+	private String zoomImageUrl;
 
 	public ContentImageVO() {
 		super();
@@ -53,10 +55,19 @@ public class ContentImageVO extends DTO {
 		this.createdDt = createdDt;
 	}
 
+	public String getZoomImageUrl() {
+		return zoomImageUrl;
+	}
+
+	public void setZoomImageUrl(String zoomImageUrl) {
+		this.zoomImageUrl = zoomImageUrl;
+	}
+
 	@Override
 	public String toString() {
 		return "ContentImageVO [imageId=" + imageId + ", contentId=" + contentId + ", imageUrl=" + imageUrl
-				+ ", createdDt=" + createdDt + ", toString()=" + super.toString() + "]";
+				+ ", createdDt=" + createdDt + ", zoomImageUrl=" + zoomImageUrl + ", toString()=" + super.toString()
+				+ "]";
 	}
 
 }

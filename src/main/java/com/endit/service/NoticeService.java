@@ -8,7 +8,7 @@ public interface NoticeService {
 
     PageResponse<NoticeVO> getPublicNoticeList(NoticeSearchVO search);
 
-    NoticeVO getPublicNotice(Long noticeId);
+    NoticeVO getPublicNotice(Long noticeId, boolean increaseViewCount);
 
     PageResponse<NoticeVO> getAdminNoticeList(NoticeSearchVO search);
 

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
+import com.endit.auth.CurrentMemberProvider;
 import com.endit.domain.CollectionItemVO;
 import com.endit.service.CollectionItemService;
 
@@ -34,6 +35,7 @@ import com.endit.service.CollectionItemService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
+ * 2026. 8. 29. jinyoung    부모 컬렉션 공개 범위·소유권 및 인증 처리 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -45,10 +47,15 @@ import com.endit.service.CollectionItemService;
 public class CollectionItemController {
 
 	private final CollectionItemService collectionItemService;
+	private final CurrentMemberProvider currentMemberProvider;
 
 	/** CollectionItemService를 주입받아 Controller 생성 */
-	public CollectionItemController(CollectionItemService collectionItemService) {
+	public CollectionItemController(
+			CollectionItemService collectionItemService,
+			CurrentMemberProvider currentMemberProvider) {
+
 		this.collectionItemService = collectionItemService;
+		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/** 컬렉션 작품 목록 조회 */
@@ -64,7 +71,10 @@ public class CollectionItemController {
 		param.setPageSize(pageSize);
 
 		List<CollectionItemVO> items =
-				collectionItemService.retrieve(collectionId, param);
+				collectionItemService.retrieve(
+						collectionId,
+						param,
+						currentMemberProvider.findCurrentMemberId());
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		
@@ -81,7 +91,10 @@ public class CollectionItemController {
 			@PathVariable int contentId) {
 
 		return ResponseEntity.ok(
-				collectionItemService.get(collectionId, contentId));
+				collectionItemService.get(
+						collectionId,
+						contentId,
+						currentMemberProvider.findCurrentMemberId()));
 	}
 
 	/** 컬렉션에 작품 추가 */
@@ -90,8 +103,9 @@ public class CollectionItemController {
 			@PathVariable int collectionId,
 			@RequestBody CollectionItemVO param) {
 
-		CollectionItemVO created =
-				collectionItemService.create(collectionId, param);
+		long memberId = currentMemberProvider.requireMemberId();
+		CollectionItemVO created = collectionItemService.create(
+				memberId, collectionId, param);
 
 		URI location = URI.create(
 				"/api/collections/" + collectionId
@@ -106,7 +120,8 @@ public class CollectionItemController {
 			@PathVariable int collectionId,
 			@PathVariable int contentId) {
 
-		collectionItemService.delete(collectionId, contentId);
+		long memberId = currentMemberProvider.requireMemberId();
+		collectionItemService.delete(memberId, collectionId, contentId);
 
 		return ResponseEntity.noContent().build();
 	}
