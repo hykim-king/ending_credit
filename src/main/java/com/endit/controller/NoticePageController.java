@@ -2,12 +2,15 @@ package com.endit.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.endit.domain.NoticeVO;
 import com.endit.service.NoticeService;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 @Controller
@@ -68,5 +71,34 @@ public class NoticePageController {
         model.addAttribute("isEdit", true);
 
         return "admin/notice/adminNoticeForm";
+    }
+
+    /** 화면 요청에서 발생한 Notice 상태 예외를 원래 HTTP 상태로 유지하고 상세 스택은 노출하지 않는다. */
+    @ExceptionHandler(ResponseStatusException.class)
+    public String handleResponseStatusException(
+            ResponseStatusException exception,
+            HttpServletResponse response,
+            Model model
+    ) {
+        response.setStatus(exception.getStatusCode().value());
+        model.addAttribute(
+                "message",
+                exception.getReason() == null ? "요청을 처리할 수 없습니다." : exception.getReason()
+        );
+        model.addAttribute("errorTrace", "");
+        return "error/business_error";
+    }
+
+    /** 예상하지 못한 Notice 화면 예외도 상세 스택을 노출하지 않는다. */
+    @ExceptionHandler(Exception.class)
+    public String handleException(
+            Exception exception,
+            HttpServletResponse response,
+            Model model
+    ) {
+        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        model.addAttribute("message", "서비스 처리 중 오류가 발생했습니다.");
+        model.addAttribute("errorTrace", "");
+        return "error/error";
     }
 }

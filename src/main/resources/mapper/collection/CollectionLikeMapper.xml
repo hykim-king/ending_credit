@@ -2,6 +2,11 @@
 <!DOCTYPE mapper
     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+Modification History
+2026. 8. 29. jinyoung - 회원별 좋아요 목록에 현재 조회자 기준 공개 범위 적용
+-->
 <mapper namespace="com.endit.mapper.CollectionLikeMapper">
 
     <!-- COLLECTION_LIKE 테이블 컬럼 <-> CollectionLikeVO 필드 매핑 -->
@@ -69,16 +74,26 @@
           JOIN COLLECTION c
             ON cl.COLLECTION_ID = c.COLLECTION_ID
          WHERE cl.MEMBER_ID = #{memberId}
+           AND (
+                c.IS_PUBLIC = 'Y'
+                OR c.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+           )
          ORDER BY cl.CREATED_DT DESC, c.COLLECTION_ID DESC
         OFFSET (#{pageNo} - 1) * #{pageSize} ROWS
         FETCH NEXT #{pageSize} ROWS ONLY
     </select>
 
     <!-- 특정 회원이 좋아요 누른 컬렉션 전체 건수 (페이징 total count용) -->
-    <select id="selectLikedCollectionCountByMember" parameterType="int" resultType="int">
+    <select id="selectLikedCollectionCountByMember" resultType="int">
         SELECT COUNT(*)
-          FROM COLLECTION_LIKE
-         WHERE MEMBER_ID = #{memberId}
+          FROM COLLECTION_LIKE cl
+          JOIN COLLECTION c
+            ON cl.COLLECTION_ID = c.COLLECTION_ID
+         WHERE cl.MEMBER_ID = #{memberId}
+           AND (
+                c.IS_PUBLIC = 'Y'
+                OR c.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+           )
     </select>
 
     <!-- 특정 컬렉션에 좋아요 누른 회원 목록 (페이징 미적용: 화면에 회원목록 UI 없음, 카운트만 표시) -->

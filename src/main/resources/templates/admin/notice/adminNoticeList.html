@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>공지 관리 | END IT ADMIN</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/notice/notice.css">
+</head>
+<body data-page="admin-notice-list">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies">영화</a>
+            <a href="/admin/people">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices" class="active">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <h1 class="admin-page-title">공지 관리 목록</h1>
+
+        <div class="admin-filter-box">
+            <input type="search" id="adminQuery" maxlength="200" placeholder="공지 제목 검색">
+
+            <select id="adminStatus" aria-label="게시 상태">
+                <option value="">전체 상태</option>
+                <option value="DRAFT">DRAFT</option>
+                <option value="PUBLISHED">PUBLISHED</option>
+                <option value="HIDDEN">HIDDEN</option>
+            </select>
+
+            <select id="adminImportant" aria-label="중요 여부">
+                <option value="">중요 전체</option>
+                <option value="Y">중요 Y</option>
+                <option value="N">중요 N</option>
+            </select>
+
+            <button type="button" id="adminSearchButton" class="outline-button">검색</button>
+            <button type="button" id="createNoticeButton" class="primary-button">공지 등록</button>
+        </div>
+
+        <div class="admin-table-scroll">
+            <table class="admin-notice-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>제목</th>
+                    <th>중요</th>
+                    <th>상태</th>
+                    <th>조회</th>
+                    <th>작성자</th>
+                    <th>등록일</th>
+                    <th>수정일</th>
+                </tr>
+                </thead>
+                <tbody id="adminNoticeBody"></tbody>
+            </table>
+        </div>
+
+        <div id="adminEmptyState" class="notice-state" hidden>
+            조건에 맞는 공지사항이 없습니다.
+        </div>
+
+        <div id="adminErrorState" class="notice-state" hidden>
+            공지 목록을 불러오지 못했습니다.
+        </div>
+
+        <nav id="adminPagination" class="notice-pagination" aria-label="관리자 공지 페이지"></nav>
+    </main>
+</div>
+
+<script src="/assets/js/notice/notice.js"></script>
+</body>
+</html>

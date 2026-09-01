@@ -1,10 +1,6 @@
 HELP.md
 target/
 
-# Local-only reference docs (not shared with team)
-/docs/
-/CLAUDE.md
-
 # Local-only verification scaffolding (not shared with team)
 /src/main/java/com/endit/controller/TestContentController.java
 /src/main/java/com/endit/service/TestContentService.java

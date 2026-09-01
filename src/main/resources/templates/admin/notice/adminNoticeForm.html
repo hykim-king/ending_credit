@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? '공지 수정 | END IT ADMIN' : '공지 등록 | END IT ADMIN'}">
+        공지 등록·수정 | END IT ADMIN
+    </title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/notice/notice.css">
+</head>
+<body data-page="admin-notice-form" th:attr="data-notice-id=${notice.noticeId}">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies">영화</a>
+            <a href="/admin/people">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices" class="active">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <h1 class="admin-page-title" th:text="${isEdit ? '공지 수정' : '공지 등록'}">공지 등록·수정</h1>
+
+        <form id="noticeForm" class="notice-form">
+            <label for="title">제목 *</label>
+            <input id="title"
+                   name="title"
+                   type="text"
+                   maxlength="200"
+                   required
+                   placeholder="공지 제목"
+                   th:value="${notice.title}">
+
+            <label for="content">본문 *</label>
+            <textarea id="content"
+                      name="content"
+                      rows="11"
+                      required
+                      placeholder="공지 내용을 입력합니다."
+                      th:text="${notice.content}"></textarea>
+
+            <fieldset>
+                <legend>중요 공지</legend>
+                <div class="choice-group">
+                    <label>
+                        <input type="radio" name="important" value="Y"
+                               th:checked="${notice.important == 'Y'}">
+                        <span>Y</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="important" value="N"
+                               th:checked="${notice.important == 'N'}">
+                        <span>N</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>게시 상태</legend>
+                <div class="choice-group status-choice-group">
+                    <label>
+                        <input type="radio" name="status" value="DRAFT"
+                               th:checked="${notice.status == 'DRAFT'}">
+                        <span>DRAFT</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="status" value="PUBLISHED"
+                               th:checked="${notice.status == 'PUBLISHED'}">
+                        <span>PUBLISHED</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="status" value="HIDDEN"
+                               th:checked="${notice.status == 'HIDDEN'}">
+                        <span>HIDDEN</span>
+                    </label>
+                </div>
+            </fieldset>
+
+            <div id="formError" class="form-error" hidden></div>
+
+            <div class="form-actions">
+                <button type="button" id="cancelButton" class="outline-button">취소</button>
+                <button type="submit" id="saveButton" class="primary-button">저장</button>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script src="/assets/js/notice/notice.js"></script>
+</body>
+</html>

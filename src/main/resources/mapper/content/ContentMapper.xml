@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
   "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+Modification History
+2026. 8. 29. jinyoung - 한글·원제 통합 제목 검색 조건 추가
+-->
+
 <mapper namespace="com.endit.mapper.ContentMapper">
 
 	<select id="findContentIdByExternal" resultType="java.lang.Integer">
@@ -24,6 +30,12 @@
 					</when>
 					<when test="searchDiv == '40'">
 						external_id = #{searchWord}
+					</when>
+					<when test="searchDiv == '50'">
+						(
+							UPPER(title_ko) LIKE '%' || UPPER(#{searchWord}) || '%'
+							OR UPPER(title_org) LIKE '%' || UPPER(#{searchWord}) || '%'
+						)
 					</when>
 				</choose>
 			</if>
