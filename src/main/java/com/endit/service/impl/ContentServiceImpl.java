@@ -85,8 +85,16 @@ public class ContentServiceImpl implements ContentService {
 
 	// 정렬 축 - searchWord를 검색 조건이 쓰고 있어 searchMap의 이 키로 받는다
 	private static final String SEARCH_KEY_SORT = "sort";
+	// 최신순 - 개봉일 기준이다. 적재 시점이 필요하면 SORT_REGISTERED를 쓴다
 	private static final String SORT_LATEST = "latest";
 	private static final String SORT_BOX_OFFICE = "boxoffice";
+	// 관련도 - 검색어가 있어야 뜻이 있어 매퍼가 검색어 없는 호출은 기본 정렬로 흘린다
+	private static final String SORT_RELEVANCE = "relevance";
+	// 등록순 - TMDB 적재 시각 기준
+	private static final String SORT_REGISTERED = "registered";
+
+	private static final Set<String> ALLOWED_SORT =
+			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED);
 
 	// LIKE 이스케이프 - 매퍼의 ESCAPE '\'와 짝이다. 역슬래시를 먼저 바꿔야 이중 이스케이프가 안 난다
 	private static final String LIKE_ESCAPE_CHAR = "\\";
@@ -706,7 +714,7 @@ public class ContentServiceImpl implements ContentService {
 			return;
 		}
 
-		if (!SORT_LATEST.equals(sort) && !SORT_BOX_OFFICE.equals(sort)) {
+		if (!ALLOWED_SORT.contains(sort)) {
 			throw new IllegalArgumentException("지원하지 않는 정렬입니다. sort=" + sort);
 		}
 	}

@@ -44,6 +44,13 @@ Modification History
 			<if test="searchMap.externalId != null and searchMap.externalId != ''">
 				AND external_id = #{searchMap.externalId}
 			</if>
+			<!-- 개봉작만 - release_year DESC는 미래 개봉일을 맨 앞에 올리므로,
+			     "최신 개봉작"처럼 이미 개봉한 것만 보여야 하는 화면이 이 조건을 켠다.
+			     검색은 미개봉작도 찾아야 하므로 켜지 않는다 -->
+			<if test="searchMap.released == 'Y'">
+				AND release_year IS NOT NULL
+				AND release_year &lt;= SYSDATE
+			</if>
 		</where>
 	</sql>
 
@@ -53,6 +60,27 @@ Modification History
 		<choose>
 			<when test="searchMap.sort == 'boxoffice'">
 				content_id ASC
+			</when>
+			<!-- 최신순은 개봉 기준이다. created_dt는 TMDB 적재 시각이라 개봉 연도와 무관한 순서가 나온다.
+			     개봉일을 모르는 콘텐츠는 뒤로 보낸다 -->
+			<when test="searchMap.sort == 'latest'">
+				release_year DESC NULLS LAST, content_id DESC
+			</when>
+			<!-- 등록순 - TMDB에서 늦게 적재된 순. "최신 등록작"처럼 적재 시점이 뜻인 화면이 쓴다 -->
+			<when test="searchMap.sort == 'registered'">
+				created_dt DESC, content_id ASC
+			</when>
+			<!-- 관련도 - 정확일치 → 앞일치 → 부분일치 순. 검색어가 없으면 뜻이 없어 기본 정렬로 흘린다.
+			     서비스가 %·_를 escape해 보내므로 등호가 아니라 ESCAPE를 붙인 LIKE로 정확일치를 본다 -->
+			<when test="searchMap.sort == 'relevance' and searchWord != null and searchWord != ''">
+				CASE
+					WHEN UPPER(title_ko) LIKE UPPER(#{searchWord}) ESCAPE '\' THEN 0
+					WHEN UPPER(title_org) LIKE UPPER(#{searchWord}) ESCAPE '\' THEN 0
+					WHEN UPPER(title_ko) LIKE UPPER(#{searchWord}) || '%' ESCAPE '\' THEN 1
+					WHEN UPPER(title_org) LIKE UPPER(#{searchWord}) || '%' ESCAPE '\' THEN 1
+					ELSE 2
+				END ASC,
+				title_ko ASC, content_id ASC
 			</when>
 			<otherwise>
 				created_dt DESC, content_id ASC

@@ -206,6 +206,17 @@ layout:decorate="~{layout/layout}">
 		padding: 12px 0;
 		border-bottom: 1px solid #E4E2E9;
 		min-width: 0;
+		/* ACT-C-007 - 크레딧 줄 전체가 P-01 인물 상세로 가는 링크다 */
+		text-decoration: none;
+		color: inherit;
+	}
+	.cast-cell:hover .cast-name {
+		color: #6550C8;
+	}
+	.cast-cell:focus-visible {
+		outline: 2px solid #6550C8;
+		outline-offset: -2px;
+		border-radius: 8px;
 	}
 	.cast-avatar, .cast-avatar-placeholder {
 		flex: 0 0 48px;
@@ -369,7 +380,8 @@ layout:decorate="~{layout/layout}">
 				<button type="button" class="cast-nav cast-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
 				<!-- 감독 우선 정렬은 ContentCreditServiceImpl.retrieveAll이 이미 해 준다 -->
 				<div class="cast-grid">
-					<div class="cast-cell" th:each="credit : ${castAndCrew}">
+					<a class="cast-cell" th:each="credit : ${castAndCrew}"
+					   th:href="@{'/people/' + ${credit.personId}}">
 						<img th:if="${credit.profileImageUrl} != null" th:src="${credit.profileImageUrl}"
 						     class="cast-avatar" loading="lazy" alt="profile">
 						<div th:if="${credit.profileImageUrl} == null" class="cast-avatar-placeholder">사진 없음</div>
@@ -382,7 +394,7 @@ layout:decorate="~{layout/layout}">
 								      th:text="' | ' + ${credit.character}"> | 배역</span>
 							</div>
 						</div>
-					</div>
+					</a>
 				</div>
 				<button type="button" class="cast-nav cast-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
 			</div>

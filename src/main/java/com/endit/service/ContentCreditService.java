@@ -1,6 +1,7 @@
 package com.endit.service;
 
 import java.util.List;
+import java.util.Set;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentCreditVO;
@@ -16,6 +17,10 @@ public interface ContentCreditService {
 
 	// 인물 하나의 참여 작품 목록 조회
 	List<ContentCreditVO> retrieveByPerson(int personId, DTO param);
+
+	// 인물 여럿 중 감독 크레딧을 가진 인물의 id 조회
+	// 목록 화면의 역할 표기용이다. 인물마다 retrieveByPerson을 부르면 목록 크기만큼 쿼리가 늘어난다
+	Set<Integer> retrieveDirectorIds(List<Integer> personIds);
 
 	// 크레딧 단건 조회
 	ContentCreditVO get(int creditId);

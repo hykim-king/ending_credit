@@ -147,6 +147,19 @@
 	padding: 12px 0;
 	border-bottom: 1px solid #E4E2E9;
 	min-width: 0;
+	/* 행 전체가 P-01로 가는 링크다 */
+	text-decoration: none;
+	color: inherit;
+}
+
+.ec-person-row:hover .ec-person-name {
+	color: #6550C8;
+}
+
+.ec-person-row:focus-visible {
+	outline: 2px solid #6550C8;
+	outline-offset: -2px;
+	border-radius: 8px;
 }
 
 .ec-person-avatar,

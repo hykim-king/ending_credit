@@ -43,9 +43,11 @@
 <!--
 	인물 카드 - 영화 상세의 크레딧 줄과 같은 모양(48px 아바타 + 이름 옆에 붙는 가로 행).
 	배역은 콘텐츠마다 달라 인물 검색에서는 알 수 없으므로 감독/배우만 적는다.
-	role은 CONTENT_CREDIT에서 온 값이라 컨트롤러가 따로 채워 넘긴다
+	role은 CONTENT_CREDIT에서 온 값이라 컨트롤러가 따로 채워 넘긴다.
+	행 전체가 P-01 인물 상세로 가는 링크다(FL-02 - S-02·S-03이 이 프래그먼트를 공유한다)
 -->
-<div th:fragment="personCard(person, role)" class="ec-person-row">
+<a th:fragment="personCard(person, role)" class="ec-person-row"
+   th:href="@{'/people/' + ${person.personId}}">
 	<img th:if="${person.profileImageUrl != null}" th:src="${person.profileImageUrl}"
 	     class="ec-person-avatar" th:alt="${person.nameKo}" loading="lazy">
 	<div th:if="${person.profileImageUrl == null}" class="ec-person-avatar-empty">사진 없음</div>
@@ -55,7 +57,7 @@
 		<div class="ec-person-org" th:if="${person.nameOrg != null and !person.nameOrg.isEmpty()}"
 		     th:text="${person.nameOrg}">Name</div>
 	</div>
-</div>
+</a>
 
 <!-- 컬렉션 카드 - 제목/작성자/작품 수. CollectionVO는 팀원 소유라 필드를 읽기만 한다 -->
 <div th:fragment="collectionCard(collection)" class="ec-card ec-collection-card">

@@ -40,4 +40,9 @@ public interface ContentImageService {
 	// 인물 상세 프로필 URL
 	String toPersonProfileUrl(String path);
 
+	// 완성 URL을 DB에 저장할 원본 경로로 되돌린다. 위 변환들의 역변환이다.
+	// 화면에서 받은 URL을 그대로 저장하면 완성 URL이 DB에 박히므로 쓰기 경로가 저장 직전에 부른다.
+	// 크기를 알려 주는 게 아니라 벗겨내는 쪽이라 "크기 지식을 가두는" 원칙에 걸리지 않는다.
+	String toStoredPath(String url);
+
 }

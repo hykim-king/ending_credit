@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${isEdit ? '인물 수정' : '인물 등록'} + ' | END IT ADMIN'">인물 등록 | END IT ADMIN</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/admin/people.css">
+</head>
+<body data-page="admin-person-form"
+      th:attr="data-person-id=${person.personId}, data-edit=${isEdit}">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies">영화</a>
+            <a href="/admin/people" class="active">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <h1 class="admin-page-title" th:text="${isEdit ? '인물 수정' : '인물 등록'}">인물 등록</h1>
+
+        <!--
+            공개 상태·임시저장 컨트롤이 없다 - POL-037: PERSON에 해당 컬럼이 없다.
+            폼은 action/method 없이 JS가 fetch로 보낸다(공지 관리 화면과 같은 방식).
+        -->
+        <form id="personForm" class="admin-person-form">
+            <label for="nameKo">국문명</label>
+            <input type="text" id="nameKo" name="nameKo" maxlength="100"
+                   th:value="${person.nameKo}" placeholder="예) 크리스토퍼 놀란">
+
+            <label for="nameOrg">원문명</label>
+            <input type="text" id="nameOrg" name="nameOrg" maxlength="200"
+                   th:value="${person.nameOrg}" placeholder="예) Christopher Nolan">
+            <p class="form-hint">POL-034 - 국문명과 원문명 중 하나는 반드시 채워야 합니다.</p>
+
+            <label for="externalId">외부 ID</label>
+            <input type="text" id="externalId" name="externalId" maxlength="50"
+                   th:value="${person.externalId}" placeholder="TMDB 인물 ID (선택)">
+            <p class="form-hint">
+                동명이인 구분에 쓰입니다. 비워 두어도 등록되며, 이미 쓰이는 값이면 저장할 때 막힙니다.
+            </p>
+
+            <label for="profileImageUrl">프로필 이미지</label>
+            <input type="text" id="profileImageUrl" name="profileImageUrl" maxlength="500"
+                   th:value="${person.profileImageUrl}" placeholder="TMDB 이미지 경로 또는 전체 URL">
+            <p class="form-hint">
+                전체 URL을 넣어도 저장할 때 원본 경로만 남깁니다. 비워 두면 기존 이미지를 유지합니다.
+            </p>
+
+            <img class="profile-preview" id="profilePreview" alt="프로필 미리보기"
+                 th:if="${person.profileImageUrl != null}" th:src="${person.profileImageUrl}">
+
+            <div class="form-error" id="formError" hidden></div>
+
+            <div class="form-actions">
+                <button type="button" class="outline-button" id="cancelButton">취소</button>
+                <!-- ACT-AD-006 - 이름 조건을 통과해야 활성화된다 -->
+                <button type="submit" class="primary-button" id="saveButton">저장</button>
+            </div>
+        </form>
+
+        <!--
+            크레딧 정정 (API-054의 credits) - 인물이 저장된 뒤에만 다룰 수 있다.
+            역할은 POL-033의 4종만 고를 수 있고, 배역은 ACTOR일 때만 저장된다.
+        -->
+        <section class="credit-section" th:if="${isEdit}">
+            <h2>참여 작품 크레딧</h2>
+            <p class="form-hint">역할·배역·표시순서를 고치고 저장하면 해당 줄만 반영됩니다.</p>
+
+            <div class="admin-table-scroll">
+                <table class="credit-table">
+                    <thead>
+                    <tr>
+                        <th>연도</th>
+                        <th>작품</th>
+                        <th>역할</th>
+                        <th>배역</th>
+                        <th>표시순서</th>
+                        <th>관리</th>
+                    </tr>
+                    </thead>
+                    <tbody id="creditBody"></tbody>
+                </table>
+            </div>
+
+            <div id="creditEmptyState" class="admin-state" hidden>등록된 크레딧이 없습니다.</div>
+            <div id="creditErrorState" class="admin-state" hidden>크레딧을 불러오지 못했습니다.</div>
+
+            <div class="credit-add">
+                <h3>크레딧 추가</h3>
+                <p class="form-hint">이미 등록된 작품만 연결할 수 있습니다.</p>
+
+                <div class="credit-add-search">
+                    <input type="search" id="creditMovieQuery" maxlength="100" placeholder="작품 제목 검색">
+                    <button type="button" class="outline-button" id="creditMovieSearchButton">작품 검색</button>
+                </div>
+
+                <ul class="credit-add-results" id="creditMovieResults"></ul>
+
+                <div class="credit-add-fields">
+                    <select id="creditRole" aria-label="역할">
+                        <option value="ACTOR">배우</option>
+                        <option value="DIRECTOR">감독</option>
+                        <option value="WRITER">각본</option>
+                        <option value="PRODUCER">제작</option>
+                    </select>
+                    <input type="text" id="creditCharacter" maxlength="200" placeholder="배역 (배우만)">
+                    <input type="number" id="creditDisplayOrder" min="0" value="0" aria-label="표시순서">
+                    <button type="button" class="primary-button" id="creditAddButton" disabled>추가</button>
+                </div>
+
+                <div class="form-error" id="creditError" hidden></div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="/assets/js/admin/people.js"></script>
+</body>
+</html>

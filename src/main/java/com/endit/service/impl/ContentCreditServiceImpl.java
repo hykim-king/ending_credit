@@ -1,8 +1,11 @@
 package com.endit.service.impl;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,6 +77,26 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		return credits;
 	}
 
+	// 인물 여럿 중 감독 크레딧을 가진 인물만 추린다 - 목록 화면의 역할 표기용
+	@Override
+	public Set<Integer> retrieveDirectorIds(List<Integer> personIds) {
+		// IN ()은 문법 오류라 빈 목록은 매퍼까지 보내지 않는다
+		if (personIds == null || personIds.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		List<Integer> directorIds =
+				contentCreditMapper.doSelectPersonIdsByRole(personIds, ROLE_DIRECTOR);
+		log.debug("retrieveDirectorIds asked={} found={}",
+				personIds.size(), directorIds == null ? 0 : directorIds.size());
+
+		if (directorIds == null || directorIds.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		return new HashSet<>(directorIds);
+	}
+
 	// 인물 하나의 참여 작품 목록 조회 - 매퍼의 person_id 검색축을 쓴다
 	@Override
 	public List<ContentCreditVO> retrieveByPerson(int personId, DTO param) {
@@ -138,6 +161,10 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 
 		param.setContentId(contentId);
 
+		// POL-033 - 읽기 필터에만 걸려 있던 역할 검사를 쓰기 경로에도 건다.
+		// AD-06 크레딧 정정이 임의 역할을 넣을 수 있는 유일한 경로다
+		validateWriteRole(param.getRole());
+
 		int result = contentCreditMapper.doSave(param);
 
 		if (result != 1) {
@@ -176,6 +203,9 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 
 		// character(감독은 null)와 displayOrder(0이 정상값)는 "안 채움"과 "비움"을 구분할 수 없어
 		// 넘어온 값으로 그대로 덮는다. 호출부가 전체 필드를 채워 보내야 한다
+
+		// 기존 역할을 메운 뒤에 검사한다. 역할을 안 보내는 수정이 정상이기 때문이다
+		validateWriteRole(param.getRole());
 
 		int result = contentCreditMapper.doUpdate(param);
 
@@ -230,6 +260,20 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 	}
 
 	// 모르는 역할이 오면 조건이 아무것도 걸리지 않아 예외처리
+	// 저장되는 역할이 POL-033의 4종 안인지 확인한다. role은 NOT NULL이라 빈 값도 막는다
+	private void validateWriteRole(String role) {
+		if (!StringUtils.hasText(role)) {
+			throw new IllegalArgumentException("크레딧 역할이 필요합니다.");
+		}
+
+		if (!ROLE_DIRECTOR.equals(role)
+				&& !ROLE_ACTOR.equals(role)
+				&& !ROLE_WRITER.equals(role)
+				&& !ROLE_PRODUCER.equals(role)) {
+			throw new IllegalArgumentException("지원하지 않는 역할입니다. role=" + role);
+		}
+	}
+
 	private void validateRole(DTO param) {
 		if (param.getSearchMap() == null) {
 			// 매퍼의 searchMap.role 판정이 NPE를 내지 않도록 빈 맵으로 되돌려 준다

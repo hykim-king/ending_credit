@@ -6,14 +6,65 @@ layout:decorate="~{layout/layout}">
 <meta charset="UTF-8">
 <title>검색</title>
 <link rel="stylesheet" th:href="@{/assets/css/search/cards.css}">
+<script th:src="@{/assets/js/search/search.js}" defer></script>
 <style>
+	/* 가운데 정렬하지 않는다. main과 header가 같은 .endit-main 열을 쓰므로
+	   폭을 두지 않아야 검색창 왼쪽 끝이 헤더의 END IT와 맞는다 */
 	.search-hero {
-		max-width: 720px;
-		margin: 0 auto;
-		padding: 48px 16px 32px;
+		padding: 28px 0 20px;
 	}
 	.search-hero.compact {
-		padding: 24px 16px 16px;
+		padding: 16px 0 12px;
+	}
+	/* S-01 페이지 제목 - 검색어가 있으면 결과가 주인공이라 숨긴다 */
+	.search-title {
+		font-size: 22px;
+		font-weight: 700;
+		margin-bottom: 12px;
+	}
+	/* 순위는 검색창과 같은 왼쪽 기준선에서 시작하되 폭은 절반만 쓴다 */
+	.search-panel {
+		max-width: 520px;
+	}
+	.ranking-title {
+		font-size: 15px;
+		font-weight: 700;
+		margin-bottom: 4px;
+	}
+	.ranking-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.ranking-link {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 8px 2px;
+		border-bottom: 1px solid #E4E2E9;
+		text-decoration: none;
+	}
+	.ranking-link:hover .ranking-title-text {
+		text-decoration: underline;
+	}
+	.ranking-no {
+		min-width: 16px;
+		color: #FF5A82;
+		font-size: 13px;
+		font-weight: 600;
+	}
+	.ranking-title-text {
+		color: #6550C8;
+		font-size: 14px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	/* 상한을 넘긴 검색어 안내 - 검색창은 그대로 남는다 */
+	.query-notice {
+		margin-top: 12px;
+		font-size: 14px;
+		color: #C0392B;
 	}
 	.search-box {
 		display: flex;
@@ -21,9 +72,9 @@ layout:decorate="~{layout/layout}">
 	}
 	.search-box input {
 		flex: 1;
-		height: 52px;
-		font-size: 18px;
-		padding: 0 16px;
+		height: 42px;
+		font-size: 15px;
+		padding: 0 14px;
 		border: 1px solid #E4E2E9;
 		border-radius: 8px;
 	}
@@ -32,12 +83,13 @@ layout:decorate="~{layout/layout}">
 		border-color: #6550C8;
 	}
 	.search-box button {
-		height: 52px;
-		padding: 0 24px;
+		height: 42px;
+		padding: 0 20px;
 		border: none;
 		border-radius: 8px;
 		background: #6550C8;
 		color: #fff;
+		font-size: 14px;
 		font-weight: 600;
 		cursor: pointer;
 	}
@@ -61,6 +113,15 @@ layout:decorate="~{layout/layout}">
 		color: #6550C8;
 		text-decoration: none;
 	}
+	/* 유형 머릿말 - 영화만 전체 결과 화면(S-03)이 있어 링크가 된다 */
+	.section-link {
+		color: inherit;
+		text-decoration: none;
+	}
+	.section-link:hover {
+		color: #6550C8;
+		text-decoration: underline;
+	}
 	/* .card-row와 카드 스타일은 assets/css/search/cards.css에 있다 */
 	.search-empty {
 		padding: 48px 0;
@@ -69,52 +130,66 @@ layout:decorate="~{layout/layout}">
 	}
 	/* 한 섹션이 실패해도 나머지는 그대로 보인다 */
 	.section-error {
+		display: flex;
+		align-items: center;
+		gap: 12px;
 		padding: 16px;
 		border: 1px solid #E4E2E9;
 		border-radius: 8px;
 		color: #777;
 		font-size: 14px;
 	}
+	/* S-05 재시도 - 누르는 동안 잠가 중복 요청을 막는다 */
+	.retry-button {
+		height: 32px;
+		padding: 0 14px;
+		border: 1px solid #6550C8;
+		border-radius: 8px;
+		background: #fff;
+		color: #6550C8;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.retry-button:disabled {
+		border-color: #C9C7D1;
+		color: #C9C7D1;
+		cursor: default;
+	}
 </style>
 </head>
 <body>
 <div layout:fragment="content">
 
-	<!-- 검색창 - 검색어가 있으면 위로 붙이고, 없으면 큰 화면 가운데에 둔다(S-01) -->
+	<!-- 검색창 - 헤더의 END IT와 같은 왼쪽 기준선에서 열 전체 폭을 쓴다(S-01) -->
 	<div class="search-hero" th:classappend="${!#strings.isEmpty(query)} ? 'compact' : ''">
+		<h1 class="search-title" th:if="${#strings.isEmpty(query)}">검색</h1>
 		<form class="search-box" th:action="@{/search}" method="get">
-			<input type="text" name="query" th:value="${query}" autofocus
-			       placeholder="영화, 인물, 컬렉션 검색" aria-label="검색어">
+			<input type="text" name="query" th:value="${query}" autofocus maxlength="100"
+			       placeholder="영화, 인물, 컬렉션을 검색해 보세요" aria-label="검색어">
 			<button type="submit">검색</button>
 		</form>
-	</div>
-
-	<!-- ── S-01 검색 시작: 박스오피스 순위 ───────────────────────── -->
-	<!-- 순위가 0건이거나 조회에 실패하면 섹션을 통째로 숨기고 검색창만 남긴다 -->
-	<div class="container search-section"
-	     th:if="${#strings.isEmpty(query) and rankings != null and !rankings.isEmpty()}">
-		<h5>박스오피스</h5>
-		<div class="card-row">
-			<th:block th:each="movie : ${rankings}">
-				<div th:replace="~{fragments/cards :: rankCard(${movie})}"></div>
-			</th:block>
-		</div>
+		<p class="query-notice" th:if="${queryTooLong != null}">
+			검색어는 100자 이내로 입력해 주세요.
+		</p>
 	</div>
 
 	<!-- ── S-02 통합검색: 영화 → 인물 → 컬렉션 ──────────────────── -->
 	<div th:if="${!#strings.isEmpty(query)}">
 
 		<!-- 영화 - 정의서상 영화 결과를 가장 위에 둔다 -->
-		<div class="container search-section" th:if="${movieFailed != null or !movies.isEmpty()}">
+		<div class="search-section" th:if="${movieFailed != null or !movies.isEmpty()}">
 			<h5>
-				영화
+				<!-- 머릿말 자체가 S-03 진입점이다. 결과가 적어 더보기가 안 뜰 때도 전체 탐색으로 갈 수 있어야 한다 -->
+				<a class="section-link" th:href="@{/search/movies(query=${query})}">영화</a>
 				<span class="section-count" th:if="${movieFailed == null}"
 				      th:text="${movieTotalCnt} + '건'">0건</span>
 				<a class="section-more" th:if="${hasMoreMovies}"
 				   th:href="@{/search/movies(query=${query})}">더보기</a>
 			</h5>
+			<!-- S-05 검색 오류 - 검색어는 그대로 두고 재시도만 제공한다 -->
 			<div class="section-error" th:if="${movieFailed != null}">
-				영화 결과를 불러오지 못했습니다.
+				<span>영화 결과를 불러오지 못했습니다.</span>
+				<button type="button" class="retry-button">다시 시도</button>
 			</div>
 			<div class="card-row" th:if="${movieFailed == null}">
 				<th:block th:each="movie : ${movies}">
@@ -124,14 +199,19 @@ layout:decorate="~{layout/layout}">
 		</div>
 
 		<!-- 인물 -->
-		<div class="container search-section" th:if="${personFailed != null or !people.isEmpty()}">
+		<div class="search-section" th:if="${personFailed != null or !people.isEmpty()}">
 			<h5>
-				인물
+				<!-- 영화와 같이 머릿말이 인물 전체 결과 화면의 진입점이다 -->
+				<a class="section-link" th:href="@{/search/people(query=${query})}">인물</a>
 				<span class="section-count" th:if="${personFailed == null}"
 				      th:text="${personTotalCnt} + '건'">0건</span>
+				<a class="section-more" th:if="${hasMorePeople}"
+				   th:href="@{/search/people(query=${query})}">더보기</a>
 			</h5>
+			<!-- S-05 검색 오류 - 검색어는 그대로 두고 재시도만 제공한다 -->
 			<div class="section-error" th:if="${personFailed != null}">
-				인물 결과를 불러오지 못했습니다.
+				<span>인물 결과를 불러오지 못했습니다.</span>
+				<button type="button" class="retry-button">다시 시도</button>
 			</div>
 			<div class="card-row people" th:if="${personFailed == null}">
 				<th:block th:each="person : ${people}">
@@ -141,14 +221,16 @@ layout:decorate="~{layout/layout}">
 		</div>
 
 		<!-- 컬렉션 -->
-		<div class="container search-section" th:if="${collectionFailed != null or !collections.isEmpty()}">
+		<div class="search-section" th:if="${collectionFailed != null or !collections.isEmpty()}">
 			<h5>
 				컬렉션
 				<span class="section-count" th:if="${collectionFailed == null}"
 				      th:text="${collectionTotalCnt} + '건'">0건</span>
 			</h5>
+			<!-- S-05 검색 오류 - 검색어는 그대로 두고 재시도만 제공한다 -->
 			<div class="section-error" th:if="${collectionFailed != null}">
-				컬렉션 결과를 불러오지 못했습니다.
+				<span>컬렉션 결과를 불러오지 못했습니다.</span>
+				<button type="button" class="retry-button">다시 시도</button>
 			</div>
 			<div class="card-row collections" th:if="${collectionFailed == null}">
 				<th:block th:each="collection : ${collections}">
@@ -157,14 +239,23 @@ layout:decorate="~{layout/layout}">
 			</div>
 		</div>
 
-		<!-- 세 유형 모두 0건이고 실패도 아닐 때만 빈 상태를 보여준다 -->
-		<div class="container search-empty"
-		     th:if="${movies.isEmpty() and people.isEmpty() and collections.isEmpty()
-		             and movieFailed == null and personFailed == null and collectionFailed == null}">
+		<!-- S-04 검색 결과 없음 - 입력어를 되짚고 다음 행동을 제시한다 -->
+		<div class="search-empty" th:if="${noResults}">
 			<p><b th:text="'&quot;' + ${query} + '&quot;'">검색어</b>에 대한 결과가 없습니다.</p>
-			<p>다른 검색어로 다시 시도해 보세요.</p>
+			<p>다른 키워드로 다시 검색해 보세요.</p>
 		</div>
 	</div>
+
+	<!-- ── S-01 검색 시작 / S-04 결과 없음: 박스오피스 순위 ─────────── -->
+	<!-- 순위는 /api/search/rankings로 따로 읽는다. 0건이거나 실패하면
+	     search.js가 섹션을 숨겨 검색창만 남긴다.
+	     S-04는 "초기 순위 포함"이 요건이라 결과가 0건일 때도 같이 그린다 -->
+	<section class="search-panel search-section" id="rankingSection"
+	         th:if="${#strings.isEmpty(query) or noResults}" hidden>
+		<h5 class="ranking-title">박스오피스</h5>
+		<ol class="ranking-list" id="rankingList"></ol>
+	</section>
+
 
 </div>
 </body>
