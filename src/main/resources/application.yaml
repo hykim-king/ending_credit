@@ -12,6 +12,20 @@ spring:
     active: app
 
   # =========================================================
+  # OAuth2 Client (Google 로그인)
+  # =========================================================
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
+  # =========================================================
   # Thymeleaf
   # 개발 환경에서는 cache 비활성화
   # =========================================================

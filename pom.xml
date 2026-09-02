@@ -57,11 +57,17 @@
 
         <!-- ===================== Security ===================== -->
 
-        <!-- Spring Security 
+        <!-- Spring Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
-        </dependency> -->
+        </dependency>
+
+        <!-- OAuth2 Client (Google 로그인) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
 
         <!-- ===================== Database ===================== -->
 
