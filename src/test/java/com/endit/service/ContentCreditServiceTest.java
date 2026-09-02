@@ -31,6 +31,7 @@ import com.endit.mapper.PersonMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 31. eunhu       최초 생성
+ * 2026. 9. 2.  eunhu       PersonService.getFilmography 삭제에 따라 참여작 빈 목록 검증 이관
  * ------------------------------------------------------------
  * </pre>
  *
@@ -188,6 +189,19 @@ class ContentCreditServiceTest {
 		assertEquals(1, param.getTotalCnt());
 	}
 
+	/** 참여작이 없는 인물의 반환값 검증 - P-01이 빈 목록에서 더보기를 띄우지 않아야 한다 */
+	@Test
+	@DisplayName("참여작이 없으면 빈 목록에 총건수 0")
+	void retrieveByPersonEmpty() {
+		int personId = createPersonId();
+
+		DTO param = new DTO();
+		List<ContentCreditVO> result = contentCreditService.retrieveByPerson(personId, param);
+
+		assertTrue(result.isEmpty());
+		assertEquals(0, param.getTotalCnt());
+	}
+
 	/**
 	 * 매퍼의 doUpdate가 content_id·person_id를 무조건 SET하므로,
 	 * 배역명만 고칠 때 소속이 0으로 덮이지 않고 유지되는지 검증
@@ -244,8 +258,8 @@ class ContentCreditServiceTest {
 		return createCredit(contentId, role, DEFAULT_DISPLAY_ORDER);
 	}
 
-	/** 표시순서까지 지정해 크레딧을 만든다. 같은 역할 안의 정렬을 검증할 때 쓴다 */
-	private ContentCreditVO createCredit(int contentId, String role, int displayOrder) {
+	/** 테스트용 인물을 등록하고 번호를 돌려준다. DB에는 TMDB 원본 경로만 저장된다 */
+	private int createPersonId() {
 		PersonVO person = new PersonVO();
 		person.setExternalId(UUID.randomUUID().toString().substring(0, 12));
 		person.setNameKo("크레딧 테스트 인물");
@@ -253,8 +267,13 @@ class ContentCreditServiceTest {
 		person.setProfileImageUrl(SAMPLE_PATH);
 		personMapper.doSave(person);
 
+		return person.getPersonId();
+	}
+
+	/** 표시순서까지 지정해 크레딧을 만든다. 같은 역할 안의 정렬을 검증할 때 쓴다 */
+	private ContentCreditVO createCredit(int contentId, String role, int displayOrder) {
 		ContentCreditVO credit = new ContentCreditVO();
-		credit.setPersonId(person.getPersonId());
+		credit.setPersonId(createPersonId());
 		credit.setRole(role);
 		credit.setCharacter(ROLE_ACTOR.equals(role) ? "테스트 배역" : null);
 		credit.setDisplayOrder(displayOrder);

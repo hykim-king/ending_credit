@@ -104,8 +104,8 @@ public class SearchViewController {
 		}
 
 		boolean movieShown = addMoviePreview(searchWord, model);
-		// 인물·컬렉션은 매퍼가 와일드카드를 막지 못해 걷어낸 검색어로 조회한다
-		boolean personShown = addPersonPreview(toWildcardFreeWord(searchWord), model);
+		boolean personShown = addPersonPreview(searchWord, model);
+		// 컬렉션 매퍼는 아직 ESCAPE가 없어(타 담당) 걷어낸 검색어로 조회한다
 		boolean collectionShown = addCollectionPreview(toWildcardFreeWord(searchWord), model);
 
 		// S-04 판정 - 세 유형이 모두 0건이고 오류도 없을 때. 이때는 초기 순위를 같이 보여준다
@@ -170,21 +170,10 @@ public class SearchViewController {
 			return REDIRECT_SEARCH;
 		}
 
-		// 매퍼가 와일드카드를 막지 못해 걷어낸다. 걷어내고 남는 게 없으면 조회 자체를 하지 않는다
-		String nameWord = toWildcardFreeWord(searchWord);
-
-		if (nameWord.isEmpty()) {
-			model.addAttribute("query", searchWord);
-			model.addAttribute("people", Collections.emptyList());
-			model.addAttribute("personRoles", Collections.emptyMap());
-			model.addAttribute("paging", new DTO());
-			return PERSON_SEARCH_VIEW;
-		}
-
 		DTO param = new DTO();
 		param.setPageNo(page);
 		param.setPageSize(PERSON_PAGE_SIZE);
-		param.setSearchWord(nameWord);
+		param.setSearchWord(searchWord);
 
 		List<PersonVO> people;
 
@@ -211,12 +200,7 @@ public class SearchViewController {
 		return searchWord.length() > MAX_QUERY_LENGTH;
 	}
 
-	/*
-	 * 영화는 ContentService가 %·_를 escape해 글자로 되돌리지만,
-	 * PersonMapper·CollectionMapper에는 ESCAPE 선언이 없어(타 담당 영역) 와일드카드가 그대로 먹는다.
-	 * 검색 화면에서 걷어내지 않으면 "%" 한 글자에 인물·컬렉션 전 건이 걸린다.
-	 * 두 매퍼에 ESCAPE가 들어오면 이 메서드를 지우고 검색어를 그대로 넘기면 된다
-	 */
+	// S-01 컬렉션 미리보기용 - CollectionMapper에 ESCAPE가 들어오면 이 메서드를 지운다
 	private String toWildcardFreeWord(String searchWord) {
 		return searchWord.replace("%", "").replace("_", "");
 	}
@@ -254,7 +238,7 @@ public class SearchViewController {
 
 	// 인물 미리보기 - PersonMapper의 otherwise 분기가 이름 부분일치를 맡는다
 	private boolean addPersonPreview(String searchWord, Model model) {
-		// 와일드카드만 있던 검색어는 걷어내면 빈 값이 된다. 그대로 조회하면 조건이 빠져 전 건이 나온다
+		// 빈 검색어를 그대로 조회하면 조건이 빠져 전 건이 나온다
 		if (searchWord.isEmpty()) {
 			model.addAttribute("people", Collections.emptyList());
 			model.addAttribute("personTotalCnt", 0);
@@ -289,7 +273,6 @@ public class SearchViewController {
 	}
 
 	// 인물별 역할 표기를 만든다. PersonVO에는 역할이 없어 CONTENT_CREDIT을 따로 읽는다.
-	// 감독 크레딧을 가진 인물을 한 번에 받아 오므로 목록이 길어져도 쿼리는 한 번이다
 	private Map<Integer, String> toRoleLabels(List<PersonVO> people) {
 		Map<Integer, String> labels = new LinkedHashMap<>();
 

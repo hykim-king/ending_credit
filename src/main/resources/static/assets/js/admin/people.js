@@ -37,7 +37,8 @@
 
             try {
                 const body = await response.json();
-                message = body.message || body.detail || message;
+                // MessageVO의 필드명은 message / detailMessage 다
+                message = body.message || body.detailMessage || message;
             } catch (error) {
                 // 본문이 JSON이 아니면 기본 문구를 쓴다
             }
@@ -205,14 +206,15 @@
         const saveButton = $("#saveButton");
         const nameKo = $("#nameKo");
         const nameOrg = $("#nameOrg");
+        const externalId = $("#externalId");
 
-        // ACT-AD-006 - 이름 조건(POL-034)을 통과해야 저장이 열린다. 서버도 같은 규칙을 막는다
+        // ACT-AD-006 - 원문명·외부ID는 DB가 NOT NULL이라 필수다. 서버도 같은 규칙을 막는다
         function syncSaveButton() {
-            saveButton.disabled = !nameKo.value.trim() && !nameOrg.value.trim();
+            saveButton.disabled = !nameOrg.value.trim() || !externalId.value.trim();
         }
 
-        nameKo.addEventListener("input", syncSaveButton);
         nameOrg.addEventListener("input", syncSaveButton);
+        externalId.addEventListener("input", syncSaveButton);
         syncSaveButton();
 
         $("#cancelButton").addEventListener("click", () => {
@@ -223,17 +225,24 @@
             event.preventDefault();
             errorBox.hidden = true;
 
-            if (!nameKo.value.trim() && !nameOrg.value.trim()) {
-                errorBox.textContent = "국문명과 원문명 중 하나는 입력해 주세요.";
+            if (!nameOrg.value.trim()) {
+                errorBox.textContent = "원문명을 입력해 주세요.";
                 errorBox.hidden = false;
-                nameKo.focus();
+                nameOrg.focus();
+                return;
+            }
+
+            if (!externalId.value.trim()) {
+                errorBox.textContent = "외부 ID를 입력해 주세요.";
+                errorBox.hidden = false;
+                externalId.focus();
                 return;
             }
 
             const payload = {
                 nameKo: nameKo.value.trim(),
                 nameOrg: nameOrg.value.trim(),
-                externalId: $("#externalId").value.trim(),
+                externalId: externalId.value.trim(),
                 profileImageUrl: $("#profileImageUrl").value.trim()
             };
 

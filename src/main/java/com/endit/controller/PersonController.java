@@ -20,24 +20,20 @@ import com.endit.domain.PersonVO;
 import com.endit.service.ContentCreditService;
 import com.endit.service.PersonService;
 
-/**
- * 인물 상세 / 목록 API
- * 화면설계: P-01
- * 담당: 이기준
- *
- * GET /api/people/{personId}                              인물 상세 (+ 참여 작품)
- * GET /api/people/{personId}/filmography?page=&size=       인물 참여 작품 (P-01 더보기)
- * GET /api/people?searchWord=&searchDiv=&pageNo=&pageSize= 인물 검색·목록
- */
+// P-01 인물 상세 - 인물 조회·참여작·검색 REST API
 @RestController
 @RequestMapping("/api/people")
 public class PersonController {
 
 	private static final Logger log = LoggerFactory.getLogger(PersonController.class);
 
-	// P-01 더보기가 페이지 크기를 안 넘겼을 때의 기본값. 화면은 data-page-size로 첫 페이지와 같은 값을 보낸다
+	// P-01 더보기 기본값 - 애노테이션이 상수식만 받아 문자열이 원본이다
 	private static final String DEFAULT_PAGE_SIZE_TEXT = "12";
 	private static final String FIRST_PAGE_NO_TEXT = "1";
+
+	// P-01 상세에 싣는 참여작 첫 페이지 - 위 문자열에서 파생시켜 어긋나지 않게 한다
+	private static final int FIRST_PAGE_NO = Integer.parseInt(FIRST_PAGE_NO_TEXT);
+	private static final int FILMOGRAPHY_PREVIEW_SIZE = Integer.parseInt(DEFAULT_PAGE_SIZE_TEXT);
 
 	private final PersonService personService;
 	private final ContentCreditService contentCreditService;
@@ -47,7 +43,7 @@ public class PersonController {
 		this.contentCreditService = contentCreditService;
 	}
 
-	/** 인물 상세 + 참여 작품 */
+	// P-01 인물 상세 + 참여작 첫 페이지
 	@GetMapping("/{personId}")
 	public ResponseEntity<Map<String, Object>> get(@PathVariable int personId) {
 		log.debug("get personId={}", personId);
@@ -57,21 +53,20 @@ public class PersonController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 		}
 
-		List<ContentCreditVO> filmography = personService.getFilmography(personId);
+		DTO param = new DTO();
+		param.setPageNo(FIRST_PAGE_NO);
+		param.setPageSize(FILMOGRAPHY_PREVIEW_SIZE);
+
+		List<ContentCreditVO> filmography = contentCreditService.retrieveByPerson(personId, param);
 
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("person", person);
 		body.put("filmography", filmography);
+		body.put("filmographyPage", toPageInfo(param));
 		return ResponseEntity.ok(body);
 	}
 
-	/**
-	 * 인물 참여 작품 (P-01 더보기)
-	 *
-	 * PersonService.getFilmography는 pageSize 50 고정에 DTO를 버려서 총건수가 나오지 않는다.
-	 * 더보기는 남은 건수를 알아야 하므로 ContentCreditService를 직접 부른다.
-	 * (ContentCreditMapper로 내려가면 이미지 URL 변환을 건너뛴다 - P-01 이미지가 404 났던 원인)
-	 */
+	// P-01 참여작 더보기 - 매퍼로 바로 내려가면 이미지 URL 변환이 빠진다
 	@GetMapping("/{personId}/filmography")
 	public ResponseEntity<Map<String, Object>> retrieveFilmography(
 			@PathVariable int personId,
@@ -88,13 +83,22 @@ public class PersonController {
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("items", items);
-		// 화면이 남은 건수를 재려면 totalCnt가 필요하다. param에 담겨 돌아온다
-		response.put("page", param);
+		response.put("page", toPageInfo(param));
 
 		return ResponseEntity.ok(response);
 	}
 
-	/** 인물 목록·검색 */
+	// P-01 페이징 응답 - retrieveByPerson이 DTO에 덮어쓴 검색축(searchDiv '20')이 새어 나가지 않게 추린다
+	private Map<String, Object> toPageInfo(DTO param) {
+		Map<String, Object> page = new LinkedHashMap<>();
+		page.put("pageNo", param.getPageNo());
+		page.put("pageSize", param.getPageSize());
+		page.put("totalCnt", param.getTotalCnt());
+
+		return page;
+	}
+
+	// 인물 목록·검색
 	@GetMapping
 	public ResponseEntity<Map<String, Object>> retrieve(
 			@RequestParam(defaultValue = "") String searchWord,

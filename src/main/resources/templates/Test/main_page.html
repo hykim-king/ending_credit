@@ -59,9 +59,10 @@ layout:decorate="~{layout/layout}">
     .shelf-next {
         right: 4px;
     }
-    .shelf-nav:disabled {
-        opacity: .3;
-        cursor: default;
+    /* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다.
+       한 화면에 다 들어갈 때와, 넘어갈 쪽이 없을 때 둘 다 감춘다 */
+    .shelf-nav[hidden] {
+        display: none;
     }
     .shelf-nav:focus-visible, .movie-card:focus-visible {
         outline: 3px solid #D8D1FF;
@@ -206,8 +207,9 @@ layout:decorate="~{layout/layout}">
                     function update() {
                         var itemWidth = items[0].getBoundingClientRect().width;
                         track.style.transform = 'translateX(-' + (startIndex * (itemWidth + GAP)) + 'px)';
-                        prevBtn.disabled = startIndex === 0;
-                        nextBtn.disabled = startIndex + VISIBLE_COUNT >= items.length;
+                        // 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
+                        prevBtn.hidden = startIndex === 0;
+                        nextBtn.hidden = startIndex + VISIBLE_COUNT >= items.length;
                     }
 
                     prevBtn.addEventListener('click', function () {

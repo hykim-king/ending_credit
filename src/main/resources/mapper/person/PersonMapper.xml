@@ -12,19 +12,20 @@
 	<sql id="personWhere">
 		<where>
 			<if test="searchWord != null and searchWord != ''">
+				<!-- ESCAPE - 검색어의 %·_를 서비스가 \로 escape해 보내므로 와일드카드가 아닌 글자로 취급한다 -->
 				<choose>
 					<when test="searchDiv == '10'">
-						name_ko LIKE #{searchWord} || '%'
+						name_ko LIKE #{searchWord} || '%' ESCAPE '\'
 					</when>
 					<when test="searchDiv == '20'">
-						name_org LIKE #{searchWord} || '%'
+						name_org LIKE #{searchWord} || '%' ESCAPE '\'
 					</when>
 					<when test="searchDiv == '30'">
 						external_id = #{searchWord}
 					</when>
 					<otherwise>
-						( name_ko LIKE '%' || #{searchWord} || '%'
-						   OR name_org LIKE '%' || #{searchWord} || '%' )
+						( name_ko LIKE '%' || #{searchWord} || '%' ESCAPE '\'
+						   OR name_org LIKE '%' || #{searchWord} || '%' ESCAPE '\' )
 					</otherwise>
 				</choose>
 			</if>

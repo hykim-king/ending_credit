@@ -112,9 +112,10 @@ layout:decorate="~{layout/layout}">
 	.gallery-next {
 		right: -22px;
 	}
-	.gallery-nav:disabled {
-		opacity: 0.3;
-		cursor: default;
+	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다.
+	   넘어갈 쪽이 없으면 흐리게 두지 않고 아예 감춘다 */
+	.gallery-nav[hidden] {
+		display: none;
 	}
 	.gallery-item img {
 		cursor: pointer;
@@ -279,7 +280,8 @@ layout:decorate="~{layout/layout}">
 		cursor: pointer;
 		z-index: 2;
 	}
-	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다 (12명 이하일 때 숨김) */
+	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다.
+	   12명 이하로 한 페이지에 다 들어갈 때와, 넘어갈 쪽이 없을 때 둘 다 감춘다 */
 	.cast-nav[hidden] {
 		display: none;
 	}
@@ -288,10 +290,6 @@ layout:decorate="~{layout/layout}">
 	}
 	.cast-next {
 		right: -22px;
-	}
-	.cast-nav:disabled {
-		opacity: 0.3;
-		cursor: default;
 	}
 	@media (max-width: 900px) {
 		.cast-grid {
@@ -468,8 +466,9 @@ layout:decorate="~{layout/layout}">
 					var page = Math.floor(index / PAGE_SIZE);
 					cell.hidden = page !== pageNo;
 				});
-				prevBtn.disabled = pageNo === 0;
-				nextBtn.disabled = pageNo === pageCount - 1;
+				// 넘어갈 페이지가 없으면 흐리게 두지 않고 감춘다
+				prevBtn.hidden = pageNo === 0;
+				nextBtn.hidden = pageNo === pageCount - 1;
 			}
 
 			prevBtn.addEventListener('click', function () {
@@ -500,9 +499,10 @@ layout:decorate="~{layout/layout}">
 
 			var items = track.children;
 			var pageSize = 3;
+			// 한 화면에 다 들어가면 화살표를 띄우지 않는다
 			if (items.length <= pageSize) {
-				prevBtn.style.display = 'none';
-				nextBtn.style.display = 'none';
+				prevBtn.hidden = true;
+				nextBtn.hidden = true;
 				return;
 			}
 
@@ -513,8 +513,9 @@ layout:decorate="~{layout/layout}">
 				var itemWidth = items[0].getBoundingClientRect().width;
 				var offset = startIndex * (itemWidth + gap);
 				track.style.transform = 'translateX(-' + offset + 'px)';
-				prevBtn.disabled = startIndex === 0;
-				nextBtn.disabled = startIndex + pageSize >= items.length;
+				// 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
+				prevBtn.hidden = startIndex === 0;
+				nextBtn.hidden = startIndex + pageSize >= items.length;
 			}
 
 			prevBtn.addEventListener('click', function () {
@@ -552,8 +553,9 @@ layout:decorate="~{layout/layout}">
 			function show(index) {
 				currentIndex = index;
 				modalImg.src = images[currentIndex];
-				prevBtn.disabled = currentIndex === 0;
-				nextBtn.disabled = currentIndex === images.length - 1;
+				// 첫 장·마지막 장에서는 화살표를 감춘다
+				prevBtn.hidden = currentIndex === 0;
+				nextBtn.hidden = currentIndex === images.length - 1;
 				// 전부 서버 렌더링이므로 목록 길이가 곧 전체 건수다
 				modalCount.textContent = (currentIndex + 1) + ' / ' + images.length;
 			}

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
+import org.apache.ibatis.session.SqlSession;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
-import com.endit.domain.ContentCreditVO;
-import com.endit.domain.ContentVO;
 import com.endit.domain.PersonVO;
 import com.endit.mapper.PersonMapper;
 
@@ -26,8 +25,9 @@ import com.endit.mapper.PersonMapper;
  * <pre>
  * Class Name  : PersonServiceTest
  * Description : 실제 Spring Bean과 DB를 사용해 인물 Service를 검증하는 통합 테스트
- *               인물 프로필과 참여작 이미지는 축마다 크기가 다르므로(w300 / w185 / w500),
- *               각 URL이 어느 크기로 완성되는지가 이 테스트의 핵심 검증 대상이다.
+ *               인물 프로필은 참여작 카드(w185)와 크기가 다르므로(w300),
+ *               URL이 어느 크기로 완성되는지가 이 테스트의 핵심 검증 대상이다.
+ *               참여작 조회는 ContentCreditServiceTest.retrieveByPerson이 맡는다.
  *
  * Modification History
  * ------------------------------------------------------------
@@ -35,6 +35,7 @@ import com.endit.mapper.PersonMapper;
  * ------------------------------------------------------------
  * 2026. 8. 31. eunhu       최초 생성
  * 2026. 9. 1.  eunhu       등록·수정·외부 ID 중복 검사 테스트 추가
+ * 2026. 9. 2.  eunhu       getFilmography 삭제에 따라 참여작 테스트 이관
  * ------------------------------------------------------------
  * </pre>
  *
@@ -48,12 +49,9 @@ class PersonServiceTest {
 
 	private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/";
 	private static final String PERSON_PROFILE_PREFIX = TMDB_IMAGE_BASE_URL + "w300/";
-	private static final String CREDIT_PROFILE_PREFIX = TMDB_IMAGE_BASE_URL + "w185/";
-	private static final String POSTER_PREFIX = TMDB_IMAGE_BASE_URL + "w500/";
 
 	private static final String SAMPLE_PATH = "/sample-profile.jpg";
 	private static final String SEARCH_BY_NAME_KO = "10";
-	private static final String ROLE_ACTOR = "ACTOR";
 
 	private static final int OVER_MAX_PAGE_SIZE = 500;
 	private static final int MAX_PAGE_SIZE = 100;
@@ -63,13 +61,10 @@ class PersonServiceTest {
 	private PersonService personService;
 
 	@Autowired
-	private ContentService contentService;
-
-	@Autowired
-	private ContentCreditService contentCreditService;
-
-	@Autowired
 	private PersonMapper personMapper;
+
+	@Autowired
+	private SqlSession sqlSession;
 
 	/** 단건 조회 결과의 프로필 경로가 인물 상세용 크기로 완성되는지 검증 */
 	@Test
@@ -133,33 +128,6 @@ class PersonServiceTest {
 		assertEquals(0, param.getTotalCnt());
 	}
 
-	/**
-	 * 참여작 목록의 이미지가 크레딧 축 크기로 완성되는지 검증.
-	 * 인물 상세(w300)와 달리 참여작 카드의 프로필은 w185, 포스터는 w500이다
-	 */
-	@Test
-	@DisplayName("참여작 목록의 프로필은 w185, 포스터는 w500으로 완성")
-	void getFilmography() {
-		int personId = createPersonId("참여작 인물");
-		int contentId = createContentId();
-		createCredit(contentId, personId);
-
-		List<ContentCreditVO> result = personService.getFilmography(personId);
-
-		assertFalse(result.isEmpty());
-		assertTrue(result.get(0).getProfileImageUrl().startsWith(CREDIT_PROFILE_PREFIX));
-		assertTrue(result.get(0).getPosterUrl().startsWith(POSTER_PREFIX));
-	}
-
-	/** 참여작이 없는 인물에 대한 반환값 검증 */
-	@Test
-	@DisplayName("참여작이 없으면 빈 목록 반환")
-	void getFilmographyEmpty() {
-		int personId = createPersonId("참여작 없는 인물");
-
-		assertTrue(personService.getFilmography(personId).isEmpty());
-	}
-
 	/** 등록 결과가 재조회 계약(풀 URL)으로 돌아오는지 검증 */
 	@Test
 	@DisplayName("등록하면 채번된 인물이 w300 풀 URL로 반환")
@@ -187,14 +155,27 @@ class PersonServiceTest {
 		assertThrows(IllegalArgumentException.class, () -> personService.create(param));
 	}
 
-	/** POL-034 - 외부 ID는 선택이므로 비어 있어도 등록된다 */
+	// PERSON.EXTERNAL_ID가 NOT NULL이라 서비스가 먼저 막는다.
+	// 여기서 안 막으면 INSERT에서 ORA-01400이 나 500이 된다 (docs/known-issues.md)
 	@Test
-	@DisplayName("외부 ID가 없어도 등록 가능")
+	@DisplayName("외부 ID가 없으면 등록 실패")
 	void createWithoutExternalId() {
 		PersonVO param = new PersonVO();
 		param.setNameKo("외부ID 없는 인물");
+		param.setNameOrg("No External Person");
 
-		assertTrue(personService.create(param).getPersonId() > 0);
+		assertThrows(IllegalArgumentException.class, () -> personService.create(param));
+	}
+
+	// PERSON.NAME_ORG도 NOT NULL이라 같은 이유로 막는다
+	@Test
+	@DisplayName("원문명이 없으면 등록 실패")
+	void createWithoutNameOrg() {
+		PersonVO param = new PersonVO();
+		param.setNameKo("원문명 없는 인물");
+		param.setExternalId(UUID.randomUUID().toString().substring(0, 12));
+
+		assertThrows(IllegalArgumentException.class, () -> personService.create(param));
 	}
 
 	/** POL-034 UK_PERSON_EXTERNAL - 이미 쓰인 외부 ID는 막는다 */
@@ -205,11 +186,13 @@ class PersonServiceTest {
 
 		PersonVO first = new PersonVO();
 		first.setNameKo("선점 인물");
+		first.setNameOrg("First Person");
 		first.setExternalId(externalId);
 		personService.create(first);
 
 		PersonVO second = new PersonVO();
 		second.setNameKo("중복 인물");
+		second.setNameOrg("Second Person");
 		second.setExternalId(externalId);
 
 		assertThrows(IllegalStateException.class, () -> personService.create(second));
@@ -224,6 +207,8 @@ class PersonServiceTest {
 	void createReversesFullImageUrl() {
 		PersonVO param = new PersonVO();
 		param.setNameKo("URL 역변환 인물");
+		param.setNameOrg("Url Person");
+		param.setExternalId(UUID.randomUUID().toString().substring(0, 12));
 		param.setProfileImageUrl(PERSON_PROFILE_PREFIX + "sample-profile.jpg");
 
 		int personId = personService.create(param).getPersonId();
@@ -270,6 +255,7 @@ class PersonServiceTest {
 
 		PersonVO created = new PersonVO();
 		created.setNameKo("자기 외부ID 인물");
+		created.setNameOrg("Own External Person");
 		created.setExternalId(externalId);
 
 		int personId = personService.create(created).getPersonId();
@@ -289,11 +275,14 @@ class PersonServiceTest {
 
 		PersonVO owner = new PersonVO();
 		owner.setNameKo("외부ID 선점 인물");
+		owner.setNameOrg("Owner Person");
 		owner.setExternalId(takenId);
 		personService.create(owner);
 
 		PersonVO other = new PersonVO();
 		other.setNameKo("수정 대상 인물");
+		other.setNameOrg("Other Person");
+		other.setExternalId(UUID.randomUUID().toString().substring(0, 12));
 		int personId = personService.create(other).getPersonId();
 
 		PersonVO param = new PersonVO();
@@ -321,6 +310,7 @@ class PersonServiceTest {
 
 		PersonVO param = new PersonVO();
 		param.setNameKo("외부ID 검사 인물");
+		param.setNameOrg("Has External Person");
 		param.setExternalId(externalId);
 		personService.create(param);
 
@@ -335,8 +325,12 @@ class PersonServiceTest {
 		assertThrows(IllegalArgumentException.class, () -> personService.hasExternalId(" "));
 	}
 
-	/** DB에 저장된 원본 경로를 그대로 읽는다. get()은 풀 URL을 돌려주므로 쓸 수 없다 */
+	// DB 원본 경로를 읽는다 - 캐시를 비우지 않으면 create가 제자리에서 바꾼 VO가 그대로 돌아온다
 	private String findStoredProfilePath(int personId) {
+		// MyBatis 1차 캐시는 같은 트랜잭션에서 같은 인스턴스를 돌려주는데,
+		// PersonServiceImpl.get이 그 인스턴스의 URL을 풀 URL로 바꿔 놓는다
+		sqlSession.clearCache();
+
 		PersonVO key = new PersonVO();
 		key.setPersonId(personId);
 
@@ -354,33 +348,6 @@ class PersonServiceTest {
 		personMapper.doSave(person);
 
 		return person.getPersonId();
-	}
-
-	/** 참여작 검증에 쓸 콘텐츠를 등록하고 번호를 돌려준다 */
-	private int createContentId() {
-		ContentVO content = new ContentVO();
-		content.setExternalId(UUID.randomUUID().toString().substring(0, 12));
-		content.setTitleKo("인물 테스트 영화");
-		content.setTitleOrg("Person Test Movie");
-		content.setOverview("통합 테스트용 줄거리");
-		content.setReleaseYear("2026-01-01");
-		content.setRuntimeMin(120);
-		content.setCountry("US");
-		content.setPosterUrl(SAMPLE_PATH);
-		content.setBackdropUrl(SAMPLE_PATH);
-
-		return contentService.create(content).getContentId();
-	}
-
-	/** 인물을 콘텐츠에 배우로 연결한다 */
-	private void createCredit(int contentId, int personId) {
-		ContentCreditVO credit = new ContentCreditVO();
-		credit.setPersonId(personId);
-		credit.setRole(ROLE_ACTOR);
-		credit.setCharacter("테스트 배역");
-		credit.setDisplayOrder(0);
-
-		contentCreditService.create(contentId, credit);
 	}
 
 }

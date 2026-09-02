@@ -22,19 +22,17 @@ import com.endit.service.ContentCreditService;
 import com.endit.service.PersonLikeService;
 import com.endit.service.PersonService;
 
-/**
- * 인물 상세 화면(P-01)의 경로를 처리하는 Controller
- */
+// P-01 인물 상세 - 프로필·역할 요약·필모그래피·좋아요를 한 화면에 그린다
 @Controller
 public class PersonViewController {
 
 	private static final Logger log = LoggerFactory.getLogger(PersonViewController.class);
 
-	// 필모그래피 첫 페이지 건수. 더보기가 같은 크기로 이어 받도록 화면에 함께 내려 준다
+	// 필모그래피 첫 페이지 건수 - 더보기가 같은 크기로 이어받도록 화면에 내려 준다
 	private static final int FILMOGRAPHY_PAGE_SIZE = 12;
 	private static final int FIRST_PAGE_NO = 1;
 
-	// POL-033이 정한 크레딧 역할 4종의 표기. 더보기로 붙는 행은 person/detail.js가 같은 표를 들고 있다
+	// POL-033 역할 4종 표기 - person/detail.js가 같은 표를 들고 있다
 	private static final Map<String, String> ROLE_LABELS = Map.of(
 			"DIRECTOR", "감독",
 			"ACTOR", "배우",
@@ -59,7 +57,7 @@ public class PersonViewController {
 		this.currentMemberProvider = currentMemberProvider;
 	}
 
-	/** 인물 상세 화면 */
+	// P-01 인물 상세 화면
 	@GetMapping("/people/{personId}")
 	public String detail(@PathVariable int personId, Model model) {
 
@@ -82,8 +80,7 @@ public class PersonViewController {
 		return PERSON_DETAIL_VIEW;
 	}
 
-	// 필모그래피 첫 페이지. PersonService.getFilmography는 pageSize 50 고정에 DTO를 버려
-	// 총건수가 화면까지 오지 않아 더보기를 만들 수 없다. 우리 서비스를 직접 부른다
+	// P-01 필모그래피 첫 페이지 - 더보기가 남은 건수를 재야 해서 totalCnt를 주는 경로로 읽는다
 	private void addFilmography(int personId, Model model) {
 		DTO param = new DTO();
 		param.setPageNo(FIRST_PAGE_NO);
@@ -94,7 +91,7 @@ public class PersonViewController {
 		try {
 			filmography = contentCreditService.retrieveByPerson(personId, param);
 		} catch (RuntimeException e) {
-			// 03의 오류 상태는 "목록 재시도"다. 화면 전체가 죽는 것보다 목록 자리만 비우는 편이 낫다
+			// 목록 자리만 비우고 화면은 살린다
 			log.warn("참여 작품 조회에 실패했습니다. personId={}", personId, e);
 			filmography = Collections.emptyList();
 			model.addAttribute("filmographyFailed", true);
@@ -106,8 +103,7 @@ public class PersonViewController {
 		model.addAttribute("roleSummary", toRoleSummary(filmography));
 	}
 
-	// 히어로의 역할 요약("감독, 배우"). 첫 페이지 크레딧의 역할을 중복 없이 모은다.
-	// 추가 쿼리가 없는 대신 13번째 작품에만 있는 역할은 잡히지 않는다
+	// P-01 히어로 역할 요약("감독, 배우") - 첫 페이지 크레딧에서만 모으므로 그 밖의 역할은 빠진다
 	private String toRoleSummary(List<ContentCreditVO> filmography) {
 		Set<String> labels = new LinkedHashSet<>();
 
@@ -140,13 +136,7 @@ public class PersonViewController {
 		}
 	}
 
-	/*
-	 * 로그인 회원 번호. 인증 경계는 CurrentMemberProvider가 맡고 있으므로 세션을 직접 보지 않는다 -
-	 * 실제 인증이 병합되면 그 구현체만 바뀌고 이 화면은 그대로다.
-	 *
-	 * 화면이 번호를 알아야 하는 이유는 PersonLikeController가 아직 X-Member-Id 임시 헤더를 받기 때문이다.
-	 * 그 컨트롤러가 CurrentMemberProvider로 옮겨 가면 여기서 번호를 내려 줄 필요도 없어진다.
-	 */
+	// P-01 좋아요용 로그인 회원 번호 - PersonLikeController가 X-Member-Id 헤더를 받는 동안만 필요하다
 	private Integer toCurrentMemberId() {
 		OptionalLong memberId = currentMemberProvider.findCurrentMemberId();
 

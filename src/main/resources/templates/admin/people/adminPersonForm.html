@@ -37,16 +37,17 @@
             <input type="text" id="nameKo" name="nameKo" maxlength="100"
                    th:value="${person.nameKo}" placeholder="예) 크리스토퍼 놀란">
 
-            <label for="nameOrg">원문명</label>
-            <input type="text" id="nameOrg" name="nameOrg" maxlength="200"
+            <label for="nameOrg">원문명 *</label>
+            <input type="text" id="nameOrg" name="nameOrg" maxlength="200" required
                    th:value="${person.nameOrg}" placeholder="예) Christopher Nolan">
-            <p class="form-hint">POL-034 - 국문명과 원문명 중 하나는 반드시 채워야 합니다.</p>
+            <p class="form-hint">PERSON.NAME_ORG가 NOT NULL이라 필수입니다(정의서 POL-034는 선택으로 적혀 있습니다).</p>
 
-            <label for="externalId">외부 ID</label>
-            <input type="text" id="externalId" name="externalId" maxlength="50"
-                   th:value="${person.externalId}" placeholder="TMDB 인물 ID (선택)">
+            <label for="externalId">외부 ID *</label>
+            <input type="text" id="externalId" name="externalId" maxlength="50" required
+                   th:value="${person.externalId}" placeholder="TMDB 인물 ID">
             <p class="form-hint">
-                동명이인 구분에 쓰입니다. 비워 두어도 등록되며, 이미 쓰이는 값이면 저장할 때 막힙니다.
+                동명이인 구분에 쓰입니다. TMDB에 없는 인물이면 겹치지 않는 값을 직접 정해 넣으세요.
+                이미 쓰이는 값이면 저장할 때 막힙니다.
             </p>
 
             <label for="profileImageUrl">프로필 이미지</label>

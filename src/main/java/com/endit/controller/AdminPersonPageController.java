@@ -12,11 +12,7 @@ import com.endit.service.PersonService;
 
 import jakarta.servlet.http.HttpSession;
 
-/**
- * 관리자 인물 화면(AD-05 인물 관리 목록 / AD-06 인물 등록·수정)의 경로를 처리하는 Controller
- *
- * 목록 데이터와 저장은 JavaScript가 REST API로 처리한다 - 공지 관리 화면과 같은 구조다.
- */
+// AD-05 인물 목록 / AD-06 인물 등록·수정 - 화면만 띄우고 데이터는 JS가 REST로 가져간다
 @Controller
 public class AdminPersonPageController {
 
@@ -29,7 +25,7 @@ public class AdminPersonPageController {
 		this.personService = personService;
 	}
 
-	/** AD-05 인물 관리 목록 */
+	// AD-05 인물 관리 목록
 	@GetMapping("/admin/people")
 	public String adminPersonList(HttpSession session) {
 		NoticeSessionSupport.requireAdminId(session);
@@ -37,7 +33,7 @@ public class AdminPersonPageController {
 		return PERSON_LIST_VIEW;
 	}
 
-	/** AD-06 인물 신규 등록 */
+	// AD-06 인물 신규 등록 폼
 	@GetMapping("/admin/people/new")
 	public String adminPersonCreate(HttpSession session, Model model) {
 		NoticeSessionSupport.requireAdminId(session);
@@ -48,14 +44,14 @@ public class AdminPersonPageController {
 		return PERSON_FORM_VIEW;
 	}
 
-	/** AD-06 인물 수정 */
+	// AD-06 인물 수정 폼
 	@GetMapping("/admin/people/{personId}")
 	public String adminPersonEdit(@PathVariable int personId, HttpSession session, Model model) {
 		NoticeSessionSupport.requireAdminId(session);
 
 		PersonVO person = personService.get(personId);
 
-		// PersonService.get은 없는 인물에 null을 돌려준다(컨트롤러가 404로 바꾸는 계약)
+		// get은 없는 인물에 null을 준다 - 404로 바꾸는 건 컨트롤러 몫
 		if (person == null) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "존재하지 않는 인물입니다.");
 		}
