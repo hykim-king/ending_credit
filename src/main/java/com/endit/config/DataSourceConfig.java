@@ -20,7 +20,7 @@ public class DataSourceConfig {
 		
 		//Oracle datasource-개인
 //		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-//		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XEPDB1");
+//		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE1");
 //		ds.setUsername("endit_test");
 //		ds.setPassword("qwer1234");
 		
