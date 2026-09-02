@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${content.titleKo} + ' | END IT ADMIN'">영화 상세 | END IT ADMIN</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/admin/movies.css">
+</head>
+<body data-page="admin-content-detail">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies" class="active">영화</a>
+            <a href="/admin/people">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <!--
+            읽기 전용이다 - 정의서 AD-04에 쓰기 기능이 없고 CONTENT에 UPDATED_DT도 없다.
+            네 조각(콘텐츠·장르·이미지·크레딧)을 컨트롤러가 model에 담아 주므로 JS를 쓰지 않는다.
+        -->
+        <div class="admin-page-head">
+            <h1 class="admin-page-title" th:text="${content.titleKo}">영화 제목</h1>
+            <a href="/admin/movies" class="outline-button spacer"
+               style="display:inline-flex;align-items:center">목록으로</a>
+        </div>
+
+        <dl class="detail-grid">
+            <dt>콘텐츠 ID</dt>
+            <dd th:text="${content.contentId}">0</dd>
+
+            <dt>외부 ID</dt>
+            <dd th:text="${content.externalId} ?: '—'">—</dd>
+
+            <dt>원제</dt>
+            <dd th:text="${content.titleOrg} ?: '—'">—</dd>
+
+            <dt>개봉일</dt>
+            <dd th:text="${content.releaseYear} ?: '—'">—</dd>
+
+            <dt>러닝타임</dt>
+            <dd th:text="${content.runtimeMin} + '분'">0분</dd>
+
+            <dt>제작 국가</dt>
+            <dd th:text="${content.country} ?: '—'">—</dd>
+
+            <dt>등록일</dt>
+            <dd th:text="${content.createdDt} ?: '—'">—</dd>
+
+            <dt>줄거리</dt>
+            <dd th:text="${content.overview} ?: '등록된 줄거리가 없습니다.'">—</dd>
+        </dl>
+
+        <section class="detail-section">
+            <h2>대표 이미지</h2>
+            <div class="poster-pair">
+                <figure>
+                    <img th:if="${content.posterUrl}" th:src="${content.posterUrl}"
+                         th:alt="${content.titleKo} + ' 포스터'">
+                    <figcaption>포스터</figcaption>
+                </figure>
+                <figure>
+                    <img th:if="${content.backdropUrl}" th:src="${content.backdropUrl}"
+                         th:alt="${content.titleKo} + ' 배경'">
+                    <figcaption>배경</figcaption>
+                </figure>
+            </div>
+            <p class="admin-state" th:if="${content.posterUrl == null and content.backdropUrl == null}">
+                등록된 대표 이미지가 없습니다.
+            </p>
+        </section>
+
+        <section class="detail-section">
+            <h2>장르</h2>
+            <ul class="chip-row" th:if="${!#lists.isEmpty(genres)}">
+                <li class="chip" th:each="genre : ${genres}" th:text="${genre.genreName}">장르</li>
+            </ul>
+            <p class="admin-state" th:if="${#lists.isEmpty(genres)}">연결된 장르가 없습니다.</p>
+        </section>
+
+        <section class="detail-section">
+            <h2>갤러리 이미지</h2>
+            <ul class="gallery" th:if="${!#lists.isEmpty(images)}">
+                <li th:each="image : ${images}">
+                    <img th:src="${image.imageUrl}" th:alt="${content.titleKo} + ' 갤러리 이미지'" loading="lazy">
+                </li>
+            </ul>
+            <p class="admin-state" th:if="${#lists.isEmpty(images)}">등록된 갤러리 이미지가 없습니다.</p>
+        </section>
+
+        <section class="detail-section">
+            <h2>크레딧</h2>
+
+            <div class="admin-table-scroll" th:if="${!#lists.isEmpty(credits)}">
+                <table class="stage-table">
+                    <thead>
+                    <tr>
+                        <th>인물</th>
+                        <th>원문명</th>
+                        <th>역할</th>
+                        <th>배역</th>
+                        <th>표시순서</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="credit : ${credits}">
+                        <td class="cell-title" th:text="${credit.nameKo} ?: '—'">이름</td>
+                        <td th:text="${credit.nameOrg} ?: '—'">원문명</td>
+                        <!-- POL-033의 4종. 그 밖의 값은 코드를 그대로 보여 준다 -->
+                        <td th:switch="${credit.role}">
+                            <span th:case="'DIRECTOR'">감독</span>
+                            <span th:case="'ACTOR'">배우</span>
+                            <span th:case="'WRITER'">각본</span>
+                            <span th:case="'PRODUCER'">제작</span>
+                            <span th:case="*" th:text="${credit.role}">역할</span>
+                        </td>
+                        <td th:text="${credit.character} ?: '—'">배역</td>
+                        <td th:text="${credit.displayOrder}">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="admin-state" th:if="${#lists.isEmpty(credits)}">등록된 크레딧이 없습니다.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>

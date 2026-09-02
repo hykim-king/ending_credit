@@ -1,0 +1,324 @@
+/*
+ * P-01 인물 상세
+ * templates/person/detail.html과 짝이다. 값은 docs/design-principles.md를 따른다.
+ */
+
+.person-detail-tokens,
+:root {
+	--person-primary: #6550C8;
+	--person-hover: #5841B4;
+	--person-active: #49339E;
+	--person-border: #E4E2E9;
+	--person-focus: #D8D1FF;
+	--person-text: #17171B;
+	--person-muted: #777;
+	--person-soft: #F4F3F7;
+	--person-danger: #C0392B;
+}
+
+/* ── 히어로 ─────────────────────────────────────── */
+.person-hero {
+	display: flex;
+	align-items: flex-start;
+	gap: 24px;
+	padding: 32px 0 24px;
+}
+
+/* 원형이 아니라 라운드 사각이다. 프로필은 w300으로 이미 완성돼 온다 */
+.person-profile {
+	flex: 0 0 120px;
+	width: 120px;
+	height: 160px;
+	border-radius: 12px;
+	object-fit: cover;
+	background: var(--person-soft);
+}
+
+.person-profile-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	color: #999;
+}
+
+.person-hero-body {
+	min-width: 0;
+	padding-top: 4px;
+}
+
+.person-name {
+	margin: 0;
+	font-size: 32px;
+	font-weight: 700;
+	line-height: 1.25;
+	color: var(--person-text);
+}
+
+.person-name-org {
+	margin: 4px 0 0;
+	font-size: 16px;
+	color: var(--person-muted);
+}
+
+.person-role-summary {
+	margin: 8px 0 0;
+	font-size: 14px;
+	color: var(--person-muted);
+}
+
+/* ── 좋아요 (ACT-P-001 / CMP-22) ─────────────────── */
+.person-like {
+	margin-top: 16px;
+	/* 접근성 원칙: 44px 터치 영역 */
+	min-height: 44px;
+	padding: 0 20px;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: 1px solid var(--person-border);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--person-text);
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.person-like:hover {
+	border-color: var(--person-primary);
+}
+
+.person-like:focus-visible {
+	outline: none;
+	border-color: var(--person-primary);
+	box-shadow: 0 0 0 3px var(--person-focus);
+}
+
+/* 색만으로 구분하지 않는다 - 아이콘이 빈 하트에서 채운 하트로 바뀐다 */
+.person-like.is-liked {
+	border-color: var(--person-primary);
+	color: var(--person-primary);
+	font-weight: 600;
+}
+
+.person-like:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+.person-like-count {
+	color: var(--person-muted);
+}
+
+.person-like.is-liked .person-like-count {
+	color: var(--person-primary);
+}
+
+.person-like-notice {
+	margin: 8px 0 0;
+	font-size: 13px;
+	color: var(--person-danger);
+}
+
+/* ── 참여 작품 ───────────────────────────────────── */
+.filmography {
+	padding-bottom: 48px;
+	border-top: 1px solid var(--person-border);
+}
+
+.filmography-head {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	margin: 24px 0 8px;
+	font-size: 20px;
+	font-weight: 700;
+	color: var(--person-text);
+}
+
+.filmography-count {
+	font-size: 14px;
+	font-weight: 400;
+	color: var(--person-muted);
+}
+
+.filmography-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.filmo-row + .filmo-row {
+	border-top: 1px solid var(--person-border);
+}
+
+/* 연도 · 포스터 · 제목 · 역할의 4열 행. 와챠피디아식 표 목록이다 */
+.filmo-link {
+	display: grid;
+	grid-template-columns: 56px 48px minmax(0, 1fr) minmax(0, 200px);
+	align-items: center;
+	gap: 16px;
+	/* 44px 터치 영역을 행 높이로 확보한다 */
+	min-height: 88px;
+	padding: 12px 8px;
+	border-radius: 8px;
+	text-decoration: none;
+	color: inherit;
+}
+
+.filmo-link:hover {
+	background: var(--person-soft);
+}
+
+.filmo-link:focus-visible {
+	outline: 2px solid var(--person-primary);
+	outline-offset: -2px;
+}
+
+.filmo-year {
+	font-size: 13px;
+	color: var(--person-muted);
+}
+
+.filmo-poster {
+	display: block;
+	width: 48px;
+	aspect-ratio: 2 / 3;
+	border-radius: 4px;
+	overflow: hidden;
+	background: var(--person-soft);
+}
+
+.filmo-poster img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.filmo-title {
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.4;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.filmo-role {
+	font-size: 14px;
+	color: var(--person-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* ── 빈 상태 · 오류 상태 · 더보기 ─────────────────── */
+.filmography-empty {
+	margin: 0;
+	padding: 48px 0;
+	text-align: center;
+	color: var(--person-muted);
+}
+
+.filmography-error {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 32px 0;
+	color: var(--person-danger);
+}
+
+.filmography-retry {
+	min-height: 44px;
+	padding: 0 16px;
+	border: 1px solid var(--person-border);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--person-text);
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.filmography-retry:hover {
+	border-color: var(--person-primary);
+}
+
+.filmography-retry:focus-visible {
+	outline: none;
+	border-color: var(--person-primary);
+	box-shadow: 0 0 0 3px var(--person-focus);
+}
+
+.filmography-more {
+	display: flex;
+	justify-content: center;
+	margin-top: 16px;
+}
+
+.filmography-more-button {
+	min-height: 44px;
+	padding: 0 32px;
+	border: 1px solid var(--person-border);
+	border-radius: 8px;
+	background: #fff;
+	color: var(--person-text);
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.filmography-more-button:hover {
+	border-color: var(--person-primary);
+}
+
+.filmography-more-button:focus-visible {
+	outline: none;
+	border-color: var(--person-primary);
+	box-shadow: 0 0 0 3px var(--person-focus);
+}
+
+.filmography-more-button:disabled {
+	opacity: 0.6;
+	cursor: default;
+}
+
+/* 서버가 렌더 시점에 붙이고 JS가 토글한다 */
+.is-hidden {
+	display: none;
+}
+
+.person-notfound {
+	color: var(--person-danger);
+}
+
+@media (max-width: 700px) {
+	.person-hero {
+		gap: 16px;
+	}
+
+	.person-profile {
+		flex-basis: 88px;
+		width: 88px;
+		height: 118px;
+	}
+
+	.person-name {
+		font-size: 24px;
+	}
+
+	/* 좁은 화면에서는 역할을 제목 아래로 내린다 */
+	.filmo-link {
+		grid-template-columns: 44px 40px minmax(0, 1fr);
+		gap: 12px;
+	}
+
+	.filmo-role {
+		grid-column: 3;
+		white-space: normal;
+	}
+
+	.filmo-title {
+		white-space: normal;
+	}
+}

@@ -3,8 +3,10 @@ package com.endit.service.impl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -40,10 +42,14 @@ import info.movito.themoviedbapi.model.core.image.Artwork;
 import info.movito.themoviedbapi.model.movies.Cast;
 import info.movito.themoviedbapi.model.movies.Credits;
 import info.movito.themoviedbapi.model.movies.Crew;
+import info.movito.themoviedbapi.model.movies.Data;
 import info.movito.themoviedbapi.model.movies.Images;
 import info.movito.themoviedbapi.model.movies.MovieDb;
+import info.movito.themoviedbapi.model.movies.Translation;
+import info.movito.themoviedbapi.model.people.PersonDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import info.movito.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse;
+import info.movito.themoviedbapi.tools.appendtoresponse.PersonAppendToResponse;
 
 /**
  * <pre>
@@ -68,12 +74,12 @@ public class ContentServiceImpl implements ContentService {
 	private static final String DIRECTOR_JOB = "Director";
 	// 한 영화에서 저장할 배우 수
 	private static final int MAX_CAST = 10;
-	// 신규 저장 없이 skip만 나는 페이지가 이만큼 연속되면 조기 종료
-	private static final int MAX_EMPTY_PAGE = 5;
 	// 배경 이미지와 포스터를 각각 최대 몇 장까지 저장할지
 	private static final int MAX_GALLERY_PER_TYPE = 10;
-	// 국제코드 미국인 영화만 DB에 넣기
-	private static final String TARGET_PRODUCTION_COUNTRY = "US";
+	// TRANSLATIONS 응답에서 영문 번역을 찾을 때 쓰는 iso_639_1 코드
+	private static final String LANG_EN = "en";
+	// 인물 TRANSLATIONS의 data 안에 있는 이름 키. 라이브러리가 매핑을 안 해 맵에서 직접 꺼낸다
+	private static final String TRANSLATION_NAME_KEY = "name";
 
 	// contentWhere가 지원하는 검색 축. 이 넷 밖의 값이 오면 WHERE 절이 통째로 빠져 전체 조회가 되므로 서비스에서 막는다
 	private static final String SEARCH_BY_TITLE_KO = "10";
@@ -81,6 +87,30 @@ public class ContentServiceImpl implements ContentService {
 	private static final String SEARCH_BY_COUNTRY = "30";
 	private static final String SEARCH_BY_EXTERNAL_ID = "40";
 	private static final String SEARCH_BY_TITLE = "50";
+
+	// 정렬 축 - searchWord를 검색 조건이 쓰고 있어 searchMap의 이 키로 받는다
+	private static final String SEARCH_KEY_SORT = "sort";
+	// 최신순 - 개봉일 기준이다. 적재 시점이 필요하면 SORT_REGISTERED를 쓴다
+	private static final String SORT_LATEST = "latest";
+	private static final String SORT_BOX_OFFICE = "boxoffice";
+	// 관련도 - 검색어가 있어야 뜻이 있어 매퍼가 검색어 없는 호출은 기본 정렬로 흘린다
+	private static final String SORT_RELEVANCE = "relevance";
+	// 등록순 - TMDB 적재 시각 기준
+	private static final String SORT_REGISTERED = "registered";
+	// 인기순 - 매퍼가 아니라 서비스가 순위 목록으로 정렬한다. 순위가 비면 SORT_BOX_OFFICE로 흘린다
+	private static final String SORT_POPULAR = "popular";
+
+	private static final Set<String> ALLOWED_SORT =
+			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR);
+
+	private static final int FIRST_RANK_PAGE = 1;
+	// 순위 목록에 채울 목표 건수
+	private static final int TARGET_RANK_SIZE = 100;
+	// 목표를 못 채워도 여기서 멈춘다. 한 페이지 20건이므로 최대 300건까지 훑는다
+	private static final int MAX_RANK_PAGE = 15;
+
+	// LIKE 이스케이프 - 매퍼의 ESCAPE '\'와 짝이다. 역슬래시를 먼저 바꿔야 이중 이스케이프가 안 난다
+	private static final String LIKE_ESCAPE_CHAR = "\\";
 
 	// limit을 안 주거나 0 이하로 준 호출의 기본 수집 건수
 	private static final int DEFAULT_SYNC_LIMIT = 100;
@@ -103,6 +133,9 @@ public class ContentServiceImpl implements ContentService {
 	// 라이브러리 진입점.
 	private final TmdbApi tmdbApi;
 	private final TmdbProperties tmdbProperties;
+
+	// 스케줄러 스레드가 쓰고 웹 요청 스레드가 읽는다. 통째로 교체하므로 잠금 없이도 중간 상태가 보이지 않는다
+	private volatile List<Integer> rankedIds = List.of();
 
 	public ContentServiceImpl(
 			ContentMapper contentMapper,
@@ -142,8 +175,6 @@ public class ContentServiceImpl implements ContentService {
 		int insertedCount = 0;
 		// TMDB 인기 목록은 한 페이지에 20건이다
 		int page = 1;
-		// 신규 저장이 하나도 없었던 페이지가 연속으로 몇 번째인지
-		int emptyPage = 0;
 
 		try {
 			// 신규 저장 건수(insertedCount)가 limit을 채울 때까지 돈다. skip된 건 다음 페이지로 보충한다
@@ -155,7 +186,6 @@ public class ContentServiceImpl implements ContentService {
 				if (results.getResults() == null || results.getResults().isEmpty()) {
 					break;
 				}
-				int insertedBeforePage = insertedCount;
 				// 가져온 영화 목록 순회
 				for (Movie movie : results.getResults()) {
 					if (insertedCount >= limit) {
@@ -167,22 +197,8 @@ public class ContentServiceImpl implements ContentService {
 						log.debug("TMDB 영화 skip. 기존 데이터: externalId={}", movie.getId());
 						continue;
 					}
-					// 제작국가가 TARGET_PRODUCTION_COUNTRY가 아니면 상세조회만 하고 저장은 하지 않는다
-					if (saveFromTmdb(movie.getId())) {
-						insertedCount++;
-					}
-				}
-
-				// 이 페이지에서 신규 저장이 하나도 없었다면 연속 카운트 증가, 하나라도 있었다면 리셋
-				if (insertedCount == insertedBeforePage) {
-					emptyPage++;
-					if (emptyPage >= MAX_EMPTY_PAGE) {
-						log.warn("TMDB 인기 영화 import 조기 종료: 신규 없는 페이지 {}회 연속. processed={}, inserted={}",
-								emptyPage, processedCount, insertedCount);
-						break;
-					}
-				} else {
-					emptyPage = 0;
+					saveFromTmdb(movie.getId());
+					insertedCount++;
 				}
 
 				if (results.getTotalPages() == null || page >= results.getTotalPages()) {
@@ -195,6 +211,68 @@ public class ContentServiceImpl implements ContentService {
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 인기 영화 조회 실패", e);
 		}
+	}
+
+	// @Transactional을 붙이지 않는다. TMDB 호출이 수 초 걸려 커넥션을 그동안 붙잡게 되고, 읽기만 해서 얻을 것도 없다
+	@Override
+	public int syncRank() {
+		validateApiKey();
+
+		List<Integer> matched = new ArrayList<>();
+		// 페이지를 넘기는 사이 popularity가 밀리면 같은 영화가 두 번 온다
+		Set<Integer> seenTmdbIds = new HashSet<>();
+		int skipped = 0;
+		int page = FIRST_RANK_PAGE;
+
+		try {
+			// 훑은 건수가 아니라 매칭된 건수를 목표로 삼는다. 보유하지 않은 영화가 많으면 그만큼 더 판다
+			while (matched.size() < TARGET_RANK_SIZE && page <= MAX_RANK_PAGE) {
+				MovieResultsPage results = tmdbApi.getMovieLists().getPopular(
+						tmdbProperties.getLanguage(), page, null);
+				if (results.getResults() == null || results.getResults().isEmpty()) {
+					break;
+				}
+
+				for (Movie movie : results.getResults()) {
+					if (matched.size() >= TARGET_RANK_SIZE) {
+						break;
+					}
+					if (!seenTmdbIds.add(movie.getId())) {
+						continue;
+					}
+					Integer contentId = contentMapper.findContentIdByExternal(String.valueOf(movie.getId()));
+					if (contentId == null) {
+						skipped++;
+						continue;
+					}
+					matched.add(contentId);
+				}
+
+				if (results.getTotalPages() == null || page >= results.getTotalPages()) {
+					break;
+				}
+				page++;
+			}
+		} catch (TmdbException e) {
+			// 던지면 스케줄이 죽어 다음 주기까지 순위가 멈춘다. 모은 데까지만 쓰고 넘어간다
+			log.warn("TMDB 인기순위 조회 실패. 수집분까지만 사용: matched={}", matched.size(), e);
+		}
+
+		// 어제 순위가 빈 화면보다 낫다
+		if (matched.isEmpty()) {
+			log.warn("TMDB 인기순위 매칭 0건. 기존 순위 유지: previous={}", rankedIds.size());
+			return 0;
+		}
+
+		rankedIds = List.copyOf(matched);
+		// skipped가 크면 적재가 밀렸다는 신호다
+		log.info("TMDB 인기순위 동기화: matched={}, skipped={}, pages={}", matched.size(), skipped, page);
+		return matched.size();
+	}
+
+	@Override
+	public List<Integer> retrieveRank() {
+		return rankedIds;
 	}
 
 	// 외부 영화 id (TMDB에서 제공하는 영화 ID값)가 이미 우리 테이블에 있는지 확인하는 메서드
@@ -229,20 +307,15 @@ public class ContentServiceImpl implements ContentService {
 		}
 	}
 
-	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다. 제작국가가 TARGET_PRODUCTION_COUNTRY가 아니면 저장하지 않고 false를 반환한다
-	private boolean saveFromTmdb(int tmdbMovieId) {
+	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다
+	private void saveFromTmdb(int tmdbMovieId) {
 		try {
-			// HTTP GET /movie/영화id + append_to_response=credits 로 영화 상세보기에 CREDIT 정보를 함께 호출함
-			// 이유는 API 호출 횟수를 줄이기 위해서
-			// 여기서 보면 영화 상세 (.getdetails) 랑 MovieAppendToResponse.CREDITS 로 크레딧 정보 받아오고 있음.
+			// HTTP GET /movie/영화id + append_to_response=credits,translations
+			// 이유는 API 호출 횟수를 줄이기 위해서. 항목을 얹는 것뿐이라 호출 수는 늘지 않는다.
+			// TRANSLATIONS는 언어별 제목·줄거리를 함께 받아 제목 폴백에 쓴다
 			MovieDb movie = tmdbApi.getMovies().getDetails(
-					tmdbMovieId, tmdbProperties.getLanguage(), MovieAppendToResponse.CREDITS);
-
-			// popular API에는 제작국가 필터가 없어서, 상세조회 응답을 받은 뒤 여기서 걸러낸다
-			if (!isProducedIn(movie, TARGET_PRODUCTION_COUNTRY)) {
-				log.debug("TMDB 영화 skip. 제작국가 불일치: externalId={}", tmdbMovieId);
-				return false;
-			}
+					tmdbMovieId, tmdbProperties.getLanguage(),
+					MovieAppendToResponse.CREDITS, MovieAppendToResponse.TRANSLATIONS);
 
 			ContentVO content = toContentVO(movie);
 
@@ -253,19 +326,9 @@ public class ContentServiceImpl implements ContentService {
 			syncImages(contentId, tmdbMovieId);
 			// 장르는 credits가 아님. 상세 JSON에 이미 들어있는 genres로 CONTENT_GENRE만 연결
 			syncContentGenres(contentId, movie);
-			return true;
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 영화 조회 실패: " + tmdbMovieId, e);
 		}
-	}
-
-	// 제작국가 목록에 미국 국제 코드가가 있는지 확인
-	private boolean isProducedIn(MovieDb movie, String isoCode) {
-		if (movie.getProductionCountries() == null) {
-			return false;
-		}
-		return movie.getProductionCountries().stream()
-				.anyMatch(country -> isoCode.equalsIgnoreCase(country.getIsoCode()));
 	}
 
 	// 컨텐츠 저장
@@ -460,16 +523,31 @@ public class ContentServiceImpl implements ContentService {
 	}
 
 	// 라이브러리가 준 인물 정보를 우리 person VO로 바꿈.
-	// name은 ko-KR로 요청했을 때 한글 이름, originalName은 원어 이름.
+	// name은 TMDB 대표 이름, originalName은 원어 이름 - 둘 다 언어와 무관하게 온다.
 	// 프로필도 풀 URL 말고 path만 넣음. 이름 둘 다 없으면 NAME_KO는 UNKNOWN으로 때움
 	private PersonVO toPersonVO(int tmdbPersonId, String name, String originalName,
 			String profilePath) {
 		PersonVO person = new PersonVO();
 		person.setExternalId(String.valueOf(tmdbPersonId));
 
-		// name은 요청 언어 이름, originalName은 원어 이름
 		String nameOrg = StringUtils.hasText(originalName) ? originalName : name;
 		String nameKo = StringUtils.hasText(name) ? name : nameOrg;
+
+		// 제목은 ko-KR로 부르면 한국어 제목이 오지만 인물 이름은 언어와 무관하게 온다 - 한국어 등록이
+		// 없으면 한자·가나 그대로다. 영문 이름은 제목과 같은 자리(translations)에 있으므로 그걸로 채운다
+		if (!hasAllowedScript(nameKo) || !hasAllowedScript(nameOrg)) {
+			String english = getEnglishName(tmdbPersonId);
+			if (StringUtils.hasText(english)) {
+				if (!hasAllowedScript(nameKo)) {
+					nameKo = english;
+				}
+				if (!hasAllowedScript(nameOrg)) {
+					nameOrg = english;
+				}
+			}
+		}
+
+		// 번역까지 없으면 원어 이름이 그대로 남는다. 이름이 한 자도 없을 때만 UNKNOWN이다
 		if (!StringUtils.hasText(nameKo)) {
 			nameKo = "UNKNOWN";
 		}
@@ -479,6 +557,39 @@ public class ContentServiceImpl implements ContentService {
 		person.setProfileImageUrl(toImagePath(profilePath));
 		return person;
 	}
+
+	// HTTP GET /person/{id} + append_to_response=translations - 영문 번역 이름만 쓴다.
+	// 이름을 못 쓰는 인물마다 호출이 한 번 더 나가므로, 이름이 이미 한글·라틴이면 부르지 않는다
+	private String getEnglishName(int tmdbPersonId) {
+		try {
+			PersonDb person = tmdbApi.getPeople().getDetails(
+					tmdbPersonId, tmdbProperties.getLanguage(), PersonAppendToResponse.TRANSLATIONS);
+			if (person == null || person.getTranslations() == null
+					|| person.getTranslations().getTranslations() == null) {
+				return null;
+			}
+
+			// people 패키지에도 Translation·Data가 있어 movies 쪽 import와 이름이 겹친다. 여기만 전체 이름을 쓴다
+			for (info.movito.themoviedbapi.model.people.Translation translation
+					: person.getTranslations().getTranslations()) {
+				if (!LANG_EN.equalsIgnoreCase(translation.getIso6391()) || translation.getData() == null) {
+					continue;
+				}
+				// Translation.getName()은 언어 이름("English")이지 인물 이름이 아니다. 인물 이름은 data 안에 있는데,
+				// 라이브러리 people.Data가 biography만 매핑해서 AbstractJsonMapping의 newItems로 흘러든다.
+				// 라이브러리가 name을 정식 매핑하면 여기가 비므로 getData().getName()으로 바꾼다
+				Object englishName = translation.getData().getNewItems().get(TRANSLATION_NAME_KEY);
+				return englishName != null ? englishName.toString().trim() : null;
+			}
+
+			return null;
+		} catch (Exception e) {
+			// 번역을 못 받아도 인물 저장 자체는 막지 않는다. 원어 이름이 그대로 남을 뿐이다
+			log.warn("TMDB 인물 영문 이름 조회 실패. 원어 이름을 그대로 쓴다: externalId={}", tmdbPersonId, e);
+			return null;
+		}
+	}
+
 	// 받아온 정보를 우리 credit vo 에 넣는 작업 + db 에 저장
 	private void saveCredit(int contentId, int personId, String role, String character, int displayOrder) {
 		ContentCreditVO credit = new ContentCreditVO();
@@ -495,9 +606,9 @@ public class ContentServiceImpl implements ContentService {
 	private ContentVO toContentVO(MovieDb movie) {
 		ContentVO content = new ContentVO();
 		content.setExternalId(String.valueOf(movie.getId()));
-		content.setTitleKo(resolveTitleKo(movie));
-		content.setTitleOrg(movie.getOriginalTitle());
-		content.setOverview(movie.getOverview());
+		content.setTitleKo(toTitleKo(movie));
+		content.setTitleOrg(toTitleOrg(movie));
+		content.setOverview(toOverview(movie));
 		content.setReleaseYear(movie.getReleaseDate());
 		content.setRuntimeMin(movie.getRuntime() != null ? movie.getRuntime() : 0);
 		content.setCountry(resolveCountry(movie));
@@ -506,13 +617,86 @@ public class ContentServiceImpl implements ContentService {
 		return content;
 	}
 
-	// 한글 제목 고르는 메서드. language가 ko-KR이면 title이 한글제목임.
-	// 한글제목 없으면 원제로 넣음. TITLE_KO가 비는 것보다 원제라도 있는 게 나음
-	private String resolveTitleKo(MovieDb movie) {
-		if (StringUtils.hasText(movie.getTitle())) {
+	// ko 번역이 없으면 TMDB가 title에 원어 제목을 담아 주므로, hasText가 아니라 스크립트를 본다
+	private String toTitleKo(MovieDb movie) {
+		if (hasAllowedScript(movie.getTitle())) {
 			return movie.getTitle();
 		}
+
+		Data english = toTranslation(movie, LANG_EN);
+		if (english != null && StringUtils.hasText(english.getTitle())) {
+			return english.getTitle();
+		}
+
+		// 제목은 비면 목록에서 식별이 안 되므로 원어라도 넣는다
 		return movie.getOriginalTitle();
+	}
+
+	// 원제 자리에 영문 제목을 넣는다. title_en 컬럼이 생기면 이 값을 그쪽으로 옮긴다
+	private String toTitleOrg(MovieDb movie) {
+		Data english = toTranslation(movie, LANG_EN);
+		if (english != null && StringUtils.hasText(english.getTitle())) {
+			return english.getTitle();
+		}
+
+		return movie.getOriginalTitle();
+	}
+
+	// 줄거리는 한국어만 받는다. 제목과 달리 영문으로 채우지 않고 null로 둔다 -
+	// 한글 화면에 영문 줄거리가 박히느니 비워 두고 화면이 "줄거리 없음"을 그리는 게 낫다
+	private String toOverview(MovieDb movie) {
+		if (hasHangul(movie.getOverview())) {
+			return movie.getOverview();
+		}
+
+		return null;
+	}
+
+	// TRANSLATIONS 응답에서 해당 언어의 번역 묶음을 꺼낸다. append_to_response에 안 얹었으면 null이다
+	private Data toTranslation(MovieDb movie, String languageCode) {
+		if (movie.getTranslations() == null || movie.getTranslations().getTranslations() == null) {
+			return null;
+		}
+
+		for (Translation translation : movie.getTranslations().getTranslations()) {
+			if (languageCode.equalsIgnoreCase(translation.getIso6391())) {
+				return translation.getData();
+			}
+		}
+
+		return null;
+	}
+
+	// 한글/라틴/숫자·기호만 통과시킨다. 키릴·한자·가나가 섞이면 한국어 값으로 인정하지 않는다.
+	// 제목은 "F1 더 무비"처럼 라틴이 섞인 한국어 제목과 "Superman" 같은 영문 제목을 함께 받고,
+	// 인물 이름은 이 검사에 걸리면 별칭을 다시 받아 온다
+	private boolean hasAllowedScript(String text) {
+		if (!StringUtils.hasText(text)) {
+			return false;
+		}
+
+		return text.codePoints().allMatch(this::isAllowedScript);
+	}
+
+	private boolean isAllowedScript(int codePoint) {
+		Character.UnicodeScript script = Character.UnicodeScript.of(codePoint);
+
+		return script == Character.UnicodeScript.HANGUL
+				|| script == Character.UnicodeScript.LATIN
+				// 숫자·공백·문장부호는 COMMON, 결합 문자는 INHERITED로 분류된다
+				|| script == Character.UnicodeScript.COMMON
+				|| script == Character.UnicodeScript.INHERITED;
+	}
+
+	// 한글이 한 글자라도 들어 있는지. 줄거리처럼 한국어여야만 의미가 있는 값에 쓴다.
+	// 한자를 인용한 한국어 줄거리도 통과시키려고 allMatch가 아니라 anyMatch로 본다
+	private boolean hasHangul(String text) {
+		if (!StringUtils.hasText(text)) {
+			return false;
+		}
+
+		return text.codePoints().anyMatch(
+				codePoint -> Character.UnicodeScript.of(codePoint) == Character.UnicodeScript.HANGUL);
 	}
 
 	// 제작국가가 여러 개면 첫 번째만 대표 국가로 쓴다. 나머지 컷
@@ -572,8 +756,34 @@ public class ContentServiceImpl implements ContentService {
 
 		normalizePaging(param);
 		validateSearchDiv(param);
+		ensureSearchMap(param);
+		validateSort(param);
 
-		List<ContentVO> contents = contentMapper.doRetrieve(param);
+		if (SORT_POPULAR.equals(param.getSearchMap().get(SEARCH_KEY_SORT))) {
+			List<Integer> ranked = rankedIds;
+			// 인기순 경로는 WHERE 조건을 태울 수 없고, 순위가 비면 보여줄 것도 없다. 둘 다 적재순으로 흘린다
+			if (StringUtils.hasText(param.getSearchWord()) || ranked.isEmpty()) {
+				log.warn("인기순 정렬 불가로 적재순 대체: searchWord={}, rankSize={}",
+						param.getSearchWord(), ranked.size());
+				param.getSearchMap().put(SEARCH_KEY_SORT, SORT_BOX_OFFICE);
+			} else {
+				return retrievePopular(param, ranked);
+			}
+		}
+
+		// 이스케이프한 검색어는 매퍼에만 넘기고 호출부 DTO는 원래 값으로 되돌린다.
+		// 안 그러면 이 DTO를 응답에 싣는 컨트롤러로 역슬래시가 새어 나가고,
+		// 같은 DTO로 다시 조회할 때 이중 이스케이프가 된다
+		String rawSearchWord = param.getSearchWord();
+		param.setSearchWord(toEscapedSearchWord(param));
+
+		List<ContentVO> contents;
+
+		try {
+			contents = contentMapper.doRetrieve(param);
+		} finally {
+			param.setSearchWord(rawSearchWord);
+		}
 
 		if (contents == null) {
 			param.setTotalCnt(0);
@@ -631,6 +841,40 @@ public class ContentServiceImpl implements ContentService {
 		return get(param.getContentId());
 	}
 
+	// 순위 목록에서 페이지 몫만 잘라 그 순서대로 재조립한다. 매퍼는 IN 조회만 하고 정렬하지 않는다
+	private List<ContentVO> retrievePopular(DTO param, List<Integer> ranked) {
+		// 인기순의 총건수는 전체 콘텐츠 수가 아니라 순위 목록 길이다. 페이저도 이 값으로 그려진다
+		param.setTotalCnt(ranked.size());
+
+		int from = (param.getPageNo() - 1) * param.getPageSize();
+		if (from >= ranked.size()) {
+			return Collections.emptyList();
+		}
+
+		List<Integer> pageIds = ranked.subList(from, Math.min(from + param.getPageSize(), ranked.size()));
+
+		Map<Integer, ContentVO> byId = new HashMap<>();
+		for (ContentVO content : contentMapper.doRetrieveByIds(pageIds)) {
+			byId.put(content.getContentId(), content);
+		}
+
+		List<ContentVO> contents = new ArrayList<>();
+		for (int i = 0; i < pageIds.size(); i++) {
+			ContentVO content = byId.get(pageIds.get(i));
+			// 순위를 만든 뒤 지워진 콘텐츠는 건너뛴다
+			if (content == null) {
+				continue;
+			}
+			// SearchApiController가 no를 순위 숫자로 읽는다
+			content.setNo(from + i + 1);
+			content.setTotalCnt(ranked.size());
+			applyFullImageUrl(content);
+			contents.add(content);
+		}
+
+		return contents;
+	}
+
 	// TMDB 원본 경로를 화면에 바로 쓸 수 있는 풀 URL로 완성한다.
 	// 어떤 크기를 쓸지는 ContentImageServiceImpl이 정하므로 여기서는 용도만 말한다
 	private void applyFullImageUrl(ContentVO content) {
@@ -666,6 +910,44 @@ public class ContentServiceImpl implements ContentService {
 				&& !SEARCH_BY_TITLE.equals(searchDiv)) {
 			throw new IllegalArgumentException("지원하지 않는 검색 구분입니다. searchDiv=" + searchDiv);
 		}
+	}
+
+	// 매퍼의 searchMap.externalId 판정이 NPE를 내지 않도록 빈 맵을 보장한다
+	private void ensureSearchMap(DTO param) {
+		if (param.getSearchMap() == null) {
+			param.setSearchMap(new HashMap<>());
+		}
+	}
+
+	// 모르는 정렬 값이 오면 매퍼가 조용히 기본 정렬로 넘어가므로 여기서 막는다
+	private void validateSort(DTO param) {
+		String sort = param.getSearchMap().get(SEARCH_KEY_SORT);
+
+		if (!StringUtils.hasText(sort)) {
+			return;
+		}
+
+		if (!ALLOWED_SORT.contains(sort)) {
+			throw new IllegalArgumentException("지원하지 않는 정렬입니다. sort=" + sort);
+		}
+	}
+
+	// 검색어의 %·_는 LIKE 와일드카드라 그냥 두면 "%" 한 글자에 전체가 걸린다.
+	// 매퍼가 ESCAPE '\'를 선언해 두었으므로 앞에 역슬래시를 붙여 글자로 되돌린다.
+	// DTO를 고치지 않고 값만 돌려주므로 호출부가 넘긴 검색어는 그대로 남는다
+	private String toEscapedSearchWord(DTO param) {
+		String searchWord = param.getSearchWord();
+
+		// 외부 ID 축은 등호 비교라 이스케이프가 오히려 검색어를 망친다
+		if (!StringUtils.hasText(searchWord) || SEARCH_BY_EXTERNAL_ID.equals(param.getSearchDiv())) {
+			return searchWord;
+		}
+
+		// 역슬래시를 먼저 바꾼다. 나중에 바꾸면 앞서 붙인 이스케이프까지 다시 이스케이프된다
+		return searchWord
+				.replace(LIKE_ESCAPE_CHAR, LIKE_ESCAPE_CHAR + LIKE_ESCAPE_CHAR)
+				.replace("%", LIKE_ESCAPE_CHAR + "%")
+				.replace("_", LIKE_ESCAPE_CHAR + "_");
 	}
 
 }
