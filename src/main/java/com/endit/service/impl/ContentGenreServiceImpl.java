@@ -86,15 +86,21 @@ public class ContentGenreServiceImpl implements ContentGenreService {
 		return item;
 	}
 
+	// 콘텐츠-장르 연결 존재 확인 - 없으면 예외 대신 false를 돌려주므로 등록 전 검사에 쓴다
+	@Override
+	public boolean has(int contentId, int genreId) {
+		return contentGenreMapper.doSelectOne(createKey(contentId, genreId)) != null;
+	}
+
 	// 콘텐츠에 장르 연결 등록 - CONTENT_GENRE insert
 	@Override
 	@Transactional
 	public ContentGenreVO create(int contentId, int genreId) {
-		ContentGenreVO key = createKey(contentId, genreId);
-
-		if (contentGenreMapper.doSelectOne(key) != null) {
+		if (has(contentId, genreId)) {
 			throw new IllegalStateException("이미 연결된 장르입니다.");
 		}
+
+		ContentGenreVO key = createKey(contentId, genreId);
 
 		int result = contentGenreMapper.doSave(key);
 

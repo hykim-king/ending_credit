@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 등록 | END IT ADMIN</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/admin/movies.css">
+</head>
+<body data-page="admin-content-form">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies" class="active">영화</a>
+            <a href="/admin/people">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <h1 class="admin-page-title">영화 등록</h1>
+
+        <!--
+            수정 화면이 없다 - 정의서 AD-02 제외조건이 "수정 없음"이고 API-052는 POST 전용이다.
+            네 단(기본·장르·이미지·크레딧)이 한 번의 POST로 나가며, 폼 안의 추가·제거는 화면 상태일 뿐
+            하위 엔터티별 저장·삭제 API를 부르지 않는다.
+        -->
+        <form id="movieForm" class="admin-movie-form">
+
+            <section class="form-section">
+                <h2>기본 정보</h2>
+                <p class="form-hint">제목과 외부 ID는 필수입니다. 나머지는 비워 두어도 등록됩니다.</p>
+
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="externalId">외부 ID</label>
+                        <div class="field-with-button">
+                            <input type="text" id="externalId" maxlength="50" placeholder="TMDB 영화 ID">
+                            <button type="button" class="outline-button" id="checkButton">중복 확인</button>
+                        </div>
+                        <p class="check-result" id="checkResult" hidden></p>
+                        <p class="form-hint">POL-030 - 이미 등록된 ID면 저장할 때 막힙니다.</p>
+                    </div>
+
+                    <div class="field">
+                        <label for="country">제작 국가</label>
+                        <input type="text" id="country" maxlength="100" placeholder="예) 미국">
+                    </div>
+
+                    <div class="field">
+                        <label for="titleKo">제목 (국문)</label>
+                        <input type="text" id="titleKo" maxlength="200" placeholder="예) 인터스텔라">
+                    </div>
+
+                    <div class="field">
+                        <label for="titleOrg">원제</label>
+                        <input type="text" id="titleOrg" maxlength="200" placeholder="예) Interstellar">
+                    </div>
+
+                    <div class="field">
+                        <label for="releaseYear">개봉일</label>
+                        <input type="date" id="releaseYear">
+                    </div>
+
+                    <div class="field">
+                        <label for="runtimeMin">러닝타임 (분)</label>
+                        <input type="number" id="runtimeMin" min="0" value="0">
+                    </div>
+
+                    <div class="field wide">
+                        <label for="overview">줄거리</label>
+                        <textarea id="overview" rows="5" placeholder="줄거리를 입력하세요"></textarea>
+                    </div>
+
+                    <div class="field">
+                        <label for="posterUrl">포스터</label>
+                        <input type="text" id="posterUrl" maxlength="500" placeholder="TMDB 경로 또는 전체 URL">
+                    </div>
+
+                    <div class="field">
+                        <label for="backdropUrl">배경 이미지</label>
+                        <input type="text" id="backdropUrl" maxlength="500" placeholder="TMDB 경로 또는 전체 URL">
+                    </div>
+                </div>
+
+                <p class="form-hint" style="margin-top:12px">
+                    TMDB 이미지 주소(<code>https://image.tmdb.org/t/p/…</code>)나 <code>/</code>로 시작하는 경로만 받습니다.
+                    전체 URL을 넣으면 저장할 때 경로만 남깁니다. 다른 사이트 주소는 저장되지 않습니다.
+                </p>
+            </section>
+
+            <!-- 장르 마스터는 서버가 model에 실어 준다(GenreService.retrieveAll) -->
+            <section class="form-section">
+                <h2>장르</h2>
+                <p class="form-hint">이미 등록된 장르만 고를 수 있습니다. 선택하지 않아도 등록됩니다.</p>
+
+                <div class="genre-grid" th:if="${!#lists.isEmpty(genres)}">
+                    <label class="genre-check" th:each="genre : ${genres}">
+                        <input type="checkbox" name="genreId" th:value="${genre.genreId}">
+                        <span th:text="${genre.name}">장르</span>
+                    </label>
+                </div>
+
+                <p class="admin-state" th:if="${#lists.isEmpty(genres)}">
+                    등록된 장르가 없습니다. TMDB 동기화를 먼저 실행해 주세요.
+                </p>
+            </section>
+
+            <section class="form-section">
+                <h2>갤러리 이미지</h2>
+                <p class="form-hint">비워 둔 줄은 저장하지 않습니다.</p>
+
+                <div class="image-rows" id="imageRows"></div>
+                <button type="button" class="outline-button" id="addImageButton">이미지 줄 추가</button>
+            </section>
+
+            <!--
+                크레딧 - 이미 등록된 인물만 연결한다(AD-06과 책임을 나누기 위한 합의).
+                인물 검색은 AD-05의 /api/admin/people을 그대로 재사용한다.
+            -->
+            <section class="form-section">
+                <h2>크레딧</h2>
+                <p class="form-hint">이미 등록된 인물만 연결할 수 있습니다. 새 인물은 인물 관리에서 먼저 등록해 주세요.</p>
+
+                <div class="person-search">
+                    <input type="search" id="personQuery" maxlength="100" placeholder="인물 이름 또는 외부 ID 검색">
+                    <select id="personSearchDiv" aria-label="인물 검색 조건">
+                        <option value="">이름 전체</option>
+                        <option value="10">국문명으로 시작</option>
+                        <option value="20">원문명으로 시작</option>
+                        <option value="30">외부 ID 일치</option>
+                    </select>
+                    <button type="button" class="outline-button" id="personSearchButton">인물 검색</button>
+                </div>
+
+                <ul class="person-results" id="personResults"></ul>
+
+                <div class="credit-fields">
+                    <select id="creditRole" aria-label="역할">
+                        <option value="ACTOR">배우</option>
+                        <option value="DIRECTOR">감독</option>
+                        <option value="WRITER">각본</option>
+                        <option value="PRODUCER">제작</option>
+                    </select>
+                    <input type="text" id="creditCharacter" maxlength="200" placeholder="배역 (배우만)">
+                    <input type="number" id="creditDisplayOrder" min="0" value="0" aria-label="표시순서">
+                    <button type="button" class="primary-button" id="creditAddButton" disabled>크레딧 담기</button>
+                </div>
+
+                <div class="stage-box">
+                    <h3>담은 크레딧</h3>
+                    <div class="admin-table-scroll">
+                        <table class="stage-table">
+                            <thead>
+                            <tr>
+                                <th>인물</th>
+                                <th>역할</th>
+                                <th>배역</th>
+                                <th>표시순서</th>
+                                <th>관리</th>
+                            </tr>
+                            </thead>
+                            <tbody id="creditStageBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="creditStageEmpty" class="admin-state">아직 담은 크레딧이 없습니다.</div>
+                </div>
+            </section>
+
+            <div class="form-error" id="formError" hidden></div>
+
+            <div class="form-actions">
+                <button type="button" class="outline-button" id="cancelButton">취소</button>
+                <!-- 제목과 외부 ID를 채워야 활성화된다. 서버도 같은 규칙을 막는다 -->
+                <button type="submit" class="primary-button" id="saveButton" disabled>등록</button>
+            </div>
+        </form>
+    </main>
+</div>
+
+<script src="/assets/js/admin/movies.js"></script>
+</body>
+</html>

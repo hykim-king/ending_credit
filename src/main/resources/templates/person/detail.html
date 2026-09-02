@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${notFound ? '인물' : (person.nameKo != null and !person.nameKo.isEmpty() ? person.nameKo : person.nameOrg)}">인물</title>
+<link rel="stylesheet" th:href="@{/assets/css/person/detail.css}">
+<script th:src="@{/assets/js/person/detail.js}" defer></script>
+</head>
+<body>
+<div layout:fragment="content">
+
+	<div th:if="${notFound}" class="container py-5">
+		<p class="person-notfound">해당 인물을 찾을 수 없습니다.</p>
+	</div>
+
+	<div th:unless="${notFound}" class="container">
+
+		<!-- 히어로 - 03의 영역 순서: 국문/원문명·이미지·좋아요가 참여작보다 먼저다 -->
+		<div class="person-hero">
+			<img th:if="${person.profileImageUrl != null}" th:src="${person.profileImageUrl}"
+			     class="person-profile" th:alt="${person.nameKo}">
+			<div th:if="${person.profileImageUrl == null}" class="person-profile person-profile-empty">사진 없음</div>
+
+			<div class="person-hero-body">
+				<!-- POL-034가 국문명/원문명 중 하나만 있어도 되게 허용하므로 없는 쪽을 대신 세운다 -->
+				<h1 class="person-name"
+				    th:text="${person.nameKo != null and !person.nameKo.isEmpty()} ? ${person.nameKo} : ${person.nameOrg}">이름</h1>
+
+				<p class="person-name-org"
+				   th:if="${person.nameKo != null and !person.nameKo.isEmpty()
+				           and person.nameOrg != null and !person.nameOrg.isEmpty()}"
+				   th:text="${person.nameOrg}">Name</p>
+
+				<p class="person-role-summary" th:if="${!roleSummary.isEmpty()}" th:text="${roleSummary}">감독, 배우</p>
+
+				<!--
+					ACT-P-001 좋아요 - 항상 노출한다. 상태는 색이 아니라 아이콘 모양으로도 갈린다
+					(디자인 원칙: 색상만으로 상태를 구분하지 않음)
+				-->
+				<button type="button" class="person-like" id="personLikeButton"
+				        th:classappend="${liked} ? 'is-liked' : ''"
+				        th:attr="data-person-id=${person.personId},
+				                 data-member-id=${loginMemberId},
+				                 data-liked=${liked},
+				                 aria-pressed=${liked}">
+					<i class="bi" th:classappend="${liked} ? 'bi-heart-fill' : 'bi-heart'"></i>
+					<span>좋아요</span>
+					<span class="person-like-count" th:text="${likeCount}">0</span>
+				</button>
+				<p class="person-like-notice" id="personLikeNotice" hidden></p>
+			</div>
+		</div>
+
+		<!-- 참여 작품 - 01이 "단일 리스트"로 확정해 역할 필터를 두지 않는다 -->
+		<section class="filmography"
+		         th:attr="data-person-id=${person.personId},
+		                  data-page-size=${pageSize},
+		                  data-total-cnt=${filmographyTotalCnt}">
+			<h2 class="filmography-head">
+				참여 작품
+				<span class="filmography-count" th:if="${filmographyFailed == null}"
+				      th:text="${filmographyTotalCnt}">0</span>
+			</h2>
+
+			<div class="filmography-error" id="filmographyError"
+			     th:classappend="${filmographyFailed == null} ? 'is-hidden' : ''">
+				<span id="filmographyErrorText">참여 작품을 불러오지 못했습니다.</span>
+				<button type="button" class="filmography-retry" id="filmographyRetry">다시 시도</button>
+			</div>
+
+			<p class="filmography-empty" id="filmographyEmpty"
+			   th:classappend="${filmographyFailed != null or !filmography.isEmpty()} ? 'is-hidden' : ''">
+				참여작이 없습니다.
+			</p>
+
+			<ol class="filmography-list" id="filmographyList">
+				<li class="filmo-row" th:each="credit : ${filmography}">
+					<a class="filmo-link" th:href="@{'/movies/' + ${credit.contentId}}">
+						<!-- release_year가 YYYY-MM-DD 문자열이라 앞 4자리만 쓴다 -->
+						<span class="filmo-year"
+						      th:text="${credit.releaseYear != null and #strings.length(credit.releaseYear) >= 4}
+						               ? ${#strings.substring(credit.releaseYear, 0, 4)} : ''">2026</span>
+
+						<span class="filmo-poster">
+							<img th:if="${credit.posterUrl != null}" th:src="${credit.posterUrl}"
+							     th:alt="${credit.titleKo}" loading="lazy">
+						</span>
+
+						<span class="filmo-title" th:text="${credit.titleKo}">제목</span>
+
+						<span class="filmo-role">
+							<span th:text="${roleLabels[credit.role]}">배우</span><!--
+							 POL-033: 배역은 ACTOR만 쓴다
+						--><span th:if="${credit.role == 'ACTOR' and credit.character != null and !credit.character.isEmpty()}"
+						         th:text="' | ' + ${credit.character}"> | 배역</span>
+						</span>
+					</a>
+				</li>
+			</ol>
+
+			<div class="filmography-more">
+				<button type="button" class="filmography-more-button" id="filmographyMore"
+				        th:classappend="${hasMoreFilmography} ? '' : 'is-hidden'">
+					더보기 <i class="bi bi-chevron-down"></i>
+				</button>
+			</div>
+		</section>
+
+	</div>
+</div>
+</body>
+</html>

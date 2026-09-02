@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/authLayout}">
+<head>
+    <title>ENDIT</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <!-- 로고 -->
+    <div class="mb-4">
+        <a href="/" class="text-decoration-none fw-bold fs-4" style="color:#6550C8;">END IT</a>
+    </div>
+
+    <div class="card p-4">
+        <h3 class="text-center mb-4">이미 가입된 이메일이에요</h3>
+
+        <!-- 대상 이메일 표시 (컨트롤러가 넘긴 blockedEmail) -->
+        <div class="rounded text-center p-3 mb-4" style="background:#f4f3f7;">
+            <div class="text-muted" style="font-size:0.9em;">Google 계정</div>
+            <div th:text="${email}">name@gmail.com</div>
+        </div>
+
+        <!-- 안내 문구 -->
+        <p class="text-center text-muted mb-4">
+            이 이메일은 이미 이메일 계정으로 가입돼 있어요.<br>
+            기존 계정으로 로그인해 주세요.
+        </p>
+
+        <!-- 로그인(주 버튼) / 메인으로(보조 버튼) -->
+        <a href="/login" class="btn btn-primary w-100 mb-2">로그인</a>
+        <a href="/" class="btn btn-outline-secondary w-100">메인으로</a>
+
+    </div>
+
+</div>
+</body>
+</html>

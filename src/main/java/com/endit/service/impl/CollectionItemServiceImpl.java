@@ -25,6 +25,7 @@ import com.endit.service.CollectionItemService;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    부모 컬렉션 조회 권한 및 변경 소유권 검증 추가
+ * 2026. 9. 02. jinyoung    목록 조회 시 현재 회원 평가 조건 전달
  * ------------------------------------------------------------
  * </pre>
  *
@@ -36,6 +37,8 @@ import com.endit.service.CollectionItemService;
 public class CollectionItemServiceImpl implements CollectionItemService {
 
 	private static final String SEARCH_BY_COLLECTION = "10";
+	private static final int DEFAULT_PAGE_SIZE = 12;
+	private static final int MAX_PAGE_SIZE = 100;
 
 	private final CollectionItemMapper collectionItemMapper;
 	private final CollectionService collectionService;
@@ -54,11 +57,10 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		this.collectionService = collectionService;
 	}
 
+	/** 접근 권한과 페이징 조건을 확인한 뒤 컬렉션 작품을 조회한다. */
 	@Override
 	public List<CollectionItemVO> retrieve(
-			int collectionId,
-			DTO param,
-			OptionalLong currentMemberId) {
+			int collectionId, DTO param, OptionalLong currentMemberId) {
 
 		validateCollectionId(collectionId);
 		collectionService.get(collectionId, currentMemberId);
@@ -72,6 +74,9 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		normalizePaging(param);
 		param.setSearchDiv(SEARCH_BY_COLLECTION);
 		param.setSearchWord(String.valueOf(collectionId));
+		param.getSearchMap().remove("currentMemberId");
+		currentMemberId.ifPresent(memberId ->
+				param.getSearchMap().put("currentMemberId", String.valueOf(memberId)));
 
 		// 목록과 같은 조건으로 count를 먼저 조회해 페이지 계산 정보에 사용한다.
 		int totalCount = collectionItemMapper.count(param);
@@ -84,6 +89,7 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		return collectionItemMapper.doRetrieve(param);
 	}
 
+	/** 접근 가능한 컬렉션에서 작품 한 건을 조회한다. */
 	@Override
 	public CollectionItemVO get(
 			int collectionId,
@@ -94,6 +100,7 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		return findItem(collectionId, contentId);
 	}
 
+	/** 소유 컬렉션에 중복되지 않은 작품 한 건을 추가한다. */
 	@Override
 	@Transactional
 	public CollectionItemVO create(
@@ -131,6 +138,7 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		return created;
 	}
 
+	/** 소유 컬렉션에 포함된 작품 한 건을 삭제한다. */
 	@Override
 	@Transactional
 	public void delete(long memberId, int collectionId, int contentId) {
@@ -143,7 +151,7 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		}
 	}
 
-	/** 부모 컬렉션 접근 검사가 끝난 뒤 컬렉션 작품을 조회 */
+	/** 부모 컬렉션 접근 확인이 끝난 작품을 복합 키로 조회한다. */
 	private CollectionItemVO findItem(int collectionId, int contentId) {
 		CollectionItemVO key = createKey(collectionId, contentId);
 		CollectionItemVO item = collectionItemMapper.doSelectOne(key);
@@ -156,20 +164,20 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		return item;
 	}
 
-	/** 페이지 번호와 페이지 크기를 허용 범위의 기본값으로 보정 */
+	/** 페이지 번호와 크기를 허용 범위로 보정한다. */
 	private void normalizePaging(DTO param) {
 		if (param.getPageNo() <= 0) {
 			param.setPageNo(1);
 		}
 
 		if (param.getPageSize() <= 0) {
-			param.setPageSize(12);
-		} else if (param.getPageSize() > 100) {
-			param.setPageSize(100);
+			param.setPageSize(DEFAULT_PAGE_SIZE);
+		} else if (param.getPageSize() > MAX_PAGE_SIZE) {
+			param.setPageSize(MAX_PAGE_SIZE);
 		}
 	}
 
-	/** 컬렉션 번호와 콘텐츠 번호를 담은 조회 키 생성 */
+	/** 컬렉션 번호와 콘텐츠 번호를 담은 복합 키를 만든다. */
 	private CollectionItemVO createKey(int collectionId, int contentId) {
 		validateCollectionId(collectionId);
 		validateContentId(contentId);
@@ -181,14 +189,14 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		return key;
 	}
 
-	/** 컬렉션 번호가 유효한 양수인지 검증 */
+	/** 컬렉션 번호가 양수인지 확인한다. */
 	private void validateCollectionId(int collectionId) {
 		if (collectionId <= 0) {
 			throw new IllegalArgumentException("올바른 컬렉션 번호가 필요합니다.");
 		}
 	}
 
-	/** 콘텐츠 번호가 유효한 양수인지 검증 */
+	/** 콘텐츠 번호가 양수인지 확인한다. */
 	private void validateContentId(int contentId) {
 		if (contentId <= 0) {
 			throw new IllegalArgumentException("올바른 콘텐츠 번호가 필요합니다.");

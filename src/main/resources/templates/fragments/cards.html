@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>공통 카드 컴포넌트</title>
+</head>
+<body>
+
+<!--
+	CMP-03 MovieCard / CMP-04 PersonCard
+	검색 3화면이 공유하고, 홈 섹션도 그대로 쓸 수 있도록 프래그먼트로 뺐다.
+	이미지 URL은 서비스가 이미 풀 URL로 완성해 주므로 여기서 크기를 알 필요가 없다.
+-->
+
+<!-- 영화 카드 - 포스터/제목/연도/국가. 상세로 가는 링크는 포스터에만 건다 -->
+<div th:fragment="movieCard(movie)" class="ec-card">
+	<a th:href="@{'/movies/' + ${movie.contentId}}" class="ec-poster-link"
+	   th:title="${movie.titleKo}">
+		<div class="ec-poster">
+			<img th:if="${movie.posterUrl != null}" th:src="${movie.posterUrl}"
+			     th:alt="${movie.titleKo}" loading="lazy">
+			<div th:if="${movie.posterUrl == null}" class="ec-poster-empty">이미지 없음</div>
+		</div>
+	</a>
+	<div class="ec-card-body">
+		<div class="ec-card-title" th:text="${movie.titleKo}">제목</div>
+		<div class="ec-card-meta">
+			<!-- release_year는 YYYY-MM-DD 문자열이라 앞 4자리만 쓴다 -->
+			<span th:if="${movie.releaseYear != null and #strings.length(movie.releaseYear) >= 4}"
+			      th:text="${#strings.substring(movie.releaseYear, 0, 4)}">2026</span>
+			<span th:if="${movie.country != null and !movie.country.isEmpty()}"
+			      th:text="' · ' + ${movie.country}"> · US</span>
+		</div>
+	</div>
+</div>
+
+<!-- 순위 카드 - 영화 카드에 순위 번호를 얹는다. no(rnum)가 곧 순위다 -->
+<div th:fragment="rankCard(movie)" class="ec-card ec-rank-card">
+	<span class="ec-rank" th:text="${movie.no}">1</span>
+	<div th:replace="~{fragments/cards :: movieCard(${movie})}"></div>
+</div>
+
+<!--
+	인물 카드 - 영화 상세의 크레딧 줄과 같은 모양(48px 아바타 + 이름 옆에 붙는 가로 행).
+	배역은 콘텐츠마다 달라 인물 검색에서는 알 수 없으므로 감독/배우만 적는다.
+	role은 CONTENT_CREDIT에서 온 값이라 컨트롤러가 따로 채워 넘긴다.
+	행 전체가 P-01 인물 상세로 가는 링크다(FL-02 - S-02·S-03이 이 프래그먼트를 공유한다)
+-->
+<a th:fragment="personCard(person, role)" class="ec-person-row"
+   th:href="@{'/people/' + ${person.personId}}">
+	<img th:if="${person.profileImageUrl != null}" th:src="${person.profileImageUrl}"
+	     class="ec-person-avatar" th:alt="${person.nameKo}" loading="lazy">
+	<div th:if="${person.profileImageUrl == null}" class="ec-person-avatar-empty">사진 없음</div>
+	<div class="ec-person-body">
+		<div class="ec-person-name" th:text="${person.nameKo}">이름</div>
+		<div class="ec-person-role" th:if="${role != null}" th:text="${role}">배우</div>
+		<div class="ec-person-org" th:if="${person.nameOrg != null and !person.nameOrg.isEmpty()}"
+		     th:text="${person.nameOrg}">Name</div>
+	</div>
+</a>
+
+<!-- 컬렉션 카드 - 제목/작성자/작품 수. CollectionVO는 팀원 소유라 필드를 읽기만 한다 -->
+<div th:fragment="collectionCard(collection)" class="ec-card ec-collection-card">
+	<a th:href="@{'/collections/' + ${collection.collectionId}}" class="ec-card-link">
+		<div class="ec-card-body">
+			<div class="ec-card-title" th:text="${collection.title}">컬렉션 제목</div>
+			<div class="ec-card-meta">
+				<span th:text="${collection.nickname}">작성자</span>
+				<span th:text="' · 작품 ' + ${collection.itemCount}"> · 작품 0</span>
+			</div>
+		</div>
+	</a>
+</div>
+
+</body>
+</html>
