@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<!-- TODO 확인: 로그인 메인 레이아웃 fragment 이름 (CollectionView 화면들이 쓰는 것과 동일하게).
+     authLayout(가운데 좁은 카드)이 아니라 G-02 헤더가 들어가는 메인 레이아웃이어야 함. -->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>마이페이지 - ENDIT</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <!-- 서버가 넘긴 memberId. /me 전용 API라 JS에서 안 써도 되지만, 필요 시 참조용 -->
+    <div class="mypage" th:data-member-id="${memberId}"
+         style="max-width:900px; margin:0 auto; padding:24px 16px;">
+
+        <!-- ===== 프로필 헤더 ===== -->
+        <section class="d-flex align-items-center gap-3 mb-4">
+            <!-- 이미지 없으면 JS가 기본 아바타 유지 -->
+            <img id="profileImg" alt="프로필 이미지"
+                 src="/images/default-avatar.png"
+                 style="width:72px; height:72px; border-radius:50%; object-fit:cover; background:#E4E2E9;">
+            <div class="flex-grow-1">
+                <h2 id="nickname" class="mb-1" style="font-size:22px;">&nbsp;</h2>
+                <p id="introduction" class="text-muted mb-0" style="font-size:14px;"></p>
+            </div>
+            <!-- 내 프로필: 설정 버튼 (U-02에서는 신고 버튼으로 대체) -->
+            <a href="/members/me/settings" class="btn btn-outline-secondary">설정</a>
+        </section>
+
+        <!-- ===== 기록 카운트 4종 (평가·코멘트·컬렉션·보고싶어요) ===== -->
+        <section class="d-flex text-center mb-5"
+                 style="border:1px solid #E4E2E9; border-radius:12px; overflow:hidden;">
+            <a th:href="@{/members/me/records(tab='ratings')}"
+               class="flex-fill py-3 text-decoration-none text-dark border-end">
+                <div id="ratingCnt" style="font-size:20px; font-weight:600;">0</div>
+                <div class="text-muted" style="font-size:14px;">평가</div>
+            </a>
+            <a th:href="@{/members/me/records(tab='comments')}"
+               class="flex-fill py-3 text-decoration-none text-dark border-end">
+                <div id="commentCnt" style="font-size:20px; font-weight:600;">0</div>
+                <div class="text-muted" style="font-size:14px;">코멘트</div>
+            </a>
+            <a th:href="@{/members/me/records(tab='collections')}"
+               class="flex-fill py-3 text-decoration-none text-dark border-end">
+                <div id="collectionCnt" style="font-size:20px; font-weight:600;">0</div>
+                <div class="text-muted" style="font-size:14px;">컬렉션</div>
+            </a>
+            <a th:href="@{/members/me/records(tab='watchlist')}"
+               class="flex-fill py-3 text-decoration-none text-dark">
+                <div id="watchlistCnt" style="font-size:20px; font-weight:600;">0</div>
+                <div class="text-muted" style="font-size:14px;">보고싶어요</div>
+            </a>
+        </section>
+
+        <!-- ===== 좋아한 인물 ===== -->
+        <section class="mb-5">
+            <a href="/members/me/likes?type=person"
+               class="d-flex justify-content-between align-items-center text-decoration-none text-dark mb-3">
+                <span style="font-weight:600;">좋아한 인물 <span id="personLikeCount">0</span>명</span>
+                <span class="text-muted">›</span>
+            </a>
+            <!-- JS가 카드 채움. 비면 안내 문구 -->
+            <div id="personLikeList" class="d-flex gap-3"></div>
+        </section>
+
+        <!-- ===== 좋아한 컬렉션 ===== -->
+        <section class="mb-5">
+            <a href="/members/me/likes?type=collection"
+               class="d-flex justify-content-between align-items-center text-decoration-none text-dark mb-3">
+                <span style="font-weight:600;">좋아한 컬렉션 <span id="collectionLikeCount">0</span>개</span>
+                <span class="text-muted">›</span>
+            </a>
+            <div id="collectionLikeList" class="d-flex gap-3"></div>
+        </section>
+
+    </div>
+
+    <script>
+        // 마이페이지는 CSR: 화면 뜨면 JS가 API 불러 채운다 (팀 관례)
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfile();
+            loadPersonLikes();
+            loadCollectionLikes();
+        });
+
+        // 내 프로필 + 기록 카운트
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/members/me/account');
+                if (!res.ok) return;
+                const d = await res.json();
+
+                document.getElementById('nickname').textContent = d.nickname ?? '';
+                document.getElementById('introduction').textContent = d.introduction ?? '';
+                if (d.profileImgUrl) {
+                    document.getElementById('profileImg').src = d.profileImgUrl;
+                }
+
+                // stats 키: ratingCnt / commentCnt / collectionCnt / watchlistCnt
+                // (평가·컬렉션·보고싶어요는 서비스 연결 전이라 아직 0으로 옴)
+                const s = d.stats ?? {};
+                document.getElementById('ratingCnt').textContent     = s.ratingCnt ?? 0;
+                document.getElementById('commentCnt').textContent    = s.commentCnt ?? 0;
+                document.getElementById('collectionCnt').textContent = s.collectionCnt ?? 0;
+                document.getElementById('watchlistCnt').textContent  = s.watchlistCnt ?? 0;
+            } catch (e) {
+                console.error('프로필 조회 실패', e);
+            }
+        }
+
+        // 좋아한 인물 미리보기 3명 + 전체 건수
+        async function loadPersonLikes() {
+            const list = document.getElementById('personLikeList');
+            try {
+                const res = await fetch('/api/members/me/likes/persons');
+                if (!res.ok) return;
+                const d = await res.json();
+
+                document.getElementById('personLikeCount').textContent = d.totalCount ?? 0;
+
+                if (!d.items || d.items.length === 0) {
+                    list.innerHTML = '<p class="text-muted" style="font-size:14px;">좋아한 인물이 없어요.</p>';
+                    return;
+                }
+                // 이름 + 이미지만 (역할은 DB에 없어 표시하지 않음)
+                list.innerHTML = d.items.map(p => `
+                    <a href="/people/${p.personId}" class="text-center text-decoration-none text-dark">
+                        <img src="${p.profileImgUrl || '/images/default-avatar.png'}" alt=""
+                             style="width:64px; height:64px; border-radius:50%; object-fit:cover; background:#E4E2E9;">
+                        <div style="font-size:14px; margin-top:4px;">${escapeHtml(p.nameKo || '')}</div>
+                    </a>
+                `).join('');
+            } catch (e) {
+                console.error('좋아한 인물 조회 실패', e);
+            }
+        }
+
+        // 좋아한 컬렉션 미리보기 3개 + 전체 건수 (썸네일은 DB 준비 후 추가)
+        async function loadCollectionLikes() {
+            const list = document.getElementById('collectionLikeList');
+            try {
+                const res = await fetch('/api/members/me/likes/collections');
+                if (!res.ok) return;
+                const d = await res.json();
+
+                document.getElementById('collectionLikeCount').textContent = d.totalCount ?? 0;
+
+                if (!d.items || d.items.length === 0) {
+                    list.innerHTML = '<p class="text-muted" style="font-size:14px;">좋아한 컬렉션이 없어요.</p>';
+                    return;
+                }
+                list.innerHTML = d.items.map(c => `
+                    <a href="/collections/${c.collectionId}"
+                       class="text-decoration-none text-dark d-flex align-items-center justify-content-center"
+                       style="width:120px; height:80px; border:1px solid #E4E2E9; border-radius:8px; padding:8px; font-size:14px; text-align:center;">
+                        ${escapeHtml(c.title || '')}
+                    </a>
+                `).join('');
+            } catch (e) {
+                console.error('좋아한 컬렉션 조회 실패', e);
+            }
+        }
+
+        // XSS 방지: 닉네임·제목 등 사용자 입력을 innerHTML에 넣기 전 이스케이프
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+
+</div>
+</body>
+</html>

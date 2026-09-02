@@ -1,22 +1,11 @@
 /**
- * <pre>
- * Class Name : UserCommentMapper
- * Description : 코멘트 Mapper
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * 2026. 8. 14.  홍선기   deleteAll 제거(테스트가 @Transactional 롤백 방식으로 바뀌어 미사용·전체삭제 위험만 남음)
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 12.
+ * 코멘트 Mapper
  */
 package com.endit.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 
+import com.endit.cmn.DTO;
 import com.endit.cmn.WorkDiv;
 import com.endit.domain.UserCommentVO;
 
@@ -34,6 +23,21 @@ public interface UserCommentMapper extends WorkDiv<UserCommentVO> {
 	 * @return int(총건수)
 	 */
 	int totalCnt();
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : totalCntBySearch
+	 * Description : 검색조건(searchDiv/searchWord)이 걸린 코멘트 건수
+	 *               10=회원별, 20=영화별, 30=컬렉션별. 조건이 없으면 전체 건수.
+	 *               가려진(신고 승인) 코멘트도 삭제된 것이 아니므로 포함한다.
+	 *
+	 * </pre>
+	 *
+	 * @param param 검색조건이 담긴 DTO
+	 * @return int(조건에 맞는 건수)
+	 */
+	int totalCntBySearch(DTO param);
 
 	/**
 	 *
