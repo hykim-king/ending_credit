@@ -19,6 +19,7 @@ import com.endit.domain.CollectionVO;
  * ------------------------------------------------------------
  * 2026. 8. 21. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    인증 회원·요청 DTO·전체 공개 목록·U-05·소유권 계약 추가
+ * 2026. 9. 02. jinyoung    전체 목록에 현재 회원의 비공개 컬렉션 노출
  * ------------------------------------------------------------
  * </pre>
  *
@@ -34,6 +35,17 @@ public interface CollectionService {
 	 * @return 공개 컬렉션 목록
 	 */
 	List<CollectionVO> retrieve(DTO param);
+
+	/**
+	 * 검색 및 페이징 조건과 현재 회원을 반영한 컬렉션 목록 조회
+	 *
+	 * 로그인 회원에게는 공개 컬렉션과 본인이 작성한 비공개 컬렉션을 반환한다.
+	 *
+	 * @param param 검색 및 페이징 조건
+	 * @param currentMemberId 현재 회원 번호 또는 빈 값
+	 * @return 현재 회원이 접근할 수 있는 컬렉션 목록
+	 */
+	List<CollectionVO> retrieve(DTO param, OptionalLong currentMemberId);
 
 	/**
 	 * U-05 대상 회원의 컬렉션 목록 조회
