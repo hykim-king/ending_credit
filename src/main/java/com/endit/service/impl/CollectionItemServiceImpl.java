@@ -3,6 +3,7 @@ package com.endit.service.impl;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionItemVO;
 import com.endit.mapper.CollectionItemMapper;
+import com.endit.service.CollectionService;
 import com.endit.service.CollectionItemService;
 
 /**
@@ -22,6 +24,7 @@ import com.endit.service.CollectionItemService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
+ * 2026. 8. 29. jinyoung    부모 컬렉션 조회 권한 및 변경 소유권 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -35,19 +38,30 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 	private static final String SEARCH_BY_COLLECTION = "10";
 
 	private final CollectionItemMapper collectionItemMapper;
+	private final CollectionService collectionService;
 
 	/**
 	 * CollectionItemMapper를 주입받아 Service 구현체 생성
 	 *
 	 * @param collectionItemMapper 컬렉션 작품 Mapper
+	 * @param collectionService 부모 컬렉션 접근 정책 Service
 	 */
-	public CollectionItemServiceImpl(CollectionItemMapper collectionItemMapper) {
+	public CollectionItemServiceImpl(
+			CollectionItemMapper collectionItemMapper,
+			CollectionService collectionService) {
+
 		this.collectionItemMapper = collectionItemMapper;
+		this.collectionService = collectionService;
 	}
 
 	@Override
-	public List<CollectionItemVO> retrieve(int collectionId, DTO param) {
+	public List<CollectionItemVO> retrieve(
+			int collectionId,
+			DTO param,
+			OptionalLong currentMemberId) {
+
 		validateCollectionId(collectionId);
+		collectionService.get(collectionId, currentMemberId);
 
 		if (param == null) {
 			throw new IllegalArgumentException("조회 조건은 null일 수 없습니다.");
@@ -71,27 +85,24 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 	}
 
 	@Override
-	public CollectionItemVO get(int collectionId, int contentId) {
-		// COLLECTION_ITEM은 collectionId와 contentId가 함께 PK이므로 두 값 모두 필요하다.
-		CollectionItemVO key = createKey(collectionId, contentId);
-		CollectionItemVO item = collectionItemMapper.doSelectOne(key);
+	public CollectionItemVO get(
+			int collectionId,
+			int contentId,
+			OptionalLong currentMemberId) {
 
-		if (item == null) {
-			throw new NoSuchElementException(
-					"컬렉션에 포함되지 않은 작품입니다. collectionId="
-					+ collectionId + ", contentId=" + contentId);
-		}
-
-		return item;
+		collectionService.get(collectionId, currentMemberId);
+		return findItem(collectionId, contentId);
 	}
 
 	@Override
 	@Transactional
 	public CollectionItemVO create(
+			long memberId,
 			int collectionId,
 			CollectionItemVO param) {
 
 		validateCollectionId(collectionId);
+		collectionService.getOwned(collectionId, memberId);
 
 		if (param == null) {
 			throw new IllegalArgumentException("추가할 작품 정보가 필요합니다.");
@@ -122,13 +133,27 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 
 	@Override
 	@Transactional
-	public void delete(int collectionId, int contentId) {
-		CollectionItemVO existing = get(collectionId, contentId);
+	public void delete(long memberId, int collectionId, int contentId) {
+		collectionService.getOwned(collectionId, memberId);
+		CollectionItemVO existing = findItem(collectionId, contentId);
 		int result = collectionItemMapper.doDelete(existing);
 
 		if (result != 1) {
 			throw new IllegalStateException("컬렉션 작품 삭제에 실패했습니다.");
 		}
+	}
+
+	/** 부모 컬렉션 접근 검사가 끝난 뒤 컬렉션 작품을 조회 */
+	private CollectionItemVO findItem(int collectionId, int contentId) {
+		CollectionItemVO key = createKey(collectionId, contentId);
+		CollectionItemVO item = collectionItemMapper.doSelectOne(key);
+
+		if (item == null) {
+			throw new NoSuchElementException(
+					"컬렉션에 포함되지 않은 작품입니다. collectionId="
+					+ collectionId + ", contentId=" + contentId);
+		}
+		return item;
 	}
 
 	/** 페이지 번호와 페이지 크기를 허용 범위의 기본값으로 보정 */

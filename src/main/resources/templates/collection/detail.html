@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+Modification History
+2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 정책 적용
+2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 화면 연결·작품 평균 별점 적용
+-->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
 <meta charset="UTF-8">
@@ -8,8 +13,9 @@
 <title>컬렉션 상세</title>
 <link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
 </head>
-<!-- 서버는 조회 키만 data-* 속성에 넣고 실제 상세 데이터는 REST API로 가져온다. -->
-<body class="bg-light" th:attr="data-collection-id=${collectionId}">
+<!-- 서버는 조회 키와 화면 권한 판별값만 넣고 실제 상세 데이터는 REST API로 가져온다. -->
+<body class="bg-light"
+      th:attr="data-collection-id=${collectionId},data-current-member-id=${currentMemberId}">
     <header class="border-bottom bg-white">
         <div class="container py-3 d-flex justify-content-between align-items-center">
             <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
@@ -38,40 +44,32 @@
                             <span id="collectionDate"></span>
                         </div>
                     </div>
-                    <div class="d-flex align-items-start gap-2">
-                        <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
-                        <button class="btn btn-outline-danger" type="button"
-                                data-bs-toggle="modal" data-bs-target="#deleteCollectionModal">
-                            삭제
-                        </button>
+                    <div id="collectionActions" class="d-flex flex-wrap align-items-start gap-2">
+                        <button id="likeButton" class="btn btn-outline-danger d-none"
+                                type="button" aria-pressed="false">좋아요</button>
+                        <button id="copyLinkButton" class="btn btn-outline-secondary d-none"
+                                type="button">링크 복사</button>
+                        <a id="commentsLink" class="btn btn-outline-secondary" href="#">
+                            코멘트 보기
+                        </a>
+                        <div id="ownerActions" class="d-flex gap-2 d-none">
+                            <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
+                            <button class="btn btn-outline-danger" type="button"
+                                    data-bs-toggle="modal" data-bs-target="#deleteCollectionModal">
+                                삭제
+                            </button>
+                        </div>
                     </div>
                 </div>
+
+                <p id="copyLinkFeedback" class="small text-success mt-2 mb-0 d-none"
+                   role="status" aria-live="polite">링크를 복사했습니다.</p>
 
                 <div class="mt-3 d-flex gap-3 small text-secondary">
                     <span>작품 <strong id="itemCount">0</strong></span>
                     <span>좋아요 <strong id="likeCount">0</strong></span>
                     <span>댓글 <strong id="commentCount">0</strong></span>
                 </div>
-            </div>
-        </section>
-
-        <!-- 콘텐츠 검색 API가 연결되기 전까지 contentId로 작품을 추가하는 최소 기능 영역 -->
-        <section class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-4">
-                <h2 class="h5 mb-3">작품 추가</h2>
-                <form id="addItemForm" class="row g-2">
-                    <div class="col-12 col-md-9">
-                        <label class="visually-hidden" for="contentId">콘텐츠 번호</label>
-                        <input id="contentId" class="form-control" type="number" min="1"
-                               placeholder="추가할 콘텐츠 번호" required>
-                    </div>
-                    <div class="col-12 col-md-3 d-grid">
-                        <button class="btn btn-dark" type="submit">컬렉션에 추가</button>
-                    </div>
-                </form>
-                <p class="form-text mb-0">
-                    콘텐츠 검색 화면이 연결되기 전까지 콘텐츠 번호를 직접 입력합니다.
-                </p>
             </div>
         </section>
 

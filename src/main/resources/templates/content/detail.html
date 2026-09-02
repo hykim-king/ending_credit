@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>콘텐츠 상세</title>
+<style>
+	.backdrop-header {
+		position: relative;
+		width: 100vw;
+		margin-left: calc(50% - 50vw);
+		/* main의 p-3 상단 여백을 상쇄해 헤더 바로 아래에 붙인다 */
+		margin-top: -1rem;
+		height: 420px;
+		background-color: #222;
+		background-size: cover;
+		background-position: center;
+		color: #fff;
+	}
+	.backdrop-header::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.1) 100%);
+	}
+	.backdrop-header .backdrop-caption {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 24px;
+		z-index: 1;
+	}
+	/* layout.html의 .endit-main + p-3와 동일한 제약을 재현해 아래 포스터와 왼쪽 끝을 맞춘다 */
+	.backdrop-caption-inner {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+	.poster-box {
+		width: 220px;
+		flex: 0 0 220px;
+	}
+	.poster-box img, .poster-placeholder {
+		width: 100%;
+		aspect-ratio: 2 / 3;
+		object-fit: cover;
+		border-radius: 8px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+	}
+	.poster-placeholder, .backdrop-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #ccc;
+		color: #666;
+	}
+	.backdrop-placeholder {
+		height: 100%;
+		width: 100%;
+	}
+	.gallery-viewport {
+		position: relative;
+	}
+	.gallery-clip {
+		overflow: hidden;
+	}
+	.gallery-track {
+		display: flex;
+		gap: 12px;
+		transition: transform 0.3s ease;
+	}
+	.gallery-item {
+		flex: 0 0 calc((100% - 24px) / 3);
+		aspect-ratio: 16 / 9;
+		border-radius: 8px;
+		overflow: hidden;
+		background-color: #ddd;
+	}
+	.gallery-item img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	.gallery-nav {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		/* 접근성 원칙: 44px 터치 영역 */
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		border: none;
+		background: rgba(255,255,255,0.9);
+		box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+		/* 버튼은 44px 터치 영역을 유지하고 아이콘만 작게 */
+		font-size: 15px;
+		/* 아이콘을 정확히 가운데 두기 위해 flex로 맞춘다 */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		line-height: 1;
+		cursor: pointer;
+		z-index: 2;
+	}
+	.gallery-prev {
+		left: -22px;
+	}
+	.gallery-next {
+		right: -22px;
+	}
+	.gallery-nav:disabled {
+		opacity: 0.3;
+		cursor: default;
+	}
+	.gallery-item img {
+		cursor: pointer;
+	}
+	.gallery-modal {
+		display: none;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.85);
+		align-items: center;
+		justify-content: center;
+		z-index: 1050;
+	}
+	.gallery-modal.active {
+		display: flex;
+	}
+	.gallery-modal-img {
+		max-width: 85vw;
+		max-height: 85vh;
+		object-fit: contain;
+		border-radius: 8px;
+	}
+	.gallery-modal-close {
+		position: absolute;
+		top: 20px;
+		right: 24px;
+		/* 접근성 원칙: 44px 터치 영역 */
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		border: none;
+		background: rgba(255,255,255,0.9);
+		font-size: 17px;
+		/* 아이콘 중앙 정렬 */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		line-height: 1;
+		cursor: pointer;
+		z-index: 1051;
+	}
+	.gallery-modal-prev {
+		left: 24px;
+	}
+	.gallery-modal-next {
+		right: 24px;
+	}
+	/* 접근성 원칙: 명확한 focus. Focus ring #D8D1FF */
+	.gallery-nav:focus-visible,
+	.cast-nav:focus-visible,
+	.gallery-modal-close:focus-visible,
+	.gallery-item img:focus-visible {
+		outline: 3px solid #D8D1FF;
+		outline-offset: 2px;
+	}
+	.gallery-item img:focus-visible {
+		outline-offset: -3px;
+	}
+	.gallery-modal-count {
+		position: absolute;
+		bottom: 24px;
+		left: 50%;
+		transform: translateX(-50%);
+		padding: 8px 16px;
+		border-radius: 8px;
+		background: rgba(0,0,0,0.6);
+		color: #fff;
+		font-size: 14px;
+		font-variant-numeric: tabular-nums;
+		z-index: 1051;
+	}
+	.cast-viewport {
+		position: relative;
+	}
+	.cast-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		column-gap: 24px;
+	}
+	/* .cast-cell의 display:flex가 hidden 속성을 덮어쓰므로 명시적으로 막는다 */
+	.cast-cell[hidden] {
+		display: none;
+	}
+	.cast-cell {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 12px 0;
+		border-bottom: 1px solid #E4E2E9;
+		min-width: 0;
+	}
+	.cast-avatar, .cast-avatar-placeholder {
+		flex: 0 0 48px;
+		width: 48px;
+		height: 48px;
+		border-radius: 8px;
+		object-fit: cover;
+	}
+	.cast-avatar-placeholder {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #ccc;
+		color: #666;
+		font-size: 11px;
+		text-align: center;
+	}
+	.cast-text {
+		min-width: 0;
+	}
+	/*
+	 * 이름 14px / 역할·배역 12px.
+	 * design-principles.md의 "본문 16px / 보조 14px"를 의도적으로 벗어난다 -
+	 * 한 페이지에 12명을 담는 밀도를 맞추기 위한 예외이며 사용자 승인을 받았다.
+	 */
+	.cast-name {
+		font-size: 14px;
+		font-weight: 600;
+		line-height: 1.4;
+	}
+	.cast-role {
+		font-size: 12px;
+		color: #777;
+		line-height: 1.4;
+	}
+	/* 브랜드 Primary로 감독을 구분한다. "감독" 문구가 함께 있어 색만으로 구분하지 않는다 */
+	.cast-role .is-director {
+		color: #6550C8;
+		font-weight: 600;
+	}
+	.cast-nav {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		/* 접근성 원칙: 44px 터치 영역 */
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		border: 1px solid #E4E2E9;
+		background: rgba(255,255,255,0.95);
+		box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+		/* 버튼은 44px 터치 영역을 유지하고 아이콘만 작게 */
+		font-size: 15px;
+		/* 아이콘 중앙 정렬 */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		line-height: 1;
+		cursor: pointer;
+		z-index: 2;
+	}
+	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다 (12명 이하일 때 숨김) */
+	.cast-nav[hidden] {
+		display: none;
+	}
+	.cast-prev {
+		left: -22px;
+	}
+	.cast-next {
+		right: -22px;
+	}
+	.cast-nav:disabled {
+		opacity: 0.3;
+		cursor: default;
+	}
+	@media (max-width: 900px) {
+		.cast-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+	@media (max-width: 560px) {
+		.cast-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+	/* 브랜드 Primary. "감독" 문구와 함께 쓰므로 색만으로 역할을 구분하지 않는다 */
+	.role-badge {
+		background-color: #6550C8;
+		color: #fff;
+	}
+	.action-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+		margin-top: 12px;
+	}
+	.action-placeholder {
+		display: inline-flex;
+		align-items: center;
+		/* 접근성 원칙: 44px 터치 영역 */
+		min-height: 44px;
+		border: 1px dashed rgba(0,0,0,0.25);
+		border-radius: 12px;
+		padding: 0 22px;
+		font-size: 16px;
+		color: #555;
+		background: rgba(0,0,0,0.04);
+		cursor: default;
+		user-select: none;
+	}
+</style>
+</head>
+<body>
+<div layout:fragment="content">
+
+	<div th:if="${notFound}" class="container py-5">
+		<p class="text-danger">해당 contentId의 데이터를 찾을 수 없습니다.</p>
+	</div>
+
+	<div th:unless="${notFound}">
+		<div class="backdrop-header" th:style="${content.backdropUrl} != null ? 'background-image: url(' + ${content.backdropUrl} + ')' : ''">
+			<div th:if="${content.backdropUrl} == null" class="backdrop-placeholder">백드롭 이미지 없음</div>
+			<div class="backdrop-caption">
+				<div class="backdrop-caption-inner">
+					<div class="container">
+						<h1 class="fw-bold" th:text="${content.titleKo}">제목</h1>
+						<p class="mb-1" th:text="${content.titleOrg}">원제</p>
+						<p class="mb-0 small" th:text="${content.releaseYear} + ' · ' + ${content.country} + ' · ' + ${content.runtimeMin} + '분'">
+							2026 · 미국 · 120분
+						</p>
+						<div th:if="${genres != null and !genres.isEmpty()}" class="mt-2">
+							<span class="badge text-bg-light me-1" th:each="genre : ${genres}" th:text="${genre.genreName}">장르</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="container py-4">
+			<div class="d-flex gap-4 flex-wrap">
+				<div class="poster-box">
+					<img th:if="${content.posterUrl} != null" th:src="${content.posterUrl}" alt="poster">
+					<div th:if="${content.posterUrl} == null" class="poster-placeholder">포스터 없음</div>
+				</div>
+				<div class="flex-grow-1" style="flex-basis: 0; min-width: 280px;">
+					<!-- 별점/보고싶어요: MEMBER_CONTENT 담당 팀 구현 예정 자리 -->
+					<div class="action-row mb-3">
+						<span class="action-placeholder">★ 별점 (추가예정)</span>
+						<span class="action-placeholder">🔖 보고싶어요 (추가예정)</span>
+					</div>
+					<h5>시놉시스</h5>
+					<p th:text="${content.overview}">시놉시스 내용</p>
+				</div>
+			</div>
+		</div>
+
+		<div class="container pb-4" th:if="${castAndCrew != null and !castAndCrew.isEmpty()}">
+			<h5 class="mb-3">출연진</h5>
+			<div class="cast-viewport">
+				<button type="button" class="cast-nav cast-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
+				<!-- 감독 우선 정렬은 ContentCreditServiceImpl.retrieveAll이 이미 해 준다 -->
+				<div class="cast-grid">
+					<div class="cast-cell" th:each="credit : ${castAndCrew}">
+						<img th:if="${credit.profileImageUrl} != null" th:src="${credit.profileImageUrl}"
+						     class="cast-avatar" loading="lazy" alt="profile">
+						<div th:if="${credit.profileImageUrl} == null" class="cast-avatar-placeholder">사진 없음</div>
+						<div class="cast-text">
+							<div class="cast-name" th:text="${credit.nameKo}">이름</div>
+							<div class="cast-role">
+								<span th:classappend="${credit.role == 'DIRECTOR'} ? 'is-director' : ''"
+								      th:text="${credit.role == 'DIRECTOR'} ? '감독' : '배우'">배우</span><span
+								      th:if="${credit.character != null and !credit.character.isEmpty()}"
+								      th:text="' | ' + ${credit.character}"> | 배역</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<button type="button" class="cast-nav cast-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+			</div>
+		</div>
+
+		<div class="container pb-4">
+			<!-- 코멘트: USER_COMMENT 담당 팀 구현 예정 자리 -->
+			<div class="action-row">
+				<span class="action-placeholder">💬 코멘트 (추가예정)</span>
+			</div>
+		</div>
+
+		<div class="container pb-5" th:if="${galleryImages != null and !galleryImages.isEmpty()}">
+			<h5 class="mb-3">갤러리</h5>
+			<div class="gallery-viewport">
+				<button type="button" class="gallery-nav gallery-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
+				<div class="gallery-clip">
+					<div class="gallery-track">
+						<!-- src=썸네일, data-full=확대용. 두 URL 모두 서버가 완성해 준다 -->
+						<div class="gallery-item" th:each="image : ${galleryImages}">
+							<img th:src="${image.imageUrl}" th:attr="data-full=${image.zoomImageUrl}"
+							     loading="lazy" alt="gallery image">
+						</div>
+					</div>
+				</div>
+				<button type="button" class="gallery-nav gallery-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+			</div>
+		</div>
+
+		<div class="container pb-5">
+			<!-- 컬렉션에 추가: 컬렉션 담당 팀 구현 예정 자리 -->
+			<div class="action-row">
+				<span class="action-placeholder">＋ 컬렉션에 추가 (추가예정)</span>
+			</div>
+		</div>
+
+		<div id="galleryModal" class="gallery-modal">
+			<button type="button" class="gallery-modal-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+			<button type="button" class="gallery-nav gallery-modal-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
+			<img id="galleryModalImg" class="gallery-modal-img" src="" alt="gallery large view">
+			<button type="button" class="gallery-nav gallery-modal-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+			<div id="galleryModalCount" class="gallery-modal-count" aria-live="polite">0 / 0</div>
+		</div>
+	</div>
+
+	<script>
+		// 출연진 4열 x 3행 = 12명 페이징. 갤러리 캐러셀과 변수가 섞이지 않게 별도 블록에 담는다
+		document.addEventListener('DOMContentLoaded', function () {
+			var PAGE_SIZE = 12;
+
+			var grid = document.querySelector('.cast-grid');
+			var prevBtn = document.querySelector('.cast-prev');
+			var nextBtn = document.querySelector('.cast-next');
+			if (!grid || !prevBtn || !nextBtn) {
+				return;
+			}
+
+			var cells = Array.prototype.slice.call(grid.querySelectorAll('.cast-cell'));
+			var pageCount = Math.ceil(cells.length / PAGE_SIZE);
+			var pageNo = 0;
+
+			// 한 페이지에 다 들어가면 화살표를 띄우지 않는다
+			if (pageCount <= 1) {
+				prevBtn.hidden = true;
+				nextBtn.hidden = true;
+				return;
+			}
+
+			function render() {
+				cells.forEach(function (cell, index) {
+					var page = Math.floor(index / PAGE_SIZE);
+					cell.hidden = page !== pageNo;
+				});
+				prevBtn.disabled = pageNo === 0;
+				nextBtn.disabled = pageNo === pageCount - 1;
+			}
+
+			prevBtn.addEventListener('click', function () {
+				if (pageNo > 0) {
+					pageNo--;
+					render();
+				}
+			});
+			nextBtn.addEventListener('click', function () {
+				if (pageNo < pageCount - 1) {
+					pageNo++;
+					render();
+				}
+			});
+
+			render();
+		});
+	</script>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			var track = document.querySelector('.gallery-track');
+			var prevBtn = document.querySelector('.gallery-prev');
+			var nextBtn = document.querySelector('.gallery-next');
+			if (!track || !prevBtn || !nextBtn) {
+				return;
+			}
+
+			var items = track.children;
+			var pageSize = 3;
+			if (items.length <= pageSize) {
+				prevBtn.style.display = 'none';
+				nextBtn.style.display = 'none';
+				return;
+			}
+
+			var startIndex = 0;
+
+			function update() {
+				var gap = 12;
+				var itemWidth = items[0].getBoundingClientRect().width;
+				var offset = startIndex * (itemWidth + gap);
+				track.style.transform = 'translateX(-' + offset + 'px)';
+				prevBtn.disabled = startIndex === 0;
+				nextBtn.disabled = startIndex + pageSize >= items.length;
+			}
+
+			prevBtn.addEventListener('click', function () {
+				startIndex = Math.max(0, startIndex - pageSize);
+				update();
+			});
+			nextBtn.addEventListener('click', function () {
+				startIndex = Math.min(items.length - pageSize, startIndex + pageSize);
+				update();
+			});
+			window.addEventListener('resize', update);
+
+			update();
+		});
+	</script>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function () {
+			// 확대용 URL은 서버가 data-full에 완성해 준다. 화면은 이미지 크기를 알지 못한다
+			var images = Array.prototype.map.call(document.querySelectorAll('.gallery-item img'), function (img) {
+				return img.getAttribute('data-full');
+			});
+			var modal = document.getElementById('galleryModal');
+			var modalImg = document.getElementById('galleryModalImg');
+			var modalCount = document.getElementById('galleryModalCount');
+			var closeBtn = modal ? modal.querySelector('.gallery-modal-close') : null;
+			var prevBtn = modal ? modal.querySelector('.gallery-modal-prev') : null;
+			var nextBtn = modal ? modal.querySelector('.gallery-modal-next') : null;
+			if (!modal || !modalImg || images.length === 0) {
+				return;
+			}
+
+			var currentIndex = 0;
+
+			function show(index) {
+				currentIndex = index;
+				modalImg.src = images[currentIndex];
+				prevBtn.disabled = currentIndex === 0;
+				nextBtn.disabled = currentIndex === images.length - 1;
+				// 전부 서버 렌더링이므로 목록 길이가 곧 전체 건수다
+				modalCount.textContent = (currentIndex + 1) + ' / ' + images.length;
+			}
+
+			function open(index) {
+				show(index);
+				modal.classList.add('active');
+			}
+
+			function close() {
+				modal.classList.remove('active');
+				modalImg.src = '';
+			}
+
+			document.querySelectorAll('.gallery-item img').forEach(function (img, index) {
+				img.addEventListener('click', function () {
+					open(index);
+				});
+			});
+
+			prevBtn.addEventListener('click', function () {
+				if (currentIndex > 0) {
+					show(currentIndex - 1);
+				}
+			});
+			nextBtn.addEventListener('click', function () {
+				if (currentIndex < images.length - 1) {
+					show(currentIndex + 1);
+				}
+			});
+			closeBtn.addEventListener('click', close);
+			modal.addEventListener('click', function (event) {
+				if (event.target === modal) {
+					close();
+				}
+			});
+			document.addEventListener('keydown', function (event) {
+				if (event.key === 'Escape' && modal.classList.contains('active')) {
+					close();
+				}
+			});
+		});
+	</script>
+
+</div>
+</body>
+</html>
