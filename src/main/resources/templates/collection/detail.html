@@ -1,49 +1,45 @@
 <!DOCTYPE html>
 <!--
 Modification History
-2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 정책 적용
-2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 화면 연결·작품 평균 별점 적용
-2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 D-01·D-05 본문 UI 반영
-2026. 9. 01. jinyoung - 컬렉션 내부 작품 포스터 상단 콜라주 적용
-2026. 9. 01. jinyoung - 상세 통합 블록·보기 전환·더보기·댓글 입력 UI 적용
-2026. 9. 02. jinyoung - 상세 반응형 폭·소유자 액션 위치·작품 평가 표시 개선
+2026. 8. 29. jinyoung - 상세 조회·소유자 작업·좋아요 적용
+2026. 8. 31. jinyoung - 링크 복사·댓글 연결·작품 평가 정보 적용
+2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
+2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
 <head>
-<title>컬렉션 상세</title>
-<link rel="stylesheet" th:href="@{/assets/css/collection.css}">
-<script th:src="@{/assets/js/collection/collection-detail.js}" defer></script>
+    <title>컬렉션 상세</title>
+    <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-detail.css}">
+    <script th:src="@{/assets/js/collection/collection-detail.js}" defer></script>
 </head>
 <body>
 <div layout:fragment="content"
      id="collectionDetailPage"
      class="collection-page collection-detail-page"
      th:attr="data-collection-id=${collectionId},data-current-member-id=${currentMemberId}">
-    <a class="collection-back-link" th:href="@{/collections}">
+    <!-- 이전 화면과 오류 안내 -->
+    <a id="collectionBackLink" class="collection-back-link" th:href="@{/collections}">
         <i class="bi bi-chevron-left" aria-hidden="true"></i>
-        컬렉션 목록
+        이전으로
     </a>
 
-    <div id="errorMessage"
-         class="alert alert-danger d-none"
-         role="alert"
-         tabindex="-1"></div>
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
 
+    <!-- 컬렉션 정보 -->
     <div class="collection-detail-block">
         <section class="collection-detail-hero" aria-labelledby="collectionTitle">
+            <!-- 표지와 작성자 작업 -->
             <div id="collectionDetailCover" class="collection-detail-cover">
-                <div id="collectionDetailCoverFallback"
-                     class="collection-detail-cover-fallback"
-                     aria-hidden="true">
+                <div id="collectionDetailCoverFallback" class="collection-detail-cover-fallback" aria-hidden="true">
                     <i class="bi bi-collection-play"></i>
                 </div>
 
                 <div class="collection-cover-author">
-                    <span id="collectionAuthorAvatar"
-                          class="collection-cover-avatar collection-cover-avatar-fallback"
+                    <span id="collectionAuthorAvatar" class="collection-cover-avatar collection-cover-avatar-fallback"
                           aria-hidden="true">
                         <i class="bi bi-person-fill"></i>
                     </span>
@@ -59,9 +55,7 @@ Modification History
                         <i class="bi bi-pencil" aria-hidden="true"></i>
                         <span>수정</span>
                     </a>
-                    <button class="collection-owner-action collection-danger-action"
-                            type="button"
-                            data-bs-toggle="modal"
+                    <button class="collection-owner-action collection-danger-action" type="button" data-bs-toggle="modal"
                             data-bs-target="#deleteCollectionModal">
                         <i class="bi bi-trash3" aria-hidden="true"></i>
                         <span>삭제</span>
@@ -71,55 +65,42 @@ Modification History
 
             <div class="collection-detail-heading">
                 <h1 id="collectionTitle" class="collection-detail-title">컬렉션</h1>
-                <p id="collectionDescription" class="collection-detail-description">
-                    컬렉션 정보를 불러오고 있습니다.
-                </p>
+                <p id="collectionDescription" class="collection-detail-description">컬렉션 정보를 불러오고 있습니다.</p>
                 <div class="collection-detail-heading-meta">
                     <time id="collectionDate" datetime=""></time>
                 </div>
             </div>
 
+            <!-- 좋아요·댓글·링크 -->
             <div class="collection-detail-stats" aria-label="컬렉션 활동">
-                <button id="likeButton"
-                        class="collection-stat-action"
-                        type="button"
-                        aria-pressed="false">
+                <button id="likeButton" class="collection-stat-action" type="button" aria-pressed="false">
                     <i class="bi bi-heart" aria-hidden="true"></i>
                     <span id="likeButtonLabel">좋아요</span>
                     <strong id="likeCount">0</strong>
                 </button>
-                <button id="commentsLink"
-                        class="collection-stat-action"
-                        type="button">
+                <button id="commentsLink" class="collection-stat-action" type="button">
                     <i class="bi bi-chat" aria-hidden="true"></i>
                     <span>댓글</span>
                     <strong id="commentCount">0</strong>
                 </button>
-                <button id="copyLinkButton"
-                        class="collection-stat-action"
-                        type="button">
+                <button id="copyLinkButton" class="collection-stat-action" type="button">
                     <i class="bi bi-link-45deg" aria-hidden="true"></i>
                     <span>링크 복사</span>
                 </button>
             </div>
         </section>
 
+        <!-- 담긴 작품 -->
         <section class="collection-movies-section" aria-labelledby="collectionMoviesHeading">
             <header class="collection-movies-heading">
-                <h2 id="collectionMoviesHeading" class="collection-section-title mb-0">
-                    담긴 작품 <span id="itemResultCount">0</span>
-                </h2>
+                <h2 id="collectionMoviesHeading" class="collection-section-title mb-0">담긴 작품 <span id="itemResultCount">0</span></h2>
                 <div class="collection-view-toggle" aria-label="작품 보기 방식">
-                    <button id="gridViewButton"
-                            class="collection-view-button is-active"
-                            type="button"
+                    <button id="gridViewButton" class="collection-view-button is-active" type="button"
                             aria-label="포스터형으로 보기"
                             aria-pressed="true">
                         <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
                     </button>
-                    <button id="listViewButton"
-                            class="collection-view-button"
-                            type="button"
+                    <button id="listViewButton" class="collection-view-button" type="button"
                             aria-label="리스트형으로 보기"
                             aria-pressed="false">
                         <i class="bi bi-list-ul" aria-hidden="true"></i>
@@ -127,10 +108,7 @@ Modification History
                 </div>
             </header>
 
-            <div id="itemLoading"
-                 class="collection-movie-grid"
-                 role="status"
-                 aria-live="polite"
+            <div id="itemLoading" class="collection-movie-grid" role="status" aria-live="polite"
                  aria-label="컬렉션 작품을 불러오는 중입니다">
                 <div class="collection-movie-skeleton"></div>
                 <div class="collection-movie-skeleton"></div>
@@ -139,9 +117,7 @@ Modification History
                 <div class="collection-movie-skeleton"></div>
             </div>
 
-            <div id="itemList"
-                 class="collection-movie-grid is-grid-view d-none"
-                 aria-live="polite"></div>
+            <div id="itemList" class="collection-movie-grid is-grid-view d-none" aria-live="polite"></div>
 
             <div id="itemEmpty" class="collection-empty-state d-none">
                 <i class="bi bi-film collection-empty-icon" aria-hidden="true"></i>
@@ -150,30 +126,21 @@ Modification History
             </div>
 
             <div class="collection-load-more-wrap">
-                <button id="loadMoreButton"
-                        class="collection-load-more-button d-none"
-                        type="button">
+                <button id="loadMoreButton" class="collection-load-more-button d-none" type="button">
                     <span id="loadMoreLabel">더보기</span>
                     <i class="bi bi-chevron-down" aria-hidden="true"></i>
                 </button>
             </div>
         </section>
 
-        <section id="collectionComments"
-                 class="collection-comments-section"
+        <!-- 댓글 안내 -->
+        <section id="collectionComments" class="collection-comments-section"
                  aria-labelledby="collectionCommentsHeading"
                  tabindex="-1">
-            <h2 id="collectionCommentsHeading" class="collection-section-title">
-                댓글 <span id="commentSectionCount">0</span>
-            </h2>
+            <h2 id="collectionCommentsHeading" class="collection-section-title">댓글 <span id="commentSectionCount">0</span></h2>
             <div class="collection-comment-composer">
-                <label class="visually-hidden" for="collectionCommentInput">
-                    컬렉션 댓글
-                </label>
-                <textarea id="collectionCommentInput"
-                          rows="1"
-                          placeholder="컬렉션에 댓글을 남겨보세요."
-                          disabled></textarea>
+                <label class="visually-hidden" for="collectionCommentInput">컬렉션 댓글</label>
+                <textarea id="collectionCommentInput" rows="1" placeholder="컬렉션에 댓글을 남겨보세요." disabled></textarea>
                 <button type="button" disabled>
                     <i class="bi bi-chat" aria-hidden="true"></i>
                     등록
@@ -182,40 +149,26 @@ Modification History
         </section>
     </div>
 
-    <p id="copyLinkFeedback"
-       class="collection-copy-feedback"
-       role="status"
-       aria-live="polite">
-        링크를 복사했어요
-    </p>
+    <!-- 링크 복사 안내 -->
+    <p id="copyLinkFeedback" class="collection-copy-feedback" role="status" aria-live="polite">링크를 복사했어요</p>
 
-    <div class="modal fade"
-         id="deleteCollectionModal"
-         tabindex="-1"
-         aria-label="컬렉션 삭제 확인"
-        aria-hidden="true">
+    <!-- 삭제 확인 모달 -->
+    <div class="modal fade" id="deleteCollectionModal" tabindex="-1" aria-label="컬렉션 삭제 확인"
+         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content collection-delete-modal">
-                <button type="button"
-                        class="btn-close collection-delete-close"
-                        data-bs-dismiss="modal"
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
                         aria-label="닫기"></button>
                 <div class="modal-body">
                     <div class="collection-delete-icon" aria-hidden="true">
                         <i class="bi bi-trash3"></i>
                     </div>
-                    <p class="collection-delete-question">
-                        해당 컬렉션을 삭제할까요?
-                    </p>
-                    <p class="collection-delete-description">
-                        컬렉션에 기록된 좋아요와 댓글 기록이 모두 삭제되며 되돌릴 수 없습니다.
-                    </p>
+                    <p class="collection-delete-question">해당 컬렉션을 삭제할까요?</p>
+                    <p class="collection-delete-description">컬렉션에 기록된 좋아요와 댓글 기록이 모두 삭제되며 되돌릴 수 없습니다.</p>
                     <div class="collection-delete-actions">
-                        <button type="button"
-                                class="btn collection-delete-button collection-delete-cancel"
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel"
                                 data-bs-dismiss="modal">취소</button>
-                        <button id="confirmDeleteButton"
-                                type="button"
+                        <button id="confirmDeleteButton" type="button"
                                 class="btn btn-danger collection-delete-button">삭제</button>
                     </div>
                 </div>

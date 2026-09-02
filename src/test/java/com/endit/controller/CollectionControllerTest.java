@@ -3,6 +3,7 @@ package com.endit.controller;
 import static com.endit.support.CollectionRequestFixtures.createRequest;
 import static com.endit.support.CollectionRequestFixtures.updateRequest;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -28,10 +29,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.domain.CollectionCreateRequest;
+import com.endit.domain.CollectionItemVO;
 import com.endit.domain.CollectionUpdateRequest;
 import com.endit.domain.CollectionVO;
+import com.endit.domain.ContentVO;
 import com.endit.domain.MemberVO;
+import com.endit.mapper.CollectionItemMapper;
 import com.endit.mapper.CollectionMapper;
+import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -49,6 +54,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 2026. 8. 31. jinyoung    존재하지 않는 contentId의 HTTP 400 변환 검증 추가
  * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
  * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 응답 검증
+ * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -73,6 +79,12 @@ class CollectionControllerTest {
 	private CollectionMapper collectionMapper;
 
 	@Autowired
+	private CollectionItemMapper collectionItemMapper;
+
+	@Autowired
+	private ContentMapper contentMapper;
+
+	@Autowired
 	private MemberMapper memberMapper;
 
 	@Value("${endit.dev-auth.member-id}")
@@ -82,7 +94,8 @@ class CollectionControllerTest {
 	@Test
 	@DisplayName("컬렉션 목록과 페이징 정보 반환")
 	void retrieve() throws Exception {
-		CollectionVO collection = createSavedCollection("HTTP 목록 컬렉션");
+		CollectionVO collection = createCollectionForMemberWithItem(
+				Math.toIntExact(authenticatedMemberId), "HTTP 목록 컬렉션", "Y");
 
 		mockMvc.perform(get("/api/collections")
 					.param("pageNo", "1")
@@ -107,7 +120,7 @@ class CollectionControllerTest {
 	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션 포함")
 	void retrieveIncludesOwnPrivateCollection() throws Exception {
 		String title = "HTTP 전체 비공개 포함-" + UUID.randomUUID();
-		CollectionVO privateCollection = createCollectionForMember(
+		CollectionVO privateCollection = createCollectionForMemberWithItem(
 				Math.toIntExact(authenticatedMemberId), title, "N");
 
 		mockMvc.perform(get("/api/collections")
@@ -121,6 +134,22 @@ class CollectionControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(1))
 				.andExpect(jsonPath("$.currentMemberId")
 						.value(authenticatedMemberId));
+	}
+
+	/** 작품이 없는 컬렉션은 전체 목록 응답에서 제외되는지 검증 */
+	@Test
+	@DisplayName("전체 목록은 작품이 없는 컬렉션 제외")
+	void retrieveExcludesEmptyCollection() throws Exception {
+		String title = "HTTP 빈 컬렉션 제외-" + UUID.randomUUID();
+		createCollectionForMember(
+				Math.toIntExact(authenticatedMemberId), title, "Y");
+
+		mockMvc.perform(get("/api/collections")
+					.param("searchDiv", "10")
+					.param("searchWord", title))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items", hasSize(0)))
+				.andExpect(jsonPath("$.page.totalCnt").value(0));
 	}
 
 	/** 작성자 본인의 U-05 API에 공개와 비공개 컬렉션이 모두 노출되는지 검증 */
@@ -190,8 +219,7 @@ class CollectionControllerTest {
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location",
-						org.hamcrest.Matchers.matchesPattern(
-								"/api/collections/[1-9][0-9]*")))
+						matchesPattern("/api/collections/[1-9][0-9]*")))
 				.andExpect(jsonPath("$.collectionId").isNumber())
 				.andExpect(jsonPath("$.title").value("HTTP 등록 컬렉션"))
 				.andExpect(jsonPath("$.isPublic").value("Y"));
@@ -330,6 +358,41 @@ class CollectionControllerTest {
 		assertEquals(1, collectionMapper.doSave(collection));
 
 		return collection;
+	}
+
+	/** 지정한 회원 소유 컬렉션에 테스트 작품 한 건을 포함해 등록 */
+	private CollectionVO createCollectionForMemberWithItem(
+			int memberId,
+			String title,
+			String isPublic) {
+
+		CollectionVO collection = createCollectionForMember(
+				memberId, title, isPublic);
+		ContentVO content = createContent(title);
+		CollectionItemVO item = new CollectionItemVO(
+				collection.getCollectionId(), content.getContentId(), null);
+		assertEquals(1, collectionItemMapper.doSave(item));
+
+		return collection;
+	}
+
+	/** 컬렉션 목록 테스트에 사용할 작품 등록 */
+	private ContentVO createContent(String titleSuffix) {
+		String token = UUID.randomUUID().toString().replace("-", "");
+		ContentVO content = new ContentVO(
+				0,
+				"COLLECTION_HTTP_" + token,
+				"컬렉션 HTTP 작품 " + titleSuffix,
+				"Collection HTTP Content " + titleSuffix,
+				"컬렉션 HTTP 목록 테스트",
+				"2026-09-02",
+				120,
+				"KR",
+				"https://example.com/poster.jpg",
+				"https://example.com/backdrop.jpg",
+				null);
+		assertEquals(1, contentMapper.doSave(content));
+		return content;
 	}
 
 	/** 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록 */

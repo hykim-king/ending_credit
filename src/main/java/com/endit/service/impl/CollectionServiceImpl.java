@@ -47,6 +47,10 @@ public class CollectionServiceImpl implements CollectionService {
 
 	private static final String PUBLIC_YES = "Y";
 	private static final String PUBLIC_NO = "N";
+	private static final int DEFAULT_PAGE_SIZE = 10;
+	private static final int MAX_PAGE_SIZE = 100;
+	private static final int MAX_TITLE_LENGTH = 100;
+	private static final int MAX_DESCRIPTION_LENGTH = 1000;
 
 	private final CollectionMapper collectionMapper;
 	private final CollectionItemMapper collectionItemMapper;
@@ -65,11 +69,13 @@ public class CollectionServiceImpl implements CollectionService {
 		this.collectionItemMapper = collectionItemMapper;
 	}
 
+	/** 비회원 기준으로 공개 컬렉션 목록을 조회한다. */
 	@Override
 	public List<CollectionVO> retrieve(DTO param) {
 		return retrieve(param, OptionalLong.empty());
 	}
 
+	/** 현재 회원의 접근 범위를 반영해 컬렉션 목록을 조회한다. */
 	@Override
 	public List<CollectionVO> retrieve(
 			DTO param,
@@ -89,6 +95,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return retrieveVisible(param, queryParam);
 	}
 
+	/** 대상 회원의 공개 범위에 맞는 컬렉션 목록을 조회한다. */
 	@Override
 	public List<CollectionVO> retrieveByMember(
 			long memberId,
@@ -111,7 +118,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return retrieveVisible(param, queryParam);
 	}
 
-	/** 공개 범위 조회와 응답용 페이징 전체 건수 설정을 공통 처리한다. */
+	/** 목록과 전체 건수를 같은 공개 조건으로 조회한다. */
 	private List<CollectionVO> retrieveVisible(
 			DTO param,
 			CollectionQueryParam queryParam) {
@@ -126,6 +133,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return collectionMapper.retrieveVisible(queryParam);
 	}
 
+	/** 접근 가능한 컬렉션 한 건을 조회한다. */
 	@Override
 	public CollectionVO get(
 			int collectionId,
@@ -144,6 +152,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return collection;
 	}
 
+	/** 컬렉션 소유권을 확인하고 변경 가능한 컬렉션을 반환한다. */
 	@Override
 	public CollectionVO getOwned(int collectionId, long memberId) {
 		validateMemberId(memberId);
@@ -161,6 +170,7 @@ public class CollectionServiceImpl implements CollectionService {
 				"다른 회원의 컬렉션은 변경할 수 없습니다.");
 	}
 
+	/** 컬렉션과 선택한 작품을 하나의 트랜잭션으로 등록한다. */
 	@Override
 	@Transactional
 	public CollectionVO create(
@@ -192,6 +202,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return get(param.getCollectionId(), OptionalLong.of(memberId));
 	}
 
+	/** 컬렉션 정보와 포함 작품 목록을 하나의 트랜잭션으로 수정한다. */
 	@Override
 	@Transactional
 	public CollectionVO update(
@@ -244,6 +255,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return get(collectionId, OptionalLong.of(memberId));
 	}
 
+	/** 소유권을 확인한 뒤 컬렉션을 삭제한다. */
 	@Override
 	@Transactional
 	public void delete(long memberId, int collectionId) {
@@ -267,9 +279,9 @@ public class CollectionServiceImpl implements CollectionService {
 		}
 
 		if (param.getPageSize() <= 0) {
-			param.setPageSize(10);
-		} else if (param.getPageSize() > 100) {
-			param.setPageSize(100);
+			param.setPageSize(DEFAULT_PAGE_SIZE);
+		} else if (param.getPageSize() > MAX_PAGE_SIZE) {
+			param.setPageSize(MAX_PAGE_SIZE);
 		}
 	}
 
@@ -282,10 +294,9 @@ public class CollectionServiceImpl implements CollectionService {
 		if (request == null) {
 			throw new IllegalArgumentException("등록할 컬렉션 정보가 필요합니다.");
 		}
-
 	}
 
-	/** 외부 응답용 DTO와 인증 정보를 내부 컬렉션 조회 조건으로 복사 */
+	/** 외부 조회 조건과 인증 정보를 Mapper 조회 조건으로 복사한다. */
 	private CollectionQueryParam createQueryParam(
 			DTO param,
 			OptionalLong currentMemberId) {
@@ -302,7 +313,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return queryParam;
 	}
 
-	/** 접근 판정 전에 실제 컬렉션 존재 여부 조회 */
+	/** 접근 권한을 확인하기 전에 컬렉션 존재 여부를 조회한다. */
 	private CollectionVO findExisting(int collectionId) {
 		validateCollectionId(collectionId);
 
@@ -316,13 +327,13 @@ public class CollectionServiceImpl implements CollectionService {
 		return collection;
 	}
 
-	/** 비공개 컬렉션의 존재 여부가 노출되지 않도록 미조회와 같은 예외 생성 */
+	/** 비공개 컬렉션의 존재 여부를 숨기기 위한 미조회 예외를 만든다. */
 	private NoSuchElementException collectionNotFound(int collectionId) {
 		return new NoSuchElementException(
 				"존재하지 않는 컬렉션입니다. collectionId=" + collectionId);
 	}
 
-	/** 요청 회원 번호가 CollectionVO가 사용하는 정수 범위의 양수인지 검증 */
+	/** 회원 번호가 CollectionVO에서 사용할 수 있는 양수인지 확인한다. */
 	private void validateMemberId(long memberId) {
 		if (memberId <= 0 || memberId > Integer.MAX_VALUE) {
 			throw new IllegalArgumentException("올바른 회원 번호가 필요합니다.");
@@ -352,7 +363,7 @@ public class CollectionServiceImpl implements CollectionService {
 
 		String normalized = title.trim();
 
-		if (normalized.length() > 100) {
+		if (normalized.length() > MAX_TITLE_LENGTH) {
 			throw new IllegalArgumentException(
 					"컬렉션 제목은 100자 이하여야 합니다.");
 		}
@@ -372,7 +383,7 @@ public class CollectionServiceImpl implements CollectionService {
 
 		String normalized = description.trim();
 
-		if (normalized.length() > 1000) {
+		if (normalized.length() > MAX_DESCRIPTION_LENGTH) {
 			throw new IllegalArgumentException(
 					"컬렉션 설명은 1000자 이하여야 합니다.");
 		}
@@ -380,7 +391,7 @@ public class CollectionServiceImpl implements CollectionService {
 		return normalized;
 	}
 
-	/** null은 빈 목록, 중복은 한 건으로 정규화하고 요청 순서를 유지한다. */
+	/** null은 빈 목록으로, 중복 번호는 요청 순서를 유지한 한 건으로 정리한다. */
 	private Set<Integer> normalizeContentIds(List<Integer> contentIds) {
 
 		if (contentIds == null) {
@@ -394,15 +405,13 @@ public class CollectionServiceImpl implements CollectionService {
 				throw new IllegalArgumentException(
 						"작품 번호(contentIds)는 양수여야 합니다.");
 			}
-
-
 			uniqueContentIds.add(contentId);
 		}
 
 		return uniqueContentIds;
 	}
 
-	/** 공개 여부를 Y/N으로 정규화하고 값이 없으면 지정한 기본값을 사용한다. */
+	/** 공개 여부를 Y/N으로 정리하고 빈 값에는 기본값을 사용한다. */
 	private String normalizeIsPublic(
 			String isPublic,
 			String defaultValue) {
@@ -422,11 +431,10 @@ public class CollectionServiceImpl implements CollectionService {
 		return normalized;
 	}
 
-	/** 컬렉션 작품 한 건을 저장하고 결과를 검증 */
+	/** 컬렉션 작품 한 건을 저장하고 결과를 확인한다. */
 	private void insertCollectionItem(int collectionId, int contentId) {
-		CollectionItemVO item = new CollectionItemVO();
-		item.setCollectionId(collectionId);
-		item.setContentId(contentId);
+		CollectionItemVO item = new CollectionItemVO(
+				collectionId, contentId, null);
 
 		if (collectionItemMapper.doSave(item) != 1) {
 			throw new IllegalStateException(
@@ -434,11 +442,10 @@ public class CollectionServiceImpl implements CollectionService {
 		}
 	}
 
-	/** 컬렉션 작품 한 건을 삭제하고 결과를 검증 */
+	/** 컬렉션 작품 한 건을 삭제하고 결과를 확인한다. */
 	private void deleteCollectionItem(int collectionId, int contentId) {
-		CollectionItemVO item = new CollectionItemVO();
-		item.setCollectionId(collectionId);
-		item.setContentId(contentId);
+		CollectionItemVO item = new CollectionItemVO(
+				collectionId, contentId, null);
 
 		if (collectionItemMapper.doDelete(item) != 1) {
 			throw new IllegalStateException(

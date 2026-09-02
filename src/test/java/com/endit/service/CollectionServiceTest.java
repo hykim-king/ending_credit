@@ -51,6 +51,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 9. 01. jinyoung    목록 카드 대표 포스터 조회 검증 추가
  * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 조회 검증
  * 2026. 9. 02. jinyoung    현재 회원의 목록 좋아요 여부 검증
+ * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -87,8 +88,12 @@ class CollectionServiceTest {
 	@DisplayName("목록 조회 시 기본 페이징과 전체 건수 설정")
 	void retrieve() {
 		int memberId = createMemberId();
+		ContentVO content = createContent("통합 목록");
 		CollectionVO saved = collectionService.create(memberId,
-				createRequest("통합 목록 컬렉션", "컬렉션 설명", List.of()));
+				createRequest(
+						"통합 목록 컬렉션",
+						"컬렉션 설명",
+						List.of(content.getContentId())));
 
 		DTO param = new DTO();
 		param.setSearchDiv("10");
@@ -129,8 +134,13 @@ class CollectionServiceTest {
 	void retrieveWithCurrentMemberLike() {
 		int ownerId = createMemberId();
 		int currentMemberId = createMemberId();
-		CollectionVO saved = saveCollection(
-				ownerId, "좋아요 상태 컬렉션-" + UUID.randomUUID(), "Y");
+		ContentVO content = createContent("좋아요 상태");
+		CollectionVO saved = collectionService.create(
+				ownerId,
+				createRequest(
+						"좋아요 상태 컬렉션-" + UUID.randomUUID(),
+						"컬렉션 설명",
+						List.of(content.getContentId())));
 		CollectionLikeVO like = new CollectionLikeVO(
 				currentMemberId, saved.getCollectionId(), null);
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(like));
@@ -163,7 +173,14 @@ class CollectionServiceTest {
 	void retrievePrivateCollection() {
 		int ownerId = createMemberId();
 		String title = "비공개목록-" + UUID.randomUUID();
-		CollectionVO privateCollection = saveCollection(ownerId, title, "N");
+		ContentVO content = createContent("비공개 목록");
+		CollectionVO privateCollection = collectionService.create(
+				ownerId,
+				createRequest(
+						title,
+						"컬렉션 설명",
+						"N",
+						List.of(content.getContentId())));
 
 		DTO param = searchByTitle(title);
 		List<CollectionVO> result = collectionService.retrieve(
@@ -173,6 +190,35 @@ class CollectionServiceTest {
 		assertEquals(privateCollection.getCollectionId(),
 				result.get(0).getCollectionId());
 		assertEquals(1, param.getTotalCnt());
+	}
+
+	/** 빈 컬렉션은 전체 목록에서 제외하고 회원별 목록에는 유지하는지 검증 */
+	@Test
+	@DisplayName("빈 컬렉션은 전체 목록에서 제외하고 회원별 목록에는 포함")
+	void retrieveEmptyCollectionVisibility() {
+		int ownerId = createMemberId();
+		CollectionVO emptyCollection = collectionService.create(
+				ownerId,
+				createRequest(
+						"빈 컬렉션-" + UUID.randomUUID(),
+						"컬렉션 설명",
+						List.of()));
+
+		DTO publicParam = searchByTitle(emptyCollection.getTitle());
+		List<CollectionVO> publicResult = collectionService.retrieve(
+				publicParam, OptionalLong.of(ownerId));
+
+		assertTrue(publicResult.isEmpty());
+		assertEquals(0, publicParam.getTotalCnt());
+
+		DTO memberParam = searchByTitle(emptyCollection.getTitle());
+		List<CollectionVO> memberResult = collectionService.retrieveByMember(
+				ownerId, memberParam, OptionalLong.of(ownerId));
+
+		assertEquals(1, memberResult.size());
+		assertEquals(emptyCollection.getCollectionId(),
+				memberResult.get(0).getCollectionId());
+		assertEquals(1, memberParam.getTotalCnt());
 	}
 
 	/** U-05를 작성자 본인이 조회하면 공개와 비공개를 모두 반환하는지 검증 */

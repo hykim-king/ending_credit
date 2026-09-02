@@ -5,31 +5,34 @@
 
 <!--
 Modification History
-2026. 8. 29. jinyoung - 전체 공개 목록과 U-05 본인·타인 공개 범위 조회 추가
-2026. 9. 01. jinyoung - 목록 카드용 컬렉션 대표 포스터 5건 조회 추가
-2026. 9. 01. jinyoung - 목록 카드용 작성자 프로필 이미지 조회 추가
-2026. 9. 02. jinyoung - 전체 목록에 현재 회원 소유 비공개 컬렉션 포함
-2026. 9. 01. jinyoung - 상세 화면용 작성자 프로필 이미지 조회 추가
-2026. 9. 02. jinyoung - 목록에 현재 회원의 좋아요 여부 추가
+2026. 8. 29. jinyoung - 컬렉션 공개 범위 목록 조회 추가
+2026. 9. 01. jinyoung - 대표 포스터 및 작성자 프로필 조회 추가
+2026. 9. 02. jinyoung - 내 비공개·좋아요 상태 반영 및 빈 컬렉션 제외
 -->
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
 
-    <!-- searchDiv: 10(제목), 20(회원 번호) -->
+    <!-- 공통 검색 조건: 10(제목), 20(회원 번호) -->
+    <sql id="collectionSearchCondition">
+        <if test="searchWord != null and searchWord != ''">
+            <choose>
+                <when test="searchDiv == '10'">
+                    AND C.TITLE LIKE '%' || #{searchWord} || '%'
+                </when>
+                <when test="searchDiv == '20'">
+                    AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                </when>
+            </choose>
+        </if>
+    </sql>
+
     <sql id="collectionWhere">
         <where>
-            <if test="searchWord != null and searchWord != ''">
-                <choose>
-                    <when test="searchDiv == '10'">
-                        AND C.TITLE LIKE '%' || #{searchWord} || '%'
-                    </when>
-                    <when test="searchDiv == '20'">
-                        AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
-                    </when>
-                </choose>
-            </if>
+            <include refid="collectionSearchCondition"/>
         </where>
     </sql>
+
+    <!-- 기본 등록·조회·수정·삭제 -->
 
     <!-- 컬렉션 등록 -->
     <insert id="doSave" parameterType="CollectionVO">
@@ -112,6 +115,7 @@ Modification History
          WHERE COLLECTION_ID = #{collectionId}
     </delete>
 
+    <!-- 공통 WorkDiv 목록 조회 -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionVO">
         SELECT COLLECTION_ID,
                MEMBER_ID,
@@ -175,6 +179,8 @@ Modification History
          ORDER BY RNUM
     </select>
 
+    <!-- 테스트와 공통 Mapper 지원 쿼리 -->
+
     <!-- 컬렉션 전체 삭제 -->
     <delete id="deleteAll">
         DELETE FROM COLLECTION
@@ -192,6 +198,8 @@ Modification History
         <include refid="collectionWhere"/>
     </select>
 
+    <!-- 화면 목록 공개 범위 조회 -->
+
     <!-- 전체 목록은 공개와 현재 회원 소유 컬렉션을, U-05는 본인일 때 비공개까지 노출한다. -->
     <sql id="visibleCollectionWhere">
         <where>
@@ -203,33 +211,28 @@ Modification History
                         OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
                     )
                 </when>
+                <when test="currentMemberId != null">
+                    AND (
+                        C.IS_PUBLIC = 'Y'
+                        OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                    )
+                </when>
                 <otherwise>
-                    <choose>
-                        <when test="currentMemberId != null">
-                            AND (
-                                C.IS_PUBLIC = 'Y'
-                                OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
-                            )
-                        </when>
-                        <otherwise>
-                            AND C.IS_PUBLIC = 'Y'
-                        </otherwise>
-                    </choose>
+                    AND C.IS_PUBLIC = 'Y'
                 </otherwise>
             </choose>
-            <if test="searchWord != null and searchWord != ''">
-                <choose>
-                    <when test="searchDiv == '10'">
-                        AND C.TITLE LIKE '%' || #{searchWord} || '%'
-                    </when>
-                    <when test="searchDiv == '20'">
-                        AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
-                    </when>
-                </choose>
+            <if test="targetMemberId == null">
+                AND EXISTS (
+                    SELECT 1
+                      FROM COLLECTION_ITEM VISIBLE_CI
+                     WHERE VISIBLE_CI.COLLECTION_ID = C.COLLECTION_ID
+                )
             </if>
+            <include refid="collectionSearchCondition"/>
         </where>
     </sql>
 
+    <!-- 공개 범위와 대표 포스터를 반영한 컬렉션 목록 -->
     <select id="retrieveVisible" parameterType="CollectionQueryParam" resultType="CollectionVO">
         SELECT COLLECTION_ID,
                MEMBER_ID,
@@ -347,6 +350,7 @@ Modification History
          ORDER BY RNUM
     </select>
 
+    <!-- 공개 범위를 반영한 컬렉션 전체 건수 -->
     <select id="countVisible" parameterType="CollectionQueryParam" resultType="int">
         SELECT COUNT(*)
           FROM COLLECTION C

@@ -1,32 +1,28 @@
 <!DOCTYPE html>
 <!--
 Modification History
-2026. 8. 31. jinyoung - 컬렉션 검색 조건을 제목으로 단일화
-2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 컬렉션 검색 결과 본문 UI 반영
-2026. 9. 01. jinyoung - 컬렉션 검색·생성 영역 간소화
+2026. 8. 31. jinyoung - 제목 검색 적용
+2026. 9. 01. jinyoung - 검색·생성·목록 결과 UI 개선
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
 <head>
-<title>컬렉션</title>
-<link rel="stylesheet" th:href="@{/assets/css/collection.css}">
-<script th:src="@{/assets/js/collection/collection-list.js}" defer></script>
+    <title>컬렉션</title>
+    <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+    <script th:src="@{/assets/js/collection/collection-list.js}" defer></script>
 </head>
 <body>
-<div layout:fragment="content"
-     id="collectionListPage"
-     class="collection-page collection-list-page">
+<div layout:fragment="content" id="collectionListPage" class="collection-page collection-list-page">
+    <!-- 검색 및 생성 -->
     <section class="collection-list-hero" aria-label="컬렉션 검색 및 생성">
         <form id="searchForm" class="collection-list-search" role="search">
             <div class="collection-list-search-field">
                 <i class="bi bi-search" aria-hidden="true"></i>
                 <label class="visually-hidden" for="searchWord">컬렉션 제목</label>
-                <input id="searchWord"
-                       class="form-control"
-                       type="search"
-                       autocomplete="off"
+                <input id="searchWord" class="form-control" type="search" autocomplete="off"
                        placeholder="컬렉션 제목을 검색해 보세요">
                 <button class="btn btn-primary" type="submit">검색</button>
             </div>
@@ -38,31 +34,25 @@ Modification History
                     <option value="24">24개</option>
                 </select>
             </div>
-            <a class="btn btn-primary collection-create-button"
-               th:href="@{/collections/new}">
+            <a class="btn btn-primary collection-create-button" th:href="@{/collections/new}">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
                 새 컬렉션
             </a>
         </form>
     </section>
 
-    <div id="errorMessage"
-         class="alert alert-danger d-none"
-         role="alert"
-         tabindex="-1"></div>
+    <!-- 오류 안내 -->
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
 
+    <!-- 목록 결과 -->
     <section class="collection-list-results" aria-labelledby="collectionResultHeading">
         <header class="collection-list-result-heading">
-            <h2 id="collectionResultHeading" class="collection-section-title mb-0">
-                전체 컬렉션
-            </h2>
+            <h2 id="collectionResultHeading" class="collection-section-title mb-0">전체 컬렉션</h2>
             <span id="resultCount" class="collection-result-count">0개</span>
         </header>
 
-        <div id="collectionLoading"
-             class="collection-card-grid"
-             role="status"
-             aria-live="polite"
+        <!-- 로딩 상태 -->
+        <div id="collectionLoading" class="collection-card-grid" role="status" aria-live="polite"
              aria-label="컬렉션을 불러오는 중입니다">
             <div class="collection-list-skeleton"></div>
             <div class="collection-list-skeleton"></div>
@@ -72,21 +62,18 @@ Modification History
             <div class="collection-list-skeleton"></div>
         </div>
 
-        <div id="collectionList"
-             class="collection-card-grid d-none"
-             aria-live="polite"></div>
+        <!-- 컬렉션 카드 -->
+        <div id="collectionList" class="collection-card-grid d-none" aria-live="polite"></div>
 
+        <!-- 빈 결과 -->
         <div id="collectionListEmpty" class="collection-empty-state d-none">
             <i class="bi bi-collection collection-empty-icon" aria-hidden="true"></i>
             <strong id="collectionEmptyTitle">컬렉션이 없습니다.</strong>
-            <span id="collectionEmptyDescription">
-                새로운 컬렉션이 만들어지면 이곳에 표시됩니다.
-            </span>
+            <span id="collectionEmptyDescription">새로운 컬렉션이 만들어지면 이곳에 표시됩니다.</span>
         </div>
 
-        <nav id="paginationNavigation"
-             class="collection-list-pagination d-none"
-             aria-label="컬렉션 목록 페이지">
+        <!-- 페이지 이동 -->
+        <nav id="paginationNavigation" class="collection-list-pagination d-none" aria-label="컬렉션 목록 페이지">
             <ul id="pagination" class="pagination justify-content-center mb-0"></ul>
         </nav>
     </section>

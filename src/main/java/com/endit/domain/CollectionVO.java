@@ -22,24 +22,24 @@ package com.endit.domain;
  */
 public class CollectionVO {
 
-	private int collectionId;      // 컬렉션 번호
-	private int memberId;          // 작성 회원 번호
-	private String title;          // 컬렉션 제목
-	private String description;    // 컬렉션 설명
-	private String isPublic;       // 공개 여부(Y: 공개, N: 비공개)
-	private String createdDt;      // 생성 일시
-	private String updatedDt;      // 최종 수정 일시
-	private String nickname;       // 작성자 닉네임
-	private String profileImgUrl;  // 작성자 프로필 이미지 URL
-	private int itemCount;         // 포함 작품 수
-	private int likeCount;         // 좋아요 수
-	private boolean likedByCurrentMember; // 현재 회원의 좋아요 여부
-	private int commentCount;      // 코멘트 수
-	private String previewPosterUrl1; // 목록 대표 포스터 URL 1
-	private String previewPosterUrl2; // 목록 대표 포스터 URL 2
-	private String previewPosterUrl3; // 목록 대표 포스터 URL 3
-	private String previewPosterUrl4; // 목록 대표 포스터 URL 4
-	private String previewPosterUrl5; // 목록 대표 포스터 URL 5
+	private int collectionId;              // 컬렉션 번호
+	private int memberId;                  // 작성 회원 번호
+	private String title;                  // 컬렉션 제목
+	private String description;            // 컬렉션 설명
+	private String isPublic;               // 공개 여부(Y: 공개, N: 비공개)
+	private String createdDt;              // 생성 일시
+	private String updatedDt;              // 최종 수정 일시
+	private String nickname;               // 작성자 닉네임
+	private String profileImgUrl;          // 작성자 프로필 이미지 URL
+	private int itemCount;                 // 포함 작품 수
+	private int likeCount;                 // 좋아요 수
+	private boolean likedByCurrentMember;  // 현재 회원의 좋아요 여부
+	private int commentCount;              // 코멘트 수
+	private String previewPosterUrl1;      // 목록 대표 포스터 URL 1
+	private String previewPosterUrl2;      // 목록 대표 포스터 URL 2
+	private String previewPosterUrl3;      // 목록 대표 포스터 URL 3
+	private String previewPosterUrl4;      // 목록 대표 포스터 URL 4
+	private String previewPosterUrl5;      // 목록 대표 포스터 URL 5
 
 	public CollectionVO() {
 		super();
@@ -203,13 +203,23 @@ public class CollectionVO {
 
 	@Override
 	public String toString() {
-		return "CollectionVO [collectionId=" + collectionId + ", memberId=" + memberId + ", title=" + title
-				+ ", description=" + description + ", isPublic=" + isPublic + ", createdDt=" + createdDt
-				+ ", updatedDt=" + updatedDt + ", nickname=" + nickname + ", profileImgUrl=" + profileImgUrl
-				+ ", itemCount=" + itemCount + ", likeCount=" + likeCount + ", likedByCurrentMember="
-				+ likedByCurrentMember + ", commentCount=" + commentCount + ", previewPosterUrl1="
-				+ previewPosterUrl1 + ", previewPosterUrl2=" + previewPosterUrl2
-				+ ", previewPosterUrl3=" + previewPosterUrl3 + ", previewPosterUrl4=" + previewPosterUrl4
+		return "CollectionVO [collectionId=" + collectionId
+				+ ", memberId=" + memberId
+				+ ", title=" + title
+				+ ", description=" + description
+				+ ", isPublic=" + isPublic
+				+ ", createdDt=" + createdDt
+				+ ", updatedDt=" + updatedDt
+				+ ", nickname=" + nickname
+				+ ", profileImgUrl=" + profileImgUrl
+				+ ", itemCount=" + itemCount
+				+ ", likeCount=" + likeCount
+				+ ", likedByCurrentMember=" + likedByCurrentMember
+				+ ", commentCount=" + commentCount
+				+ ", previewPosterUrl1=" + previewPosterUrl1
+				+ ", previewPosterUrl2=" + previewPosterUrl2
+				+ ", previewPosterUrl3=" + previewPosterUrl3
+				+ ", previewPosterUrl4=" + previewPosterUrl4
 				+ ", previewPosterUrl5=" + previewPosterUrl5 + "]";
 	}
 }

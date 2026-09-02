@@ -1,28 +1,32 @@
 /**
  * Modification History
- * 2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 및 포스터 적용
- * 2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 연결·작품 평균 별점 적용
- * 2026. 8. 31. jinyoung - 컬렉션 작품 카드를 영화 상세 화면과 연결
- * 2026. 9. 01. jinyoung - D-01·D-05 본문 UI와 상태 피드백 반영
- * 2026. 9. 01. jinyoung - 상세 상단 작품 포스터 콜라주 반영
- * 2026. 9. 01. jinyoung - 상세 통합 블록·보기 전환·더보기·댓글 이동 적용
- * 2026. 9. 02. jinyoung - 상세 반응형·소유자 액션·평균 및 내 평가 표시 개선
+ * 2026. 8. 29. jinyoung - 상세 조회·소유자 작업·좋아요 적용
+ * 2026. 8. 31. jinyoung - 링크 복사·댓글 연결·작품 평가 정보 적용
+ * 2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
+ * 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
  */
-// 공통 layout을 사용하므로 담당 본문 루트의 값을 상세 조회와 권한 표시에 사용한다.
+const ITEMS_PER_PAGE = 12;
+const COPY_FEEDBACK_DURATION_MS = 2400;
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+const TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
+
+// 공통 레이아웃의 본문 루트에 서버가 기록한 식별값을 사용한다.
 const detailPage = document.querySelector("#collectionDetailPage");
 const collectionId = Number(detailPage.dataset.collectionId);
 const currentMemberId = Number(detailPage.dataset.currentMemberId || 0);
+
+let currentItemPage = 0;
+let totalItemCount = 0;
 let isOwner = false;
 let isLiked = false;
 let isPublicCollection = false;
-let currentItemPage = 0;
-let totalItemCount = 0;
-let currentViewMode = "grid";
 let copyFeedbackTimer = null;
 
 document.addEventListener("DOMContentLoaded", initializeDetail);
 
+/** 상세 화면 이벤트를 연결하고 컬렉션과 작품을 차례로 불러온다. */
 async function initializeDetail() {
+    document.querySelector("#collectionBackLink").addEventListener("click", navigateBack);
     document.querySelector("#editLink").href = `/collections/${collectionId}/edit`;
     document.querySelector("#confirmDeleteButton").addEventListener("click", deleteCollection);
     document.querySelector("#likeButton").addEventListener("click", toggleLike);
@@ -39,8 +43,25 @@ async function initializeDetail() {
     document.querySelector("#loadMoreButton").addEventListener("click", loadMoreItems);
 
     // 소유자 여부를 먼저 확정한 뒤 상세 화면의 버튼 노출을 결정한다.
-    await loadCollection();
+    const collectionLoaded = await loadCollection();
+    if (!collectionLoaded) {
+        return;
+    }
     await loadItems(1);
+}
+
+// 상세 정보와 사용자 동작
+
+/** 방문 기록이 있으면 실제 이전 페이지로, 없으면 컬렉션 목록으로 이동한다. */
+function navigateBack(event) {
+    event.preventDefault();
+
+    if (window.history.length > 1) {
+        window.history.back();
+        return;
+    }
+
+    window.location.href = event.currentTarget.href;
 }
 
 /** 컬렉션 제목, 설명, 작성자와 집계 정보를 화면에 표시한다. */
@@ -78,8 +99,11 @@ async function loadCollection() {
         } else {
             renderLikeButton();
         }
+
+        return true;
     } catch (error) {
         showDetailError(errorMessage, error.message);
+        return false;
     }
 }
 
@@ -117,6 +141,7 @@ async function copyCollectionLink() {
     }
 }
 
+/** 링크 복사 결과를 잠시 표시한다. */
 function showCopyFeedback(message) {
     const feedback = document.querySelector("#copyLinkFeedback");
     feedback.textContent = message;
@@ -125,7 +150,7 @@ function showCopyFeedback(message) {
     window.requestAnimationFrame(() => feedback.classList.add("is-visible"));
     copyFeedbackTimer = window.setTimeout(() => {
         feedback.classList.remove("is-visible");
-    }, 2400);
+    }, COPY_FEEDBACK_DURATION_MS);
 }
 
 /** Clipboard API를 사용할 수 없는 환경을 위한 복사 대체 처리다. */
@@ -153,6 +178,7 @@ async function loadLikeStatus() {
     renderLikeButton();
 }
 
+/** 현재 좋아요 상태를 버튼 아이콘과 접근성 속성에 반영한다. */
 function renderLikeButton() {
     const likeButton = document.querySelector("#likeButton");
     const icon = likeButton.querySelector("i");
@@ -202,6 +228,8 @@ async function toggleLike() {
     }
 }
 
+// 작품 목록과 보기 방식
+
 /** 지정한 페이지의 컬렉션 작품을 조회해 기존 목록 뒤에 이어 붙인다. */
 async function loadItems(pageNo) {
     const errorMessage = document.querySelector("#errorMessage");
@@ -225,7 +253,7 @@ async function loadItems(pageNo) {
     try {
         const data = await requestGet(`/api/collections/${collectionId}/items`, {
             pageNo,
-            pageSize: 12
+            pageSize: ITEMS_PER_PAGE
         });
 
         const items = data.items || [];
@@ -248,6 +276,7 @@ async function loadItems(pageNo) {
     }
 }
 
+/** 첫 작품 목록의 포스터로 상세 상단 콜라주를 만든다. */
 function renderDetailCover(items) {
     const cover = document.querySelector("#collectionDetailCover");
     const fallback = document.querySelector("#collectionDetailCoverFallback");
@@ -273,6 +302,8 @@ function renderDetailCover(items) {
         poster.addEventListener("error", () => {
             poster.remove();
             const remainingPosters = collage.querySelectorAll("img").length;
+            collage.className =
+                `collection-detail-poster-collage poster-count-${remainingPosters || 1}`;
             if (remainingPosters === 0) {
                 collage.remove();
                 cover.classList.remove("has-posters");
@@ -286,11 +317,12 @@ function renderDetailCover(items) {
     cover.append(collage);
 }
 
-function renderItems(items, append) {
+/** 작품 목록을 기존 목록에 추가하거나 새로 그린다. */
+function renderItems(items, appendResults) {
     const itemList = document.querySelector("#itemList");
     const itemEmpty = document.querySelector("#itemEmpty");
 
-    if (!append) {
+    if (!appendResults) {
         itemList.replaceChildren();
     }
     document.querySelector("#itemLoading").classList.add("d-none");
@@ -345,21 +377,23 @@ function renderItems(items, append) {
 
 /** 현재까지 불러온 작품 뒤에 다음 12개를 추가한다. */
 function loadMoreItems() {
-    if (currentItemPage * 12 >= totalItemCount) {
+    if (currentItemPage * ITEMS_PER_PAGE >= totalItemCount) {
         return;
     }
 
     loadItems(currentItemPage + 1);
 }
 
+/** 다음 작품 페이지가 있을 때만 더보기 버튼을 표시한다. */
 function updateLoadMoreButton() {
     const loadMoreButton = document.querySelector("#loadMoreButton");
-    const hasMore = currentItemPage * 12 < totalItemCount;
+    const hasMore = currentItemPage * ITEMS_PER_PAGE < totalItemCount;
 
     restoreLoadMoreButton();
     loadMoreButton.classList.toggle("d-none", !hasMore);
 }
 
+/** 더보기 버튼을 기본 상태로 되돌린다. */
 function restoreLoadMoreButton() {
     const loadMoreButton = document.querySelector("#loadMoreButton");
     loadMoreButton.disabled = false;
@@ -372,21 +406,25 @@ function setMovieView(viewMode) {
     const gridViewButton = document.querySelector("#gridViewButton");
     const listViewButton = document.querySelector("#listViewButton");
 
-    currentViewMode = viewMode === "list" ? "list" : "grid";
-    itemList.classList.toggle("is-grid-view", currentViewMode === "grid");
-    itemList.classList.toggle("is-list-view", currentViewMode === "list");
-    gridViewButton.classList.toggle("is-active", currentViewMode === "grid");
-    listViewButton.classList.toggle("is-active", currentViewMode === "list");
-    gridViewButton.setAttribute("aria-pressed", String(currentViewMode === "grid"));
-    listViewButton.setAttribute("aria-pressed", String(currentViewMode === "list"));
+    const normalizedViewMode = viewMode === "list" ? "list" : "grid";
+    const isGridView = normalizedViewMode === "grid";
+
+    itemList.classList.toggle("is-grid-view", isGridView);
+    itemList.classList.toggle("is-list-view", !isGridView);
+    gridViewButton.classList.toggle("is-active", isGridView);
+    listViewButton.classList.toggle("is-active", !isGridView);
+    gridViewButton.setAttribute("aria-pressed", String(isGridView));
+    listViewButton.setAttribute("aria-pressed", String(!isGridView));
 }
 
+/** 댓글 입력 영역으로 이동하고 키보드 초점을 맞춘다. */
 function scrollToComments() {
     const comments = document.querySelector("#collectionComments");
     comments.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => comments.focus({ preventScroll: true }), 450);
 }
 
+/** 작성자 이름과 프로필 이미지를 표시한다. */
 function renderCollectionAuthor(collection) {
     const nickname = collection.nickname || `회원 ${collection.memberId}`;
     const avatar = document.querySelector("#collectionAuthorAvatar");
@@ -411,12 +449,14 @@ function renderCollectionAuthor(collection) {
     avatar.append(image);
 }
 
+/** 수정 일시를 상대 시간 문구와 time 속성으로 표시한다. */
 function renderUpdatedDate(dateValue) {
     const dateElement = document.querySelector("#collectionDate");
     dateElement.textContent = formatRelativeUpdate(dateValue);
     dateElement.dateTime = dateValue ? dateValue.replace(" ", "T") : "";
 }
 
+/** 저장된 날짜를 오늘·일·주·월·년 단위의 상대 시간으로 바꾼다. */
 function formatRelativeUpdate(dateValue) {
     if (!dateValue) {
         return "";
@@ -436,7 +476,9 @@ function formatRelativeUpdate(dateValue) {
     );
     const elapsedDays = Math.max(
         0,
-        Math.floor((today.getTime() - updatedDay.getTime()) / 86400000)
+        Math.floor(
+            (today.getTime() - updatedDay.getTime()) / MILLISECONDS_PER_DAY
+        )
     );
 
     if (elapsedDays === 0) {
@@ -470,6 +512,9 @@ function formatRelativeUpdate(dateValue) {
     return `${Math.max(1, elapsedYears)}년 전 업데이트`;
 }
 
+// 삭제와 공통 표시 도우미
+
+/** 포스터가 없는 작품에 사용할 기본 영역을 만든다. */
 function createDetailPosterPlaceholder() {
     const placeholder = document.createElement("div");
     const icon = document.createElement("i");
@@ -482,6 +527,7 @@ function createDetailPosterPlaceholder() {
     return placeholder;
 }
 
+/** 삭제 요청이 성공하면 회원 컬렉션 목록으로 이동한다. */
 async function deleteCollection() {
     const errorMessage = document.querySelector("#errorMessage");
     const deleteButton = document.querySelector("#confirmDeleteButton");
@@ -502,6 +548,7 @@ async function deleteCollection() {
     }
 }
 
+/** 공통 요청 함수로 DELETE 요청을 보낸다. */
 function requestDelete(url) {
     // 공통 requestFetch를 사용하면 204 응답과 오류 JSON 처리를 다시 작성하지 않아도 된다.
     return requestFetch(url, {
@@ -513,12 +560,14 @@ function requestDelete(url) {
     });
 }
 
+/** 상세 오류를 표시하고 화면 상단으로 이동한다. */
 function showDetailError(element, message) {
     element.textContent = message;
     element.classList.remove("d-none");
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+/** 상세 오류 메시지를 숨긴다. */
 function hideDetailError(element) {
     element.textContent = "";
     element.classList.add("d-none");
@@ -530,13 +579,14 @@ function resolveDetailPosterUrl(posterUrl) {
         return posterUrl;
     }
 
-    return `https://image.tmdb.org/t/p/w500${posterUrl}`;
+    return `${TMDB_POSTER_BASE_URL}${posterUrl}`;
 }
 
+/** 프로필 이미지 경로를 현재 사이트 기준의 절대 URL로 바꾼다. */
 function resolveCollectionProfileUrl(profileImgUrl) {
     try {
         return new URL(profileImgUrl, `${window.location.origin}/`).href;
-    } catch (error) {
+    } catch {
         return profileImgUrl;
     }
 }

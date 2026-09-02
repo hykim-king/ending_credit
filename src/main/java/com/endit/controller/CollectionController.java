@@ -84,21 +84,14 @@ public class CollectionController {
 			@RequestParam(defaultValue = "") String searchDiv,
 			@RequestParam(defaultValue = "") String searchWord) {
 
-		DTO param = new DTO();
-		param.setPageNo(pageNo);
-		param.setPageSize(pageSize);
-		param.setSearchDiv(searchDiv);
-		param.setSearchWord(searchWord);
+		DTO param = createSearchParam(
+				pageNo, pageSize, searchDiv, searchWord);
 
 		OptionalLong currentMemberId = currentMemberProvider.findCurrentMemberId();
 		List<CollectionVO> items = collectionService.retrieve(
 				param, currentMemberId);
 
-		// 목록(items)과 페이징 정보(page)를 한 JSON 응답으로 전달한다.
-		// LinkedHashMap은 디버깅할 때 응답 키 순서를 일정하게 유지하기 위해 사용한다.
-		Map<String, Object> response = new LinkedHashMap<>();
-		response.put("items", items);
-		response.put("page", param);
+		Map<String, Object> response = createPageResponse(items, param);
 		response.put("currentMemberId", currentMemberId.orElse(0));
 
 		return ResponseEntity.ok(response);
@@ -122,22 +115,15 @@ public class CollectionController {
 			@RequestParam(defaultValue = "") String searchDiv,
 			@RequestParam(defaultValue = "") String searchWord) {
 
-		DTO param = new DTO();
-		param.setPageNo(pageNo);
-		param.setPageSize(pageSize);
-		param.setSearchDiv(searchDiv);
-		param.setSearchWord(searchWord);
+		DTO param = createSearchParam(
+				pageNo, pageSize, searchDiv, searchWord);
 
 		List<CollectionVO> items = collectionService.retrieveByMember(
 				memberId,
 				param,
 				currentMemberProvider.findCurrentMemberId());
 
-		Map<String, Object> response = new LinkedHashMap<>();
-		response.put("items", items);
-		response.put("page", param);
-
-		return ResponseEntity.ok(response);
+		return ResponseEntity.ok(createPageResponse(items, param));
 	}
 
 	/**
@@ -261,6 +247,34 @@ public class CollectionController {
 		return ResponseEntity
 				.status(HttpStatus.NOT_FOUND)
 				.body(message);
+	}
+
+	/** 검색 및 페이징 요청값을 Service 입력 객체로 변환한다. */
+	private static DTO createSearchParam(
+			int pageNo,
+			int pageSize,
+			String searchDiv,
+			String searchWord) {
+
+		DTO param = new DTO();
+		param.setPageNo(pageNo);
+		param.setPageSize(pageSize);
+		param.setSearchDiv(searchDiv);
+		param.setSearchWord(searchWord);
+
+		return param;
+	}
+
+	/** 목록과 페이징 정보를 일정한 키 순서로 응답한다. */
+	private static Map<String, Object> createPageResponse(
+			List<CollectionVO> items,
+			DTO page) {
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("page", page);
+
+		return response;
 	}
 
 }
