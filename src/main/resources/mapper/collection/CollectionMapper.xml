@@ -5,26 +5,34 @@
 
 <!--
 Modification History
-2026. 8. 29. jinyoung - 전체 공개 목록과 U-05 본인·타인 공개 범위 조회 추가
+2026. 8. 29. jinyoung - 컬렉션 공개 범위 목록 조회 추가
+2026. 9. 01. jinyoung - 대표 포스터 및 작성자 프로필 조회 추가
+2026. 9. 02. jinyoung - 내 비공개·좋아요 상태 반영 및 빈 컬렉션 제외
 -->
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
 
-    <!-- searchDiv: 10(제목), 20(회원 번호) -->
+    <!-- 공통 검색 조건: 10(제목), 20(회원 번호) -->
+    <sql id="collectionSearchCondition">
+        <if test="searchWord != null and searchWord != ''">
+            <choose>
+                <when test="searchDiv == '10'">
+                    AND C.TITLE LIKE '%' || #{searchWord} || '%'
+                </when>
+                <when test="searchDiv == '20'">
+                    AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                </when>
+            </choose>
+        </if>
+    </sql>
+
     <sql id="collectionWhere">
         <where>
-            <if test="searchWord != null and searchWord != ''">
-                <choose>
-                    <when test="searchDiv == '10'">
-                        AND C.TITLE LIKE '%' || #{searchWord} || '%'
-                    </when>
-                    <when test="searchDiv == '20'">
-                        AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
-                    </when>
-                </choose>
-            </if>
+            <include refid="collectionSearchCondition"/>
         </where>
     </sql>
+
+    <!-- 기본 등록·조회·수정·삭제 -->
 
     <!-- 컬렉션 등록 -->
     <insert id="doSave" parameterType="CollectionVO">
@@ -59,6 +67,7 @@ Modification History
                TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
                TO_CHAR(C.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
                M.NICKNAME,
+               M.PROFILE_IMG_URL,
                NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
                NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT
@@ -106,6 +115,7 @@ Modification History
          WHERE COLLECTION_ID = #{collectionId}
     </delete>
 
+    <!-- 공통 WorkDiv 목록 조회 -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="CollectionVO">
         SELECT COLLECTION_ID,
                MEMBER_ID,
@@ -115,6 +125,7 @@ Modification History
                CREATED_DT,
                UPDATED_DT,
                NICKNAME,
+               PROFILE_IMG_URL,
                ITEM_COUNT,
                LIKE_COUNT,
                COMMENT_COUNT
@@ -127,6 +138,7 @@ Modification History
                    TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
                    TO_CHAR(NVL(C.UPDATED_DT, C.CREATED_DT), 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
                    M.NICKNAME,
+                   M.PROFILE_IMG_URL,
                    NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                    NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
                    NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
@@ -167,6 +179,8 @@ Modification History
          ORDER BY RNUM
     </select>
 
+    <!-- 테스트와 공통 Mapper 지원 쿼리 -->
+
     <!-- 컬렉션 전체 삭제 -->
     <delete id="deleteAll">
         DELETE FROM COLLECTION
@@ -184,7 +198,9 @@ Modification History
         <include refid="collectionWhere"/>
     </select>
 
-    <!-- 전체 목록은 공개만, U-05는 대상 회원 본인일 때만 비공개까지 노출한다. -->
+    <!-- 화면 목록 공개 범위 조회 -->
+
+    <!-- 전체 목록은 공개와 현재 회원 소유 컬렉션을, U-05는 본인일 때 비공개까지 노출한다. -->
     <sql id="visibleCollectionWhere">
         <where>
             <choose>
@@ -195,23 +211,28 @@ Modification History
                         OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
                     )
                 </when>
+                <when test="currentMemberId != null">
+                    AND (
+                        C.IS_PUBLIC = 'Y'
+                        OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                    )
+                </when>
                 <otherwise>
                     AND C.IS_PUBLIC = 'Y'
                 </otherwise>
             </choose>
-            <if test="searchWord != null and searchWord != ''">
-                <choose>
-                    <when test="searchDiv == '10'">
-                        AND C.TITLE LIKE '%' || #{searchWord} || '%'
-                    </when>
-                    <when test="searchDiv == '20'">
-                        AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
-                    </when>
-                </choose>
+            <if test="targetMemberId == null">
+                AND EXISTS (
+                    SELECT 1
+                      FROM COLLECTION_ITEM VISIBLE_CI
+                     WHERE VISIBLE_CI.COLLECTION_ID = C.COLLECTION_ID
+                )
             </if>
+            <include refid="collectionSearchCondition"/>
         </where>
     </sql>
 
+    <!-- 공개 범위와 대표 포스터를 반영한 컬렉션 목록 -->
     <select id="retrieveVisible" parameterType="CollectionQueryParam" resultType="CollectionVO">
         SELECT COLLECTION_ID,
                MEMBER_ID,
@@ -221,9 +242,16 @@ Modification History
                CREATED_DT,
                UPDATED_DT,
                NICKNAME,
+               PROFILE_IMG_URL,
                ITEM_COUNT,
                LIKE_COUNT,
-               COMMENT_COUNT
+               LIKED_BY_CURRENT_MEMBER,
+               COMMENT_COUNT,
+               PREVIEW_POSTER_URL1,
+               PREVIEW_POSTER_URL2,
+               PREVIEW_POSTER_URL3,
+               PREVIEW_POSTER_URL4,
+               PREVIEW_POSTER_URL5
           FROM (
             SELECT C.COLLECTION_ID,
                    C.MEMBER_ID,
@@ -233,9 +261,30 @@ Modification History
                    TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
                    TO_CHAR(NVL(C.UPDATED_DT, C.CREATED_DT), 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
                    M.NICKNAME,
+                   M.PROFILE_IMG_URL,
                    NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                    NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
+                   <choose>
+                       <when test="currentMemberId != null">
+                           CASE
+                               WHEN EXISTS (
+                                   SELECT 1
+                                     FROM COLLECTION_LIKE MY_CL
+                                    WHERE MY_CL.COLLECTION_ID = C.COLLECTION_ID
+                                      AND MY_CL.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                               )
+                               THEN 1
+                               ELSE 0
+                           END
+                       </when>
+                       <otherwise>0</otherwise>
+                   </choose> AS LIKED_BY_CURRENT_MEMBER,
                    NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
+                   CP.PREVIEW_POSTER_URL1,
+                   CP.PREVIEW_POSTER_URL2,
+                   CP.PREVIEW_POSTER_URL3,
+                   CP.PREVIEW_POSTER_URL4,
+                   CP.PREVIEW_POSTER_URL5,
                    ROW_NUMBER() OVER (
                        ORDER BY NVL(C.UPDATED_DT, C.CREATED_DT) DESC, C.COLLECTION_ID DESC
                    ) AS RNUM
@@ -264,6 +313,34 @@ Modification History
                      GROUP BY COLLECTION_ID
               ) UC
                 ON UC.COLLECTION_ID = C.COLLECTION_ID
+              LEFT JOIN (
+                    SELECT COLLECTION_ID,
+                           MAX(CASE WHEN POSTER_ORDER = 1 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL1,
+                           MAX(CASE WHEN POSTER_ORDER = 2 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL2,
+                           MAX(CASE WHEN POSTER_ORDER = 3 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL3,
+                           MAX(CASE WHEN POSTER_ORDER = 4 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL4,
+                           MAX(CASE WHEN POSTER_ORDER = 5 THEN POSTER_URL END)
+                               AS PREVIEW_POSTER_URL5
+                      FROM (
+                            SELECT CI.COLLECTION_ID,
+                                   C.POSTER_URL,
+                                   ROW_NUMBER() OVER (
+                                       PARTITION BY CI.COLLECTION_ID
+                                       ORDER BY CI.ADDED_DT DESC, CI.CONTENT_ID DESC
+                                   ) AS POSTER_ORDER
+                              FROM COLLECTION_ITEM CI
+                             INNER JOIN CONTENT C
+                                ON C.CONTENT_ID = CI.CONTENT_ID
+                             WHERE C.POSTER_URL IS NOT NULL
+                      )
+                     WHERE POSTER_ORDER &lt;= 5
+                     GROUP BY COLLECTION_ID
+              ) CP
+                ON CP.COLLECTION_ID = C.COLLECTION_ID
             <include refid="visibleCollectionWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
@@ -273,6 +350,7 @@ Modification History
          ORDER BY RNUM
     </select>
 
+    <!-- 공개 범위를 반영한 컬렉션 전체 건수 -->
     <select id="countVisible" parameterType="CollectionQueryParam" resultType="int">
         SELECT COUNT(*)
           FROM COLLECTION C

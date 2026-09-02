@@ -1,111 +1,176 @@
 <!DOCTYPE html>
 <!--
 Modification History
-2026. 8. 29. jinyoung - D-01 조회 전용·소유자 관리·좋아요 정책 적용
-2026. 8. 31. jinyoung - 공개 링크 복사·코멘트 화면 연결·작품 평균 별점 적용
+2026. 8. 29. jinyoung - 상세 조회·소유자 작업·좋아요 적용
+2026. 8. 31. jinyoung - 링크 복사·댓글 연결·작품 평가 정보 적용
+2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
+2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
 -->
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta th:if="${_csrf != null}" name="_csrf" th:content="${_csrf.token}">
-<meta th:if="${_csrf != null}" name="_csrf_header" th:content="${_csrf.headerName}">
-<title>컬렉션 상세</title>
-<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
+    <title>컬렉션 상세</title>
+    <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-detail.css}">
+    <script th:src="@{/assets/js/collection/collection-detail.js}" defer></script>
 </head>
-<!-- 서버는 조회 키와 화면 권한 판별값만 넣고 실제 상세 데이터는 REST API로 가져온다. -->
-<body class="bg-light"
-      th:attr="data-collection-id=${collectionId},data-current-member-id=${currentMemberId}">
-    <header class="border-bottom bg-white">
-        <div class="container py-3 d-flex justify-content-between align-items-center">
-            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/collections}">
-                Ending Credit
-            </a>
-            <a class="btn btn-outline-dark" th:href="@{/collections}">목록</a>
-        </div>
-    </header>
+<body>
+<div layout:fragment="content"
+     id="collectionDetailPage"
+     class="collection-page collection-detail-page"
+     th:attr="data-collection-id=${collectionId},data-current-member-id=${currentMemberId}">
+    <!-- 이전 화면과 오류 안내 -->
+    <a id="collectionBackLink" class="collection-back-link" th:href="@{/collections}">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        이전으로
+    </a>
 
-    <main class="container py-4">
-        <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
 
-        <!-- GET /api/collections/{id} 결과가 채워지는 컬렉션 기본 정보 영역 -->
-        <section class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-4">
-                <div class="d-flex flex-column flex-md-row justify-content-between gap-3">
-                    <div>
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <h1 id="collectionTitle" class="h2 mb-0">컬렉션</h1>
-                            <span id="publicBadge" class="badge text-bg-secondary"></span>
-                        </div>
-                        <p id="collectionDescription" class="text-secondary mb-3"></p>
-                        <div class="small text-secondary">
-                            <span id="collectionAuthor"></span>
-                            <span class="mx-1">·</span>
-                            <span id="collectionDate"></span>
-                        </div>
-                    </div>
-                    <div id="collectionActions" class="d-flex flex-wrap align-items-start gap-2">
-                        <button id="likeButton" class="btn btn-outline-danger d-none"
-                                type="button" aria-pressed="false">좋아요</button>
-                        <button id="copyLinkButton" class="btn btn-outline-secondary d-none"
-                                type="button">링크 복사</button>
-                        <a id="commentsLink" class="btn btn-outline-secondary" href="#">
-                            코멘트 보기
-                        </a>
-                        <div id="ownerActions" class="d-flex gap-2 d-none">
-                            <a id="editLink" class="btn btn-outline-dark" href="#">수정</a>
-                            <button class="btn btn-outline-danger" type="button"
-                                    data-bs-toggle="modal" data-bs-target="#deleteCollectionModal">
-                                삭제
-                            </button>
-                        </div>
-                    </div>
+    <!-- 컬렉션 정보 -->
+    <div class="collection-detail-block">
+        <section class="collection-detail-hero" aria-labelledby="collectionTitle">
+            <!-- 표지와 작성자 작업 -->
+            <div id="collectionDetailCover" class="collection-detail-cover">
+                <div id="collectionDetailCoverFallback" class="collection-detail-cover-fallback" aria-hidden="true">
+                    <i class="bi bi-collection-play"></i>
                 </div>
 
-                <p id="copyLinkFeedback" class="small text-success mt-2 mb-0 d-none"
-                   role="status" aria-live="polite">링크를 복사했습니다.</p>
-
-                <div class="mt-3 d-flex gap-3 small text-secondary">
-                    <span>작품 <strong id="itemCount">0</strong></span>
-                    <span>좋아요 <strong id="likeCount">0</strong></span>
-                    <span>댓글 <strong id="commentCount">0</strong></span>
+                <div class="collection-cover-author">
+                    <span id="collectionAuthorAvatar" class="collection-cover-avatar collection-cover-avatar-fallback"
+                          aria-hidden="true">
+                        <i class="bi bi-person-fill"></i>
+                    </span>
+                    <strong id="collectionAuthor">작성자</strong>
                 </div>
+
+                <span id="privateBadge" class="collection-private-badge d-none">
+                    <i class="bi bi-lock-fill" aria-hidden="true"></i>
+                    비공개
+                </span>
+                <div id="ownerActions" class="collection-owner-actions d-none">
+                    <a id="editLink" class="collection-owner-action" href="#">
+                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                        <span>수정</span>
+                    </a>
+                    <button class="collection-owner-action collection-danger-action" type="button" data-bs-toggle="modal"
+                            data-bs-target="#deleteCollectionModal">
+                        <i class="bi bi-trash3" aria-hidden="true"></i>
+                        <span>삭제</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="collection-detail-heading">
+                <h1 id="collectionTitle" class="collection-detail-title">컬렉션</h1>
+                <p id="collectionDescription" class="collection-detail-description">컬렉션 정보를 불러오고 있습니다.</p>
+                <div class="collection-detail-heading-meta">
+                    <time id="collectionDate" datetime=""></time>
+                </div>
+            </div>
+
+            <!-- 좋아요·댓글·링크 -->
+            <div class="collection-detail-stats" aria-label="컬렉션 활동">
+                <button id="likeButton" class="collection-stat-action" type="button" aria-pressed="false">
+                    <i class="bi bi-heart" aria-hidden="true"></i>
+                    <span id="likeButtonLabel">좋아요</span>
+                    <strong id="likeCount">0</strong>
+                </button>
+                <button id="commentsLink" class="collection-stat-action" type="button">
+                    <i class="bi bi-chat" aria-hidden="true"></i>
+                    <span>댓글</span>
+                    <strong id="commentCount">0</strong>
+                </button>
+                <button id="copyLinkButton" class="collection-stat-action" type="button">
+                    <i class="bi bi-link-45deg" aria-hidden="true"></i>
+                    <span>링크 복사</span>
+                </button>
             </div>
         </section>
 
-        <section>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 class="h4 mb-0">포함된 작품</h2>
-                <span id="itemResultCount" class="text-secondary small">0개</span>
+        <!-- 담긴 작품 -->
+        <section class="collection-movies-section" aria-labelledby="collectionMoviesHeading">
+            <header class="collection-movies-heading">
+                <h2 id="collectionMoviesHeading" class="collection-section-title mb-0">담긴 작품 <span id="itemResultCount">0</span></h2>
+                <div class="collection-view-toggle" aria-label="작품 보기 방식">
+                    <button id="gridViewButton" class="collection-view-button is-active" type="button"
+                            aria-label="포스터형으로 보기"
+                            aria-pressed="true">
+                        <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
+                    </button>
+                    <button id="listViewButton" class="collection-view-button" type="button"
+                            aria-label="리스트형으로 보기"
+                            aria-pressed="false">
+                        <i class="bi bi-list-ul" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </header>
+
+            <div id="itemLoading" class="collection-movie-grid" role="status" aria-live="polite"
+                 aria-label="컬렉션 작품을 불러오는 중입니다">
+                <div class="collection-movie-skeleton"></div>
+                <div class="collection-movie-skeleton"></div>
+                <div class="collection-movie-skeleton"></div>
+                <div class="collection-movie-skeleton"></div>
+                <div class="collection-movie-skeleton"></div>
             </div>
 
-            <!-- GET /api/collections/{id}/items 결과 카드가 JavaScript로 생성된다. -->
-            <div id="itemList" class="row g-3" aria-live="polite"></div>
+            <div id="itemList" class="collection-movie-grid is-grid-view d-none" aria-live="polite"></div>
 
-            <nav class="mt-4" aria-label="컬렉션 작품 페이지">
-                <ul id="itemPagination" class="pagination justify-content-center"></ul>
-            </nav>
+            <div id="itemEmpty" class="collection-empty-state d-none">
+                <i class="bi bi-film collection-empty-icon" aria-hidden="true"></i>
+                <strong>아직 담긴 작품이 없습니다.</strong>
+                <span>작성자가 작품을 추가하면 이곳에 표시됩니다.</span>
+            </div>
+
+            <div class="collection-load-more-wrap">
+                <button id="loadMoreButton" class="collection-load-more-button d-none" type="button">
+                    <span id="loadMoreLabel">더보기</span>
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                </button>
+            </div>
         </section>
-    </main>
 
-    <!-- 컬렉션 전체 삭제 전에 사용자의 최종 확인을 받는 Bootstrap 모달 -->
-    <div class="modal fade" id="deleteCollectionModal" tabindex="-1"
-         aria-labelledby="deleteCollectionModalLabel" aria-hidden="true">
+        <!-- 댓글 안내 -->
+        <section id="collectionComments" class="collection-comments-section"
+                 aria-labelledby="collectionCommentsHeading"
+                 tabindex="-1">
+            <h2 id="collectionCommentsHeading" class="collection-section-title">댓글 <span id="commentSectionCount">0</span></h2>
+            <div class="collection-comment-composer">
+                <label class="visually-hidden" for="collectionCommentInput">컬렉션 댓글</label>
+                <textarea id="collectionCommentInput" rows="1" placeholder="컬렉션에 댓글을 남겨보세요." disabled></textarea>
+                <button type="button" disabled>
+                    <i class="bi bi-chat" aria-hidden="true"></i>
+                    등록
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 링크 복사 안내 -->
+    <p id="copyLinkFeedback" class="collection-copy-feedback" role="status" aria-live="polite">링크를 복사했어요</p>
+
+    <!-- 삭제 확인 모달 -->
+    <div class="modal fade" id="deleteCollectionModal" tabindex="-1" aria-label="컬렉션 삭제 확인"
+         aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="modal-title fs-5" id="deleteCollectionModalLabel">컬렉션 삭제</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                            aria-label="닫기"></button>
-                </div>
+            <div class="modal-content collection-delete-modal">
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
+                        aria-label="닫기"></button>
                 <div class="modal-body">
-                    컬렉션을 삭제하면 되돌릴 수 없습니다. 삭제하시겠습니까?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">취소</button>
-                    <button id="confirmDeleteButton" type="button"
-                            class="btn btn-danger">삭제</button>
+                    <div class="collection-delete-icon" aria-hidden="true">
+                        <i class="bi bi-trash3"></i>
+                    </div>
+                    <p class="collection-delete-question">해당 컬렉션을 삭제할까요?</p>
+                    <p class="collection-delete-description">컬렉션에 기록된 좋아요와 댓글 기록이 모두 삭제되며 되돌릴 수 없습니다.</p>
+                    <div class="collection-delete-actions">
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel"
+                                data-bs-dismiss="modal">취소</button>
+                        <button id="confirmDeleteButton" type="button"
+                                class="btn btn-danger collection-delete-button">삭제</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -115,5 +180,6 @@ Modification History
     <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
     <script th:src="@{/assets/js/collection/collection-detail.js}"></script>
     <script th:src="@{/assets/js/collection/collection-like.js}"></script>
+</div>
 </body>
 </html>

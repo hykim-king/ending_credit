@@ -1,8 +1,11 @@
 package com.endit.controller;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,10 +20,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
+import com.endit.domain.CollectionLikeItemVO;
 import com.endit.domain.MemberVO;
+import com.endit.domain.PersonLikeVO;
 import com.endit.security.LoginMemberHelper;
+import com.endit.service.CollectionLikeService;
 import com.endit.service.MemberService;
+import com.endit.service.PersonLikeService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -50,16 +58,27 @@ public class MemberMyPageApiController {
 
 	/** LoginMemberHelper가 비로그인 상태에서 던지는 메시지. 이 값으로 401/409를 가른다. */
 	private static final String LOGIN_REQUIRED = "로그인이 필요합니다.";
+	
+	/** 좋아요 미리보기로 보여줄 개수 */
+	private static final int LIKE_PREVIEW_SIZE = 3;
 
 	private final MemberService memberService;
+	private final PersonLikeService personLikeService;
+	private final CollectionLikeService collectionLikeService;
 
 	/**
 	 * MemberService를 주입받아 Controller 생성
 	 *
 	 * @param memberService 회원 Service
 	 */
-	public MemberMyPageApiController(MemberService memberService) {
+	public MemberMyPageApiController(
+			MemberService memberService,
+			PersonLikeService personLikeService,
+			CollectionLikeService collectionLikeService) {
+	 
 		this.memberService = memberService;
+		this.personLikeService = personLikeService;
+		this.collectionLikeService = collectionLikeService;
 	}
 
 	// ===================== 내 계정 =====================
@@ -286,6 +305,86 @@ public class MemberMyPageApiController {
 
 		return response;
 	}
+	
+	/**
+	 * 내가 좋아한 인물 미리보기.
+	 * 최신순 3명 + 전체 건수. 마이페이지 하단 좋아요 섹션에서 사용.
+	 *
+	 * @return { items: [{personId, nameKo, profileImgUrl}], totalCount }
+	 */
+	@GetMapping("/me/likes/persons")
+	public ResponseEntity<Map<String, Object>> getMyLikedPersons() {
+	 
+		Long memberId = LoginMemberHelper.getMemberId();
+	 
+		log.debug("getMyLikedPersons(memberId={})", memberId);
+	 
+		// 페이징만 세팅 (memberId·정렬은 서비스가 param에 알아서 채움)
+		DTO param = new DTO();
+		param.setPageNo(1);
+		param.setPageSize(LIKE_PREVIEW_SIZE);
+	 
+		// 최신 3명. 서비스가 param.totalCnt 에 전체 건수를 채워준다. (sort는 "latest"만 허용)
+		List<PersonLikeVO> likes =
+				personLikeService.retrieveLikes(memberId.intValue(), param, "latest");
+	 
+		// VO에서 화면에 쓸 필드만 골라 담는다 (toAccountResponse와 동일 방식)
+		List<Map<String, Object>> items = new ArrayList<>();
+	 
+		for (PersonLikeVO like : likes) {
+			Map<String, Object> item = new LinkedHashMap<>();
+			item.put("personId",      like.getPersonId());
+			item.put("nameKo",        like.getNameKo());
+			item.put("profileImgUrl", like.getProfileImageUrl());
+			items.add(item);
+		}
+	 
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items",      items);
+		response.put("totalCount", param.getTotalCnt());
+	 
+		return ResponseEntity.ok(response);
+	}
+	 
+	/**
+	 * 내가 좋아한 컬렉션 미리보기.
+	 * 최신순 3개 + 전체 건수. (썸네일은 DB 준비 후 추가)
+	 *
+	 * 내 좋아요 목록이라 조회자(viewer)는 나 자신 → 내가 좋아요 누른 비공개 컬렉션도 포함된다.
+	 *
+	 * @return { items: [{collectionId, title}], totalCount }
+	 */
+	@GetMapping("/me/likes/collections")
+	public ResponseEntity<Map<String, Object>> getMyLikedCollections() {
+	 
+		Long memberId = LoginMemberHelper.getMemberId();
+	 
+		log.debug("getMyLikedCollections(memberId={})", memberId);
+	 
+		DTO param = new DTO();
+		param.setPageNo(1);
+		param.setPageSize(LIKE_PREVIEW_SIZE);
+	 
+		// 세 번째 인자는 OptionalLong (null 금지). 내 화면이라 viewer = 나.
+		List<CollectionLikeItemVO> likes =
+				collectionLikeService.retrieveByMember(
+						memberId.intValue(), param, OptionalLong.of(memberId));
+	 
+		List<Map<String, Object>> items = new ArrayList<>();
+	 
+		for (CollectionLikeItemVO like : likes) {
+			Map<String, Object> item = new LinkedHashMap<>();
+			item.put("collectionId", like.getCollectionId()); // TODO: VO getter 이름 확인
+			item.put("title",        like.getTitle());        // TODO: VO getter 이름 확인
+			items.add(item);
+		}
+	 
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items",      items);
+		response.put("totalCount", param.getTotalCnt());
+	 
+		return ResponseEntity.ok(response);
+	}	
 
 	/**
 	 * 프로필 화면에 표시할 활동 집계.
