@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>인물 검색</title>
+<script th:src="@{/assets/js/person/person-list.js}" defer></script>
+</head>
+<body th:attr="data-search-word=${searchWord},data-search-div=${searchDiv},data-page-no=${pageNo},data-page-size=${pageSize}">
+<div layout:fragment="content">
+
+    <div class="mb-4">
+        <p class="filter-bar text-muted mb-1">인물</p>
+        <h1 class="h3 fw-bold mb-1">인물 검색 결과</h1>
+        <p class="text-secondary mb-0">배우·감독 이름으로 인물을 검색할 수 있습니다.</p>
+    </div>
+
+    <form id="searchForm" class="row g-2 mb-4">
+        <div class="col-12 col-md-3">
+            <label class="visually-hidden" for="searchDiv">검색 구분</label>
+            <select id="searchDiv" class="form-select">
+                <option value="">이름 통합</option>
+                <option value="10">한글 이름</option>
+                <option value="20">원어 이름</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-6">
+            <label class="visually-hidden" for="searchWord">검색어</label>
+            <input id="searchWord" class="form-control" type="search"
+                   placeholder="인물 이름을 입력하세요">
+        </div>
+        <div class="col-7 col-md-2">
+            <label class="visually-hidden" for="pageSize">페이지 크기</label>
+            <select id="pageSize" class="form-select">
+                <option value="12">12개씩</option>
+                <option value="24">24개씩</option>
+                <option value="36">36개씩</option>
+            </select>
+        </div>
+        <div class="col-5 col-md-1 d-grid">
+            <button class="btn btn-primary" type="submit">검색</button>
+        </div>
+    </form>
+
+    <div id="errorMessage" class="alert alert-danger d-none" role="alert"></div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <strong>검색 결과</strong>
+        <span id="resultCount" class="filter-bar text-muted">0명</span>
+    </div>
+
+    <div id="personList" class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-3" aria-live="polite"></div>
+
+    <nav class="mt-4" aria-label="인물 검색 페이지">
+        <ul id="pagination" class="pagination justify-content-center mb-0"></ul>
+    </nav>
+
+</div>
+</body>
+</html>

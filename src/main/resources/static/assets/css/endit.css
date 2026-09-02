@@ -304,3 +304,49 @@ body {
     font-size: .82rem;
     color: #6B6577;
 }
+
+/* 인물 검색 결과 카드 */
+.person-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--endit-border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.person-card-image-wrap {
+    aspect-ratio: 1 / 1;
+    background: #F4F3F8;
+}
+
+.person-card-image,
+.person-card-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.person-card-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #B4AFC0;
+    font-size: 3rem;
+}
+
+.person-card-body {
+    padding: .85rem;
+}
+
+.person-card-title {
+    font-size: .95rem;
+    font-weight: 700;
+    margin-bottom: .2rem;
+    line-height: 1.35;
+}
+
+.person-card-meta {
+    font-size: .82rem;
+    color: #6B6577;
+    min-height: 1.1rem;
+}
