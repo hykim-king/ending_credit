@@ -122,6 +122,28 @@ Modification History
 		) B
 	</select>
 
+	<!-- 인기순위처럼 순서가 이미 정해진 id 묶음을 한 번에 읽는다.
+	     정렬을 서비스가 하므로 ORDER BY도 페이징도 걸지 않는다.
+	     컬럼 목록이 위 doSelectOne·doRetrieve와 겹친다 - known-issues의 컬럼 SQL 중복 항목이며 공통 fragment 추출은 별도 과제다 -->
+	<select id="doRetrieveByIds" resultType="ContentVO">
+		SELECT content_id,
+		       external_id,
+		       title_ko,
+		       title_org,
+		       overview,
+		       TO_CHAR(release_year, 'YYYY-MM-DD') release_year,
+		       runtime_min,
+		       country,
+		       poster_url,
+		       backdrop_url,
+		       TO_CHAR(created_dt, 'YYYY-MM-DD HH24:MI:SS') created_dt
+		  FROM content
+		 WHERE content_id IN
+		<foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
+			#{contentId}
+		</foreach>
+	</select>
+
 	<select id="doSelectOne" parameterType="ContentVO" resultType="ContentVO">
 		SELECT content_id,
 		       external_id,

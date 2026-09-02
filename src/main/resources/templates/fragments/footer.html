@@ -2,15 +2,19 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <footer th:fragment="footer" class="site-footer">
     <style>
+        @import url("https://cdn.jsdelivr.net/gh/wanteddev/wanted-sans@v1.0.3/packages/wanted-sans/fonts/webfonts/variable/complete/WantedSansVariable.min.css");
+
         .site-footer {
             width: 100%;
             background-color: #141414;
             color: #b3b3b3; /* 전체 기본 텍스트 톤을 밝게 상향 */
-            padding: 60px 0 40px 0;
-            font-family: 'Malgun Gothic', sans-serif;
+            padding: 20px 0 16px 0;
+            font-family: "Wanted Sans Variable", "Wanted Sans", "Noto Sans KR", Arial, sans-serif;
             font-size: 13px;
+            line-height: 1.4;
             box-sizing: border-box;
             border-top: 1px solid #222222;
+            margin: 0;
         }
         
         .site-footer .footer-inner {
@@ -21,16 +25,23 @@
 
         .site-footer .footer-stats {
             text-align: center;
-            margin-bottom: 50px;
-            padding-bottom: 35px;
+            margin-bottom: 16px;
+            padding-bottom: 14px;
             border-bottom: 1px solid #222222;
         }
 
         .site-footer .stats-text {
             color: #ffffff;
-            font-size: 20px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+        }
+
+        /* 이모지가 본문보다 커 보이지 않도록 글자 크기에 맞춘다 */
+        .site-footer .stats-star {
+            font-size: 1em;
+            line-height: 1;
+            vertical-align: -0.05em;
         }
 
         .site-footer .stats-count {
@@ -44,7 +55,7 @@
             align-items: flex-start;
             text-align: left;
             flex-wrap: wrap;
-            gap: 30px;
+            gap: 20px;
         }
         
         .site-footer .footer-col {
@@ -54,23 +65,24 @@
         
         .site-footer .footer-logo {
             color: #ffffff;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 14px;
+            font-weight: 700;
             letter-spacing: 1px;
             display: block;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
         }
         
         .site-footer .footer-desc {
             color: #b3b3b3; /* 설명 글씨도 희고 선명하게 변경 */
-            line-height: 1.5;
+            font-size: 13px;
+            line-height: 1.4;
             margin: 0;
         }
         
         .site-footer .footer-col h4 {
             color: #ffffff; /* 제목 글씨를 순백색으로 변경하여 가독성 강화 */
-            font-size: 14px;
-            margin-bottom: 12px;
+            font-size: 13px;
+            margin: 0 0 6px 0;
             font-weight: 600;
         }
         
@@ -81,11 +93,16 @@
         }
         
         .site-footer .footer-col ul li {
-            margin-bottom: 8px;
+            margin-bottom: 4px;
+        }
+
+        .site-footer .footer-col ul li:last-child {
+            margin-bottom: 0;
         }
         
         .site-footer .footer-col ul li a {
             color: #cccccc; /* 링크 글씨도 밝은 회색/흰색으로 변경 */
+            font-size: 13px;
             text-decoration: none;
         }
         
@@ -96,22 +113,27 @@
         
         .site-footer .lang {
             color: #cccccc;
+            font-size: 13px;
         }
         
         .site-footer .footer-bottom {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 14px;
+            padding-top: 10px;
             border-top: 1px solid #222222;
             color: #777777;
             font-size: 12px;
             text-align: center;
+        }
+
+        .site-footer .footer-bottom p {
+            margin: 0;
         }
     </style>
 
     <div class="footer-inner">
         <div class="footer-stats">
             <span class="stats-text">
-                지금까지 <span class="stats-count">⭐ [[${totalCommentCount}]]개</span>의 댓글이 쌓였어요.
+                지금까지 <span class="stats-count"><span class="stats-star">⭐</span> [[${totalCommentCount}]]개</span>의 댓글이 쌓였어요.
             </span>
         </div>
 

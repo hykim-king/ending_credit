@@ -29,8 +29,9 @@ public class SearchApiController {
 
 	// 정렬 축 - searchWord를 검색 조건이 쓰고 있어 searchMap의 이 키로 받는다
 	private static final String SEARCH_KEY_SORT = "sort";
-	// 순위의 기본 출처. 화면이 source를 생략해도 박스오피스를 준다
-	private static final String SOURCE_BOX_OFFICE = "boxoffice";
+	// 순위의 기본 출처. 화면이 source를 생략하면 TMDB 실시간 인기순을 준다.
+	// 기존 화면이 보내는 "boxoffice"(적재순)도 서비스가 그대로 받는다
+	private static final String SOURCE_POPULAR = "popular";
 
 	private static final int FIRST_PAGE_NO = 1;
 	private static final String FIRST_PAGE_NO_TEXT = "1";
@@ -50,10 +51,23 @@ public class SearchApiController {
 		this.contentService = contentService;
 	}
 
-	/** S-01 박스오피스 순위 - no(rnum)가 곧 순위다 */
+	/**
+	 *
+	 * <pre>
+	 * Method Name : retrieveRankings
+	 * Description : S-01 순위 목록. 응답의 no가 곧 순위 숫자다.
+	 *               source를 생략하면 TMDB 실시간 인기순이며, 아직 동기화 전이거나
+	 *               TMDB가 응답하지 않으면 서비스가 적재순으로 대체한다.
+	 *               "boxoffice"를 주면 적재순을 그대로 받는다. 그 밖의 값은 서비스의 정렬 검증이 막는다.
+	 *
+	 * </pre>
+	 *
+	 * @param source
+	 * @return List<ContentVO> (상위 5건, poster_url은 완성 URL)
+	 */
 	@GetMapping("/rankings")
 	public List<ContentVO> retrieveRankings(
-			@RequestParam(defaultValue = SOURCE_BOX_OFFICE) String source) {
+			@RequestParam(defaultValue = SOURCE_POPULAR) String source) {
 
 		DTO param = new DTO();
 		param.setPageNo(FIRST_PAGE_NO);

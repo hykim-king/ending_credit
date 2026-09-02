@@ -5,16 +5,8 @@ layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>박스오피스 순</title>
+<title>홈</title>
 <style>
-    /* 진단용 화면이라 꾸밈은 최소로 두고, 무엇이 비었는지가 눈에 띄게 한다 */
-    .diag-bar {
-        background: #F7F6FA;
-        border: 1px solid #E4E2E9;
-        border-radius: 8px;
-        padding: .75rem 1rem;
-        font-size: .875rem;
-    }
     /* 캐러셀 - detail.html 갤러리와 같은 골격(clip + track + translateX) */
     .shelf-viewport {
         position: relative;
@@ -81,7 +73,7 @@ layout:decorate="~{layout/layout}">
         background-color: #ECEAF2;
         display: block;
     }
-    /* URL 자체가 없는 경우 */
+    /* 포스터 URL 자체가 없는 경우 */
     .poster-empty {
         display: flex;
         align-items: center;
@@ -89,10 +81,9 @@ layout:decorate="~{layout/layout}">
         color: #6B6577;
         font-size: .8rem;
     }
-    /* URL은 있는데 로딩에 실패한 경우 - 위와 구분되어야 원인을 가른다 */
+    /* 로딩에 실패한 포스터는 빈 자리와 같은 회색 판으로 남긴다 */
     .poster-error {
-        border: 2px solid #C0392B;
-        background-color: #FDECEA;
+        background-color: #ECEAF2;
     }
     .card-title {
         margin: .5rem 0 .15rem;
@@ -109,32 +100,19 @@ layout:decorate="~{layout/layout}">
         font-size: .875rem;
         color: #5B5867;
     }
-    /* 평소엔 감춰 두고, 이미지가 실패했을 때만 원인 파악용으로 드러낸다 */
-    .card-url {
-        margin: .25rem 0 0;
-        font-size: .7rem;
-        color: #8A8496;
-        word-break: break-all;
-    }
-    .card-url[hidden] {
-        display: none;
-    }
 </style>
 </head>
 <body>
     <div layout:fragment="content">
 
         <p th:if="${#lists.isEmpty(shelves)}" class="text-muted">
-            조회 결과 0건입니다. 화면 문제가 아니라 CONTENT 적재를 먼저 확인해야 합니다.
+            아직 보여드릴 작품이 없습니다.
         </p>
 
         <!-- 선반은 여기서 한 벌만 그린다. 줄을 늘리려면 컨트롤러에서 addShelf를 한 번 더 부르면 된다 -->
         <section class="mb-5" th:each="shelf : ${shelves}">
 
-            <h5 class="mb-3">
-                <span th:text="${shelf.title}">선반 제목</span>
-                <small class="text-muted fw-normal" th:text="'(' + ${#lists.size(shelf.movies)} + '건)'">(0건)</small>
-            </h5>
+            <h5 class="mb-3" th:text="${shelf.title}">선반 제목</h5>
 
             <div class="shelf-viewport">
                 <button type="button" class="shelf-nav shelf-prev" aria-label="이전">
@@ -146,13 +124,12 @@ layout:decorate="~{layout/layout}">
                         <div class="shelf-item" th:each="movie : ${shelf.movies}">
                             <a class="movie-card" th:href="@{/movies/{id}(id=${movie.contentId})}">
 
-                                <!-- URL 없음(회색)과 로딩 실패(빨간 테두리)를 눈으로 구분한다 -->
                                 <img th:if="${!#strings.isEmpty(movie.posterUrl)}"
                                      th:src="${movie.posterUrl}"
                                      th:alt="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}"
                                      loading="lazy"
-                                     onerror="this.classList.add('poster-error'); var u = this.parentNode.querySelector('.card-url'); if (u) { u.hidden = false; }">
-                                <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty">URL 없음</div>
+                                     onerror="this.onerror = null; this.classList.add('poster-error');">
+                                <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty">이미지 없음</div>
 
                                 <p class="card-title"
                                    th:text="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}">제목</p>
@@ -166,7 +143,6 @@ layout:decorate="~{layout/layout}">
                                     <span th:if="${!#strings.isEmpty(movie.country)}" th:text="${movie.country}">국가</span>
                                 </p>
 
-                                <p class="card-url" hidden th:text="${movie.posterUrl}">posterUrl</p>
                             </a>
                         </div>
                     </div>

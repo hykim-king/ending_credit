@@ -32,6 +32,36 @@ public interface ContentService {
 	// 검색+페이징 목록 조회
 	List<ContentVO> retrieve(DTO param);
 
+	/**
+	 *
+	 * <pre>
+	 * Method Name : syncRank
+	 * Description : TMDB 인기순위를 받아 순위 목록을 갱신한다.
+	 *               DB에 쓰지 않고 서비스 메모리의 목록만 통째로 교체하므로, 재시작하면 비워진다.
+	 *               우리가 보유하지 않은 영화는 건너뛴다 - 여기서 새로 적재하지 않는다.
+	 *               매칭이 한 건도 없으면 기존 순위를 유지하고 0을 반환한다.
+	 *               TMDB 호출이 중간에 실패해도 예외를 던지지 않고 수집분까지만 반영한다.
+	 *               tmdb.api-key가 비어 있으면 IllegalStateException.
+	 *
+	 * </pre>
+	 *
+	 * @return int (우리 DB와 매칭된 건수)
+	 */
+	int syncRank();
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : retrieveRank
+	 * Description : 인기순위대로 정렬된 content_id 목록. 최대 100건이다.
+	 *               syncRank 전이거나 매칭이 0건이면 빈 목록이며, 이때 화면은 적재순으로 폴백한다.
+	 *
+	 * </pre>
+	 *
+	 * @return List<Integer> (순위 오름차순, 수정 불가)
+	 */
+	List<Integer> retrieveRank();
+
 	// 외부 ID 중복 검사
 	boolean hasExternalId(String externalId);
 
