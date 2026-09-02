@@ -1,31 +1,144 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-<meta charset="UTF-8">
-<title>footer</title>
-</head>
-<body>
-    <!--GlobalFooter (CMP-21)-->
-    <footer th:fragment="footer" style="background-color: #1a1a20; color: #9ca3af; padding: 40px 20px; font-family: 'Wanted Sans', 'Noto Sans KR', Arial, sans-serif; position: relative; border-top: 1px solid #2a2b32;">
-        <div style="max-width: 900px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <h4 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 10px 0;">END IT</h4>
-                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #9ca3af;">영화 탐색과 기록을 위한<br>Ending Credit 프로젝트</p>
+<footer th:fragment="footer" class="site-footer">
+    <style>
+        .site-footer {
+            width: 100%;
+            background-color: #141414;
+            color: #b3b3b3; /* 전체 기본 텍스트 톤을 밝게 상향 */
+            padding: 60px 0 40px 0;
+            font-family: 'Malgun Gothic', sans-serif;
+            font-size: 13px;
+            box-sizing: border-box;
+            border-top: 1px solid #222222;
+        }
+        
+        .site-footer .footer-inner {
+            max-width: 1100px; /* 좌우로 시원하게 퍼지도록 폭을 살짝 넓힘 */
+            margin: 0 auto;
+            padding: 0 30px;
+        }
+
+        .site-footer .footer-stats {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 35px;
+            border-bottom: 1px solid #222222;
+        }
+
+        .site-footer .stats-text {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .site-footer .stats-count {
+            color: #e50914; 
+        }
+
+        /* 왼쪽, 가운데, 오른쪽 메뉴를 균등하게 양끝과 간격으로 배치 */
+        .site-footer .footer-content {
+            display: flex;
+            justify-content: space-between; /* 좌우로 균등 분할 배치 */
+            align-items: flex-start;
+            text-align: left;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .site-footer .footer-col {
+            flex: 1; /* 각 컬럼이 동일한 공간을 나눠 가짐 */
+            min-width: 180px;
+        }
+        
+        .site-footer .footer-logo {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .site-footer .footer-desc {
+            color: #b3b3b3; /* 설명 글씨도 희고 선명하게 변경 */
+            line-height: 1.5;
+            margin: 0;
+        }
+        
+        .site-footer .footer-col h4 {
+            color: #ffffff; /* 제목 글씨를 순백색으로 변경하여 가독성 강화 */
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .site-footer .footer-col ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .site-footer .footer-col ul li {
+            margin-bottom: 8px;
+        }
+        
+        .site-footer .footer-col ul li a {
+            color: #cccccc; /* 링크 글씨도 밝은 회색/흰색으로 변경 */
+            text-decoration: none;
+        }
+        
+        .site-footer .footer-col ul li a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        
+        .site-footer .lang {
+            color: #cccccc;
+        }
+        
+        .site-footer .footer-bottom {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #222222;
+            color: #777777;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+
+    <div class="footer-inner">
+        <div class="footer-stats">
+            <span class="stats-text">
+                지금까지 <span class="stats-count">⭐ [[${totalCommentCount}]]개</span>의 댓글이 쌓였어요.
+            </span>
+        </div>
+
+        <div class="footer-content">
+            <div class="footer-col">
+                <span class="footer-logo">END IT</span>
+                <p class="footer-desc">영화 탐색과 기록을 위한<br>Ending Credit 프로젝트</p>
             </div>
-            <div>
-                <h4 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 10px 0;">서비스</h4>
-                <a th:href="@{/notices}" style="display: block; color: #9ca3af; text-decoration: none; font-size: 13px; margin-bottom: 4px;">공지사항</a>
-                <a href="#" style="display: block; color: #9ca3af; text-decoration: none; font-size: 13px;">FAQ·문의하기</a>
+            <div class="footer-col">
+                <h4>서비스</h4>
+                <ul>
+                    <li><a th:href="@{/notices}">공지사항</a></li>
+                    <li><a href="#">FAQ·문의하기</a></li>
+                </ul>
             </div>
-            <div>
-                <h4 style="color: #ffffff; font-size: 15px; font-weight: 700; margin: 0 0 10px 0;">데이터·설정</h4>
-                <a href="#" style="display: block; color: #9ca3af; text-decoration: none; font-size: 13px; margin-bottom: 4px;">DB 수정·추가 요청</a>
-                <a href="#" style="display: block; color: #9ca3af; text-decoration: none; font-size: 13px;">한국어</a>
+            <div class="footer-col">
+                <h4>데이터·설정</h4>
+                <ul>
+                    <li><a href="#">DB 수정·추가 요청</a></li>
+                    <li><span class="lang">한국어</span></li>
+                </ul>
             </div>
         </div>
-        <div style="position: absolute; bottom: 20px; right: 40px; font-size: 12px; color: #6b7280;">
-            © END IT
+        
+        <div class="footer-bottom">
+            <p>&copy; END IT</p>
         </div>
-    </footer>
-</body>
+    </div>
+</footer>
 </html>
