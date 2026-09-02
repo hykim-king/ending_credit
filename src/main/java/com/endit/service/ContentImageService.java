@@ -25,10 +25,19 @@ public interface ContentImageService {
 	// 이미지 삭제
 	void delete(int imageId);
 
-	// TMDB 이미지 경로를 기본 크기(tmdb.image-size)의 완성 URL로 변환
-	String toFullImageUrl(String path);
+	// ── 용도별 이미지 URL 변환 ──
+	// 크기는 전부 ContentImageServiceImpl이 정한다. 호출부는 용도만 말하고 크기를 넘기지 않는다.
 
-	// TMDB 이미지 경로를 지정한 크기의 완성 URL로 변환
-	String toFullImageUrl(String path, String size);
+	// 영화 포스터 URL
+	String toPosterUrl(String path);
+
+	// 영화 상세 헤더 배경 URL
+	String toBackdropUrl(String path);
+
+	// 크레딧 프로필 URL
+	String toCreditProfileUrl(String path);
+
+	// 인물 상세 프로필 URL
+	String toPersonProfileUrl(String path);
 
 }

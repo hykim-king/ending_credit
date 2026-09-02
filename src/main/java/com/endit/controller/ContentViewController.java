@@ -2,7 +2,6 @@ package com.endit.controller;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -48,16 +47,13 @@ public class ContentViewController {
 			ContentVO content = contentService.get(contentId);
 			List<ContentGenreVO> genres = contentGenreService.retrieveAll(contentId);
 			List<ContentCreditVO> castAndCrew = contentCreditService.retrieveAll(contentId);
-			List<String> galleryImageUrls = contentImageService.retrieveAll(contentId).stream()
-					.map(ContentImageVO::getImageUrl)
-					.collect(Collectors.toList());
+			// 썸네일용·확대용 URL이 모두 채워진 상태로 넘긴다.
+			List<ContentImageVO> galleryImages = contentImageService.retrieveAll(contentId);
 
 			model.addAttribute("content", content);
 			model.addAttribute("genres", genres);
-			model.addAttribute("posterFullUrl", content.getPosterUrl());
-			model.addAttribute("backdropFullUrl", content.getBackdropUrl());
 			model.addAttribute("castAndCrew", castAndCrew);
-			model.addAttribute("galleryImageUrls", galleryImageUrls);
+			model.addAttribute("galleryImages", galleryImages);
 			model.addAttribute("notFound", false);
 		} catch (NoSuchElementException e) {
 			model.addAttribute("notFound", true);

@@ -3,9 +3,8 @@ package com.endit.controller;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -15,13 +14,18 @@ import com.endit.service.ContentService;
 @RequestMapping("/content")
 public class ContentController {
 
-	// Attired 방식임. 생성자 주입 아님
-	@Autowired
-	private ContentService contentService;
+	private static final String DEFAULT_SYNC_LIMIT = "50";
+
+	private final ContentService contentService;
+
+	public ContentController(ContentService contentService) {
+		this.contentService = contentService;
+	}
 
 	// TMDB 인기 영화를 가져와 DB에 없는 건만 저장-> 동작 방식 컨텐츠 서비스 인터페이스에 주석으로 엄청 설명해놨으요.
-	@RequestMapping(value = "/tmdb/popular", method = {RequestMethod.GET, RequestMethod.POST})
-	public Map<String, Object> sync(@RequestParam(defaultValue = "50") int limit) {
+	// DB에 쓰는 동작이므로 POST만 받는다. GET으로 열어 두면 주소창·크롤러가 수집을 일으킨다
+	@PostMapping("/tmdb/popular")
+	public Map<String, Object> sync(@RequestParam(defaultValue = DEFAULT_SYNC_LIMIT) int limit) {
 		int insertedCount = contentService.sync(limit);
 
 		Map<String, Object> result = new HashMap<>();

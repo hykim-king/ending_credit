@@ -11,8 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentCreditVO;
 import com.endit.domain.PersonVO;
-import com.endit.mapper.ContentCreditMapper;
 import com.endit.mapper.PersonMapper;
+import com.endit.service.ContentCreditService;
+import com.endit.service.ContentImageService;
 import com.endit.service.PersonService;
 
 /**
@@ -26,14 +27,18 @@ public class PersonServiceImpl implements PersonService {
 	private static final Logger log = LoggerFactory.getLogger(PersonServiceImpl.class);
 	private static final int DEFAULT_PAGE_NO = 1;
 	private static final int DEFAULT_PAGE_SIZE = 12;
+	private static final int MAX_PAGE_SIZE = 100;
 	private static final int FILMOGRAPHY_SIZE = 50;
 
 	private final PersonMapper personMapper;
-	private final ContentCreditMapper contentCreditMapper;
+	private final ContentCreditService contentCreditService;
+	private final ContentImageService contentImageService;
 
-	public PersonServiceImpl(PersonMapper personMapper, ContentCreditMapper contentCreditMapper) {
+	public PersonServiceImpl(PersonMapper personMapper, ContentCreditService contentCreditService,
+			ContentImageService contentImageService) {
 		this.personMapper = personMapper;
-		this.contentCreditMapper = contentCreditMapper;
+		this.contentCreditService = contentCreditService;
+		this.contentImageService = contentImageService;
 	}
 
 	@Override
@@ -42,6 +47,12 @@ public class PersonServiceImpl implements PersonService {
 		param.setPersonId(personId);
 		PersonVO person = personMapper.doSelectOne(param);
 		log.debug("get personId={} found={}", personId, person != null);
+
+		if (person == null) {
+			return null;
+		}
+
+		applyFullImageUrl(person);
 		return person;
 	}
 
@@ -50,21 +61,38 @@ public class PersonServiceImpl implements PersonService {
 		DTO search = normalize(param);
 		List<PersonVO> list = personMapper.doRetrieve(search);
 		log.debug("retrieve size={}", list == null ? 0 : list.size());
-		return list != null ? list : Collections.emptyList();
+
+		if (list == null || list.isEmpty()) {
+			search.setTotalCnt(0);
+			return Collections.emptyList();
+		}
+
+		// doRetrieve가 CROSS JOIN으로 검색조건까지 걸러낸 총건수를 각 행에 실어 준다
+		search.setTotalCnt(list.get(0).getTotalCnt());
+
+		for (PersonVO person : list) {
+			applyFullImageUrl(person);
+		}
+
+		return list;
 	}
 
 	@Override
 	public List<ContentCreditVO> getFilmography(int personId) {
-		// ContentCreditMapper: searchDiv 20 = person_id
+		// 이미지 URL 완성까지 ContentCreditService가 책임진다. 매퍼를 직접 부르면 그 변환을 건너뛴다
 		DTO param = new DTO();
-		param.setSearchDiv("20");
-		param.setSearchWord(String.valueOf(personId));
 		param.setPageNo(DEFAULT_PAGE_NO);
 		param.setPageSize(FILMOGRAPHY_SIZE);
 
-		List<ContentCreditVO> list = contentCreditMapper.doRetrieve(param);
-		log.debug("getFilmography personId={} size={}", personId, list == null ? 0 : list.size());
-		return list != null ? list : Collections.emptyList();
+		List<ContentCreditVO> list = contentCreditService.retrieveByPerson(personId, param);
+		log.debug("getFilmography personId={} size={}", personId, list.size());
+		return list;
+	}
+
+	// TMDB 원본 경로를 화면에 바로 쓸 수 있는 풀 URL로 완성한다.
+	// 어떤 크기를 쓸지는 ContentImageServiceImpl이 정하므로 여기서는 용도만 말한다
+	private void applyFullImageUrl(PersonVO person) {
+		person.setProfileImageUrl(contentImageService.toPersonProfileUrl(person.getProfileImageUrl()));
 	}
 
 	private DTO normalize(DTO search) {
@@ -74,6 +102,8 @@ public class PersonServiceImpl implements PersonService {
 		}
 		if (param.getPageSize() <= 0) {
 			param.setPageSize(DEFAULT_PAGE_SIZE);
+		} else if (param.getPageSize() > MAX_PAGE_SIZE) {
+			param.setPageSize(MAX_PAGE_SIZE);
 		}
 		if (param.getSearchWord() != null) {
 			param.setSearchWord(param.getSearchWord().trim());
