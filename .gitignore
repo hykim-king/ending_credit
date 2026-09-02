@@ -2,9 +2,9 @@ HELP.md
 target/
 
 # Local-only verification scaffolding (not shared with team)
-# Test 접두사 클래스와 templates/test/는 로컬 검증 전용이라 공유하지 않는다.
-# src/test의 실제 테스트는 *Test.java(접미사)라 여기 걸리지 않는다.
-/src/main/java/**/Test*.java
+/src/main/java/com/endit/controller/TestContentController.java
+/src/main/java/com/endit/service/TestContentService.java
+/src/main/java/com/endit/service/impl/TestContentServiceImpl.java
 /src/main/resources/templates/test/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
