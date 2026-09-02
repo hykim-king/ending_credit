@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>admin_side</title>
+</head>
+<body>
+    <!--관리자 사이드 메뉴 (설계서 AD 화면 공통)
+        신고=4조 정식 구현 / 대시보드·영화·인물·회원·공지=임시 조회 전용(담당 조 구현 시 대체)
+        ※ 커뮤니티(AD-11)는 총수님 지시로 메뉴에서 제외(2026-08-25)-->
+    <aside th:fragment="admin_side(active)" class="admin-side">
+        <div class="side-label">ADMIN</div>
+        <a th:href="@{/admin/dashboard}" th:classappend="${active == 'dashboard'} ? 'active'">대시보드</a>
+        <a th:href="@{/admin/content}"   th:classappend="${active == 'content'} ? 'active'">영화</a>
+        <a th:href="@{/admin/person}"    th:classappend="${active == 'person'} ? 'active'">인물</a>
+        <a th:href="@{/admin/member}"    th:classappend="${active == 'member'} ? 'active'">회원</a>
+        <a th:href="@{/admin/report/doRetrieve}" th:classappend="${active == 'report'} ? 'active'">신고</a>
+        <a th:href="@{/admin/notice}"    th:classappend="${active == 'notice'} ? 'active'">공지</a>
+    </aside>
+</body>
+</html>

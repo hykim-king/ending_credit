@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>신고 관리</title>
+</head>
+<body>
+<div layout:fragment="content">
+
+<div class="d-flex gap-3">
+    <!--관리자 사이드 메뉴-->
+    <aside th:replace="~{fragments/admin_side :: admin_side('report')}">side</aside>
+    <!--//관리자 사이드 메뉴-->
+
+    <div class="flex-grow-1">
+        <h4 class="fw-bold mb-3">신고 관리 목록</h4>
+
+        <!--검색폼: 구분에 따라 검색어 입력칸이 select/입력으로 바뀐다-->
+        <form id="searchForm" th:action="@{/admin/report/doRetrieve}" method="get" class="row g-1 mb-3 filter-bar">
+            <input type="hidden" name="pageNo" id="pageNo" th:value="${dto.pageNo}">
+            <input type="hidden" name="searchWord" id="searchWord" th:value="${dto.searchWord}">
+            <div class="col-auto">
+                <select name="searchDiv" id="searchDiv" class="form-select form-select-sm">
+                    <option value=""  th:selected="${dto.searchDiv == ''}">전체</option>
+                    <option value="10" th:selected="${dto.searchDiv == '10'}">처리상태</option>
+                    <option value="20" th:selected="${dto.searchDiv == '20'}">신고사유</option>
+                    <option value="30" th:selected="${dto.searchDiv == '30'}">코멘트번호</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <select id="wordStatus" class="form-select form-select-sm d-none">
+                    <option th:each="code : ${statusList}"
+                            th:value="${code.code}" th:text="${code.codeName}"
+                            th:selected="${dto.searchWord == code.code}">접수</option>
+                </select>
+                <select id="wordReason" class="form-select form-select-sm d-none">
+                    <option th:each="code : ${reasonList}"
+                            th:value="${code.code}" th:text="${code.codeName}"
+                            th:selected="${dto.searchWord == code.code}">스포일러</option>
+                </select>
+                <input type="text" id="wordText" class="form-control form-control-sm d-none"
+                       placeholder="코멘트 번호" th:value="${dto.searchWord}">
+            </div>
+            <div class="col-auto">
+                <select name="pageSize" id="pageSize" class="form-select form-select-sm">
+                    <option value="10" th:selected="${dto.pageSize == 10}">10개</option>
+                    <option value="20" th:selected="${dto.pageSize == 20}">20개</option>
+                    <option value="30" th:selected="${dto.pageSize == 30}">30개</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="doSearch(1)">검색</button>
+            </div>
+        </form>
+        <!--//검색폼-->
+
+        <!--AdminDataTable (CMP-20): 행 클릭 → 상세·처리(AD-10)-->
+        <table class="table table-sm table-hover align-middle admin-table bg-white">
+            <!--열 폭 고정(table-layout:fixed) — 대상만 남는 폭을 쓰고 나머지는 줄바꿈 없이 한 줄로-->
+            <thead>
+                <tr class="text-nowrap">
+                    <th style="width:6%;">ID</th>
+                    <th style="width:7%;">유형</th>
+                    <th>대상</th>
+                    <th style="width:13%;">신고자</th>
+                    <th style="width:15%;">사유</th>
+                    <th style="width:8%;">누적신고</th>
+                    <th style="width:17%;">상태</th>
+                    <th style="width:12%;">접수일</th>
+                </tr>
+            </thead>
+            <tbody id="reportTbody">
+                <tr th:if="${#lists.isEmpty(list)}">
+                    <td colspan="8" class="text-center text-muted py-4">신고가 없습니다.</td>
+                </tr>
+                <tr th:each="vo : ${list}" th:attr="data-report-id=${vo.reportId}" class="text-nowrap">
+                    <td th:text="|R-${vo.reportId}|">R-1</td>
+                    <td>코멘트</td>
+                    <!--내용이 길면 잘라서 한 줄로, 전문은 마우스를 올리면 보인다-->
+                    <td class="text-truncate" th:title="${vo.commentDetail}"
+                        th:text="${vo.commentDetail}">신고된 코멘트 내용(200자 요약)</td>
+                    <td class="text-truncate" th:text="${vo.reporterNickname}">신고자</td>
+                    <td th:text="${vo.reason}">SPOILER</td>
+                    <!--같은 코멘트의 누적 신고 건수 — 2건 이상이면 중복 신고로 강조-->
+                    <td class="text-center">
+                        <span th:text="|${vo.reportCnt}건|"
+                              th:classappend="${vo.reportCnt > 1} ? 'fw-bold text-danger'">1건</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-received"
+                              th:if="${vo.status == 'RECEIVED' or vo.status == 'PROCESSING'}"
+                              th:text="|미처리 · ${vo.status}|">미처리</span>
+                        <span class="badge badge-accepted"
+                              th:if="${vo.status == 'ACCEPTED' or vo.status == 'REJECTED'}"
+                              th:text="|완료 · ${vo.status}|">완료</span>
+                    </td>
+                    <!--목록은 날짜만(시각은 상세에서 확인) — 좁은 칸에 밀려 겹치지 않게-->
+                    <td th:title="${vo.createdDt}"
+                        th:text="${#strings.substring(vo.createdDt, 0, 10)}">2026/08/25</td>
+                </tr>
+            </tbody>
+        </table>
+        <!--//AdminDataTable-->
+
+        <!--페이징 (CMP-19)-->
+        <nav th:if="${pageDTO.totalCnt > 0}" aria-label="페이지">
+            <ul class="pagination pagination-sm justify-content-center">
+                <li class="page-item" th:classappend="${!pageDTO.pre} ? 'disabled'">
+                    <a class="page-link" href="#" th:onclick="|doSearch(${pageDTO.startNo - 1})|">이전</a>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(pageDTO.startNo, pageDTO.endNo)}"
+                    th:classappend="${i == dto.pageNo} ? 'active'">
+                    <a class="page-link" href="#" th:onclick="|doSearch(${i})|" th:text="${i}">1</a>
+                </li>
+                <li class="page-item" th:classappend="${!pageDTO.next} ? 'disabled'">
+                    <a class="page-link" href="#" th:onclick="|doSearch(${pageDTO.endNo + 1})|">다음</a>
+                </li>
+            </ul>
+        </nav>
+        <!--//페이징-->
+    </div>
+</div>
+
+    <script th:src="@{/assets/js/report/report_list.js}" defer></script>
+</div>
+</body>
+</html>

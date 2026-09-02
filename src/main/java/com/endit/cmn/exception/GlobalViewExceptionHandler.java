@@ -6,6 +6,8 @@
  * ※ assignableTypes로 4조 화면 컨트롤러만 대상으로 한정한다 —
  * 전역으로 두면 타 조 화면의 오류까지 우리 오류 화면으로 덮어써서
  * 담당 조가 자기 예외를 보지 못한다.
+
+ * ※ 관리자 임시 화면 반영 시 assignableTypes에 AdminController를 추가할 것.
  */
 package com.endit.cmn.exception;
 
@@ -18,9 +20,10 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.endit.controller.CommentController;
+import com.endit.controller.ReportCommentController;
 
 @Order(2)
-@ControllerAdvice(assignableTypes = { CommentController.class })
+@ControllerAdvice(assignableTypes = { CommentController.class, ReportCommentController.class })
 public class GlobalViewExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
