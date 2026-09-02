@@ -7,6 +7,7 @@
 Modification History
 2026. 8. 29. jinyoung - 컬렉션 수정용 작품 ID 전체 조회 추가
 2026. 8. 31. jinyoung - MEMBER_CONTENT 기반 작품 평균 별점 조회 추가
+2026. 9. 02. jinyoung - 현재 회원의 작품 평가 점수 조회 추가
 -->
 
 <mapper namespace="com.endit.mapper.CollectionItemMapper">
@@ -66,7 +67,8 @@ Modification History
                TITLE_ORG,
                RELEASE_YEAR,
                POSTER_URL,
-               AVERAGE_RATING
+               AVERAGE_RATING,
+               MY_RATING
           FROM (
             SELECT CI.COLLECTION_ID,
                    CI.CONTENT_ID,
@@ -77,6 +79,7 @@ Modification History
                    TO_CHAR(C.RELEASE_YEAR, 'YYYY') AS RELEASE_YEAR,
                    C.POSTER_URL,
                    MR.AVERAGE_RATING,
+                   MY.RATING_SCORE AS MY_RATING,
                    ROW_NUMBER() OVER (
                        ORDER BY CI.ADDED_DT DESC, CI.COLLECTION_ID DESC, CI.CONTENT_ID DESC
                    ) AS RNUM
@@ -91,6 +94,9 @@ Modification History
                      GROUP BY CONTENT_ID
               ) MR
                 ON MR.CONTENT_ID = CI.CONTENT_ID
+              LEFT JOIN MEMBER_CONTENT MY
+                ON MY.CONTENT_ID = CI.CONTENT_ID
+               AND MY.MEMBER_ID = #{searchMap.currentMemberId,jdbcType=NUMERIC}
             <include refid="collectionItemWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">

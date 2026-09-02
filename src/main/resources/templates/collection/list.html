@@ -3,6 +3,7 @@
 Modification History
 2026. 8. 31. jinyoung - 컬렉션 검색 조건을 제목으로 단일화
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 컬렉션 검색 결과 본문 UI 반영
+2026. 9. 01. jinyoung - 컬렉션 검색·생성 영역 간소화
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -17,24 +18,7 @@ Modification History
 <div layout:fragment="content"
      id="collectionListPage"
      class="collection-page collection-list-page">
-    <section class="collection-list-hero" aria-labelledby="collectionListTitle">
-        <div class="collection-list-heading">
-            <div>
-                <p class="collection-kicker mb-2">COLLECTION</p>
-                <h1 id="collectionListTitle" class="collection-page-title">
-                    취향이 담긴 컬렉션
-                </h1>
-                <p class="collection-page-description mb-0">
-                    다른 사용자가 만든 영화 컬렉션을 제목으로 검색해 보세요.
-                </p>
-            </div>
-            <a class="btn btn-primary collection-create-button"
-               th:href="@{/collections/new}">
-                <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                새 컬렉션
-            </a>
-        </div>
-
+    <section class="collection-list-hero" aria-label="컬렉션 검색 및 생성">
         <form id="searchForm" class="collection-list-search" role="search">
             <div class="collection-list-search-field">
                 <i class="bi bi-search" aria-hidden="true"></i>
@@ -54,6 +38,11 @@ Modification History
                     <option value="24">24개</option>
                 </select>
             </div>
+            <a class="btn btn-primary collection-create-button"
+               th:href="@{/collections/new}">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                새 컬렉션
+            </a>
         </form>
     </section>
 

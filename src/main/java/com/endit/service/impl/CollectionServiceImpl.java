@@ -34,6 +34,7 @@ import com.endit.service.CollectionService;
  * 2026. 8. 21. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    요청 DTO·작품 스냅샷·공개 여부·전체 목록·U-05 접근 정책 적용
  * 2026. 8. 31. jinyoung    제목·설명 정규화와 contentIds null·중복 권장 정책 적용
+ * 2026. 9. 02. jinyoung    전체 목록 조회에 현재 회원 공개 범위 반영
  * ------------------------------------------------------------
  * </pre>
  *
@@ -66,14 +67,24 @@ public class CollectionServiceImpl implements CollectionService {
 
 	@Override
 	public List<CollectionVO> retrieve(DTO param) {
+		return retrieve(param, OptionalLong.empty());
+	}
+
+	@Override
+	public List<CollectionVO> retrieve(
+			DTO param,
+			OptionalLong currentMemberId) {
 
 		if (param == null) {
 			throw new IllegalArgumentException("조회 조건은 null일 수 없습니다.");
 		}
+		if (currentMemberId == null) {
+			throw new IllegalArgumentException("현재 회원 조회 결과가 필요합니다.");
+		}
 
 		normalizePaging(param);
 		CollectionQueryParam queryParam = createQueryParam(
-				param, OptionalLong.empty());
+				param, currentMemberId);
 
 		return retrieveVisible(param, queryParam);
 	}

@@ -24,11 +24,13 @@ import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionCreateRequest;
 import com.endit.domain.CollectionItemVO;
+import com.endit.domain.CollectionLikeVO;
 import com.endit.domain.CollectionUpdateRequest;
 import com.endit.domain.CollectionVO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionItemMapper;
+import com.endit.mapper.CollectionLikeMapper;
 import com.endit.mapper.CollectionMapper;
 import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberMapper;
@@ -47,6 +49,8 @@ import com.endit.mapper.MemberMapper;
  * 2026. 8. 31. jinyoung    입력 정규화·작품 distinct·수정 diff 정책 검증 추가
  * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
  * 2026. 9. 01. jinyoung    목록 카드 대표 포스터 조회 검증 추가
+ * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 조회 검증
+ * 2026. 9. 02. jinyoung    현재 회원의 목록 좋아요 여부 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -71,6 +75,9 @@ class CollectionServiceTest {
 
 	@Autowired
 	private CollectionItemMapper collectionItemMapper;
+
+	@Autowired
+	private CollectionLikeMapper collectionLikeMapper;
 
 	@Autowired
 	private ContentMapper contentMapper;
@@ -116,6 +123,26 @@ class CollectionServiceTest {
 		assertEquals(content.getPosterUrl(), result.get(0).getPreviewPosterUrl1());
 	}
 
+	/** 목록 조회에 현재 회원의 컬렉션 좋아요 여부가 포함되는지 검증 */
+	@Test
+	@DisplayName("목록 조회 시 현재 회원 좋아요 여부 포함")
+	void retrieveWithCurrentMemberLike() {
+		int ownerId = createMemberId();
+		int currentMemberId = createMemberId();
+		CollectionVO saved = saveCollection(
+				ownerId, "좋아요 상태 컬렉션-" + UUID.randomUUID(), "Y");
+		CollectionLikeVO like = new CollectionLikeVO(
+				currentMemberId, saved.getCollectionId(), null);
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(like));
+
+		DTO param = searchByTitle(saved.getTitle());
+		List<CollectionVO> result = collectionService.retrieve(
+				param, OptionalLong.of(currentMemberId));
+
+		assertEquals(1, result.size());
+		assertTrue(result.get(0).isLikedByCurrentMember());
+	}
+
 	/** 검색 결과가 없을 때 실제 DB 조회 결과 검증 */
 	@Test
 	@DisplayName("조회 결과가 없으면 빈 목록 반환")
@@ -130,19 +157,22 @@ class CollectionServiceTest {
 		assertEquals(0, param.getTotalCnt());
 	}
 
-	/** 전체 목록은 로그인한 작성자의 비공개 컬렉션도 제외하는지 검증 */
+	/** 전체 목록은 로그인한 작성자의 비공개 컬렉션을 포함하는지 검증 */
 	@Test
-	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션도 제외")
+	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션 포함")
 	void retrievePrivateCollection() {
 		int ownerId = createMemberId();
 		String title = "비공개목록-" + UUID.randomUUID();
-		saveCollection(ownerId, title, "N");
+		CollectionVO privateCollection = saveCollection(ownerId, title, "N");
 
 		DTO param = searchByTitle(title);
-		List<CollectionVO> result = collectionService.retrieve(param);
+		List<CollectionVO> result = collectionService.retrieve(
+				param, OptionalLong.of(ownerId));
 
-		assertTrue(result.isEmpty());
-		assertEquals(0, param.getTotalCnt());
+		assertEquals(1, result.size());
+		assertEquals(privateCollection.getCollectionId(),
+				result.get(0).getCollectionId());
+		assertEquals(1, param.getTotalCnt());
 	}
 
 	/** U-05를 작성자 본인이 조회하면 공개와 비공개를 모두 반환하는지 검증 */

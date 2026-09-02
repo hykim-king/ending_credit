@@ -3,6 +3,8 @@
  * 2026. 8. 31. jinyoung - 컬렉션 목록 검색을 제목 전용으로 단일화
  * 2026. 9. 01. jinyoung - 컬렉션 검색 결과 카드·상태·반응형 본문 UI 반영
  * 2026. 9. 01. jinyoung - 컬렉션 내부 작품 포스터 콜라주 적용
+ * 2026. 9. 01. jinyoung - 검색 결과 모드·작성자 프로필·7슬롯 포스터 모자이크 적용
+ * 2026. 9. 02. jinyoung - 빈 설명 생략 및 현재 회원 소유 컬렉션 배지 적용
  */
 let currentCollectionPage = 1;
 
@@ -21,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     currentCollectionPage = Math.max(1, Number(query.get("pageNo")) || 1);
+    setSearchResultMode((query.get("searchWord") || "").trim());
 
     searchForm.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -52,10 +55,11 @@ async function loadCollections(pageNo) {
         const collections = data.items || [];
         const totalCount = Number(data.page?.totalCnt || 0);
 
-        renderCollections(collections, searchWord);
+        renderCollections(collections, searchWord, data.currentMemberId);
         renderPagination(data.page || {}, pageNo);
         updateResultHeading(searchWord, totalCount);
         updateLocation(pageNo, pageSize, searchWord);
+        setSearchResultMode(searchWord);
     } catch (error) {
         showLoadFailure(errorMessage, error.message);
     }
@@ -68,7 +72,7 @@ function showLoading() {
     document.querySelector("#paginationNavigation").classList.add("d-none");
 }
 
-function renderCollections(collections, searchWord) {
+function renderCollections(collections, searchWord, currentMemberId) {
     const collectionList = document.querySelector("#collectionList");
     const loading = document.querySelector("#collectionLoading");
     const empty = document.querySelector("#collectionListEmpty");
@@ -83,12 +87,12 @@ function renderCollections(collections, searchWord) {
     }
 
     collections.forEach((collection) => {
-        collectionList.append(createCollectionCard(collection));
+        collectionList.append(createCollectionCard(collection, currentMemberId));
     });
     collectionList.classList.remove("d-none");
 }
 
-function createCollectionCard(collection) {
+function createCollectionCard(collection, currentMemberId) {
     const article = document.createElement("article");
     article.className = "collection-list-card";
 
@@ -98,8 +102,7 @@ function createCollectionCard(collection) {
     link.setAttribute("aria-label", `${collection.title} 컬렉션 보기`);
 
     const visual = document.createElement("div");
-    const visualVariant = Math.abs(Number(collection.collectionId || 0)) % 4;
-    visual.className = `collection-list-card-visual collection-visual-${visualVariant}`;
+    visual.className = "collection-list-card-visual";
 
     const previewPosters = [
         collection.previewPosterUrl1,
@@ -129,55 +132,138 @@ function createCollectionCard(collection) {
 
     visual.append(label, symbol, visualCount);
 
+    if (Number(currentMemberId) > 0
+            && Number(collection.memberId) === Number(currentMemberId)) {
+        const ownerBadge = document.createElement("span");
+        ownerBadge.className = "collection-list-card-owner-badge";
+        ownerBadge.textContent = "내 컬렉션";
+        label.remove();
+        visual.append(ownerBadge);
+    }
+
     const body = document.createElement("div");
     body.className = "collection-list-card-body";
 
     const title = document.createElement("h3");
     title.className = "collection-list-card-title";
-    title.textContent = collection.title;
+    const titleText = document.createElement("span");
+    titleText.className = "collection-list-card-title-text";
+    titleText.textContent = collection.title;
+    title.append(titleText);
 
     const description = document.createElement("p");
     description.className = "collection-list-card-description";
-    description.textContent = collection.description || "작성자가 남긴 설명이 없습니다.";
+    description.textContent = (collection.description || "").trim();
 
-    const author = document.createElement("p");
+    const author = document.createElement("div");
     author.className = "collection-list-card-author";
-    author.textContent = collection.nickname || `회원 ${collection.memberId}`;
+
+    const nickname = collection.nickname || `회원 ${collection.memberId}`;
+    const avatar = createAuthorAvatar(collection.profileImgUrl, nickname);
+    const authorName = document.createElement("span");
+    authorName.textContent = nickname;
+    author.append(avatar, authorName);
 
     const stats = document.createElement("div");
     stats.className = "collection-list-card-stats";
     stats.append(
-        createStat("heart", "좋아요", collection.likeCount),
+        createStat(
+            collection.likedByCurrentMember ? "heart-fill" : "heart",
+            "좋아요",
+            collection.likeCount,
+            collection.likedByCurrentMember
+        ),
         createStat("chat", "코멘트", collection.commentCount)
     );
 
     body.append(title, description, author, stats);
     link.append(visual, body);
     article.append(link);
+
+    requestAnimationFrame(() => configureScrollableTitle(title, titleText));
     return article;
+}
+
+function configureScrollableTitle(title, titleText) {
+    const overflowWidth = Math.ceil(
+        titleText.getBoundingClientRect().width - title.clientWidth
+    );
+    const isOverflowing = overflowWidth > 0;
+
+    title.classList.toggle("is-overflowing", isOverflowing);
+    title.toggleAttribute("title", isOverflowing);
+
+    if (!isOverflowing) {
+        title.style.removeProperty("--collection-title-scroll-distance");
+        title.style.removeProperty("--collection-title-scroll-duration");
+        return;
+    }
+
+    title.title = titleText.textContent;
+    title.style.setProperty(
+        "--collection-title-scroll-distance",
+        `-${overflowWidth}px`
+    );
+    title.style.setProperty(
+        "--collection-title-scroll-duration",
+        `${Math.min(7, Math.max(2.4, overflowWidth / 45))}s`
+    );
 }
 
 function createCollectionPosterCollage(posterUrls, visual) {
     const collage = document.createElement("div");
-    collage.className = `collection-list-poster-collage poster-count-${posterUrls.length}`;
+    const usesSevenSlotLayout = posterUrls.length === 5;
+    const posterIndexes = usesSevenSlotLayout
+        ? [0, 1, 2, 3, 3, 4, 4]
+        : posterUrls.map((posterUrl, index) => index);
 
-    posterUrls.forEach((posterUrl, index) => {
+    collage.className = usesSevenSlotLayout
+        ? "collection-list-poster-collage poster-count-5 is-seven-slot-layout"
+        : `collection-list-poster-collage poster-count-${posterUrls.length} is-simple-layout`;
+
+    posterIndexes.forEach((posterIndex, slotIndex) => {
+        const slot = document.createElement("span");
+        slot.className = `collection-list-poster-slot poster-slot-${slotIndex + 1}`;
+
         const poster = document.createElement("img");
-        poster.className = `collection-list-preview-poster poster-${index + 1}`;
-        poster.src = resolveCollectionPosterUrl(posterUrl);
+        poster.className = "collection-list-preview-poster";
+        poster.src = resolveCollectionPosterUrl(posterUrls[posterIndex]);
         poster.alt = "";
         poster.loading = "lazy";
+        poster.decoding = "async";
         poster.addEventListener("error", () => {
-            poster.remove();
+            slot.remove();
             if (!collage.querySelector("img")) {
                 collage.remove();
                 visual.classList.remove("has-posters");
             }
         });
-        collage.append(poster);
+        slot.append(poster);
+        collage.append(slot);
     });
 
     return collage;
+}
+
+function createAuthorAvatar(profileImgUrl, nickname) {
+    const fallback = document.createElement("span");
+    fallback.className = "collection-list-card-avatar collection-list-card-avatar-fallback";
+    fallback.setAttribute("aria-hidden", "true");
+    fallback.innerHTML = '<i class="bi bi-person-fill"></i>';
+
+    if (!profileImgUrl) {
+        return fallback;
+    }
+
+    const image = document.createElement("img");
+    image.className = "collection-list-card-avatar";
+    image.src = resolveCollectionProfileUrl(profileImgUrl);
+    image.alt = "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.addEventListener("error", () => image.replaceWith(fallback));
+    image.setAttribute("title", `${nickname} 프로필`);
+    return image;
 }
 
 function resolveCollectionPosterUrl(posterUrl) {
@@ -188,8 +274,17 @@ function resolveCollectionPosterUrl(posterUrl) {
     return `https://image.tmdb.org/t/p/w342${posterUrl}`;
 }
 
-function createStat(icon, label, count) {
+function resolveCollectionProfileUrl(profileImgUrl) {
+    try {
+        return new URL(profileImgUrl, `${window.location.origin}/`).href;
+    } catch (error) {
+        return profileImgUrl;
+    }
+}
+
+function createStat(icon, label, count, active = false) {
     const stat = document.createElement("span");
+    stat.classList.toggle("is-active", active);
     stat.innerHTML = `<i class="bi bi-${icon}" aria-hidden="true"></i>`;
 
     const text = document.createElement("span");
@@ -203,6 +298,15 @@ function updateResultHeading(searchWord, totalCount) {
         ? `“${searchWord}” 검색 결과`
         : "전체 컬렉션";
     document.querySelector("#resultCount").textContent = `${totalCount}개`;
+}
+
+function setSearchResultMode(searchWord) {
+    const collectionListPage = document.querySelector("#collectionListPage");
+    const collectionListHero = document.querySelector(".collection-list-hero");
+    const isSearchResult = Boolean(searchWord);
+
+    collectionListPage.classList.toggle("is-search-result", isSearchResult);
+    collectionListHero.classList.toggle("d-none", isSearchResult);
 }
 
 function updateEmptyState(searchWord) {
@@ -297,6 +401,7 @@ function showLoadFailure(element, message) {
     element.textContent = message || "컬렉션 목록을 불러오지 못했습니다.";
     element.classList.remove("d-none");
     element.focus();
+    setSearchResultMode("");
 }
 
 function hideError(element) {

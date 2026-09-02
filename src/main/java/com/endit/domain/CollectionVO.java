@@ -12,6 +12,8 @@ package com.endit.domain;
  * 2026. 8. 12.	jinyoung    최초 생성
  * 2026. 8. 19. jinyoung    조회용 작성자 및 집계 정보 추가
  * 2026. 9. 01. jinyoung    목록 콜라주용 대표 포스터 정보 추가
+ * 2026. 9. 01. jinyoung    목록 작성자 프로필 이미지 정보 추가
+ * 2026. 9. 02. jinyoung    현재 회원의 목록 좋아요 여부 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -28,8 +30,10 @@ public class CollectionVO {
 	private String createdDt;      // 생성 일시
 	private String updatedDt;      // 최종 수정 일시
 	private String nickname;       // 작성자 닉네임
+	private String profileImgUrl;  // 작성자 프로필 이미지 URL
 	private int itemCount;         // 포함 작품 수
 	private int likeCount;         // 좋아요 수
+	private boolean likedByCurrentMember; // 현재 회원의 좋아요 여부
 	private int commentCount;      // 코멘트 수
 	private String previewPosterUrl1; // 목록 대표 포스터 URL 1
 	private String previewPosterUrl2; // 목록 대표 포스터 URL 2
@@ -117,6 +121,14 @@ public class CollectionVO {
 		this.nickname = nickname;
 	}
 
+	public String getProfileImgUrl() {
+		return profileImgUrl;
+	}
+
+	public void setProfileImgUrl(String profileImgUrl) {
+		this.profileImgUrl = profileImgUrl;
+	}
+
 	public int getItemCount() {
 		return itemCount;
 	}
@@ -131,6 +143,14 @@ public class CollectionVO {
 
 	public void setLikeCount(int likeCount) {
 		this.likeCount = likeCount;
+	}
+
+	public boolean isLikedByCurrentMember() {
+		return likedByCurrentMember;
+	}
+
+	public void setLikedByCurrentMember(boolean likedByCurrentMember) {
+		this.likedByCurrentMember = likedByCurrentMember;
 	}
 
 	public int getCommentCount() {
@@ -185,10 +205,11 @@ public class CollectionVO {
 	public String toString() {
 		return "CollectionVO [collectionId=" + collectionId + ", memberId=" + memberId + ", title=" + title
 				+ ", description=" + description + ", isPublic=" + isPublic + ", createdDt=" + createdDt
-				+ ", updatedDt=" + updatedDt + ", nickname=" + nickname + ", itemCount=" + itemCount
-				+ ", likeCount=" + likeCount + ", commentCount=" + commentCount + ", previewPosterUrl1="
-				+ previewPosterUrl1 + ", previewPosterUrl2=" + previewPosterUrl2 + ", previewPosterUrl3="
-				+ previewPosterUrl3 + ", previewPosterUrl4=" + previewPosterUrl4 + ", previewPosterUrl5="
-				+ previewPosterUrl5 + "]";
+				+ ", updatedDt=" + updatedDt + ", nickname=" + nickname + ", profileImgUrl=" + profileImgUrl
+				+ ", itemCount=" + itemCount + ", likeCount=" + likeCount + ", likedByCurrentMember="
+				+ likedByCurrentMember + ", commentCount=" + commentCount + ", previewPosterUrl1="
+				+ previewPosterUrl1 + ", previewPosterUrl2=" + previewPosterUrl2
+				+ ", previewPosterUrl3=" + previewPosterUrl3 + ", previewPosterUrl4=" + previewPosterUrl4
+				+ ", previewPosterUrl5=" + previewPosterUrl5 + "]";
 	}
 }

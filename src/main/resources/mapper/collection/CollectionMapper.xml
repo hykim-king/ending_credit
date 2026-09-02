@@ -7,6 +7,10 @@
 Modification History
 2026. 8. 29. jinyoung - 전체 공개 목록과 U-05 본인·타인 공개 범위 조회 추가
 2026. 9. 01. jinyoung - 목록 카드용 컬렉션 대표 포스터 5건 조회 추가
+2026. 9. 01. jinyoung - 목록 카드용 작성자 프로필 이미지 조회 추가
+2026. 9. 02. jinyoung - 전체 목록에 현재 회원 소유 비공개 컬렉션 포함
+2026. 9. 01. jinyoung - 상세 화면용 작성자 프로필 이미지 조회 추가
+2026. 9. 02. jinyoung - 목록에 현재 회원의 좋아요 여부 추가
 -->
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
@@ -60,6 +64,7 @@ Modification History
                TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
                TO_CHAR(C.UPDATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
                M.NICKNAME,
+               M.PROFILE_IMG_URL,
                NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
                NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT
@@ -116,6 +121,7 @@ Modification History
                CREATED_DT,
                UPDATED_DT,
                NICKNAME,
+               PROFILE_IMG_URL,
                ITEM_COUNT,
                LIKE_COUNT,
                COMMENT_COUNT
@@ -128,6 +134,7 @@ Modification History
                    TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
                    TO_CHAR(NVL(C.UPDATED_DT, C.CREATED_DT), 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
                    M.NICKNAME,
+                   M.PROFILE_IMG_URL,
                    NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                    NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
                    NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
@@ -185,7 +192,7 @@ Modification History
         <include refid="collectionWhere"/>
     </select>
 
-    <!-- 전체 목록은 공개만, U-05는 대상 회원 본인일 때만 비공개까지 노출한다. -->
+    <!-- 전체 목록은 공개와 현재 회원 소유 컬렉션을, U-05는 본인일 때 비공개까지 노출한다. -->
     <sql id="visibleCollectionWhere">
         <where>
             <choose>
@@ -197,7 +204,17 @@ Modification History
                     )
                 </when>
                 <otherwise>
-                    AND C.IS_PUBLIC = 'Y'
+                    <choose>
+                        <when test="currentMemberId != null">
+                            AND (
+                                C.IS_PUBLIC = 'Y'
+                                OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                            )
+                        </when>
+                        <otherwise>
+                            AND C.IS_PUBLIC = 'Y'
+                        </otherwise>
+                    </choose>
                 </otherwise>
             </choose>
             <if test="searchWord != null and searchWord != ''">
@@ -222,8 +239,10 @@ Modification History
                CREATED_DT,
                UPDATED_DT,
                NICKNAME,
+               PROFILE_IMG_URL,
                ITEM_COUNT,
                LIKE_COUNT,
+               LIKED_BY_CURRENT_MEMBER,
                COMMENT_COUNT,
                PREVIEW_POSTER_URL1,
                PREVIEW_POSTER_URL2,
@@ -239,8 +258,24 @@ Modification History
                    TO_CHAR(C.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS CREATED_DT,
                    TO_CHAR(NVL(C.UPDATED_DT, C.CREATED_DT), 'YYYY-MM-DD HH24:MI:SS') AS UPDATED_DT,
                    M.NICKNAME,
+                   M.PROFILE_IMG_URL,
                    NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
                    NVL(CL.LIKE_COUNT, 0) AS LIKE_COUNT,
+                   <choose>
+                       <when test="currentMemberId != null">
+                           CASE
+                               WHEN EXISTS (
+                                   SELECT 1
+                                     FROM COLLECTION_LIKE MY_CL
+                                    WHERE MY_CL.COLLECTION_ID = C.COLLECTION_ID
+                                      AND MY_CL.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                               )
+                               THEN 1
+                               ELSE 0
+                           END
+                       </when>
+                       <otherwise>0</otherwise>
+                   </choose> AS LIKED_BY_CURRENT_MEMBER,
                    NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
                    CP.PREVIEW_POSTER_URL1,
                    CP.PREVIEW_POSTER_URL2,

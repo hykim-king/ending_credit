@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,7 @@ import com.endit.service.CollectionService;
  * ------------------------------------------------------------
  * 2026. 8. 21. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    인증 회원 기반 DTO·PATCH·전체 공개 목록·U-05 접근 권한 처리 추가
+ * 2026. 9. 02. jinyoung    전체 목록 응답에 현재 회원 식별 정보 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -88,13 +90,16 @@ public class CollectionController {
 		param.setSearchDiv(searchDiv);
 		param.setSearchWord(searchWord);
 
-		List<CollectionVO> items = collectionService.retrieve(param);
+		OptionalLong currentMemberId = currentMemberProvider.findCurrentMemberId();
+		List<CollectionVO> items = collectionService.retrieve(
+				param, currentMemberId);
 
 		// 목록(items)과 페이징 정보(page)를 한 JSON 응답으로 전달한다.
 		// LinkedHashMap은 디버깅할 때 응답 키 순서를 일정하게 유지하기 위해 사용한다.
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("items", items);
 		response.put("page", param);
+		response.put("currentMemberId", currentMemberId.orElse(0));
 
 		return ResponseEntity.ok(response);
 	}

@@ -25,6 +25,7 @@ import com.endit.service.CollectionItemService;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    부모 컬렉션 조회 권한 및 변경 소유권 검증 추가
+ * 2026. 9. 02. jinyoung    목록 조회 시 현재 회원 평가 조건 전달
  * ------------------------------------------------------------
  * </pre>
  *
@@ -72,6 +73,9 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 		normalizePaging(param);
 		param.setSearchDiv(SEARCH_BY_COLLECTION);
 		param.setSearchWord(String.valueOf(collectionId));
+		param.getSearchMap().remove("currentMemberId");
+		currentMemberId.ifPresent(memberId ->
+				param.getSearchMap().put("currentMemberId", String.valueOf(memberId)));
 
 		// 목록과 같은 조건으로 count를 먼저 조회해 페이지 계산 정보에 사용한다.
 		int totalCount = collectionItemMapper.count(param);

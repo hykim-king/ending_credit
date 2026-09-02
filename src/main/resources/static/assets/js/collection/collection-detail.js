@@ -5,6 +5,8 @@
  * 2026. 8. 31. jinyoung - 컬렉션 작품 카드를 영화 상세 화면과 연결
  * 2026. 9. 01. jinyoung - D-01·D-05 본문 UI와 상태 피드백 반영
  * 2026. 9. 01. jinyoung - 상세 상단 작품 포스터 콜라주 반영
+ * 2026. 9. 01. jinyoung - 상세 통합 블록·보기 전환·더보기·댓글 이동 적용
+ * 2026. 9. 02. jinyoung - 상세 반응형·소유자 액션·평균 및 내 평가 표시 개선
  */
 // 공통 layout을 사용하므로 담당 본문 루트의 값을 상세 조회와 권한 표시에 사용한다.
 const detailPage = document.querySelector("#collectionDetailPage");
@@ -13,16 +15,28 @@ const currentMemberId = Number(detailPage.dataset.currentMemberId || 0);
 let isOwner = false;
 let isLiked = false;
 let isPublicCollection = false;
+let currentItemPage = 0;
+let totalItemCount = 0;
+let currentViewMode = "grid";
+let copyFeedbackTimer = null;
 
 document.addEventListener("DOMContentLoaded", initializeDetail);
 
 async function initializeDetail() {
     document.querySelector("#editLink").href = `/collections/${collectionId}/edit`;
-    document.querySelector("#commentsLink").href =
-        `/comment/doRetrieve?collectionId=${collectionId}`;
     document.querySelector("#confirmDeleteButton").addEventListener("click", deleteCollection);
     document.querySelector("#likeButton").addEventListener("click", toggleLike);
     document.querySelector("#copyLinkButton").addEventListener("click", copyCollectionLink);
+    document.querySelector("#commentsLink").addEventListener("click", scrollToComments);
+    document.querySelector("#gridViewButton").addEventListener(
+        "click",
+        () => setMovieView("grid")
+    );
+    document.querySelector("#listViewButton").addEventListener(
+        "click",
+        () => setMovieView("list")
+    );
+    document.querySelector("#loadMoreButton").addEventListener("click", loadMoreItems);
 
     // 소유자 여부를 먼저 확정한 뒤 상세 화면의 버튼 노출을 결정한다.
     await loadCollection();
@@ -38,28 +52,31 @@ async function loadCollection() {
 
         document.title = `${collection.title} - 컬렉션`;
         document.querySelector("#collectionTitle").textContent = collection.title;
-        document.querySelector("#deleteCollectionTitle").textContent =
-            collection.title || "이 컬렉션";
-        document.querySelector("#collectionDescription").textContent =
-            collection.description || "설명이 없습니다.";
-        document.querySelector("#collectionAuthor").textContent =
-            collection.nickname || `회원 ${collection.memberId}`;
-        document.querySelector("#collectionDate").textContent =
-            collection.updatedDt || collection.createdDt || "";
-        document.querySelector("#itemCount").textContent = collection.itemCount || 0;
+        const description = collection.description || "";
+        const descriptionElement = document.querySelector("#collectionDescription");
+        descriptionElement.textContent = description;
+        descriptionElement.classList.toggle("d-none", description.trim().length === 0);
+        renderCollectionAuthor(collection);
+        renderUpdatedDate(collection.updatedDt || collection.createdDt);
+        document.querySelector("#itemResultCount").textContent =
+            String(collection.itemCount || 0);
         document.querySelector("#likeCount").textContent = collection.likeCount || 0;
         document.querySelector("#commentCount").textContent = collection.commentCount || 0;
-
-        const publicBadge = document.querySelector("#publicBadge");
-        publicBadge.textContent = collection.isPublic === "Y" ? "공개" : "비공개";
-        publicBadge.className = "collection-visibility-badge";
+        document.querySelector("#commentSectionCount").textContent =
+            collection.commentCount || 0;
 
         isPublicCollection = collection.isPublic === "Y";
         isOwner = currentMemberId > 0 && currentMemberId === Number(collection.memberId);
+        document.querySelector("#privateBadge").classList.toggle(
+            "d-none",
+            isPublicCollection
+        );
         applyActionVisibility();
 
         if (currentMemberId > 0 && !isOwner) {
             await loadLikeStatus();
+        } else {
+            renderLikeButton();
         }
     } catch (error) {
         showDetailError(errorMessage, error.message);
@@ -68,23 +85,24 @@ async function loadCollection() {
 
 /** 인증 여부와 소유자 여부에 따라 변경·좋아요 동작을 구분해 노출한다. */
 function applyActionVisibility() {
+    const likeButton = document.querySelector("#likeButton");
+
     document.querySelector("#ownerActions").classList.toggle("d-none", !isOwner);
-    document.querySelector("#copyLinkButton").classList.toggle(
-        "d-none",
-        !isPublicCollection
-    );
-    document.querySelector("#likeButton").classList.toggle(
-        "d-none",
-        currentMemberId <= 0 || isOwner
-    );
+    likeButton.disabled = currentMemberId <= 0;
+    likeButton.title = currentMemberId <= 0
+        ? "로그인 후 좋아요를 누를 수 있습니다."
+        : (isOwner ? "자신의 컬렉션에는 좋아요를 누를 수 없습니다." : "");
 }
 
 /** 공개 컬렉션의 현재 상세 URL을 클립보드에 복사한다. */
 async function copyCollectionLink() {
     const errorMessage = document.querySelector("#errorMessage");
-    const feedback = document.querySelector("#copyLinkFeedback");
     hideDetailError(errorMessage);
-    feedback.classList.add("d-none");
+
+    if (!isPublicCollection) {
+        showCopyFeedback("비공개 컬렉션은 링크를 공유할 수 없어요.");
+        return;
+    }
 
     try {
         if (navigator.clipboard && window.isSecureContext) {
@@ -93,13 +111,21 @@ async function copyCollectionLink() {
             copyLinkWithTemporaryInput(window.location.href);
         }
 
-        feedback.classList.remove("d-none");
-        window.setTimeout(() => {
-            feedback.classList.add("d-none");
-        }, 2400);
+        showCopyFeedback("링크를 복사했어요");
     } catch (error) {
         showDetailError(errorMessage, "링크를 복사하지 못했습니다.");
     }
+}
+
+function showCopyFeedback(message) {
+    const feedback = document.querySelector("#copyLinkFeedback");
+    feedback.textContent = message;
+    window.clearTimeout(copyFeedbackTimer);
+    feedback.classList.remove("is-visible");
+    window.requestAnimationFrame(() => feedback.classList.add("is-visible"));
+    copyFeedbackTimer = window.setTimeout(() => {
+        feedback.classList.remove("is-visible");
+    }, 2400);
 }
 
 /** Clipboard API를 사용할 수 없는 환경을 위한 복사 대체 처리다. */
@@ -132,9 +158,10 @@ function renderLikeButton() {
     const icon = likeButton.querySelector("i");
     const label = document.querySelector("#likeButtonLabel");
 
-    label.textContent = isLiked ? "좋아요 취소" : "좋아요";
+    label.textContent = "좋아요";
     icon.className = isLiked ? "bi bi-heart-fill" : "bi bi-heart";
     likeButton.setAttribute("aria-pressed", String(isLiked));
+    likeButton.setAttribute("aria-label", isLiked ? "좋아요 취소" : "좋아요");
 }
 
 /** 현재 상태에 따라 좋아요 등록 또는 취소 요청을 전송한다. */
@@ -142,6 +169,12 @@ async function toggleLike() {
     const errorMessage = document.querySelector("#errorMessage");
     const likeButton = document.querySelector("#likeButton");
     const likeCount = document.querySelector("#likeCount");
+
+    if (isOwner) {
+        showCopyFeedback("내 컬렉션에는 좋아요를 누를 수 없어요.");
+        return;
+    }
+
     const previousLiked = isLiked;
     const previousCount = Number(likeCount.textContent || 0);
 
@@ -169,14 +202,25 @@ async function toggleLike() {
     }
 }
 
-/** 지정한 페이지의 컬렉션 작품을 조회하고 목록과 페이지 버튼을 갱신한다. */
+/** 지정한 페이지의 컬렉션 작품을 조회해 기존 목록 뒤에 이어 붙인다. */
 async function loadItems(pageNo) {
     const errorMessage = document.querySelector("#errorMessage");
     const loading = document.querySelector("#itemLoading");
+    const itemList = document.querySelector("#itemList");
+    const loadMoreButton = document.querySelector("#loadMoreButton");
 
-    loading.classList.remove("d-none");
-    document.querySelector("#itemList").classList.add("d-none");
-    document.querySelector("#itemEmpty").classList.add("d-none");
+    if (pageNo === 1) {
+        currentItemPage = 0;
+        totalItemCount = 0;
+        itemList.replaceChildren();
+        itemList.classList.add("d-none");
+        loading.classList.remove("d-none");
+        document.querySelector("#itemEmpty").classList.add("d-none");
+        loadMoreButton.classList.add("d-none");
+    } else {
+        loadMoreButton.disabled = true;
+        document.querySelector("#loadMoreLabel").textContent = "불러오는 중";
+    }
 
     try {
         const data = await requestGet(`/api/collections/${collectionId}/items`, {
@@ -188,12 +232,18 @@ async function loadItems(pageNo) {
         if (pageNo === 1) {
             renderDetailCover(items);
         }
-        renderItems(items);
-        renderItemPagination(data.page || {}, pageNo);
+        renderItems(items, pageNo > 1);
+        currentItemPage = pageNo;
+        totalItemCount = Number(data.page?.totalCnt || 0);
         document.querySelector("#itemResultCount").textContent =
-            `${data.page?.totalCnt || 0}개`;
+            String(totalItemCount);
+        updateLoadMoreButton();
     } catch (error) {
-        loading.classList.add("d-none");
+        if (pageNo === 1) {
+            loading.classList.add("d-none");
+        } else {
+            restoreLoadMoreButton();
+        }
         showDetailError(errorMessage, error.message);
     }
 }
@@ -214,9 +264,8 @@ function renderDetailCover(items) {
     }
 
     const collage = document.createElement("div");
-    collage.className = "collection-detail-poster-collage";
-    collage.style.setProperty("--poster-count", String(posterItems.length));
-
+    collage.className =
+        `collection-detail-poster-collage poster-count-${posterItems.length}`;
     posterItems.forEach((item) => {
         const poster = document.createElement("img");
         poster.src = resolveDetailPosterUrl(item.posterUrl);
@@ -224,7 +273,6 @@ function renderDetailCover(items) {
         poster.addEventListener("error", () => {
             poster.remove();
             const remainingPosters = collage.querySelectorAll("img").length;
-            collage.style.setProperty("--poster-count", String(remainingPosters || 1));
             if (remainingPosters === 0) {
                 collage.remove();
                 cover.classList.remove("has-posters");
@@ -238,18 +286,14 @@ function renderDetailCover(items) {
     cover.append(collage);
 }
 
-function renderItems(items) {
+function renderItems(items, append) {
     const itemList = document.querySelector("#itemList");
     const itemEmpty = document.querySelector("#itemEmpty");
 
-    itemList.replaceChildren();
-    document.querySelector("#itemLoading").classList.add("d-none");
-    itemEmpty.classList.toggle("d-none", items.length > 0);
-    itemList.classList.toggle("d-none", items.length === 0);
-
-    if (items.length === 0) {
-        return;
+    if (!append) {
+        itemList.replaceChildren();
     }
+    document.querySelector("#itemLoading").classList.add("d-none");
 
     items.forEach((item) => {
         // 서버 데이터를 innerHTML로 조합하지 않고 textContent로 넣어 안전하게 표시한다.
@@ -280,15 +324,150 @@ function renderItems(items) {
         const info = document.createElement("p");
         info.className = "collection-movie-meta";
         const releaseYear = item.releaseYear || "개봉연도 정보 없음";
-        const averageRating = item.averageRating == null
-            ? "평가 없음"
-            : `평균 ★${Number(item.averageRating).toFixed(1)}`;
-        info.textContent = `${releaseYear} · ${averageRating}`;
+        const metadata = [releaseYear];
+        if (item.averageRating != null) {
+            metadata.push(`평균 ★${Number(item.averageRating).toFixed(1)}`);
+        }
+        if (item.myRating != null) {
+            metadata.push(`내 평가 ★${Number(item.myRating)}`);
+        }
+        info.textContent = metadata.join(" · ");
 
         body.append(title, info);
         link.append(body);
         itemList.append(link);
     });
+
+    const hasItems = itemList.childElementCount > 0;
+    itemEmpty.classList.toggle("d-none", hasItems);
+    itemList.classList.toggle("d-none", !hasItems);
+}
+
+/** 현재까지 불러온 작품 뒤에 다음 12개를 추가한다. */
+function loadMoreItems() {
+    if (currentItemPage * 12 >= totalItemCount) {
+        return;
+    }
+
+    loadItems(currentItemPage + 1);
+}
+
+function updateLoadMoreButton() {
+    const loadMoreButton = document.querySelector("#loadMoreButton");
+    const hasMore = currentItemPage * 12 < totalItemCount;
+
+    restoreLoadMoreButton();
+    loadMoreButton.classList.toggle("d-none", !hasMore);
+}
+
+function restoreLoadMoreButton() {
+    const loadMoreButton = document.querySelector("#loadMoreButton");
+    loadMoreButton.disabled = false;
+    document.querySelector("#loadMoreLabel").textContent = "더보기";
+}
+
+/** 포스터형과 리스트형은 동일한 작품 정보를 레이아웃만 바꿔 표시한다. */
+function setMovieView(viewMode) {
+    const itemList = document.querySelector("#itemList");
+    const gridViewButton = document.querySelector("#gridViewButton");
+    const listViewButton = document.querySelector("#listViewButton");
+
+    currentViewMode = viewMode === "list" ? "list" : "grid";
+    itemList.classList.toggle("is-grid-view", currentViewMode === "grid");
+    itemList.classList.toggle("is-list-view", currentViewMode === "list");
+    gridViewButton.classList.toggle("is-active", currentViewMode === "grid");
+    listViewButton.classList.toggle("is-active", currentViewMode === "list");
+    gridViewButton.setAttribute("aria-pressed", String(currentViewMode === "grid"));
+    listViewButton.setAttribute("aria-pressed", String(currentViewMode === "list"));
+}
+
+function scrollToComments() {
+    const comments = document.querySelector("#collectionComments");
+    comments.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => comments.focus({ preventScroll: true }), 450);
+}
+
+function renderCollectionAuthor(collection) {
+    const nickname = collection.nickname || `회원 ${collection.memberId}`;
+    const avatar = document.querySelector("#collectionAuthorAvatar");
+
+    document.querySelector("#collectionAuthor").textContent = nickname;
+    avatar.replaceChildren();
+    avatar.className = "collection-cover-avatar collection-cover-avatar-fallback";
+
+    if (!collection.profileImgUrl) {
+        avatar.innerHTML = '<i class="bi bi-person-fill"></i>';
+        return;
+    }
+
+    const image = document.createElement("img");
+    image.src = resolveCollectionProfileUrl(collection.profileImgUrl);
+    image.alt = "";
+    image.addEventListener("error", () => {
+        avatar.className = "collection-cover-avatar collection-cover-avatar-fallback";
+        avatar.innerHTML = '<i class="bi bi-person-fill"></i>';
+    });
+    avatar.className = "collection-cover-avatar has-image";
+    avatar.append(image);
+}
+
+function renderUpdatedDate(dateValue) {
+    const dateElement = document.querySelector("#collectionDate");
+    dateElement.textContent = formatRelativeUpdate(dateValue);
+    dateElement.dateTime = dateValue ? dateValue.replace(" ", "T") : "";
+}
+
+function formatRelativeUpdate(dateValue) {
+    if (!dateValue) {
+        return "";
+    }
+
+    const updatedDate = new Date(dateValue.replace(" ", "T"));
+    if (Number.isNaN(updatedDate.getTime())) {
+        return "";
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const updatedDay = new Date(
+        updatedDate.getFullYear(),
+        updatedDate.getMonth(),
+        updatedDate.getDate()
+    );
+    const elapsedDays = Math.max(
+        0,
+        Math.floor((today.getTime() - updatedDay.getTime()) / 86400000)
+    );
+
+    if (elapsedDays === 0) {
+        return "오늘 업데이트";
+    }
+    if (elapsedDays < 14) {
+        return `${elapsedDays}일 전 업데이트`;
+    }
+    if (elapsedDays < 30) {
+        return `${Math.floor(elapsedDays / 7)}주 전 업데이트`;
+    }
+
+    let elapsedMonths = (now.getFullYear() - updatedDate.getFullYear()) * 12
+        + now.getMonth() - updatedDate.getMonth();
+    if (now.getDate() < updatedDate.getDate()) {
+        elapsedMonths -= 1;
+    }
+    elapsedMonths = Math.max(1, elapsedMonths);
+
+    if (elapsedMonths < 12) {
+        return `${elapsedMonths}달 전 업데이트`;
+    }
+
+    let elapsedYears = now.getFullYear() - updatedDate.getFullYear();
+    if (now.getMonth() < updatedDate.getMonth()
+            || (now.getMonth() === updatedDate.getMonth()
+                && now.getDate() < updatedDate.getDate())) {
+        elapsedYears -= 1;
+    }
+
+    return `${Math.max(1, elapsedYears)}년 전 업데이트`;
 }
 
 function createDetailPosterPlaceholder() {
@@ -334,51 +513,6 @@ function requestDelete(url) {
     });
 }
 
-function renderItemPagination(page, currentPage) {
-    const pagination = document.querySelector("#itemPagination");
-    pagination.replaceChildren();
-
-    const pageSize = Number(page.pageSize || 12);
-    const totalCount = Number(page.totalCnt || 0);
-    const totalPages = Math.ceil(totalCount / pageSize);
-
-    if (totalPages <= 1) {
-        return;
-    }
-
-    // 목록 화면과 동일하게 열 개 단위의 페이지 버튼 블록을 구성한다.
-    const startPage = Math.floor((currentPage - 1) / 10) * 10 + 1;
-    const endPage = Math.min(startPage + 9, totalPages);
-
-    pagination.append(createItemPageButton("이전", startPage - 1, startPage === 1, false));
-
-    for (let pageNo = startPage; pageNo <= endPage; pageNo += 1) {
-        pagination.append(createItemPageButton(
-            String(pageNo),
-            pageNo,
-            false,
-            pageNo === currentPage
-        ));
-    }
-
-    pagination.append(createItemPageButton("다음", endPage + 1, endPage === totalPages, false));
-}
-
-function createItemPageButton(label, pageNo, disabled, active) {
-    const item = document.createElement("li");
-    item.className = `page-item${disabled ? " disabled" : ""}${active ? " active" : ""}`;
-
-    const button = document.createElement("button");
-    button.className = "page-link";
-    button.type = "button";
-    button.textContent = label;
-    button.disabled = disabled;
-    button.addEventListener("click", () => loadItems(pageNo));
-
-    item.append(button);
-    return item;
-}
-
 function showDetailError(element, message) {
     element.textContent = message;
     element.classList.remove("d-none");
@@ -397,4 +531,12 @@ function resolveDetailPosterUrl(posterUrl) {
     }
 
     return `https://image.tmdb.org/t/p/w500${posterUrl}`;
+}
+
+function resolveCollectionProfileUrl(profileImgUrl) {
+    try {
+        return new URL(profileImgUrl, `${window.location.origin}/`).href;
+    } catch (error) {
+        return profileImgUrl;
+    }
 }

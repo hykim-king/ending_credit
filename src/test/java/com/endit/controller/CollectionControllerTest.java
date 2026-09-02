@@ -48,6 +48,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 2026. 8. 29. jinyoung    PATCH·공개 여부·전체 공개 목록·U-05·소유권 정책 검증 추가
  * 2026. 8. 31. jinyoung    존재하지 않는 contentId의 HTTP 400 변환 검증 추가
  * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
+ * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 응답 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -101,20 +102,25 @@ class CollectionControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
-	/** 전체 목록에서 로그인한 작성자 본인의 비공개 컬렉션도 숨기는지 검증 */
+	/** 전체 목록에서 로그인한 작성자 본인의 비공개 컬렉션을 반환하는지 검증 */
 	@Test
-	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션도 제외")
-	void retrieveExcludesOwnPrivateCollection() throws Exception {
-		String title = "HTTP 전체 비공개 제외-" + UUID.randomUUID();
-		createCollectionForMember(
+	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션 포함")
+	void retrieveIncludesOwnPrivateCollection() throws Exception {
+		String title = "HTTP 전체 비공개 포함-" + UUID.randomUUID();
+		CollectionVO privateCollection = createCollectionForMember(
 				Math.toIntExact(authenticatedMemberId), title, "N");
 
 		mockMvc.perform(get("/api/collections")
 					.param("searchDiv", "10")
 					.param("searchWord", title))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.items", hasSize(0)))
-				.andExpect(jsonPath("$.page.totalCnt").value(0));
+				.andExpect(jsonPath("$.items", hasSize(1)))
+				.andExpect(jsonPath("$.items[0].collectionId")
+						.value(privateCollection.getCollectionId()))
+				.andExpect(jsonPath("$.items[0].isPublic").value("N"))
+				.andExpect(jsonPath("$.page.totalCnt").value(1))
+				.andExpect(jsonPath("$.currentMemberId")
+						.value(authenticatedMemberId));
 	}
 
 	/** 작성자 본인의 U-05 API에 공개와 비공개 컬렉션이 모두 노출되는지 검증 */
