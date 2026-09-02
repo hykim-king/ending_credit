@@ -10,7 +10,6 @@
  * (응답이 text/html로 정해진 뒤라) 변환 실패로 백지 500이 된다.
  * 실측 2026-08-31: 2조 공지 화면(/notices) 템플릿 부재 예외를 이 advice가 가로챔.
  * ※ 401(인증 필요)·403(권한 없음) 처리는 3조 이진영 추가(2026-08-29).
- * ※ 신고 패키지 반영 시 assignableTypes에 ReportCommentController를 추가할 것.
  */
 package com.endit.cmn.exception;
 
@@ -28,9 +27,11 @@ import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.MessageVO;
 import com.endit.controller.CommentController;
 import com.endit.controller.CommentLikeController;
+import com.endit.controller.ReportCommentController;
 
 @Order(1)
-@RestControllerAdvice(assignableTypes = { CommentController.class, CommentLikeController.class })
+@RestControllerAdvice(assignableTypes = { CommentController.class, CommentLikeController.class,
+		ReportCommentController.class })
 public class GlobalRestExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());

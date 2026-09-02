@@ -18,9 +18,10 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.endit.controller.CommentController;
+import com.endit.controller.ReportCommentController;
 
 @Order(2)
-@ControllerAdvice(assignableTypes = { CommentController.class })
+@ControllerAdvice(assignableTypes = { CommentController.class, ReportCommentController.class })
 public class GlobalViewExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());

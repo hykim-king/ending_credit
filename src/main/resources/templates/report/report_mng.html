@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>신고 상세·처리</title>
+</head>
+<body>
+<div layout:fragment="content">
+
+<div class="d-flex gap-3">
+    <!--관리자 사이드 메뉴-->
+    <aside th:replace="~{fragments/admin_side :: admin_side('report')}">side</aside>
+    <!--//관리자 사이드 메뉴-->
+
+    <div class="flex-grow-1">
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <h4 class="fw-bold mb-0">신고 상세·처리</h4>
+            <a th:href="@{/admin/report/doRetrieve}" class="btn btn-outline-primary btn-sm">목록</a>
+        </div>
+
+        <!--신고 정보 (설계서 p.69 필드 순)-->
+        <div class="comment-card mb-3">
+            <input type="hidden" id="reportId" th:value="${outVO.reportId}">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div class="filter-bar text-muted">신고 번호</div>
+                    <div class="fw-bold" th:text="|R-${outVO.reportId}|">R-1</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="filter-bar text-muted">상태</div>
+                    <div class="fw-bold" th:text="${outVO.status}">RECEIVED</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="filter-bar text-muted">신고자</div>
+                    <div class="fw-bold" th:text="|${outVO.reporterNickname} (회원 ${outVO.reportMemberId})|">신고자</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="filter-bar text-muted">접수일</div>
+                    <div class="fw-bold" th:text="${outVO.createdDt}">2026/08/25</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="filter-bar text-muted">대상 유형</div>
+                    <div class="fw-bold">COMMENT</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="filter-bar text-muted">대상 ID</div>
+                    <div class="fw-bold" th:text="|COMMENT_ID ${outVO.commentId}|">COMMENT_ID 1</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="filter-bar text-muted">사유</div>
+                    <div class="fw-bold" th:text="${outVO.reason}">SPOILER</div>
+                </div>
+                <div class="col-12">
+                    <div class="filter-bar text-muted">신고 상세 내용</div>
+                    <div th:text="${outVO.detail}">상세 내용</div>
+                </div>
+                <div class="col-12">
+                    <div class="filter-bar text-muted">신고된 코멘트</div>
+                    <div class="border rounded p-2" style="background:#F7F6FA;" th:text="${outVO.commentDetail}">코멘트 본문</div>
+                </div>
+                <div class="col-md-6" th:if="${outVO.processedDt != null}">
+                    <div class="filter-bar text-muted">처리자 / 처리일</div>
+                    <div th:text="|${outVO.processorNickname} · ${outVO.processedDt}|">-</div>
+                </div>
+                <div class="col-md-6" th:if="${outVO.processNote != null}">
+                    <div class="filter-bar text-muted">처리 내용</div>
+                    <div th:text="${outVO.processNote}">-</div>
+                </div>
+            </div>
+        </div>
+        <!--//신고 정보-->
+
+        <!--처리 입력: 미처리(RECEIVED·PROCESSING)일 때만 노출 — 완료된 신고는 이력만 남는다.
+            완료(승인/반려)는 처리자·처리 내용 필수 (CK_REPORT_PROCESS_COMPLETE)-->
+        <div class="comment-card" th:if="${outVO.status == 'RECEIVED' or outVO.status == 'PROCESSING'}">
+            <div class="row g-2 mb-2">
+                <div class="col-md-3">
+                    <label for="processorId" class="form-label filter-bar">처리 관리자 회원ID (로그인 연동 전)</label>
+                    <input type="number" id="processorId" class="form-control form-control-sm" value="9" min="1">
+                </div>
+                <div class="col-md-9">
+                    <label for="processNote" class="form-label filter-bar">처리 내용</label>
+                    <textarea id="processNote" class="form-control" rows="2" maxlength="1000"
+                              placeholder="처리 근거와 결과를 입력"></textarea>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end gap-1">
+                <button type="button" class="btn btn-outline-primary" id="btnReject">신고 반려</button>
+                <button type="button" class="btn btn-primary" id="btnApprove">신고 승인</button>
+            </div>
+            <p class="filter-bar text-muted mt-2 mb-0">
+                승인하면 신고 상태만 ACCEPTED로 저장되고 댓글은 삭제되지 않습니다(팀 결정).
+                해당 댓글은 목록에서 사유별 안내 문구("스포일러 댓글입니다." 등)로 가려집니다.
+            </p>
+        </div>
+        <!--//처리 입력-->
+
+        <!--완료된 신고: 처리 이력만 — 재승인·재반려는 서비스에서도 거부한다-->
+        <div class="comment-card filter-bar text-muted"
+             th:unless="${outVO.status == 'RECEIVED' or outVO.status == 'PROCESSING'}">
+            처리가 완료된 신고입니다. 처리자·처리 내용은 위 신고 정보에서 확인하십시오.
+        </div>
+        <!--//완료 안내-->
+    </div>
+</div>
+
+    <script th:src="@{/assets/js/report/report_mng.js}" defer></script>
+</div>
+</body>
+</html>
