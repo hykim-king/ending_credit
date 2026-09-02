@@ -24,11 +24,13 @@ import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionCreateRequest;
 import com.endit.domain.CollectionItemVO;
+import com.endit.domain.CollectionLikeVO;
 import com.endit.domain.CollectionUpdateRequest;
 import com.endit.domain.CollectionVO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionItemMapper;
+import com.endit.mapper.CollectionLikeMapper;
 import com.endit.mapper.CollectionMapper;
 import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberMapper;
@@ -46,6 +48,10 @@ import com.endit.mapper.MemberMapper;
  * 2026. 8. 29. jinyoung    요청 DTO·공개 여부·전체 공개 목록·U-05·소유권 정책 검증 추가
  * 2026. 8. 31. jinyoung    입력 정규화·작품 distinct·수정 diff 정책 검증 추가
  * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
+ * 2026. 9. 01. jinyoung    목록 카드 대표 포스터 조회 검증 추가
+ * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 조회 검증
+ * 2026. 9. 02. jinyoung    현재 회원의 목록 좋아요 여부 검증
+ * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -72,6 +78,9 @@ class CollectionServiceTest {
 	private CollectionItemMapper collectionItemMapper;
 
 	@Autowired
+	private CollectionLikeMapper collectionLikeMapper;
+
+	@Autowired
 	private ContentMapper contentMapper;
 
 	/** 실제 DB 목록 조회와 기본 페이징값 및 전체 건수 설정 검증 */
@@ -79,8 +88,12 @@ class CollectionServiceTest {
 	@DisplayName("목록 조회 시 기본 페이징과 전체 건수 설정")
 	void retrieve() {
 		int memberId = createMemberId();
+		ContentVO content = createContent("통합 목록");
 		CollectionVO saved = collectionService.create(memberId,
-				createRequest("통합 목록 컬렉션", "컬렉션 설명", List.of()));
+				createRequest(
+						"통합 목록 컬렉션",
+						"컬렉션 설명",
+						List.of(content.getContentId())));
 
 		DTO param = new DTO();
 		param.setSearchDiv("10");
@@ -93,6 +106,51 @@ class CollectionServiceTest {
 		assertEquals(1, param.getPageNo());
 		assertEquals(10, param.getPageSize());
 		assertEquals(1, param.getTotalCnt());
+	}
+
+	/** 컬렉션 목록에 내부 작품의 대표 포스터가 함께 조회되는지 검증 */
+	@Test
+	@DisplayName("목록 조회 시 내부 작품 대표 포스터 포함")
+	void retrieveWithPreviewPoster() {
+		int memberId = createMemberId();
+		ContentVO content = createContent("목록 대표 포스터");
+		CollectionVO saved = collectionService.create(
+				memberId,
+				createRequest(
+						"대표 포스터 컬렉션",
+						"컬렉션 설명",
+						List.of(content.getContentId())));
+
+		DTO param = searchByTitle(saved.getTitle());
+		List<CollectionVO> result = collectionService.retrieve(param);
+
+		assertEquals(1, result.size());
+		assertEquals(content.getPosterUrl(), result.get(0).getPreviewPosterUrl1());
+	}
+
+	/** 목록 조회에 현재 회원의 컬렉션 좋아요 여부가 포함되는지 검증 */
+	@Test
+	@DisplayName("목록 조회 시 현재 회원 좋아요 여부 포함")
+	void retrieveWithCurrentMemberLike() {
+		int ownerId = createMemberId();
+		int currentMemberId = createMemberId();
+		ContentVO content = createContent("좋아요 상태");
+		CollectionVO saved = collectionService.create(
+				ownerId,
+				createRequest(
+						"좋아요 상태 컬렉션-" + UUID.randomUUID(),
+						"컬렉션 설명",
+						List.of(content.getContentId())));
+		CollectionLikeVO like = new CollectionLikeVO(
+				currentMemberId, saved.getCollectionId(), null);
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(like));
+
+		DTO param = searchByTitle(saved.getTitle());
+		List<CollectionVO> result = collectionService.retrieve(
+				param, OptionalLong.of(currentMemberId));
+
+		assertEquals(1, result.size());
+		assertTrue(result.get(0).isLikedByCurrentMember());
 	}
 
 	/** 검색 결과가 없을 때 실제 DB 조회 결과 검증 */
@@ -109,19 +167,58 @@ class CollectionServiceTest {
 		assertEquals(0, param.getTotalCnt());
 	}
 
-	/** 전체 목록은 로그인한 작성자의 비공개 컬렉션도 제외하는지 검증 */
+	/** 전체 목록은 로그인한 작성자의 비공개 컬렉션을 포함하는지 검증 */
 	@Test
-	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션도 제외")
+	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션 포함")
 	void retrievePrivateCollection() {
 		int ownerId = createMemberId();
 		String title = "비공개목록-" + UUID.randomUUID();
-		saveCollection(ownerId, title, "N");
+		ContentVO content = createContent("비공개 목록");
+		CollectionVO privateCollection = collectionService.create(
+				ownerId,
+				createRequest(
+						title,
+						"컬렉션 설명",
+						"N",
+						List.of(content.getContentId())));
 
 		DTO param = searchByTitle(title);
-		List<CollectionVO> result = collectionService.retrieve(param);
+		List<CollectionVO> result = collectionService.retrieve(
+				param, OptionalLong.of(ownerId));
 
-		assertTrue(result.isEmpty());
-		assertEquals(0, param.getTotalCnt());
+		assertEquals(1, result.size());
+		assertEquals(privateCollection.getCollectionId(),
+				result.get(0).getCollectionId());
+		assertEquals(1, param.getTotalCnt());
+	}
+
+	/** 빈 컬렉션은 전체 목록에서 제외하고 회원별 목록에는 유지하는지 검증 */
+	@Test
+	@DisplayName("빈 컬렉션은 전체 목록에서 제외하고 회원별 목록에는 포함")
+	void retrieveEmptyCollectionVisibility() {
+		int ownerId = createMemberId();
+		CollectionVO emptyCollection = collectionService.create(
+				ownerId,
+				createRequest(
+						"빈 컬렉션-" + UUID.randomUUID(),
+						"컬렉션 설명",
+						List.of()));
+
+		DTO publicParam = searchByTitle(emptyCollection.getTitle());
+		List<CollectionVO> publicResult = collectionService.retrieve(
+				publicParam, OptionalLong.of(ownerId));
+
+		assertTrue(publicResult.isEmpty());
+		assertEquals(0, publicParam.getTotalCnt());
+
+		DTO memberParam = searchByTitle(emptyCollection.getTitle());
+		List<CollectionVO> memberResult = collectionService.retrieveByMember(
+				ownerId, memberParam, OptionalLong.of(ownerId));
+
+		assertEquals(1, memberResult.size());
+		assertEquals(emptyCollection.getCollectionId(),
+				memberResult.get(0).getCollectionId());
+		assertEquals(1, memberParam.getTotalCnt());
 	}
 
 	/** U-05를 작성자 본인이 조회하면 공개와 비공개를 모두 반환하는지 검증 */

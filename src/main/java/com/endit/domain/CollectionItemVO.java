@@ -12,6 +12,7 @@ package com.endit.domain;
  * 2026. 8. 12.	jinyoung    최초 생성
  * 2026. 8. 19. jinyoung    목록 조회용 콘텐츠 정보 추가
  * 2026. 8. 31. jinyoung    컬렉션 작품 카드용 평균 별점 추가
+ * 2026. 9. 02. jinyoung    현재 회원의 작품 평가 정보 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -20,15 +21,16 @@ package com.endit.domain;
  */
 public class CollectionItemVO {
 
-	private int collectionId;    // 컬렉션 번호
-	private int contentId;       // 콘텐츠 번호
-	private String addedDt;      // 콘텐츠 추가 일시
-	private String externalId;   // 콘텐츠 외부 연동 번호
-	private String titleKo;      // 콘텐츠 한글 제목
-	private String titleOrg;     // 콘텐츠 원제
-	private String releaseYear;  // 콘텐츠 공개 연도
-	private String posterUrl;    // 콘텐츠 포스터 URL
-	private Double averageRating; // 회원 평가 평균 별점
+	private int collectionId;      // 컬렉션 번호
+	private int contentId;         // 콘텐츠 번호
+	private String addedDt;        // 콘텐츠 추가 일시
+	private String externalId;     // 콘텐츠 외부 연동 번호
+	private String titleKo;        // 콘텐츠 한글 제목
+	private String titleOrg;       // 콘텐츠 원제
+	private String releaseYear;    // 콘텐츠 공개 연도
+	private String posterUrl;      // 콘텐츠 포스터 URL
+	private Double averageRating;  // 회원 평가 평균 별점
+	private Integer myRating;      // 현재 회원의 평가 점수
 
 	public CollectionItemVO() {
 		super();
@@ -113,11 +115,25 @@ public class CollectionItemVO {
 		this.averageRating = averageRating;
 	}
 
+	public Integer getMyRating() {
+		return myRating;
+	}
+
+	public void setMyRating(Integer myRating) {
+		this.myRating = myRating;
+	}
+
 	@Override
 	public String toString() {
-		return "CollectionItemVO [collectionId=" + collectionId + ", contentId=" + contentId + ", addedDt="
-				+ addedDt + ", externalId=" + externalId + ", titleKo=" + titleKo + ", titleOrg=" + titleOrg
-				+ ", releaseYear=" + releaseYear + ", posterUrl=" + posterUrl + ", averageRating="
-				+ averageRating + "]";
+		return "CollectionItemVO [collectionId=" + collectionId
+				+ ", contentId=" + contentId
+				+ ", addedDt=" + addedDt
+				+ ", externalId=" + externalId
+				+ ", titleKo=" + titleKo
+				+ ", titleOrg=" + titleOrg
+				+ ", releaseYear=" + releaseYear
+				+ ", posterUrl=" + posterUrl
+				+ ", averageRating=" + averageRating
+				+ ", myRating=" + myRating + "]";
 	}
 }
