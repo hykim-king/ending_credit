@@ -1,17 +1,29 @@
 /**
  * Modification History
- * 2026. 8. 31. jinyoung - 컬렉션 목록 검색을 제목 전용으로 단일화
+ * 2026. 8. 31. jinyoung - 제목 검색 적용
+ * 2026. 9. 01. jinyoung - 목록 카드·포스터 콜라주·검색 결과 UI 적용
+ * 2026. 9. 02. jinyoung - 빈 설명과 내 컬렉션 표시 개선
  */
-// HTML 문서가 모두 만들어진 뒤 이벤트를 연결해야 querySelector 결과가 null이 되지 않는다.
+const DEFAULT_PAGE_SIZE = "12";
+const PAGE_GROUP_SIZE = 10;
+const TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342";
+
 document.addEventListener("DOMContentLoaded", () => {
     const searchForm = document.querySelector("#searchForm");
     const pageSize = document.querySelector("#pageSize");
     const query = new URLSearchParams(window.location.search);
+    const requestedPageSize = query.get("pageSize");
 
-    // 삭제 완료 후 작성자의 컬렉션 목록으로 돌아올 수 있도록 URL 검색 조건을 반영한다.
     if (query.has("searchWord")) {
         document.querySelector("#searchWord").value = query.get("searchWord");
     }
+
+    if (["6", "12", "24"].includes(requestedPageSize)) {
+        pageSize.value = requestedPageSize;
+    }
+
+    const initialPage = Math.max(1, Number(query.get("pageNo")) || 1);
+    setSearchResultMode((query.get("searchWord") || "").trim());
 
     searchForm.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -19,109 +31,335 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     pageSize.addEventListener("change", () => loadCollections(1));
-
-    // 최초 진입 시 첫 페이지를 자동 조회한다.
-    loadCollections(1);
+    loadCollections(initialPage);
 });
 
-/**
- * REST API에서 컬렉션 목록을 가져와 목록과 페이지 버튼을 함께 갱신한다.
- * 검색 조건을 URL 쿼리스트링으로 전달하므로 새로고침이나 API 확인이 쉽다.
- */
+// 목록 조회와 상태 표시
+
+/** REST API에서 컬렉션 목록을 가져와 카드와 페이지 버튼을 갱신한다. */
 async function loadCollections(pageNo) {
     const errorMessage = document.querySelector("#errorMessage");
+    const searchWord = document.querySelector("#searchWord").value.trim();
+    const pageSize = document.querySelector("#pageSize").value;
 
     hideError(errorMessage);
+    showLoading();
 
     try {
-        // 공통 requestGet이 객체를 URLSearchParams로 변환해 GET 요청을 보낸다.
         const data = await requestGet("/api/collections", {
             pageNo,
-            pageSize: document.querySelector("#pageSize").value,
+            pageSize,
             searchDiv: "10",
-            searchWord: document.querySelector("#searchWord").value.trim()
+            searchWord
         });
 
-        renderCollections(data.items || []);
-        renderPagination(data.page || {}, pageNo);
+        const collections = data.items || [];
+        const totalCount = Number(data.page?.totalCnt || 0);
 
-        // ?.는 page가 없을 때 오류를 막고, || 0은 화면 기본값을 보장한다.
-        const totalCount = data.page?.totalCnt || 0;
-        document.querySelector("#resultCount").textContent = `${totalCount}개`;
+        renderCollections(collections, searchWord, data.currentMemberId);
+        renderPagination(data.page || {}, pageNo);
+        updateResultHeading(searchWord, totalCount);
+        updateLocation(pageNo, pageSize, searchWord);
+        setSearchResultMode(searchWord);
     } catch (error) {
-        showError(errorMessage, error.message);
+        showLoadFailure(errorMessage, error.message);
     }
 }
 
-function renderCollections(collections) {
+/** 목록을 요청하는 동안 로딩 상태만 표시한다. */
+function showLoading() {
+    document.querySelector("#collectionLoading").classList.remove("d-none");
+    document.querySelector("#collectionList").classList.add("d-none");
+    document.querySelector("#collectionListEmpty").classList.add("d-none");
+    document.querySelector("#paginationNavigation").classList.add("d-none");
+}
+
+// 컬렉션 카드 생성
+
+/** 조회 결과에 따라 카드 목록이나 빈 상태를 표시한다. */
+function renderCollections(collections, searchWord, currentMemberId) {
     const collectionList = document.querySelector("#collectionList");
+    const loading = document.querySelector("#collectionLoading");
+    const empty = document.querySelector("#collectionListEmpty");
+
     collectionList.replaceChildren();
+    loading.classList.add("d-none");
 
     if (collections.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "col-12 alert alert-secondary text-center";
-        empty.textContent = "조회된 컬렉션이 없습니다.";
-        collectionList.append(empty);
+        updateEmptyState(searchWord);
+        empty.classList.remove("d-none");
         return;
     }
 
     collections.forEach((collection) => {
-        // innerHTML 문자열 대신 DOM API와 textContent를 사용해
-        // 제목·설명에 HTML이 들어와도 스크립트로 실행되지 않게 한다.
-        const column = document.createElement("div");
-        column.className = "col-12 col-md-6 col-xl-4";
-
-        const card = document.createElement("article");
-        card.className = "card h-100 border-0 shadow-sm";
-
-        const body = document.createElement("div");
-        body.className = "card-body d-flex flex-column";
-
-        const heading = document.createElement("h2");
-        heading.className = "h5 card-title";
-
-        const link = document.createElement("a");
-        link.className = "stretched-link text-decoration-none text-dark";
-        link.href = `/collections/${collection.collectionId}`;
-        link.textContent = collection.title;
-        heading.append(link);
-
-        const description = document.createElement("p");
-        description.className = "card-text text-secondary flex-grow-1";
-        description.textContent = collection.description || "설명이 없습니다.";
-
-        const meta = document.createElement("div");
-        meta.className = "small text-secondary";
-        meta.textContent = `${collection.nickname || `회원 ${collection.memberId}`} · 작품 ${collection.itemCount || 0} · 좋아요 ${collection.likeCount || 0}`;
-
-        const visibility = document.createElement("span");
-        visibility.className = collection.isPublic === "Y"
-            ? "badge text-bg-success mt-3 align-self-start"
-            : "badge text-bg-secondary mt-3 align-self-start";
-        visibility.textContent = collection.isPublic === "Y" ? "공개" : "비공개";
-
-        body.append(heading, description, meta, visibility);
-        card.append(body);
-        column.append(card);
-        collectionList.append(column);
+        collectionList.append(createCollectionCard(collection, currentMemberId));
     });
+    collectionList.classList.remove("d-none");
 }
 
-function renderPagination(page, currentPage) {
-    const pagination = document.querySelector("#pagination");
-    pagination.replaceChildren();
+/** 컬렉션 한 건을 링크 카드로 만든다. */
+function createCollectionCard(collection, currentMemberId) {
+    const article = document.createElement("article");
+    article.className = "collection-list-card";
 
+    const link = document.createElement("a");
+    link.className = "collection-list-card-link";
+    link.href = `/collections/${collection.collectionId}`;
+    link.setAttribute("aria-label", `${collection.title} 컬렉션 보기`);
+
+    const visual = document.createElement("div");
+    visual.className = "collection-list-card-visual";
+
+    const previewPosters = [
+        collection.previewPosterUrl1,
+        collection.previewPosterUrl2,
+        collection.previewPosterUrl3,
+        collection.previewPosterUrl4,
+        collection.previewPosterUrl5
+    ].filter(Boolean);
+
+    if (previewPosters.length > 0) {
+        visual.classList.add("has-posters");
+        visual.append(createCollectionPosterCollage(previewPosters, visual));
+    }
+
+    const isOwnedByCurrentMember = Number(currentMemberId) > 0
+        && Number(collection.memberId) === Number(currentMemberId);
+    const visualLabel = document.createElement("span");
+    visualLabel.className = isOwnedByCurrentMember
+        ? "collection-list-card-owner-badge"
+        : "collection-list-card-label";
+    visualLabel.textContent = isOwnedByCurrentMember
+        ? "내 컬렉션"
+        : "COLLECTION";
+
+    const symbol = document.createElement("span");
+    symbol.className = "collection-list-card-symbol";
+    symbol.setAttribute("aria-hidden", "true");
+    symbol.innerHTML = '<i class="bi bi-collection-play"></i>';
+
+    const visualCount = document.createElement("span");
+    visualCount.className = "collection-list-card-visual-count";
+    visualCount.textContent = `작품 ${Number(collection.itemCount || 0)}`;
+
+    visual.append(visualLabel, symbol, visualCount);
+
+    const body = document.createElement("div");
+    body.className = "collection-list-card-body";
+
+    const title = document.createElement("h3");
+    title.className = "collection-list-card-title";
+    const titleText = document.createElement("span");
+    titleText.className = "collection-list-card-title-text";
+    titleText.textContent = collection.title;
+    title.append(titleText);
+
+    const descriptionText = (collection.description || "").trim();
+
+    const author = document.createElement("div");
+    author.className = "collection-list-card-author";
+
+    const nickname = collection.nickname || `회원 ${collection.memberId}`;
+    const avatar = createAuthorAvatar(collection.profileImgUrl, nickname);
+    const authorName = document.createElement("span");
+    authorName.textContent = nickname;
+    author.append(avatar, authorName);
+
+    const stats = document.createElement("div");
+    stats.className = "collection-list-card-stats";
+    stats.append(
+        createStat(
+            collection.likedByCurrentMember ? "heart-fill" : "heart",
+            "좋아요",
+            collection.likeCount,
+            collection.likedByCurrentMember
+        ),
+        createStat("chat", "코멘트", collection.commentCount)
+    );
+
+    body.append(title);
+    if (descriptionText) {
+        const description = document.createElement("p");
+        description.className = "collection-list-card-description";
+        description.textContent = descriptionText;
+        body.append(description);
+    }
+    body.append(author, stats);
+    link.append(visual, body);
+    article.append(link);
+
+    requestAnimationFrame(() => configureScrollableTitle(title, titleText));
+    return article;
+}
+
+/** 긴 카드 제목이 hover 시 끝까지 보이도록 이동 거리를 계산한다. */
+function configureScrollableTitle(title, titleText) {
+    const overflowWidth = Math.ceil(
+        titleText.getBoundingClientRect().width - title.clientWidth
+    );
+    const isOverflowing = overflowWidth > 0;
+
+    title.classList.toggle("is-overflowing", isOverflowing);
+    title.toggleAttribute("title", isOverflowing);
+
+    if (!isOverflowing) {
+        title.style.removeProperty("--collection-title-scroll-distance");
+        title.style.removeProperty("--collection-title-scroll-duration");
+        return;
+    }
+
+    title.title = titleText.textContent;
+    title.style.setProperty(
+        "--collection-title-scroll-distance",
+        `-${overflowWidth}px`
+    );
+    title.style.setProperty(
+        "--collection-title-scroll-duration",
+        `${Math.min(7, Math.max(2.4, overflowWidth / 45))}s`
+    );
+}
+
+/** 대표 포스터 수에 맞는 카드 콜라주를 만든다. */
+function createCollectionPosterCollage(posterUrls, visual) {
+    const collage = document.createElement("div");
+    const usesSevenSlotLayout = posterUrls.length === 5;
+    const posterIndexes = usesSevenSlotLayout
+        ? [0, 1, 2, 3, 3, 4, 4]
+        : posterUrls.map((_, index) => index);
+
+    collage.className = usesSevenSlotLayout
+        ? "collection-list-poster-collage poster-count-5 is-seven-slot-layout"
+        : `collection-list-poster-collage poster-count-${posterUrls.length} is-simple-layout`;
+
+    posterIndexes.forEach((posterIndex, slotIndex) => {
+        const slot = document.createElement("span");
+        slot.className = `collection-list-poster-slot poster-slot-${slotIndex + 1}`;
+
+        const poster = document.createElement("img");
+        poster.className = "collection-list-preview-poster";
+        poster.src = resolveCollectionPosterUrl(posterUrls[posterIndex]);
+        poster.alt = "";
+        poster.loading = "lazy";
+        poster.decoding = "async";
+        poster.addEventListener("error", () => {
+            slot.remove();
+            if (!collage.querySelector("img")) {
+                collage.remove();
+                visual.classList.remove("has-posters");
+            }
+        });
+        slot.append(poster);
+        collage.append(slot);
+    });
+
+    return collage;
+}
+
+/** 프로필 이미지가 없거나 깨지면 기본 아이콘을 반환한다. */
+function createAuthorAvatar(profileImgUrl, nickname) {
+    const fallback = document.createElement("span");
+    fallback.className = "collection-list-card-avatar collection-list-card-avatar-fallback";
+    fallback.setAttribute("aria-hidden", "true");
+    fallback.innerHTML = '<i class="bi bi-person-fill"></i>';
+
+    if (!profileImgUrl) {
+        return fallback;
+    }
+
+    const image = document.createElement("img");
+    image.className = "collection-list-card-avatar";
+    image.src = resolveCollectionProfileUrl(profileImgUrl);
+    image.alt = "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    image.addEventListener("error", () => image.replaceWith(fallback));
+    image.setAttribute("title", `${nickname} 프로필`);
+    return image;
+}
+
+/** TMDB 상대 포스터 경로를 화면에서 사용할 URL로 바꾼다. */
+function resolveCollectionPosterUrl(posterUrl) {
+    if (/^https?:\/\//i.test(posterUrl)) {
+        return posterUrl;
+    }
+
+    return `${TMDB_POSTER_BASE_URL}${posterUrl}`;
+}
+
+/** 프로필 이미지 경로를 현재 사이트 기준의 절대 URL로 바꾼다. */
+function resolveCollectionProfileUrl(profileImgUrl) {
+    try {
+        return new URL(profileImgUrl, `${window.location.origin}/`).href;
+    } catch {
+        return profileImgUrl;
+    }
+}
+
+/** 아이콘과 건수를 묶은 카드 통계 항목을 만든다. */
+function createStat(icon, label, count, active = false) {
+    const stat = document.createElement("span");
+    stat.classList.toggle("is-active", active);
+    stat.innerHTML = `<i class="bi bi-${icon}" aria-hidden="true"></i>`;
+
+    const text = document.createElement("span");
+    text.textContent = `${label} ${Number(count || 0)}`;
+    stat.append(text);
+    return stat;
+}
+
+/** 검색어와 전체 건수에 맞춰 결과 제목을 바꾼다. */
+function updateResultHeading(searchWord, totalCount) {
+    document.querySelector("#collectionResultHeading").textContent = searchWord
+        ? `“${searchWord}” 검색 결과`
+        : "전체 컬렉션";
+    document.querySelector("#resultCount").textContent = `${totalCount}개`;
+}
+
+// 빈 결과와 페이지 이동
+
+/** 검색 결과 화면에서는 검색 폼을 숨기고 결과에 집중한다. */
+function setSearchResultMode(searchWord) {
+    const collectionListPage = document.querySelector("#collectionListPage");
+    const collectionListHero = document.querySelector(".collection-list-hero");
+    const isSearchResult = Boolean(searchWord);
+
+    collectionListPage.classList.toggle("is-search-result", isSearchResult);
+    collectionListHero.classList.toggle("d-none", isSearchResult);
+}
+
+/** 검색 여부에 맞는 빈 목록 안내 문구를 표시한다. */
+function updateEmptyState(searchWord) {
+    const title = document.querySelector("#collectionEmptyTitle");
+    const description = document.querySelector("#collectionEmptyDescription");
+
+    if (searchWord) {
+        title.textContent = `“${searchWord}” 검색 결과가 없습니다.`;
+        description.textContent = "다른 제목으로 다시 검색해 보세요.";
+        return;
+    }
+
+    title.textContent = "아직 공개된 컬렉션이 없습니다.";
+    description.textContent = "새로운 컬렉션이 만들어지면 이곳에 표시됩니다.";
+}
+
+/** 전체 건수와 현재 페이지로 페이지 버튼을 만든다. */
+function renderPagination(page, currentPage) {
+    const navigation = document.querySelector("#paginationNavigation");
+    const pagination = document.querySelector("#pagination");
     const pageSize = Number(page.pageSize || 12);
     const totalCount = Number(page.totalCnt || 0);
     const totalPages = Math.ceil(totalCount / pageSize);
+
+    pagination.replaceChildren();
+    navigation.classList.toggle("d-none", totalPages <= 1);
 
     if (totalPages <= 1) {
         return;
     }
 
-    // 페이지 버튼을 1~10, 11~20처럼 열 개 단위 블록으로 만든다.
-    const startPage = Math.floor((currentPage - 1) / 10) * 10 + 1;
-    const endPage = Math.min(startPage + 9, totalPages);
+    const startPage = Math.floor((currentPage - 1) / PAGE_GROUP_SIZE)
+        * PAGE_GROUP_SIZE + 1;
+    const endPage = Math.min(startPage + PAGE_GROUP_SIZE - 1, totalPages);
 
     pagination.append(createPageItem("이전", startPage - 1, startPage === 1, false));
 
@@ -137,8 +375,8 @@ function renderPagination(page, currentPage) {
     pagination.append(createPageItem("다음", endPage + 1, endPage === totalPages, false));
 }
 
+/** 페이지 이동 버튼 한 개를 만든다. */
 function createPageItem(label, pageNo, disabled, active) {
-    // 이전·숫자·다음 버튼의 중복 DOM 생성 코드를 한 함수로 모았다.
     const item = document.createElement("li");
     item.className = `page-item${disabled ? " disabled" : ""}${active ? " active" : ""}`;
 
@@ -147,18 +385,53 @@ function createPageItem(label, pageNo, disabled, active) {
     button.type = "button";
     button.textContent = label;
     button.disabled = disabled;
-    button.addEventListener("click", () => loadCollections(pageNo));
+    button.toggleAttribute("aria-current", active);
+    if (active) {
+        button.setAttribute("aria-current", "page");
+    }
+    button.addEventListener("click", () => {
+        loadCollections(pageNo);
+        document.querySelector("#collectionResultHeading").scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    });
 
     item.append(button);
     return item;
 }
 
-function showError(element, message) {
-    // API 오류 메시지를 alert 대신 화면에 남겨 사용자가 원인을 다시 볼 수 있게 한다.
-    element.textContent = message;
-    element.classList.remove("d-none");
+/** 현재 검색·페이지 조건을 주소 표시줄에 반영한다. */
+function updateLocation(pageNo, pageSize, searchWord) {
+    const query = new URLSearchParams();
+
+    if (searchWord) {
+        query.set("searchWord", searchWord);
+    }
+    if (pageNo > 1) {
+        query.set("pageNo", String(pageNo));
+    }
+    if (pageSize !== DEFAULT_PAGE_SIZE) {
+        query.set("pageSize", pageSize);
+    }
+
+    const queryString = query.toString();
+    history.replaceState(null, "", queryString ? `/collections?${queryString}` : "/collections");
 }
 
+/** 목록 조회 실패 상태와 오류 메시지를 표시한다. */
+function showLoadFailure(element, message) {
+    document.querySelector("#collectionLoading").classList.add("d-none");
+    document.querySelector("#collectionList").classList.add("d-none");
+    document.querySelector("#collectionListEmpty").classList.add("d-none");
+    document.querySelector("#paginationNavigation").classList.add("d-none");
+    element.textContent = message || "컬렉션 목록을 불러오지 못했습니다.";
+    element.classList.remove("d-none");
+    element.focus();
+    setSearchResultMode("");
+}
+
+/** 이전 오류 메시지를 숨긴다. */
 function hideError(element) {
     element.textContent = "";
     element.classList.add("d-none");

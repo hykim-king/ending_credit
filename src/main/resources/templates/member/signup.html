@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/authLayout}">
+<head>
+    <title>ENDIT</title>
+</head>
+<body>
+
+<div layout:fragment="content">
+
+    <!-- 로고 -->
+    <div class="mb-4">
+        <a href="/" class="text-decoration-none fw-bold fs-4" style="color:#6550C8;">END IT</a>
+    </div>
+
+    <div class="card p-4">
+        <h3 class="text-center mb-4">회원가입</h3>
+
+        <!-- 선택 화면: 에러 있으면 숨김 -->
+        <div id="selectView" th:style="${errorMessage} ? 'display:none' : 'display:block'">
+            <a href="/oauth2/authorization/google" class="btn btn-outline-secondary w-100 mb-2">Google로 회원가입</a>
+            <div class="text-center text-muted my-2">또는</div>
+            <button type="button" id="emailBtn" class="btn btn-primary w-100 mb-3">이메일로 회원가입</button>
+            <div class="text-center">
+                <span class="text-muted">이미 계정이 있나요?</span>
+                <a href="/login">로그인</a>
+            </div>
+        </div>
+
+        <!-- 이메일 폼: 에러 있으면 보임 -->
+        <div id="emailView" th:style="${errorMessage} ? 'display:block' : 'display:none'">
+
+            <!-- 서버에서 온 에러 메시지 (가입 실패 시) -->
+            <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger"></div>
+
+            <form action="/signup/email" method="post" th:object="${member}">
+
+                <!-- 이메일 -->
+                <div class="mb-3">
+                    <label class="form-label">이메일 <span class="text-danger">*</span></label>
+                    <input type="text" th:field="*{email}" class="form-control" placeholder="name@example.com">
+                    <div id="emailError" class="text-danger" style="font-size:0.9em"></div>
+                </div>
+
+                <!-- 비밀번호 -->
+                <div class="mb-3">
+                    <label class="form-label">비밀번호 <span class="text-danger">*</span></label>
+                    <input type="password" th:field="*{password}" class="form-control" placeholder="8자 이상">
+                    <div id="pwEmptyError" class="text-danger" style="font-size:0.9em"></div>
+                </div>
+
+                <!-- 비밀번호 확인 -->
+                <div class="mb-3">
+                    <label class="form-label">비밀번호 확인 <span class="text-danger">*</span></label>
+                    <input type="password" id="pwConfirm" class="form-control" placeholder="비밀번호 재입력">
+                    <div id="pwError" class="text-danger" style="font-size:0.9em"></div>
+                </div>
+
+                <!-- 닉네임 + 중복확인 -->
+                <div class="mb-3">
+                    <label class="form-label">닉네임 <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="text" th:field="*{nickname}" id="nickname" class="form-control" placeholder="2~15자">
+                        <button type="button" id="checkNicknameBtn" class="btn btn-outline-secondary">중복 확인</button>
+                    </div>
+                    <div id="nicknameResult" style="font-size:0.9em"></div>
+                </div>
+
+                <!-- 가입 버튼 -->
+                <button type="submit" class="btn btn-primary w-100">가입하기</button>
+
+            </form>
+
+            <button type="button" id="backBtn" class="btn btn-link w-100">뒤로</button>
+        </div>
+
+    </div>
+
+    <script>
+        // "이메일로 회원가입" → 폼 보이기
+        document.getElementById('emailBtn').addEventListener('click', function() {
+            document.getElementById('selectView').style.display = 'none';
+            document.getElementById('emailView').style.display = 'block';
+        });
+        // "뒤로" → 선택 화면
+        document.getElementById('backBtn').addEventListener('click', function() {
+            document.getElementById('selectView').style.display = 'block';
+            document.getElementById('emailView').style.display = 'none';
+        });
+
+        // 닉네임 중복 확인
+        document.getElementById('checkNicknameBtn').addEventListener('click', async function() {
+            const nickname = document.getElementById('nickname').value;
+            const result = document.getElementById('nicknameResult');
+
+            if (nickname.trim() === '') {
+                result.textContent = '닉네임을 입력하세요';
+                result.className = 'text-danger';
+                return;
+            }
+
+            try {
+                const data = await requestGet('/api/members/nickname-check', { nickname: nickname });
+                if (data.used) {
+                    result.textContent = '이미 사용 중인 닉네임입니다';
+                    result.className = 'text-danger';
+                } else {
+                    result.textContent = '사용 가능한 닉네임입니다';
+                    result.className = 'text-success';
+                }
+            } catch (e) {
+                result.textContent = e.message;
+                result.className = 'text-danger';
+            }
+        });
+
+        // 제출 시 전체 검증 (이메일 / 비번 / 비번확인 / 닉네임)
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const emailInput    = document.getElementById('email');
+            const pwInput       = document.getElementById('password');
+            const pwConfirmInput = document.getElementById('pwConfirm');
+            const nicknameInput = document.getElementById('nickname');
+
+            const emailError    = document.getElementById('emailError');
+            const pwEmptyError  = document.getElementById('pwEmptyError');
+            const pwError       = document.getElementById('pwError');
+            const nicknameResult = document.getElementById('nicknameResult');
+
+            // 에러 초기화
+            emailError.textContent = '';
+            pwEmptyError.textContent = '';
+            pwError.textContent = '';
+
+            let valid = true;
+
+            // 이메일: 빈 값 + 형식
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailInput.value.trim() === '') {
+                emailError.textContent = '이메일을 입력하세요';
+                valid = false;
+            } else if (!emailPattern.test(emailInput.value.trim())) {
+                emailError.textContent = '올바른 이메일 형식이 아닙니다';
+                valid = false;
+            }
+
+            // 비밀번호: 빈 값 + 길이(8자 이상)
+            if (pwInput.value.trim() === '') {
+                pwEmptyError.textContent = '비밀번호를 입력하세요';
+                valid = false;
+            } else if (pwInput.value.length < 8) {
+                pwEmptyError.textContent = '비밀번호는 8자 이상이어야 합니다';
+                valid = false;
+            }
+
+            // 비밀번호 확인: 빈 값 + 일치
+            if (pwConfirmInput.value.trim() === '') {
+                pwError.textContent = '비밀번호 확인을 입력하세요';
+                valid = false;
+            } else if (pwInput.value !== pwConfirmInput.value) {
+                pwError.textContent = '비밀번호가 일치하지 않습니다';
+                valid = false;
+            }
+
+            // 닉네임: 빈 값 + 길이(2~15자)
+            if (nicknameInput.value.trim() === '') {
+                nicknameResult.textContent = '닉네임을 입력하세요';
+                nicknameResult.className = 'text-danger';
+                valid = false;
+            } else if (nicknameInput.value.trim().length < 2 || nicknameInput.value.trim().length > 15) {
+                nicknameResult.textContent = '닉네임은 2~15자여야 합니다';
+                nicknameResult.className = 'text-danger';
+                valid = false;
+            }
+
+            if (!valid) {
+                e.preventDefault();
+            }
+        });
+    </script>
+
+</div>
+</body>
+</html>

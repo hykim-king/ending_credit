@@ -1,17 +1,6 @@
 /**
- * <pre>
- * Class Name : CommentLikeVO
- * Description : 코멘트 좋아요(COMMENT_LIKE) VO
- *               PK가 (MEMBER_ID, COMMENT_ID) 복합키라 같은 코멘트에 중복 좋아요가 DB에서 막힌다.
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 12.
+ * 코멘트 좋아요(COMMENT_LIKE) VO
+ * PK가 (MEMBER_ID, COMMENT_ID) 복합키라 같은 코멘트에 중복 좋아요가 DB에서 막힌다.
  */
 package com.endit.domain;
 

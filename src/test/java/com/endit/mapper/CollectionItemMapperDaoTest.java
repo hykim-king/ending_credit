@@ -376,5 +376,5 @@ class CollectionItemMapperDaoTest {
 
 		assertEquals(0, flag);
 	}
-	
+
 }

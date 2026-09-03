@@ -112,13 +112,18 @@
                      TO_CHAR(tt1.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
                      TO_CHAR(tt1.processed_dt,'YYYY/MM/DD HH24:MI:SS') processed_dt,
                      tt1.reporter_nickname,
-                     tt1.comment_detail
+                     tt1.comment_detail,
+                     tt1.report_cnt
                 FROM(
                       SELECT ROWNUM rnum, t1.*
                         FROM (
                               SELECT rc.*,
                                      rm.nickname reporter_nickname,
-                                     DBMS_LOB.SUBSTR(uc.comment_detail, 200, 1) comment_detail
+                                     DBMS_LOB.SUBSTR(uc.comment_detail, 200, 1) comment_detail,
+                                     -- 같은 코멘트에 접수된 누적 신고 건수(중복 신고 판단용)
+                                     (SELECT COUNT(*)
+                                        FROM report_comment rc2
+                                       WHERE rc2.comment_id = rc.comment_id) report_cnt
                                 FROM report_comment rc
                                 JOIN member rm ON rm.member_id = rc.report_member_id
                                 JOIN user_comment uc ON uc.comment_id = rc.comment_id

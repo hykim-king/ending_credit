@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영화 관리 | END IT ADMIN</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/admin/movies.css">
+</head>
+<body data-page="admin-content-list">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies" class="active">영화</a>
+            <a href="/admin/people">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <h1 class="admin-page-title">영화 관리 목록</h1>
+
+        <!--
+            상태 필터가 없다 - CONTENT에 공개 상태·임시저장 컬럼이 없다.
+            검색축은 2축뿐이다 - 정의서의 "외부 출처"는 EXTERNAL_SOURCE 컬럼이 없어 외부 ID 단독으로 확정했다.
+        -->
+        <div class="admin-filter-box">
+            <input type="search" id="adminQuery" maxlength="100" placeholder="영화 제목 또는 외부 ID 검색">
+
+            <select id="adminSearchDiv" aria-label="검색 조건">
+                <option value="50">제목 (국문·원제)</option>
+                <option value="40">외부 ID 일치</option>
+            </select>
+
+            <button type="button" id="adminSearchButton" class="outline-button">검색</button>
+            <button type="button" id="createMovieButton" class="primary-button">영화 등록</button>
+        </div>
+
+        <div class="admin-table-scroll">
+            <table class="admin-movie-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>포스터</th>
+                    <th>제목</th>
+                    <th>원제</th>
+                    <th>외부 ID</th>
+                    <th>개봉일</th>
+                    <th>국가</th>
+                    <th>등록일</th>
+                </tr>
+                </thead>
+                <tbody id="adminMovieBody"></tbody>
+            </table>
+        </div>
+
+        <div id="adminEmptyState" class="admin-state" hidden>
+            조건에 맞는 영화가 없습니다.
+        </div>
+
+        <div id="adminErrorState" class="admin-state" hidden>
+            영화 목록을 불러오지 못했습니다.
+        </div>
+
+        <nav id="adminPagination" class="admin-pagination" aria-label="관리자 영화 페이지"></nav>
+    </main>
+</div>
+
+<script src="/assets/js/admin/movies.js"></script>
+</body>
+</html>

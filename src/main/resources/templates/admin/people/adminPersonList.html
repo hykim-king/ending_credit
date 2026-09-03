@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인물 관리 | END IT ADMIN</title>
+
+    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/css/admin/people.css">
+</head>
+<body data-page="admin-person-list">
+
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
+        <nav class="admin-nav">
+            <a href="/admin">대시보드</a>
+            <a href="/admin/movies">영화</a>
+            <a href="/admin/people" class="active">인물</a>
+            <a href="/admin/users">회원</a>
+            <a href="/admin/reports">신고</a>
+            <a href="/admin/community">커뮤니티</a>
+            <a href="/admin/notices">공지</a>
+        </nav>
+    </aside>
+
+    <main class="admin-content">
+        <h1 class="admin-page-title">인물 관리 목록</h1>
+
+        <!--
+            상태 필터가 없다 - POL-037: PERSON에는 공개 상태·임시저장 컬럼이 없다.
+            검색축은 PersonMapper의 searchDiv 그대로다.
+        -->
+        <div class="admin-filter-box">
+            <input type="search" id="adminQuery" maxlength="100" placeholder="인물 이름 또는 외부 ID 검색">
+
+            <select id="adminSearchDiv" aria-label="검색 조건">
+                <option value="">이름 전체</option>
+                <option value="10">국문명으로 시작</option>
+                <option value="20">원문명으로 시작</option>
+                <option value="30">외부 ID 일치</option>
+            </select>
+
+            <button type="button" id="adminSearchButton" class="outline-button">검색</button>
+            <button type="button" id="createPersonButton" class="primary-button">인물 등록</button>
+        </div>
+
+        <div class="admin-table-scroll">
+            <table class="admin-person-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>사진</th>
+                    <th>국문명</th>
+                    <th>원문명</th>
+                    <th>외부 ID</th>
+                    <th>등록일</th>
+                    <th>수정일</th>
+                </tr>
+                </thead>
+                <tbody id="adminPersonBody"></tbody>
+            </table>
+        </div>
+
+        <div id="adminEmptyState" class="admin-state" hidden>
+            조건에 맞는 인물이 없습니다.
+        </div>
+
+        <div id="adminErrorState" class="admin-state" hidden>
+            인물 목록을 불러오지 못했습니다.
+        </div>
+
+        <nav id="adminPagination" class="admin-pagination" aria-label="관리자 인물 페이지"></nav>
+    </main>
+</div>
+
+<script src="/assets/js/admin/people.js"></script>
+</body>
+</html>
