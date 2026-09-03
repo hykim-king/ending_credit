@@ -126,6 +126,26 @@
 		</foreach>
 	</select>
 
+	<!-- 화제의 감독·배우 선별 - 넘겨받은 100편 중 참여 편수 많은 순, 동수는 상위작 참여자 우선 -->
+	<select id="doSelectTopPersonByRole" resultType="ContentCreditVO">
+		SELECT person_id,
+		       name_ko
+		  FROM (
+			SELECT cc.person_id,
+			       p.name_ko
+			  FROM content_credit cc
+			  JOIN person p ON p.person_id = cc.person_id
+			 WHERE cc.role = #{role}
+			   AND cc.content_id IN
+			<foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
+				#{contentId}
+			</foreach>
+			 GROUP BY cc.person_id, p.name_ko
+			 ORDER BY COUNT(*) DESC, MIN(cc.content_id) ASC, cc.person_id ASC
+		)
+		 WHERE ROWNUM = 1
+	</select>
+
 	<select id="doSelectOne" parameterType="ContentCreditVO" resultType="ContentCreditVO">
 		SELECT cc.credit_id,
 		       cc.content_id,

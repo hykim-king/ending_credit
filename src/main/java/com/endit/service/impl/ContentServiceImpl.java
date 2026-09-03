@@ -99,11 +99,9 @@ public class ContentServiceImpl implements ContentService {
 	private static final String SORT_REGISTERED = "registered";
 	// 인기순 - 매퍼가 아니라 서비스가 순위 목록으로 정렬한다. 순위가 비면 SORT_BOX_OFFICE로 흘린다
 	private static final String SORT_POPULAR = "popular";
-	// 개봉 예정 - 개봉일 오름차순. searchMap["released"]="N"과 짝으로 써야 뜻이 선다
-	private static final String SORT_UPCOMING = "upcoming";
 
 	private static final Set<String> ALLOWED_SORT =
-			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR, SORT_UPCOMING);
+			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR);
 
 	private static final int FIRST_RANK_PAGE = 1;
 	// 순위 목록에 채울 목표 건수
