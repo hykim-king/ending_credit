@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.endit.cmn.LoginMember;
 import com.endit.security.LoginMemberHelper;
@@ -104,6 +105,20 @@ public class MemberMyPageController {
 		return "member/settings";
 	}
 
+	/** 내 회원 기록 화면을 기존 회원별 기록 경로로 연결한다. */
+	@GetMapping("/me/records")
+	public String myRecords(
+			@RequestParam(defaultValue = "ratings") String tab) {
+
+		LoginMember me = LoginMemberHelper.getLoginMember();
+		if (me == null) {
+			return REDIRECT_LOGIN;
+		}
+
+		return "redirect:/users/" + me.getMemberId()
+				+ "/records?tab=" + normalizeRecordTab(tab);
+	}
+
 	// ===================== 다른 유저 프로필 =====================
 
 	/**
@@ -140,5 +155,25 @@ public class MemberMyPageController {
 		model.addAttribute("memberId", memberId);
 
 		return "member/profile";
+	}
+
+	/** 공개 프로필의 회원 기록 경로를 기존 기록 화면으로 연결한다. */
+	@GetMapping("/{memberId:[0-9]+}/records")
+	public String memberRecords(
+			@PathVariable long memberId,
+			@RequestParam(defaultValue = "ratings") String tab) {
+
+		return "redirect:/users/" + memberId
+				+ "/records?tab=" + normalizeRecordTab(tab);
+	}
+
+	private String normalizeRecordTab(String tab) {
+		if ("comments".equalsIgnoreCase(tab)
+				|| "collections".equalsIgnoreCase(tab)
+				|| "watchlist".equalsIgnoreCase(tab)) {
+			return tab.toLowerCase();
+		}
+
+		return "ratings";
 	}
 }
