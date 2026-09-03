@@ -28,52 +28,9 @@ a {
 }
 
 button,
-input,
 select,
-textarea,
-a {
+textarea {
     min-height: 44px;
-}
-
-/* 사용자 공지 */
-.endit-header {
-    height: 64px;
-    padding: 0 32px;
-    display: grid;
-    grid-template-columns: 140px minmax(260px, 520px) 1fr;
-    gap: 24px;
-    align-items: center;
-    border-bottom: 1px solid var(--notice-border);
-}
-
-.endit-logo {
-    color: var(--notice-primary);
-    font-size: 22px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-}
-
-.header-search {
-    min-height: 40px;
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    color: #A09DA7;
-    background: var(--notice-soft);
-    border-radius: 10px;
-}
-
-.header-actions {
-    justify-self: end;
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    font-size: 14px;
-}
-
-.join-link {
-    color: var(--notice-primary);
 }
 
 .notice-container {
