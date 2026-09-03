@@ -1,10 +1,7 @@
-/**
- * U-03~U-07 회원 기록·좋아요 본문 전용 스타일.
- * 공통 레이아웃은 수정하지 않는다.
- */
+/** U-03~U-07 회원 기록·좋아요 화면 공통 스타일. */
 
 /** ===================================
- *  회원 기록 공통 레이아웃과 회원 정보
+ *  회원 기록·좋아요 공통 레이아웃
  *  =================================== */
 .member-activity-page {
     width: min(100%, 1080px);
@@ -15,61 +12,37 @@
 
 .member-activity-heading {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: space-between;
     gap: 24px;
     margin-bottom: 15px;
 }
 
-.member-activity-kicker {
-    color: var(--endit-primary);
+.member-activity-page-title {
+    display: inline-flex;
+    align-items: baseline;
+    min-width: 0;
+    margin: 0;
+    gap: .28em;
     font-size: clamp(1.4rem, 2vw, 1.55rem);
     font-weight: 800;
+}
+
+.member-activity-page-title-label {
+    color: #6550C8;
+}
+
+.member-activity-page-title-byline {
+    color: #8b8493;
+    font-size: .78em;
+}
+
+.member-activity-page-title-name {
+    color: #25212d;
     letter-spacing: .04em;
-    margin-bottom: 10px;
 }
 
-.member-record-owner {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.member-record-avatar {
-    display: grid;
-    width: 50px;
-    height: 50px;
-    flex: 0 0 50px;
-    place-items: center;
-    overflow: hidden;
-    color: #aaa4b1;
-    background: #f0eef2;
-    border-radius: 50%;
-}
-
-.member-record-avatar-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.member-record-avatar-fallback {
-    font-size: 1.55rem;
-}
-
-.member-activity-title {
-    margin-bottom: 10px;
-    font-size: clamp(1.1rem, 1.6vw, 1.25rem);
-    font-weight: 600;
-    letter-spacing: -.025em;
-}
-
-.member-activity-description {
-    color: #777180;
-    font-size: .94rem;
-}
-
-.member-profile-link {
+.member-heading-link {
     display: inline-flex;
     align-items: center;
     gap: 3px;
@@ -81,12 +54,12 @@
     white-space: nowrap;
 }
 
-.member-profile-link:hover {
+.member-heading-link:hover {
     color: var(--endit-primary);
 }
 
 /** ===================================
- *  기록 탭과 활성 표시선
+ *  기록·좋아요 탭과 활성 표시선
  *  =================================== */
 .member-tabs-wrap {
     margin-bottom: 28px;
@@ -116,6 +89,14 @@
     will-change: transform;
 }
 
+.member-like-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.member-like-tabs::after {
+    width: 50%;
+}
+
 .member-tab {
     position: relative;
     display: inline-flex;
@@ -132,6 +113,11 @@
 .member-tab:hover,
 .member-tab.active {
     color: #25212d;
+}
+
+.member-like-tabs .member-tab.active {
+    color: var(--endit-primary);
+    font-weight: 800;
 }
 
 .member-activity-content {
@@ -266,6 +252,11 @@
     gap: 26px 14px;
 }
 
+.member-person-like-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 34px 22px;
+}
+
 .member-media-card,
 .member-person-card {
     min-width: 0;
@@ -320,19 +311,17 @@
 .member-card-rating {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
     min-height: 1.45em;
     color: #8b8493;
     white-space: nowrap;
 }
 
-.member-card-rating.is-rating-record {
-    justify-content: space-between;
-    width: 100%;
-}
-
 .member-rating-stars {
     display: inline-flex;
     align-items: center;
+    margin-left: auto;
     gap: 2px;
     color: #d7d1dc;
     letter-spacing: 0;
@@ -357,11 +346,6 @@
     -webkit-background-clip: text;
 }
 
-.member-rating-separator {
-    margin: 0 .42rem;
-    color: #b0aab7;
-}
-
 .member-average-rating {
     display: inline-flex;
     align-items: center;
@@ -380,7 +364,7 @@
 }
 
 /** ===================================
- *  기록 페이지네이션
+ *  기록·좋아요 페이지네이션
  *  =================================== */
 .member-record-pagination {
     margin-top: 34px;
@@ -489,7 +473,7 @@
 }
 
 /** ===================================
- *  기록 화면 전용 컬렉션 카드
+ *  회원 활동 화면 컬렉션 카드
  *  =================================== */
 .member-activity-content .collection-card-grid {
     gap: 58px 18px;
@@ -662,57 +646,18 @@
 }
 
 /** ===================================
- *  좋아요 화면의 인물·컬렉션 카드
+ *  좋아요 화면 인물 카드와 빈 자리
  *  =================================== */
-.member-collection-cover {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    padding: 16px;
-    color: #fff;
-    background:
-        radial-gradient(circle at 75% 20%, rgba(255, 255, 255, .28), transparent 30%),
-        linear-gradient(145deg, var(--endit-primary), var(--endit-active));
-    border-radius: 12px;
-}
-
-.member-collection-cover i {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    font-size: 1.35rem;
-    opacity: .78;
-}
-
-.member-collection-cover strong {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 1rem;
-    line-height: 1.35;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-}
-
-.member-collection-stats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 7px;
-    color: #8b8493;
-    font-size: .76rem;
-}
-
 .member-like-card {
-    position: relative;
     min-width: 0;
 }
 
-.member-person-card,
-.member-liked-collection-card {
+.member-like-placeholder {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.member-person-card {
     display: block;
     color: inherit;
     text-decoration: none;
@@ -737,37 +682,16 @@
     text-align: center;
 }
 
-.member-like-remove {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 2;
-    display: grid;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    padding: 0;
-    color: var(--endit-primary);
-    background: rgba(255, 255, 255, .92);
-    border: 1px solid rgba(228, 226, 233, .9);
-    border-radius: 50%;
-    box-shadow: 0 3px 12px rgba(35, 28, 48, .12);
+.member-person-info,
+.member-person-latest {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.member-like-remove:hover {
-    color: #fff;
-    background: var(--endit-primary);
-}
-
-.member-like-remove:disabled {
-    opacity: .65;
-}
-
-.member-like-date {
-    display: block;
-    margin-top: 6px;
-    color: #9b95a1;
-    font-size: .74rem;
+.member-person-latest {
+    margin-top: 4px;
+    color: #5f5967;
 }
 
 .member-like-skeleton::before {
@@ -836,26 +760,8 @@
         margin-bottom: 22px;
     }
 
-    .member-record-owner {
-        gap: 10px;
-    }
-
-    .member-record-avatar {
-        width: 45px;
-        height: 45px;
-        flex-basis: 45px;
-    }
-
-    .member-activity-title {
-        font-size: 1.1rem;
-    }
-
-    .member-profile-link {
-        font-size: 0;
-    }
-
-    .member-profile-link i {
-        font-size: 1rem;
+    .member-heading-link {
+        font-size: .78rem;
     }
 
     .member-tabs-wrap {
@@ -877,6 +783,11 @@
     .member-skeleton-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 22px 8px;
+    }
+
+    .member-person-like-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 26px 12px;
     }
 
     .member-card-title {
@@ -905,5 +816,10 @@
     .member-card-grid,
     .member-skeleton-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .member-person-like-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 30px 18px;
     }
 }

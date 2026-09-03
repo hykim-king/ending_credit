@@ -122,7 +122,6 @@ document.addEventListener("DOMContentLoaded", () => {
         switchTab(tab, false);
     });
 
-    configureProfileImageFallback();
     updateTabView();
 
     if (!Number.isInteger(memberId) || memberId <= 0) {
@@ -426,13 +425,13 @@ function renderRecords(tab, data) {
         renderCollectionCards(items);
         renderCollectionLoadMore(items.length, totalCount);
     } else {
-        renderMovieCards(items, tab);
+        renderMovieCards(items);
         renderPagination(page, Number(page.pageNo || recordState[tab].pageNo));
     }
 }
 
 /** 평가·보고싶어요 작품 카드 렌더링 */
-function renderMovieCards(items, tab) {
+function renderMovieCards(items) {
 
     const recordList = document.querySelector("#recordList");
 
@@ -451,9 +450,8 @@ function renderMovieCards(items, tab) {
         body.className = "member-card-body";
         title.className = "member-card-title";
         meta.className = "member-card-meta member-card-rating";
-        meta.classList.toggle("is-rating-record", tab === "ratings");
         title.textContent = movieTitle;
-        renderRatingMeta(meta, item, tab === "ratings");
+        renderRatingMeta(meta, item);
 
         const poster = item.posterUrl
             ? createPosterImage(item.posterUrl, movieTitle)
@@ -472,33 +470,16 @@ function renderMovieCards(items, tab) {
  *  =================================== */
 
 /** 작품 카드 별점 정보 렌더링 */
-function renderRatingMeta(meta, item, isRatingRecord) {
+function renderRatingMeta(meta, item) {
 
     const averageRating = Number(item.averageRating);
     const myRating = Number(item.ratingScore);
     const hasAverageRating = item.averageRating != null && Number.isFinite(averageRating);
     const hasMyRating = item.ratingScore != null && Number.isFinite(myRating);
 
-    // 평가 탭은 내 별점을 왼쪽, 평균 별점을 오른쪽에 배치한다.
-    if (isRatingRecord) {
-        if (hasMyRating) {
-            meta.append(createMemberRatingStars(myRating));
-        }
-        if (hasAverageRating) {
-            meta.append(createAverageRating(averageRating));
-        }
-        return;
-    }
-
+    // 평가와 보고싶어요 탭 모두 평균 별점은 왼쪽, 내 별점은 오른쪽에 배치한다.
     if (hasAverageRating) {
         meta.append(createAverageRating(averageRating));
-    }
-
-    if (hasAverageRating && hasMyRating) {
-        const separator = document.createElement("span");
-        separator.className = "member-rating-separator";
-        separator.textContent = "·";
-        meta.append(separator);
     }
 
     if (hasMyRating) {
@@ -913,27 +894,6 @@ function setLoadMoreLoading(loading) {
 
     button.disabled = loading;
     button.textContent = loading ? "불러오는 중..." : "더보기";
-}
-
-/** 회원 프로필 이미지 대체 처리 */
-function configureProfileImageFallback() {
-
-    const image = document.querySelector(".member-record-avatar-image");
-    if (!image) {
-        return;
-    }
-
-    const fallback = document.querySelector(".member-record-avatar-fallback");
-    // 프로필 이미지가 깨지면 이미지를 숨기고 기본 회원 아이콘을 표시한다.
-    const showFallback = () => {
-        image.classList.add("d-none");
-        fallback.classList.remove("d-none");
-    };
-    image.addEventListener("error", showFallback);
-
-    if (image.complete && image.naturalWidth === 0) {
-        showFallback();
-    }
 }
 
 /** 기록 로딩 상태 표시 */

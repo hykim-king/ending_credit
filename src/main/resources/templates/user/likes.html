@@ -3,40 +3,45 @@
 Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-07 본문 UI와 본인 취소 동작 반영
+2026. 9. 03. jinyoung - 화면 제목·2열 탭·조회 카드·고정형 페이지네이션 UI 반영
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
 <head>
-<title>회원 좋아요</title>
-<link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
-<script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
-<script th:src="@{/assets/js/user/member-likes.js}" defer></script>
+    <title th:text="${member.nickname + '님의 좋아요 | ENDIT'}">회원 좋아요 | ENDIT</title>
+
+    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
+
+    <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
+    <script th:src="@{/assets/js/user/member-likes.js}" defer></script>
 </head>
 <body>
 <div layout:fragment="content"
      id="memberLikesPage"
      class="member-activity-page"
      th:attr="data-member-id=${memberId},data-current-member-id=${currentMemberId},data-initial-type=${type}">
+
+    <!-- 좋아요 제목과 회원 기록 화면 이동 -->
     <header class="member-activity-heading">
-        <div>
-            <p class="member-activity-kicker mb-2">LIKES</p>
-            <h1 class="member-activity-title"
-                th:text="|회원 #${memberId}의 좋아요|">회원의 좋아요</h1>
-            <p class="member-activity-description mb-0">
-                마음에 담아둔 인물과 컬렉션을 모아봅니다.
-            </p>
-        </div>
-        <a class="member-profile-link"
-           th:href="@{/users/{id}(id=${memberId})}">
-            프로필로 돌아가기
+        <h1 class="member-activity-page-title">
+            <span class="member-activity-page-title-label">FAVORITES</span>
+            <span class="member-activity-page-title-byline">by</span>
+            <span class="member-activity-page-title-name"
+                  th:text="${member.nickname}">회원 닉네임</span>
+        </h1>
+        <a class="member-heading-link"
+           th:href="@{/users/{id}/records(id=${memberId})}">
+            내 기록 보기
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
     </header>
 
+    <!-- 인물·컬렉션 좋아요 탭 -->
     <nav class="member-tabs-wrap" aria-label="회원 좋아요 유형">
-        <div id="likeTabs" class="member-tabs" role="tablist">
+        <div id="likeTabs" class="member-tabs member-like-tabs" role="tablist">
             <a id="personLikeTab"
                class="member-tab"
                role="tab"
@@ -54,29 +59,24 @@ Modification History
         </div>
     </nav>
 
+    <!-- 선택한 좋아요 유형의 목록 -->
     <section class="member-activity-content" aria-labelledby="likeTitle">
         <div class="member-content-heading">
-            <div>
-                <h2 id="likeTitle" class="member-content-title">좋아한 인물</h2>
+            <h2 id="likeTitle" class="member-content-title">
+                <span id="likeTitleText">좋아요한 인물</span>
                 <span id="likeTotalCount"
                       class="member-content-count"
-                      aria-live="polite">0명</span>
-            </div>
-            <div>
-                <label class="visually-hidden" for="likeSort">정렬</label>
-                <select id="likeSort"
-                        class="form-select form-select-sm member-sort"
-                        disabled>
-                    <option value="latest">최신순</option>
-                </select>
-            </div>
+                      aria-live="polite">0</span>
+            </h2>
         </div>
 
+        <!-- 조회 상태 -->
         <div id="likeLoading"
              class="member-skeleton-grid"
              role="status"
              aria-live="polite"
              aria-label="좋아요 목록을 불러오는 중입니다">
+            <div class="member-card-skeleton member-like-skeleton"></div>
             <div class="member-card-skeleton member-like-skeleton"></div>
             <div class="member-card-skeleton member-like-skeleton"></div>
             <div class="member-card-skeleton member-like-skeleton"></div>
@@ -100,12 +100,15 @@ Modification History
         </div>
 
         <div id="likeList"
-             class="member-card-grid d-none"
+             class="d-none"
              aria-live="polite"></div>
 
-        <nav class="mt-4" aria-label="회원 좋아요 페이지">
+        <!-- 인물·컬렉션 공통 페이지네이션 -->
+        <nav id="likePaginationNavigation"
+             class="member-record-pagination d-none"
+             aria-label="회원 좋아요 페이지">
             <ul id="likePagination"
-                class="pagination pagination-sm justify-content-center mb-0"></ul>
+                class="pagination justify-content-center mb-0"></ul>
         </nav>
     </section>
 </div>
