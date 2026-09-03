@@ -86,7 +86,6 @@
 <select id="selectPublicNoticeById"
         parameterType="long"
         resultType="NoticeVO">
-
     SELECT
         NOTICE_ID,
         TITLE,

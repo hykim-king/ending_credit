@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>영화 검색 결과</title>
+<link rel="stylesheet" th:href="@{/assets/css/search/cards.css}">
+<script th:src="@{/assets/js/search/search.js}" defer></script>
+<style>
+	.result-head {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding-top: 24px;
+		margin-bottom: 20px;
+	}
+	.result-head h5 {
+		margin: 0;
+		font-size: 18px;
+	}
+	.result-count {
+		font-size: 14px;
+		color: #777;
+	}
+	.result-back {
+		margin-left: auto;
+		font-size: 14px;
+		color: #6550C8;
+		text-decoration: none;
+	}
+	/* 정렬 - 값을 바꾸면 곧바로 다시 조회한다 */
+	.sort-box select {
+		height: 34px;
+		padding: 0 10px;
+		border: 1px solid #6550C8;
+		border-radius: 8px;
+		background: #fff;
+		color: #6550C8;
+		font-size: 14px;
+		cursor: pointer;
+	}
+	.sort-box select:focus {
+		outline: none;
+		box-shadow: 0 0 0 3px rgba(101, 80, 200, .18);
+	}
+	.pager {
+		display: flex;
+		justify-content: center;
+		gap: 6px;
+		margin: 36px 0;
+	}
+	.pager button {
+		min-width: 40px;
+		height: 40px;
+		padding: 0 10px;
+		border: 1px solid #E4E2E9;
+		border-radius: 6px;
+		background: #fff;
+		color: #17171B;
+		cursor: pointer;
+	}
+	.pager button.current {
+		background: #6550C8;
+		border-color: #6550C8;
+		color: #fff;
+		font-weight: 600;
+	}
+	.pager button:disabled {
+		color: #C9C7D1;
+		cursor: default;
+	}
+	/* S-04 결과 없음 - 입력어와 다음 행동을 같이 보여준다 */
+	.search-empty {
+		padding: 48px 0;
+		text-align: center;
+		color: #777;
+	}
+	/* S-05 오류 - 문구와 재시도를 같이 둔다 */
+	.search-error {
+		padding: 40px 0;
+		text-align: center;
+		color: #777;
+	}
+	.retry-button {
+		margin-top: 12px;
+		height: 38px;
+		padding: 0 18px;
+		border: 1px solid #6550C8;
+		border-radius: 8px;
+		background: #fff;
+		color: #6550C8;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.retry-button:disabled {
+		border-color: #C9C7D1;
+		color: #C9C7D1;
+		cursor: default;
+	}
+</style>
+</head>
+<body data-page="search-movies"
+      th:attr="data-query=${query}, data-sort=${sort}, data-page-no=${pageNo}, data-page-size=${pageSize}">
+<div layout:fragment="content">
+<div>
+
+	<!-- 검색어·결과 수와 정렬을 한 줄에 둔다. 재검색은 헤더 검색창이 맡는다 -->
+	<div class="result-head">
+		<h5 th:text="'&quot;' + ${query} + '&quot; 영화 결과'">영화 결과</h5>
+		<span class="result-count" id="movieCount"></span>
+		<a class="result-back" th:href="@{/search(query=${query})}">통합검색으로</a>
+
+		<!-- 정렬을 바꾸면 page를 안 실어 보내 1페이지부터 다시 본다 -->
+		<form class="sort-box" th:action="@{/search/movies}" method="get">
+			<input type="hidden" name="query" th:value="${query}">
+			<select name="sort" aria-label="정렬" onchange="this.form.submit()">
+				<option value="relevance" th:selected="${sort == 'relevance'}">정확도순</option>
+				<option value="latest" th:selected="${sort == 'latest'}">최신순</option>
+			</select>
+		</form>
+	</div>
+
+	<div class="poster-grid" id="movieGrid"></div>
+
+	<!-- S-04 검색 결과 없음 상태 -->
+	<div class="search-empty" id="movieEmpty" hidden>
+		<p><b th:text="'&quot;' + ${query} + '&quot;'">검색어</b>에 대한 영화가 없습니다.</p>
+		<p>다른 키워드로 다시 검색해 보세요.</p>
+		<a class="result-back" th:href="@{/search}">검색 시작으로</a>
+	</div>
+
+	<!-- S-05 검색 오류 상태 - 검색어는 그대로 두고 재시도만 제공한다 -->
+	<div class="search-error" id="movieError" hidden>
+		<p>영화 결과를 불러오지 못했습니다.</p>
+		<button type="button" class="retry-button" id="movieRetry">다시 시도</button>
+	</div>
+
+	<nav class="pager" id="moviePager" aria-label="페이지"></nav>
+
+</div>
+</div>
+</body>
+</html>

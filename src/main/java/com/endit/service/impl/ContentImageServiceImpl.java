@@ -220,8 +220,10 @@ public class ContentImageServiceImpl implements ContentImageService {
 		return TMDB_IMAGE_BASE_URL + size + storedPath;
 	}
 
-	// 완성 URL에서 크기 구간을 걷어내 DB에 저장할 원본 경로만 남긴다. toFullImageUrl의 역변환
-	private String toStoredPath(String url) {
+	// 완성 URL에서 크기 구간을 걷어내 DB에 저장할 원본 경로만 남긴다. toFullImageUrl의 역변환.
+	// PersonServiceImpl의 쓰기 경로도 같은 역변환이 필요해 인터페이스로 열어 뒀다
+	@Override
+	public String toStoredPath(String url) {
 		if (!StringUtils.hasText(url) || !url.startsWith(TMDB_IMAGE_BASE_URL)) {
 			return url;
 		}

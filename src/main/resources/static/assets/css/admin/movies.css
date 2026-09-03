@@ -1,0 +1,652 @@
+/*
+ * AD-02 관리자 영화 목록 / AD-03 영화 등록 / AD-04 영화 상세 조회
+ *
+ * people.css와 같은 방식으로 토큰을 공유하지 않고 복제한다 - 그쪽 파일 헤더에 적힌 이유와 같다.
+ * 관리자 화면끼리 나란히 놓였을 때 어긋나 보이지 않도록 값은 people.css와 동일하게 맞췄다.
+ *
+ * 서체도 people.css를 따랐다. docs/design-principles.md는 관리자 화면을 Arial로 정해 두었지만
+ * 기존 관리자 화면이 Wanted Sans를 쓰고 있어 그쪽에 맞췄다 - 문서와 코드 중 어느 쪽을
+ * 고칠지는 팀 결정이 필요하다.
+ */
+
+:root {
+	--admin-movie-primary: #6550C8;
+	--admin-movie-hover: #5841B4;
+	--admin-movie-active: #49339E;
+	--admin-movie-border: #E4E2E9;
+	--admin-movie-focus: #D8D1FF;
+	--admin-movie-text: #26242B;
+	--admin-movie-muted: #77737F;
+	--admin-movie-soft: #F7F6FA;
+	--admin-movie-accent: #F0EDFF;
+	--admin-movie-danger: #C34255;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	color: var(--admin-movie-text);
+	background: #fff;
+	font-family: "Wanted Sans", "Noto Sans KR", Arial, sans-serif;
+}
+
+a {
+	color: inherit;
+	text-decoration: none;
+}
+
+/* 접근성 원칙: 44px 터치 영역 */
+button,
+input,
+select,
+textarea,
+a {
+	min-height: 44px;
+}
+
+/* textarea는 여러 줄이라 최소 높이를 따로 준다 */
+textarea {
+	min-height: 120px;
+}
+
+/* 레이아웃 */
+.admin-layout {
+	min-height: 100vh;
+	display: grid;
+	grid-template-columns: 220px 1fr;
+}
+
+.admin-sidebar {
+	padding: 36px 24px;
+	color: #D7D5DF;
+	background: #222129;
+}
+
+.admin-logo {
+	margin-bottom: 34px;
+	display: block;
+	color: #fff;
+	font-weight: 700;
+}
+
+.admin-nav {
+	display: grid;
+	gap: 7px;
+}
+
+.admin-nav a {
+	padding: 0 14px;
+	display: flex;
+	align-items: center;
+	border-radius: 8px;
+}
+
+.admin-nav a:hover,
+.admin-nav a.active {
+	background: rgba(255, 255, 255, .08);
+}
+
+.admin-nav a.active {
+	color: #FF5A82;
+}
+
+.admin-content {
+	min-width: 0;
+	padding: 42px;
+}
+
+.admin-page-title {
+	margin: 0 0 28px;
+	font-size: 30px;
+	font-weight: 700;
+}
+
+.admin-page-head {
+	margin-bottom: 28px;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+
+.admin-page-head .admin-page-title {
+	margin: 0;
+}
+
+.admin-page-head .spacer {
+	margin-left: auto;
+}
+
+/* 버튼 */
+.primary-button,
+.outline-button,
+.danger-button,
+.link-button {
+	border-radius: 10px;
+	cursor: pointer;
+}
+
+.primary-button {
+	padding: 0 24px;
+	color: #fff;
+	border: 1px solid var(--admin-movie-primary);
+	background: var(--admin-movie-primary);
+}
+
+.primary-button:hover {
+	background: var(--admin-movie-hover);
+}
+
+.primary-button:active {
+	background: var(--admin-movie-active);
+}
+
+.primary-button:disabled,
+.outline-button:disabled {
+	opacity: .45;
+	cursor: default;
+}
+
+.outline-button {
+	padding: 0 22px;
+	color: var(--admin-movie-text);
+	border: 1px solid var(--admin-movie-border);
+	background: #fff;
+}
+
+.danger-button {
+	padding: 0 22px;
+	color: #fff;
+	border: 1px solid var(--admin-movie-danger);
+	background: var(--admin-movie-danger);
+}
+
+.danger-button:hover {
+	filter: brightness(.92);
+}
+
+.link-button {
+	padding: 0 8px;
+	color: var(--admin-movie-primary);
+	border: 0;
+	background: transparent;
+}
+
+/* 검색 바 (AD-02) - 정의서 2축: 제목 / 외부 ID */
+.admin-filter-box {
+	margin-bottom: 24px;
+	display: grid;
+	grid-template-columns: minmax(240px, 1fr) 200px auto auto;
+	gap: 10px;
+}
+
+.admin-filter-box input,
+.admin-filter-box select {
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid var(--admin-movie-border);
+	border-radius: 10px;
+	background: #fff;
+	outline: none;
+}
+
+.admin-filter-box input:focus,
+.admin-filter-box select:focus {
+	border-color: var(--admin-movie-primary);
+	box-shadow: 0 0 0 3px var(--admin-movie-focus);
+}
+
+/* 표 */
+.admin-table-scroll {
+	overflow-x: auto;
+}
+
+.admin-movie-table,
+.stage-table {
+	width: 100%;
+	min-width: 860px;
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
+.admin-movie-table th,
+.admin-movie-table td,
+.stage-table th,
+.stage-table td {
+	padding: 12px;
+	text-align: center;
+	font-size: 14px;
+	border-bottom: 1px solid var(--admin-movie-border);
+}
+
+.admin-movie-table th,
+.stage-table th {
+	background: var(--admin-movie-soft);
+}
+
+.admin-movie-table td.cell-title,
+.stage-table td.cell-title {
+	text-align: left;
+}
+
+.admin-movie-table tbody tr {
+	cursor: pointer;
+}
+
+.admin-movie-table tbody tr:hover {
+	background: #FAF9FC;
+}
+
+/* 제목 링크 - 행 클릭은 마우스용이라 키보드 경로를 여기로 둔다 */
+.admin-movie-table .row-link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.admin-movie-table .row-link:hover {
+	text-decoration: underline;
+}
+
+/* 접근성 원칙: 명확한 focus */
+.admin-movie-table .row-link:focus-visible {
+	outline: 3px solid var(--admin-movie-focus);
+	outline-offset: 2px;
+	border-radius: 4px;
+}
+
+.admin-movie-thumb {
+	width: 40px;
+	height: 58px;
+	border-radius: 6px;
+	object-fit: cover;
+	background: var(--admin-movie-soft);
+}
+
+.admin-movie-thumb-empty {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 58px;
+	border-radius: 6px;
+	font-size: 10px;
+	color: var(--admin-movie-muted);
+	background: var(--admin-movie-soft);
+}
+
+/* 상태 표시 */
+.admin-state {
+	padding: 48px 20px;
+	text-align: center;
+	color: var(--admin-movie-muted);
+}
+
+.admin-pagination {
+	margin-top: 28px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 4px;
+}
+
+.page-button {
+	width: 44px;
+	min-width: 44px;
+	height: 44px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	cursor: pointer;
+}
+
+.page-button:hover {
+	background: var(--admin-movie-soft);
+}
+
+.page-button.active {
+	color: var(--admin-movie-primary);
+	font-weight: 700;
+}
+
+.page-button:disabled {
+	cursor: default;
+	opacity: .35;
+}
+
+/* 폼 (AD-03) - 네 단이 한 번의 POST로 나간다 */
+.admin-movie-form {
+	max-width: 940px;
+}
+
+.form-section {
+	margin-bottom: 32px;
+	padding-bottom: 24px;
+	border-bottom: 1px solid var(--admin-movie-border);
+}
+
+.form-section:last-of-type {
+	border-bottom: 0;
+}
+
+.form-section h2 {
+	margin: 0 0 4px;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.form-section > .form-hint {
+	margin: 0 0 16px;
+}
+
+.field-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 12px 20px;
+}
+
+.field {
+	display: grid;
+	gap: 6px;
+	align-content: start;
+}
+
+.field.wide {
+	grid-column: 1 / -1;
+}
+
+.field > label {
+	font-weight: 700;
+}
+
+.admin-movie-form input[type="text"],
+.admin-movie-form input[type="number"],
+.admin-movie-form input[type="date"],
+.admin-movie-form input[type="search"],
+.admin-movie-form select,
+.admin-movie-form textarea {
+	width: 100%;
+	padding: 10px 14px;
+	border: 1px solid var(--admin-movie-border);
+	border-radius: 10px;
+	background: #fff;
+	font: inherit;
+	outline: none;
+}
+
+.admin-movie-form input:focus,
+.admin-movie-form select:focus,
+.admin-movie-form textarea:focus {
+	border-color: var(--admin-movie-primary);
+	box-shadow: 0 0 0 3px var(--admin-movie-focus);
+}
+
+.field-with-button {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 10px;
+}
+
+.check-result {
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.check-result.ok {
+	color: var(--admin-movie-active);
+}
+
+.check-result.ng {
+	color: var(--admin-movie-danger);
+}
+
+.form-hint {
+	margin: 0;
+	font-size: 13px;
+	color: var(--admin-movie-muted);
+}
+
+.form-error {
+	margin-top: 16px;
+	padding: 12px 14px;
+	color: var(--admin-movie-danger);
+	background: #FFF0F2;
+	border-radius: 8px;
+}
+
+.form-actions {
+	margin-top: 24px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+}
+
+/* 장르 - GENRE 마스터는 서버가 model에 실어 준다 */
+.genre-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 8px;
+}
+
+.genre-check {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0 12px;
+	min-height: 44px;
+	border: 1px solid var(--admin-movie-border);
+	border-radius: 10px;
+	cursor: pointer;
+}
+
+.genre-check input {
+	width: 18px;
+	min-height: 18px;
+	height: 18px;
+	accent-color: var(--admin-movie-primary);
+}
+
+.genre-check:hover {
+	background: var(--admin-movie-soft);
+}
+
+/* 이미지 URL 줄 - 폼 안의 추가·제거는 화면 상태다 */
+.image-rows {
+	display: grid;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.image-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 10px;
+}
+
+/* 크레딧 담기 - 저장 전까지는 화면 상태이고 단일 POST로 함께 나간다 */
+.person-search {
+	display: grid;
+	grid-template-columns: minmax(200px, 1fr) 180px auto;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.person-results {
+	margin: 0 0 12px;
+	padding: 0;
+	list-style: none;
+	max-height: 220px;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid var(--admin-movie-border);
+	border-radius: 8px;
+}
+
+.person-results:empty {
+	display: none;
+}
+
+.person-results li + li {
+	border-top: 1px solid var(--admin-movie-border);
+}
+
+.person-result {
+	width: 100%;
+	padding: 10px 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.person-result:hover,
+.person-result.is-selected {
+	background: var(--admin-movie-accent);
+}
+
+.person-result .sub {
+	color: var(--admin-movie-muted);
+	font-size: 13px;
+}
+
+.credit-fields {
+	display: grid;
+	grid-template-columns: 160px minmax(0, 1fr) 120px auto;
+	gap: 10px;
+	align-items: center;
+}
+
+.stage-box {
+	margin-top: 16px;
+	padding: 16px;
+	border: 1px solid var(--admin-movie-border);
+	border-radius: 10px;
+	background: var(--admin-movie-soft);
+}
+
+.stage-box h3 {
+	margin: 0 0 12px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.stage-table {
+	min-width: 640px;
+	background: #fff;
+	border-radius: 8px;
+}
+
+/* 상세 (AD-04) - 읽기 전용이라 입력 요소가 없다 */
+.detail-grid {
+	max-width: 940px;
+	display: grid;
+	grid-template-columns: 200px minmax(0, 1fr);
+	gap: 12px 24px;
+	align-items: start;
+}
+
+.detail-grid dt {
+	font-weight: 700;
+	color: var(--admin-movie-muted);
+}
+
+.detail-grid dd {
+	margin: 0;
+	word-break: break-word;
+}
+
+.detail-section {
+	margin-top: 40px;
+	padding-top: 24px;
+	border-top: 1px solid var(--admin-movie-border);
+}
+
+.detail-section h2 {
+	margin: 0 0 16px;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.chip-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.chip {
+	padding: 6px 14px;
+	border-radius: 999px;
+	font-size: 14px;
+	background: var(--admin-movie-accent);
+	color: var(--admin-movie-active);
+}
+
+.poster-pair {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+
+.poster-pair figure {
+	margin: 0;
+	display: grid;
+	gap: 6px;
+}
+
+.poster-pair figcaption {
+	font-size: 13px;
+	color: var(--admin-movie-muted);
+}
+
+.poster-pair img {
+	max-width: 220px;
+	border-radius: 10px;
+	background: var(--admin-movie-soft);
+}
+
+.gallery {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.gallery img {
+	width: 100%;
+	border-radius: 8px;
+	background: var(--admin-movie-soft);
+}
+
+.is-hidden {
+	display: none;
+}
+
+@media (max-width: 900px) {
+	.admin-layout {
+		grid-template-columns: 1fr;
+	}
+
+	.admin-content {
+		padding: 24px 18px;
+	}
+
+	.admin-filter-box,
+	.field-grid,
+	.person-search,
+	.credit-fields,
+	.detail-grid {
+		grid-template-columns: 1fr;
+	}
+}

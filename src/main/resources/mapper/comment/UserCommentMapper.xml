@@ -171,6 +171,15 @@
         SELECT COUNT(*) AS total_cnt FROM user_comment
     </select>
 
+    <!-- 검색조건이 걸린 건수 (doRetrieve의 CROSS JOIN 쪽과 같은 조건 조각을 공유한다)
+         totalCnt는 조건 없는 전체 건수라 회원별·영화별 집계에는 쓸 수 없다.
+         신고 승인으로 가려진 코멘트도 삭제된 것이 아니므로 건수에 포함한다. -->
+    <select id="totalCntBySearch" parameterType="com.endit.cmn.DTO" resultType="java.lang.Integer">
+        SELECT COUNT(*) AS total_cnt
+          FROM user_comment uc
+        <include refid="userCommentWhere"></include>
+    </select>
+
     <!-- 화면 헤더용 대상 제목 (C-04 영화 요약 / D-07 컬렉션 정보) -->
     <select id="getContentTitle" parameterType="long" resultType="string">
         SELECT NVL(title_ko, title_org) FROM content WHERE content_id = #{contentId}

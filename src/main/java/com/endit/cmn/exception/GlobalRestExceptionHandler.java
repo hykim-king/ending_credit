@@ -4,10 +4,11 @@
  * Description : Fetch(AJAX) 예외 처리
  *               컨트롤러에서 던져진 예외를 한 곳에서 받아 MessageVO(JSON)로 응답한다.
  *               id="0"(실패), message=사용자 안내, detailMessage=스택트레이스.
- *               ※ 학원 원본(sb13)은 NotFound를 NO_CONTENT(204)로 응답하나 주석 의도(404)대로 교정했다
- *                 (204는 fetch에서 응답 본문이 무시될 수 있음).
- *               ※ @Order(1): 화면용 advice와 둘 다 전역이라 스프링이 순서로 하나만 고른다 —
- *                 순서를 명시해 동작을 결정적으로 고정(현 단계는 AJAX 우선. 화면 단계에서 재설계 예정).
+ *               ※ 학원 원본(sb13)은 NotFound를 NO_CONTENT(204)로 응답하나
+ *                 주석 의도(404)대로 교정했다.
+ *               ※ @Order(1)로 advice 처리 순서를 명시한다.
+ *               ※ assignableTypes로 지정된 REST 컨트롤러만 대상으로 한정한다.
+ *                 다른 화면 컨트롤러의 예외를 가로채 JSON으로 응답하는 문제를 방지한다.
  *
  * Modification History
  * 수정일        수정자     수정내용
@@ -35,9 +36,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.endit.auth.AuthenticationRequiredException;
 import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.MessageVO;
+import com.endit.controller.CommentController;
+import com.endit.controller.CommentLikeController;
+import com.endit.controller.ReportCommentController;
 
 @Order(1)
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = { CommentController.class, CommentLikeController.class,
+		ReportCommentController.class })
 public class GlobalRestExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());

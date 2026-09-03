@@ -1,20 +1,8 @@
 /**
- * <pre>
- * Class Name : CommentLikeMapper
- * Description : 코멘트 좋아요 Mapper
- *               학원 표준대로 모든 Mapper는 WorkDiv를 상속한다.
- *               XML에는 좋아요에 실제 쓰는 것만 구현한다(doSave/doDelete + 확인/집계)
- *               — 구현 안 된 메서드는 호출할 때만 오류가 나므로 문제없다(TimeMapper 방식).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * 2026. 8. 14.  홍선기   deleteAll 제거(테스트가 @Transactional 롤백 방식으로 바뀌어 미사용·전체삭제 위험만 남음)
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 12.
+ * 코멘트 좋아요 Mapper
+ * 학원 표준대로 모든 Mapper는 WorkDiv를 상속한다.
+ * XML에는 좋아요에 실제 쓰는 것만 구현한다(doSave/doDelete + 확인/집계)
+ * — 구현 안 된 메서드는 호출할 때만 오류가 나므로 문제없다(TimeMapper 방식).
  */
 package com.endit.mapper;
 

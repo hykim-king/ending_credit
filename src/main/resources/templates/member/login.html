@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/authLayout}">
+<head>
+    <title>로그인</title>
+</head>
+<body>
+    <div layout:fragment="content">
+
+        <!-- 로고 (메인으로 이동. 메인 완성되면 href 바꾸면 됨) -->
+        <div class="mb-4">
+            <a href="/" class="text-decoration-none fw-bold fs-4" style="color:#6550C8;">END IT</a>
+        </div>
+
+        <!-- 로그인 박스 -->
+        <div class="card p-4">
+            <h3 class="text-center mb-4">로그인</h3>
+
+            <!-- 방법 선택 (A-01) -->
+            <div id="selectView" th:style="${errorMessage} ? 'display:none' : 'display:block'">
+                <a href="/oauth2/authorization/google" class="btn btn-outline-secondary w-100 mb-2">Google로 로그인</a>
+
+                <div class="text-center text-muted my-2">또는</div>
+
+                <button type="button" id="emailBtn" class="btn btn-primary w-100 mb-3">이메일로 로그인</button>
+
+                <div class="text-center">
+                    <span class="text-muted">계정이 없나요?</span>
+                    <a href="/signup">회원가입</a>
+                </div>
+            </div>
+
+            <!-- 이메일 로그인 폼 (A-02, 처음엔 숨김) -->
+            <div id="emailView" th:style="${errorMessage} ? 'display:block' : 'display:none'">
+
+                <!-- 로그인 실패 에러 -->
+                <div th:if="${errorMessage}" th:text="${errorMessage}" class="alert alert-danger"></div>
+
+                <form action="/login/email" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">이메일</label>
+                        <input type="text" name="email" class="form-control" placeholder="name@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">비밀번호</label>
+                        <input type="password" name="password" class="form-control" placeholder="비밀번호">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-2">로그인</button>
+                </form>
+
+                <button type="button" id="backBtn" class="btn btn-link w-100">뒤로</button>
+            </div>
+
+        </div>
+
+        <script>
+            // "이메일로 로그인" → 이메일 폼 보이기
+            document.getElementById('emailBtn').addEventListener('click', function() {
+                document.getElementById('selectView').style.display = 'none';
+                document.getElementById('emailView').style.display = 'block';
+            });
+
+            // "뒤로" → 다시 방법 선택
+            document.getElementById('backBtn').addEventListener('click', function() {
+                document.getElementById('selectView').style.display = 'block';
+                document.getElementById('emailView').style.display = 'none';
+            });
+
+            // 로그인 실패로 errorMessage가 있으면 처음부터 이메일 폼 보이기
+            var hasError = /*[[${errorMessage != null}]]*/ false;
+            if (hasError) {
+                document.getElementById('selectView').style.display = 'none';
+                document.getElementById('emailView').style.display = 'block';
+            }
+        </script>
+
+    </div>
+</body>
+</html>

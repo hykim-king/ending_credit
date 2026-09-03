@@ -1,20 +1,11 @@
 /**
- * <pre>
- * Class Name : GlobalViewExceptionHandler
- * Description : 화면(뷰) 예외 처리
- *               화면 요청 중 예외가 나면 message/errorTrace를 담아 오류 화면으로 보낸다.
- *               업무 예외 → error/business_error, 그 외 → error/error (학원 19장 이원화).
- *               ※ @Order(2): 현 단계는 AJAX용 advice(@Order(1))가 우선한다 —
- *                 화면 단계에서 화면/AJAX 분기 재설계 예정(작업메모 참조).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 화면(뷰) 예외 처리
+ * 화면 요청 중 예외가 나면 message/errorTrace를 담아 오류 화면으로 보낸다.
+ * 업무 예외 → error/business_error, 그 외 → error/error (학원 19장 이원화).
+ * ※ @Order(2): AJAX용 advice(@Order(1))가 우선한다.
+ * ※ assignableTypes로 4조 화면 컨트롤러만 대상으로 한정한다 —
+ * 전역으로 두면 타 조 화면의 오류까지 우리 오류 화면으로 덮어써서
+ * 담당 조가 자기 예외를 보지 못한다.
  */
 package com.endit.cmn.exception;
 
@@ -26,8 +17,11 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import com.endit.controller.CommentController;
+import com.endit.controller.ReportCommentController;
+
 @Order(2)
-@ControllerAdvice
+@ControllerAdvice(assignableTypes = { CommentController.class, ReportCommentController.class })
 public class GlobalViewExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
