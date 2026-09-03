@@ -81,7 +81,6 @@ public class AdminContentApiController {
 			@RequestParam(name = "size", defaultValue = DEFAULT_PAGE_SIZE_TEXT) int pageSize,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		DTO param = new DTO();
 		param.setSearchWord(searchWord.trim());
@@ -101,7 +100,6 @@ public class AdminContentApiController {
 			@RequestParam String externalId,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		Map<String, Object> body = new LinkedHashMap<>();
 		body.put("externalId", externalId);
@@ -123,7 +121,6 @@ public class AdminContentApiController {
 			@RequestBody AdminContentCreateRequest param,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		if (param == null || param.getContent() == null) {
 			throw new IllegalArgumentException("등록할 영화 정보가 필요합니다.");

@@ -20,6 +20,7 @@ import com.endit.cmn.MessageVO;
 import com.endit.domain.NoticeSearchVO;
 import com.endit.domain.NoticeVO;
 import com.endit.domain.PageResponse;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.NoticeService;
 
 import jakarta.servlet.http.HttpSession;
@@ -44,7 +45,6 @@ public class AdminNoticeApiController {
             @RequestParam(defaultValue = "10") int size,
             HttpSession session
     ) {
-        NoticeSessionSupport.requireAdminId(session);
 
         NoticeSearchVO search = new NoticeSearchVO();
         search.setSearchWord(query);
@@ -62,7 +62,6 @@ public class AdminNoticeApiController {
             @PathVariable Long noticeId,
             HttpSession session
     ) {
-        NoticeSessionSupport.requireAdminId(session);
         return noticeService.getAdminNotice(noticeId);
     }
 
@@ -72,7 +71,7 @@ public class AdminNoticeApiController {
             @RequestBody NoticeVO notice,
             HttpSession session
     ) {
-        Long adminId = NoticeSessionSupport.requireAdminId(session);
+        Long adminId = LoginMemberHelper.getMemberId();
         Long noticeId = noticeService.createNotice(notice, adminId);
 
         return ResponseEntity
@@ -87,7 +86,7 @@ public class AdminNoticeApiController {
             @RequestBody NoticeVO notice,
             HttpSession session
     ) {
-        Long adminId = NoticeSessionSupport.requireAdminId(session);
+        Long adminId = LoginMemberHelper.getMemberId();
         noticeService.updateNotice(noticeId, notice, adminId);
         return ResponseEntity.noContent().build();
     }
@@ -98,7 +97,7 @@ public class AdminNoticeApiController {
             @PathVariable Long noticeId,
             HttpSession session
     ) {
-        Long adminId = NoticeSessionSupport.requireAdminId(session);
+        Long adminId = LoginMemberHelper.getMemberId();
         noticeService.deleteNotice(noticeId, adminId);
         return ResponseEntity.noContent().build();
     }
