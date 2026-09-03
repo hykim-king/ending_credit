@@ -1,23 +1,13 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>공지 상세 | END IT</title>
-
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="/assets/css/notice/notice.css">
 </head>
-<body data-page="notice-detail" th:attr="data-notice-id=${noticeId}">
+<body layout:fragment="content" data-page="notice-detail" th:attr="data-notice-id=${noticeId}">
 
-<header class="endit-header">
-    <a href="/" class="endit-logo">END IT</a>
-    <div class="header-search">영화, 인물, 컬렉션 검색</div>
-    <div class="header-actions">
-        <a href="/login">로그인</a>
-        <a href="/signup" class="join-link">회원가입</a>
-    </div>
-</header>
 
 <main class="notice-container">
     <button type="button" id="backButton" class="outline-button mb-3">목록으로</button>

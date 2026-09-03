@@ -11,18 +11,7 @@
 <body data-page="admin-content-form">
 
 <div class="admin-layout">
-    <aside class="admin-sidebar">
-        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
-        <nav class="admin-nav">
-            <a href="/admin">대시보드</a>
-            <a href="/admin/movies" class="active">영화</a>
-            <a href="/admin/people">인물</a>
-            <a href="/admin/users">회원</a>
-            <a href="/admin/reports">신고</a>
-            <a href="/admin/community">커뮤니티</a>
-            <a href="/admin/notices">공지</a>
-        </nav>
-    </aside>
+    <aside th:replace="~{fragments/admin_side :: admin_side('movies')}">side</aside>
 
     <main class="admin-content">
         <h1 class="admin-page-title">영화 등록</h1>
