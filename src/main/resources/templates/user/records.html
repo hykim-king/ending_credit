@@ -2,138 +2,187 @@
 <!--
 Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
+2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-03~U-06 4탭 본문 UI 반영
+2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
 -->
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>회원 기록</title>
-<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
-</head>
-<!-- 회원 번호와 최초 탭은 View Controller가 전달하고 목록 데이터는 REST API로 조회한다. -->
-<body class="bg-light"
-      th:attr="data-member-id=${memberId},data-initial-tab=${tab}">
+    <title th:text="${member.nickname + '님의 기록 | ENDIT'}">회원 기록 | ENDIT</title>
 
-    <header class="border-bottom bg-white">
-        <div class="container py-3 d-flex justify-content-between align-items-center">
-            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/}">
-                Ending Credit
-            </a>
-            <a class="btn btn-outline-dark"
-               th:href="@{/users/{id}(id=${memberId})}">
-                프로필로 돌아가기
-            </a>
-        </div>
+    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
+
+    <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
+    <script th:src="@{/assets/js/user/member-records.js}" defer></script>
+</head>
+
+<body>
+<!-- ===================================
+     회원 기록 화면
+     서버 조회값을 data-* 속성으로 JavaScript에 전달한다.
+     =================================== -->
+<div layout:fragment="content"
+     id="memberRecordsPage"
+     class="member-activity-page"
+     th:attr="data-member-id=${memberId},
+              data-initial-tab=${tab},
+              data-ratings-count=${ratingCount},
+              data-comments-count=${commentCount},
+              data-collections-count=${collectionCount},
+              data-watchlist-count=${watchlistCount}">
+
+    <!-- ===================================
+         기록 제목과 좋아요 화면 이동
+         =================================== -->
+    <header class="member-activity-heading">
+        <h1 class="member-activity-page-title">
+            <span class="member-activity-page-title-label">RECORDS</span>
+            <span class="member-activity-page-title-byline">by</span>
+            <span class="member-activity-page-title-name"
+                  th:text="${member.nickname}">회원 닉네임</span>
+        </h1>
+
+        <a class="member-heading-link"
+           th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
+            내 좋아요 보기
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </a>
     </header>
 
-    <main class="container py-4">
-        <section class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-4">
-                <p class="text-secondary mb-1">프로필 기록</p>
-                <h1 class="h3 mb-0"
-                    th:text="|회원 #${memberId}의 영화 기록|">
-                    회원의 영화 기록
-                </h1>
-            </div>
-        </section>
+    <!-- ===================================
+         작품·코멘트·컬렉션·보고싶어요 탭
+         =================================== -->
+    <nav class="member-tabs-wrap" aria-label="회원 기록 유형">
+        <div id="recordTabs" class="member-tabs" role="tablist">
+            <a id="ratingsTab"
+               class="member-tab"
+               role="tab"
+               data-tab="ratings"
+               th:href="@{/users/{id}/records(id=${memberId},tab='ratings')}">
+                작품
+            </a>
 
-        <!-- U-03~U-06은 별도 페이지가 아니라 같은 화면 안에서 탭으로 전환한다. -->
-        <nav class="mb-4" aria-label="회원 기록 유형">
-            <div id="recordTabs" class="nav nav-tabs">
-                <a id="ratingsTab"
-                   class="nav-link"
-                   data-tab="ratings"
-                   th:href="@{/users/{id}/records(id=${memberId},tab='ratings')}">
-                    평가
-                </a>
-                <a class="nav-link disabled"
-                   href="#"
-                   tabindex="-1"
-                   aria-disabled="true"
-                   title="코멘트 API 연동 후 제공">
-                    코멘트
-                </a>
-                <a class="nav-link disabled"
-                   href="#"
-                   tabindex="-1"
-                   aria-disabled="true"
-                   title="컬렉션 API 연동 후 제공">
-                    컬렉션
-                </a>
-                <a id="watchlistTab"
-                   class="nav-link"
-                   data-tab="watchlist"
-                   th:href="@{/users/{id}/records(id=${memberId},tab='watchlist')}">
-                    보고싶어요
-                </a>
+            <a id="commentsTab"
+               class="member-tab"
+               role="tab"
+               data-tab="comments"
+               th:href="@{/users/{id}/records(id=${memberId},tab='comments')}">
+                코멘트
+            </a>
+
+            <a id="collectionsTab"
+               class="member-tab"
+               role="tab"
+               data-tab="collections"
+               th:href="@{/users/{id}/records(id=${memberId},tab='collections')}">
+                컬렉션
+            </a>
+
+            <a id="watchlistTab"
+               class="member-tab"
+               role="tab"
+               data-tab="watchlist"
+               th:href="@{/users/{id}/records(id=${memberId},tab='watchlist')}">
+                보고싶어요
+            </a>
+        </div>
+    </nav>
+
+    <!-- ===================================
+         선택한 기록 탭 본문
+         =================================== -->
+    <section class="member-activity-content" aria-labelledby="recordTitle">
+
+        <!-- 탭별 제목·건수와 정렬 드롭다운 -->
+        <div class="member-content-heading">
+
+            <!-- 탭 제목과 활동 건수 -->
+            <h2 id="recordTitle" class="member-content-title">
+                <span id="recordTitleText">평가한 작품들</span>
+                <span id="recordTotalCount"
+                      class="member-content-count"
+                      aria-live="polite">0</span>
+            </h2>
+
+            <!-- 탭별 정렬 메뉴 -->
+            <div id="recordSortWrap" class="member-sort-control">
+                <button id="recordSortButton"
+                        class="member-sort-button"
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-controls="recordSortMenu">
+                    <span id="recordSortLabel">최신 순</span>
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div id="recordSortMenu"
+                     class="member-sort-menu d-none"
+                     role="listbox"
+                     aria-label="정렬 기준"></div>
             </div>
+        </div>
+
+        <!-- 비동기 조회 상태: 로딩·오류·빈 결과 중 하나만 표시 -->
+        <div id="recordLoading"
+             class="member-skeleton-grid"
+             role="status"
+             aria-live="polite"
+             aria-label="기록을 불러오는 중입니다">
+
+            <!-- 카드 형태의 로딩 자리 표시자 -->
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+        </div>
+
+        <!-- 조회 오류 상태 -->
+        <div id="recordError" class="member-state d-none" role="alert">
+            <i class="bi bi-exclamation-circle member-state-icon" aria-hidden="true"></i>
+            <strong>기록을 불러오지 못했습니다.</strong>
+            <p id="recordErrorMessage" class="mb-3"></p>
+            <button id="recordRetryButton"
+                    class="btn btn-outline-primary btn-sm"
+                    type="button">다시 시도</button>
+        </div>
+
+        <!-- 조회 결과 없음 상태 -->
+        <div id="recordEmpty"
+             class="member-state d-none"
+             role="status">
+            <i id="recordEmptyIcon"
+               class="bi bi-inbox member-state-icon"
+               aria-hidden="true"></i>
+            <strong id="recordEmptyTitle">아직 기록이 없습니다.</strong>
+            <p id="recordEmptyMessage" class="mb-0"></p>
+        </div>
+
+        <!-- JavaScript가 탭에 맞는 카드 또는 코멘트 목록 삽입 -->
+        <div id="recordList"
+             class="d-none"
+             aria-live="polite"></div>
+
+        <!-- 작품·보고싶어요 페이지네이션 -->
+        <nav id="recordPaginationNavigation"
+             class="member-record-pagination d-none"
+             aria-label="회원 기록 페이지">
+            <ul id="recordPagination"
+                class="pagination justify-content-center mb-0"></ul>
         </nav>
 
-        <section class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <div class="d-flex flex-column flex-sm-row justify-content-between
-                            align-items-sm-center gap-3 mb-4">
-                    <div>
-                        <h2 id="recordTitle" class="h4 mb-1">평가한 영화</h2>
-                        <span id="recordTotalCount" class="text-secondary small">0개</span>
-                    </div>
-
-                    <!-- 현재 산출물에서 평가와 보고싶어요 목록은 최신순만 지원한다. -->
-                    <div>
-                        <label class="visually-hidden" for="recordSort">정렬</label>
-                        <select id="recordSort"
-                                class="form-select form-select-sm"
-                                disabled>
-                            <option value="latest">최신순</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- API 요청 중에는 기존 목록 대신 로딩 상태를 표시한다. -->
-                <div id="recordLoading"
-                     class="py-5 text-center text-secondary"
-                     role="status"
-                     aria-live="polite">
-                    기록을 불러오는 중입니다.
-                </div>
-
-                <!-- 오류 발생 시 기존 화면을 유지하고 같은 요청을 다시 수행할 수 있다. -->
-                <div id="recordError"
-                     class="alert alert-danger d-none"
-                     role="alert">
-                    <p id="recordErrorMessage" class="mb-3"></p>
-                    <button id="recordRetryButton"
-                            class="btn btn-outline-danger btn-sm"
-                            type="button">
-                        다시 시도
-                    </button>
-                </div>
-
-                <!-- 정상 응답이지만 조회 결과가 없는 경우에만 표시한다. -->
-                <div id="recordEmpty"
-                     class="alert alert-secondary text-center d-none"
-                     role="status">
-                    <p id="recordEmptyMessage" class="mb-0"></p>
-                </div>
-
-                <!-- 평가 또는 보고싶어요 콘텐츠 카드가 JavaScript로 생성된다. -->
-                <div id="recordList"
-                     class="row row-cols-2 row-cols-md-3 row-cols-lg-4
-                            row-cols-xl-5 g-3 d-none"
-                     aria-live="polite">
-                </div>
-
-                <nav class="mt-4" aria-label="회원 기록 페이지">
-                    <ul id="recordPagination"
-                        class="pagination pagination-sm justify-content-center mb-0">
-                    </ul>
-                </nav>
-            </div>
-        </section>
-    </main>
-
-    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
-    <script th:src="@{/assets/js/user/user-list-ui.js}"></script>
-    <script th:src="@{/assets/js/user/member-records.js}"></script>
+        <!-- 컬렉션 탭은 페이지네이션 대신 12개 단위 더보기 사용 -->
+        <div id="collectionLoadMoreWrap"
+             class="member-record-load-more d-none">
+            <button id="collectionLoadMoreButton"
+                    class="btn btn-outline-primary"
+                    type="button">더보기</button>
+        </div>
+    </section>
+</div>
 </body>
 </html>

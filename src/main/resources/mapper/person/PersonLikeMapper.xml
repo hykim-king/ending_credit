@@ -51,6 +51,7 @@
            AND PERSON_ID = #{personId}
     </delete>
 
+    <!-- 회원별 인물 좋아요 목록 조회: 인물 정보와 최근 참여 작품 포함 -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="PersonLikeVO">
         SELECT MEMBER_ID,
                PERSON_ID,
@@ -58,7 +59,9 @@
                EXTERNAL_ID,
                NAME_KO,
                NAME_ORG,
-               PROFILE_IMAGE_URL
+               PROFILE_IMAGE_URL,
+               ROLE,
+               LATEST_CONTENT_TITLE
           FROM (
             SELECT PL.MEMBER_ID,
                    PL.PERSON_ID,
@@ -67,19 +70,53 @@
                    P.NAME_KO,
                    P.NAME_ORG,
                    P.PROFILE_IMAGE_URL,
+                   CASE
+                       WHEN EXISTS (
+                           SELECT 1
+                             FROM CONTENT_CREDIT ROLE_CC
+                            WHERE ROLE_CC.PERSON_ID = P.PERSON_ID
+                              AND ROLE_CC.ROLE = 'DIRECTOR'
+                       ) THEN 'DIRECTOR'
+                       WHEN EXISTS (
+                           SELECT 1
+                             FROM CONTENT_CREDIT ROLE_CC
+                            WHERE ROLE_CC.PERSON_ID = P.PERSON_ID
+                       ) THEN 'ACTOR'
+                   END AS ROLE,
+                   LC.LATEST_CONTENT_TITLE,
                    ROW_NUMBER() OVER (
                        ORDER BY PL.CREATED_DT DESC, PL.MEMBER_ID DESC, PL.PERSON_ID DESC
                    ) AS RNUM
               FROM PERSON_LIKE PL
               JOIN PERSON P
                 ON P.PERSON_ID = PL.PERSON_ID
+              LEFT JOIN (
+                    SELECT PERSON_ID,
+                           LATEST_CONTENT_TITLE
+                      FROM (
+                            SELECT CC.PERSON_ID,
+                                   NVL(C.TITLE_KO, C.TITLE_ORG) AS LATEST_CONTENT_TITLE,
+                                   ROW_NUMBER() OVER (
+                                       PARTITION BY CC.PERSON_ID
+                                       ORDER BY C.RELEASE_YEAR DESC NULLS LAST,
+                                                CC.DISPLAY_ORDER ASC,
+                                                CC.CONTENT_ID ASC,
+                                                CC.CREDIT_ID ASC
+                                   ) AS CONTENT_RNUM
+                              FROM CONTENT_CREDIT CC
+                              JOIN CONTENT C
+                                ON C.CONTENT_ID = CC.CONTENT_ID
+                      )
+                     WHERE CONTENT_RNUM = 1
+              ) LC
+                ON LC.PERSON_ID = P.PERSON_ID
             <include refid="personLikeWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
-         WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
-                         AND (#{pageNo} * #{pageSize})
+            WHERE RNUM BETWEEN ((#{pageNo} - 1) * #{pageSize} + 1)
+                            AND (#{pageNo} * #{pageSize})
         </if>
-         ORDER BY RNUM
+        ORDER BY RNUM
     </select>
 
     <!-- 인물 좋아요 전체 삭제 -->
@@ -93,6 +130,7 @@
           FROM PERSON_LIKE
     </select>
 
+    <!-- 검색 조건에 해당하는 인물 좋아요 건수 조회 -->
     <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
         SELECT COUNT(*)
           FROM PERSON_LIKE PL

@@ -11,6 +11,7 @@ package com.endit.domain;
  * ------------------------------------------------------------
  * 2026. 8. 12.	jinyoung    최초 생성
  * 2026. 8. 19. jinyoung    목록 조회용 콘텐츠 정보 추가
+ * 2026. 9. 03. jinyoung    기록 카드용 전체 회원 평균 별점 필드 설명 정리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -30,13 +31,20 @@ public class MemberContentVO {
 	private String titleOrg;        // 영화 원문 제목
 	private String releaseYear;     // 개봉 연도
 	private String posterUrl;       // 포스터 URL
+	private Double averageRating;   // 전체 회원 평가 평균 별점
 
 	public MemberContentVO() {
 		super();
 	}
 
-	public MemberContentVO(int memberId, int contentId, Integer ratingScore, String watchlist, String ratedDt,
-			String watchlistDt, String updatedDt) {
+	public MemberContentVO(
+			int memberId,
+			int contentId,
+			Integer ratingScore,
+			String watchlist,
+			String ratedDt,
+			String watchlistDt,
+			String updatedDt) {
 		super();
 		this.memberId = memberId;
 		this.contentId = contentId;
@@ -135,11 +143,28 @@ public class MemberContentVO {
 		this.posterUrl = posterUrl;
 	}
 
+	public Double getAverageRating() {
+		return averageRating;
+	}
+
+	public void setAverageRating(Double averageRating) {
+		this.averageRating = averageRating;
+	}
+
 	@Override
 	public String toString() {
-		return "MemberContentVO [memberId=" + memberId + ", contentId=" + contentId + ", ratingScore="
-				+ ratingScore + ", watchlist=" + watchlist + ", ratedDt=" + ratedDt + ", watchlistDt=" + watchlistDt
-				+ ", updatedDt=" + updatedDt + ", titleKo=" + titleKo + ", titleOrg=" + titleOrg
-				+ ", releaseYear=" + releaseYear + ", posterUrl=" + posterUrl + "]";
+		return "MemberContentVO [memberId=" + memberId
+				+ ", contentId=" + contentId
+				+ ", ratingScore=" + ratingScore
+				+ ", watchlist=" + watchlist
+				+ ", ratedDt=" + ratedDt
+				+ ", watchlistDt=" + watchlistDt
+				+ ", updatedDt=" + updatedDt
+				+ ", titleKo=" + titleKo
+				+ ", titleOrg=" + titleOrg
+				+ ", releaseYear=" + releaseYear
+				+ ", posterUrl=" + posterUrl
+				+ ", averageRating=" + averageRating
+				+ "]";
 	}
 }

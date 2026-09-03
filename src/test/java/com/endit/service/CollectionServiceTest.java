@@ -52,6 +52,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 조회 검증
  * 2026. 9. 02. jinyoung    현재 회원의 목록 좋아요 여부 검증
  * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
+ * 2026. 9. 03. jinyoung    회원별 컬렉션 및 공개 범위 건수 조회 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -90,10 +91,7 @@ class CollectionServiceTest {
 		int memberId = createMemberId();
 		ContentVO content = createContent("통합 목록");
 		CollectionVO saved = collectionService.create(memberId,
-				createRequest(
-						"통합 목록 컬렉션",
-						"컬렉션 설명",
-						List.of(content.getContentId())));
+				createRequest("통합 목록 컬렉션", "컬렉션 설명", List.of(content.getContentId())));
 
 		DTO param = new DTO();
 		param.setSearchDiv("10");
@@ -114,12 +112,8 @@ class CollectionServiceTest {
 	void retrieveWithPreviewPoster() {
 		int memberId = createMemberId();
 		ContentVO content = createContent("목록 대표 포스터");
-		CollectionVO saved = collectionService.create(
-				memberId,
-				createRequest(
-						"대표 포스터 컬렉션",
-						"컬렉션 설명",
-						List.of(content.getContentId())));
+		CollectionVO saved = collectionService.create(memberId,
+				createRequest("대표 포스터 컬렉션", "컬렉션 설명", List.of(content.getContentId())));
 
 		DTO param = searchByTitle(saved.getTitle());
 		List<CollectionVO> result = collectionService.retrieve(param);
@@ -135,19 +129,13 @@ class CollectionServiceTest {
 		int ownerId = createMemberId();
 		int currentMemberId = createMemberId();
 		ContentVO content = createContent("좋아요 상태");
-		CollectionVO saved = collectionService.create(
-				ownerId,
-				createRequest(
-						"좋아요 상태 컬렉션-" + UUID.randomUUID(),
-						"컬렉션 설명",
-						List.of(content.getContentId())));
-		CollectionLikeVO like = new CollectionLikeVO(
-				currentMemberId, saved.getCollectionId(), null);
+		CollectionVO saved = collectionService.create(ownerId,
+				createRequest("좋아요 상태 컬렉션-" + UUID.randomUUID(), "컬렉션 설명", List.of(content.getContentId())));
+		CollectionLikeVO like = new CollectionLikeVO(currentMemberId, saved.getCollectionId(), null);
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(like));
 
 		DTO param = searchByTitle(saved.getTitle());
-		List<CollectionVO> result = collectionService.retrieve(
-				param, OptionalLong.of(currentMemberId));
+		List<CollectionVO> result = collectionService.retrieve(param, OptionalLong.of(currentMemberId));
 
 		assertEquals(1, result.size());
 		assertTrue(result.get(0).isLikedByCurrentMember());
@@ -174,21 +162,14 @@ class CollectionServiceTest {
 		int ownerId = createMemberId();
 		String title = "비공개목록-" + UUID.randomUUID();
 		ContentVO content = createContent("비공개 목록");
-		CollectionVO privateCollection = collectionService.create(
-				ownerId,
-				createRequest(
-						title,
-						"컬렉션 설명",
-						"N",
-						List.of(content.getContentId())));
+		CollectionVO privateCollection = collectionService.create(ownerId,
+				createRequest(title, "컬렉션 설명", "N", List.of(content.getContentId())));
 
 		DTO param = searchByTitle(title);
-		List<CollectionVO> result = collectionService.retrieve(
-				param, OptionalLong.of(ownerId));
+		List<CollectionVO> result = collectionService.retrieve(param, OptionalLong.of(ownerId));
 
 		assertEquals(1, result.size());
-		assertEquals(privateCollection.getCollectionId(),
-				result.get(0).getCollectionId());
+		assertEquals(privateCollection.getCollectionId(), result.get(0).getCollectionId());
 		assertEquals(1, param.getTotalCnt());
 	}
 
@@ -197,27 +178,21 @@ class CollectionServiceTest {
 	@DisplayName("빈 컬렉션은 전체 목록에서 제외하고 회원별 목록에는 포함")
 	void retrieveEmptyCollectionVisibility() {
 		int ownerId = createMemberId();
-		CollectionVO emptyCollection = collectionService.create(
-				ownerId,
-				createRequest(
-						"빈 컬렉션-" + UUID.randomUUID(),
-						"컬렉션 설명",
-						List.of()));
+		CollectionVO emptyCollection = collectionService.create(ownerId,
+				createRequest("빈 컬렉션-" + UUID.randomUUID(), "컬렉션 설명", List.of()));
 
 		DTO publicParam = searchByTitle(emptyCollection.getTitle());
-		List<CollectionVO> publicResult = collectionService.retrieve(
-				publicParam, OptionalLong.of(ownerId));
+		List<CollectionVO> publicResult = collectionService.retrieve(publicParam, OptionalLong.of(ownerId));
 
 		assertTrue(publicResult.isEmpty());
 		assertEquals(0, publicParam.getTotalCnt());
 
 		DTO memberParam = searchByTitle(emptyCollection.getTitle());
-		List<CollectionVO> memberResult = collectionService.retrieveByMember(
-				ownerId, memberParam, OptionalLong.of(ownerId));
+		List<CollectionVO> memberResult = collectionService.retrieveByMember(ownerId, memberParam,
+				OptionalLong.of(ownerId));
 
 		assertEquals(1, memberResult.size());
-		assertEquals(emptyCollection.getCollectionId(),
-				memberResult.get(0).getCollectionId());
+		assertEquals(emptyCollection.getCollectionId(), memberResult.get(0).getCollectionId());
 		assertEquals(1, memberParam.getTotalCnt());
 	}
 
@@ -231,15 +206,13 @@ class CollectionServiceTest {
 		saveCollection(ownerId, title, "N");
 
 		DTO param = searchByTitle(title);
-		List<CollectionVO> result = collectionService.retrieveByMember(
-				ownerId, param, OptionalLong.of(ownerId));
+
+		List<CollectionVO> result = collectionService.retrieveByMember(ownerId, param, OptionalLong.of(ownerId));
 
 		assertEquals(2, result.size());
 		assertEquals(2, param.getTotalCnt());
-		assertTrue(result.stream().anyMatch(
-				collection -> "Y".equals(collection.getIsPublic())));
-		assertTrue(result.stream().anyMatch(
-				collection -> "N".equals(collection.getIsPublic())));
+		assertTrue(result.stream().anyMatch(collection -> "Y".equals(collection.getIsPublic())));
+		assertTrue(result.stream().anyMatch(collection -> "N".equals(collection.getIsPublic())));
 	}
 
 	/** U-05를 타인이 조회하면 대상 회원의 공개 컬렉션만 반환하는지 검증 */
@@ -253,22 +226,78 @@ class CollectionServiceTest {
 		saveCollection(ownerId, title, "N");
 
 		DTO param = searchByTitle(title);
-		List<CollectionVO> result = collectionService.retrieveByMember(
-				ownerId, param, OptionalLong.of(otherMemberId));
+		List<CollectionVO> result = collectionService
+				.retrieveByMember(ownerId, param, OptionalLong.of(otherMemberId));
 
 		assertEquals(1, result.size());
-		assertEquals(publicCollection.getCollectionId(),
-				result.get(0).getCollectionId());
+		assertEquals(publicCollection.getCollectionId(), result.get(0).getCollectionId());
 		assertEquals(1, param.getTotalCnt());
+	}
+
+	@Test
+	@DisplayName("본인 프로필 컬렉션 건수는 공개와 비공개 전체 포함")
+	void countByMember() {
+
+		// Given: 대상 회원에게 공개·비공개 컬렉션을 하나씩 등록한다.
+		int targetMemberId = createMemberId();
+		String title = "본인집계-" + UUID.randomUUID();
+
+		saveCollection(targetMemberId, title + "-공개", "Y");
+		saveCollection(targetMemberId, title + "-비공개", "N");
+
+		// 다른 회원의 컬렉션은 대상 회원의 집계에 포함되지 않아야 한다.
+		int otherMemberId = createMemberId();
+		saveCollection(otherMemberId, title + "-다른회원", "Y");
+
+		// When: 대상 회원이 작성한 전체 컬렉션 건수를 조회한다.
+		int result = collectionService.countByMember(targetMemberId);
+
+		// Then: 대상 회원의 공개·비공개 컬렉션 두 건만 집계되어야 한다.
+		assertEquals(2, result);
+	}
+
+	@Test
+	@DisplayName("프로필 조회자의 접근 범위에 따른 컬렉션 건수 조회")
+	void countVisibleByMember() {
+
+		// Given: 대상 회원에게 공개·비공개 컬렉션을 하나씩 등록한다.
+		int targetMemberId = createMemberId();
+		int otherMemberId = createMemberId();
+		String title = "공개범위집계-" + UUID.randomUUID();
+
+		saveCollection(targetMemberId, title + "-공개", "Y");
+		saveCollection(targetMemberId, title + "-비공개", "N");
+
+		// When, Then: 다른 로그인 회원은 공개 컬렉션만 볼 수 있어야 한다.
+		assertEquals(1, collectionService.countVisibleByMember(targetMemberId, Long.valueOf(otherMemberId)));
+
+		// When, Then: 비회원도 공개 컬렉션만 볼 수 있어야 한다.
+		assertEquals(1, collectionService.countVisibleByMember(targetMemberId, null));
+
+		// When, Then: 대상 회원 본인은 공개·비공개 컬렉션을 모두 볼 수 있어야 한다.
+		assertEquals(2, collectionService.countVisibleByMember(targetMemberId, Long.valueOf(targetMemberId)));
+	}
+
+	@Test
+	@DisplayName("회원별 컬렉션 건수 조회 시 회원 번호 검증")
+	void validateCountMemberId() {
+
+		int targetMemberId = createMemberId();
+
+		// Then: 대상 회원 번호가 유효하지 않으면 Mapper 호출 전에 거부해야 한다.
+		assertThrows(IllegalArgumentException.class, () -> collectionService.countByMember(0));
+
+		assertThrows(IllegalArgumentException.class, () -> collectionService.countVisibleByMember(-1, null));
+
+		// 현재 조회 회원은 null이면 비회원으로 허용하지만, 0 이하는 허용하지 않는다.
+		assertThrows(IllegalArgumentException.class, () -> collectionService.countVisibleByMember(targetMemberId, 0L));
 	}
 
 	/** null 조회 조건에 대한 입력값 검증 */
 	@Test
 	@DisplayName("조회 조건이 null이면 예외 발생")
 	void retrieveNull() {
-		assertThrows(
-				IllegalArgumentException.class,
-				() -> collectionService.retrieve(null));
+		assertThrows(IllegalArgumentException.class, () -> collectionService.retrieve(null));
 	}
 
 	/** 실제 DB에 등록한 컬렉션의 단건 조회 검증 */
@@ -276,11 +305,10 @@ class CollectionServiceTest {
 	@DisplayName("컬렉션 번호로 단건 조회")
 	void get() {
 		int memberId = createMemberId();
-		CollectionVO saved = collectionService.create(memberId,
-				createRequest("통합 단건 컬렉션", "컬렉션 설명", List.of()));
+		CollectionVO saved = collectionService
+				.create(memberId, createRequest("통합 단건 컬렉션", "컬렉션 설명", List.of()));
 
-		CollectionVO result = collectionService.get(
-				saved.getCollectionId(), OptionalLong.of(memberId));
+		CollectionVO result = collectionService.get(saved.getCollectionId(), OptionalLong.of(memberId));
 
 		assertEquals(saved.getCollectionId(), result.getCollectionId());
 		assertEquals(saved.getTitle(), result.getTitle());
@@ -291,10 +319,8 @@ class CollectionServiceTest {
 	@Test
 	@DisplayName("존재하지 않는 컬렉션 조회 시 예외 발생")
 	void getNotFound() {
-		assertThrows(
-				NoSuchElementException.class,
-				() -> collectionService.get(
-						MISSING_COLLECTION_ID, OptionalLong.empty()));
+		assertThrows(NoSuchElementException.class,
+				() -> collectionService.get(MISSING_COLLECTION_ID, OptionalLong.empty()));
 	}
 
 	/** 비공개 컬렉션을 비소유자가 조회하면 미조회와 같게 처리하는지 검증 */
@@ -303,13 +329,10 @@ class CollectionServiceTest {
 	void getPrivateCollectionByNonOwner() {
 		int ownerId = createMemberId();
 		int otherMemberId = createMemberId();
-		CollectionVO saved = saveCollection(
-				ownerId, "비공개 단건 컬렉션", "N");
+		CollectionVO saved = saveCollection(ownerId, "비공개 단건 컬렉션", "N");
 
-		assertThrows(
-				NoSuchElementException.class,
-				() -> collectionService.get(
-						saved.getCollectionId(), OptionalLong.of(otherMemberId)));
+		assertThrows(NoSuchElementException.class,
+				() -> collectionService.get(saved.getCollectionId(), OptionalLong.of(otherMemberId)));
 	}
 
 	/** 공개 컬렉션도 비소유자는 변경할 수 없음을 검증 */
@@ -318,13 +341,10 @@ class CollectionServiceTest {
 	void getOwnedByNonOwner() {
 		int ownerId = createMemberId();
 		int otherMemberId = createMemberId();
-		CollectionVO saved = saveCollection(
-				ownerId, "비소유자 변경 컬렉션", "Y");
+		CollectionVO saved = saveCollection(ownerId, "비소유자 변경 컬렉션", "Y");
 
-		assertThrows(
-				ForbiddenOperationException.class,
-				() -> collectionService.getOwned(
-						saved.getCollectionId(), otherMemberId));
+		assertThrows(ForbiddenOperationException.class,
+				() -> collectionService.getOwned(saved.getCollectionId(), otherMemberId));
 	}
 
 	/** 공개 여부를 생략한 기존 요청은 기본 공개 상태로 등록되는지 검증 */
@@ -332,8 +352,7 @@ class CollectionServiceTest {
 	@DisplayName("공개 여부를 생략한 컬렉션은 공개 상태 Y로 등록")
 	void create() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				"  통합 등록 컬렉션  ", "   ", null);
+		CollectionCreateRequest request = createRequest("  통합 등록 컬렉션  ", "   ", null);
 
 		CollectionVO result = collectionService.create(memberId, request);
 
@@ -350,8 +369,7 @@ class CollectionServiceTest {
 	@DisplayName("컬렉션은 비공개 상태 N으로 등록")
 	void createPrivateCollection() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				"통합 비공개 컬렉션", "컬렉션 설명", "N", List.of());
+		CollectionCreateRequest request = createRequest("통합 비공개 컬렉션", "컬렉션 설명", "N", List.of());
 
 		CollectionVO result = collectionService.create(memberId, request);
 
@@ -365,14 +383,11 @@ class CollectionServiceTest {
 		int memberId = createMemberId();
 		ContentVO first = createContent("첫 번째");
 		ContentVO second = createContent("두 번째");
-		CollectionCreateRequest request = createRequest(
-				"작품 distinct 컬렉션",
-				"컬렉션 설명",
+		CollectionCreateRequest request = createRequest("작품 distinct 컬렉션", "컬렉션 설명",
 				List.of(first.getContentId(), second.getContentId(), first.getContentId()));
 
 		CollectionVO result = collectionService.create(memberId, request);
-		List<Integer> contentIds = collectionItemMapper
-				.selectContentIdsByCollectionId(result.getCollectionId());
+		List<Integer> contentIds = collectionItemMapper.selectContentIdsByCollectionId(result.getCollectionId());
 
 		assertEquals(2, contentIds.size());
 		assertTrue(contentIds.contains(first.getContentId()));
@@ -384,14 +399,9 @@ class CollectionServiceTest {
 	@DisplayName("존재하지 않는 contentId로 컬렉션을 등록하지 않음")
 	void createWithMissingContentId() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				"존재하지 않는 작품 컬렉션",
-				"컬렉션 설명",
-				List.of(Integer.MAX_VALUE));
+		CollectionCreateRequest request = createRequest("존재하지 않는 작품 컬렉션", "컬렉션 설명", List.of(Integer.MAX_VALUE));
 
-		assertThrows(
-				DataIntegrityViolationException.class,
-				() -> collectionService.create(memberId, request));
+		assertThrows(DataIntegrityViolationException.class, () -> collectionService.create(memberId, request));
 	}
 
 	/** Y/N 이외의 공개 여부가 저장되지 않도록 검증 */
@@ -399,12 +409,9 @@ class CollectionServiceTest {
 	@DisplayName("잘못된 공개 여부로 컬렉션을 등록하지 않음")
 	void createWithInvalidPublicState() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				"통합 컬렉션", "컬렉션 설명", "INVALID", List.of());
+		CollectionCreateRequest request = createRequest("통합 컬렉션", "컬렉션 설명", "INVALID", List.of());
 
-		assertThrows(
-				IllegalArgumentException.class,
-				() -> collectionService.create(memberId, request));
+		assertThrows(IllegalArgumentException.class, () -> collectionService.create(memberId, request));
 	}
 
 	/** 필수 제목이 없는 컬렉션 등록 방지 검증 */
@@ -412,12 +419,9 @@ class CollectionServiceTest {
 	@DisplayName("제목이 없는 컬렉션은 등록하지 않음")
 	void createWithoutTitle() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				" ", "컬렉션 설명", List.of());
+		CollectionCreateRequest request = createRequest(" ", "컬렉션 설명", List.of());
 
-		assertThrows(
-				IllegalArgumentException.class,
-				() -> collectionService.create(memberId, request));
+		assertThrows(IllegalArgumentException.class, () -> collectionService.create(memberId, request));
 	}
 
 	/** 최대 길이를 초과한 제목의 컬렉션 등록 방지 검증 */
@@ -425,12 +429,9 @@ class CollectionServiceTest {
 	@DisplayName("제목이 100자를 초과한 컬렉션은 등록하지 않음")
 	void createWithLongTitle() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				"가".repeat(101), "컬렉션 설명", List.of());
+		CollectionCreateRequest request = createRequest("가".repeat(101), "컬렉션 설명", List.of());
 
-		assertThrows(
-				IllegalArgumentException.class,
-				() -> collectionService.create(memberId, request));
+		assertThrows(IllegalArgumentException.class, () -> collectionService.create(memberId, request));
 	}
 
 	/** 최대 길이를 초과한 설명의 컬렉션 등록 방지 검증 */
@@ -438,12 +439,9 @@ class CollectionServiceTest {
 	@DisplayName("설명이 1000자를 초과한 컬렉션은 등록하지 않음")
 	void createWithLongDescription() {
 		int memberId = createMemberId();
-		CollectionCreateRequest request = createRequest(
-				"통합 컬렉션", "가".repeat(1001), List.of());
+		CollectionCreateRequest request = createRequest("통합 컬렉션", "가".repeat(1001), List.of());
 
-		assertThrows(
-				IllegalArgumentException.class,
-				() -> collectionService.create(memberId, request));
+		assertThrows(IllegalArgumentException.class, () -> collectionService.create(memberId, request));
 	}
 
 	/** 수정 시 작성자를 유지하면서 공개 컬렉션을 비공개로 변경하는지 검증 */
@@ -451,13 +449,11 @@ class CollectionServiceTest {
 	@DisplayName("기존 작성자를 유지하고 공개 컬렉션을 비공개로 수정")
 	void update() {
 		int memberId = createMemberId();
-		CollectionVO saved = collectionService.create(memberId,
-				createRequest("수정 전 컬렉션", "컬렉션 설명", List.of()));
-		CollectionUpdateRequest request = updateRequest(
-				"수정 후 컬렉션", "수정 후 설명", "N", List.of());
+		CollectionVO saved = collectionService
+				.create(memberId, createRequest("수정 전 컬렉션", "컬렉션 설명", List.of()));
+		CollectionUpdateRequest request = updateRequest("수정 후 컬렉션", "수정 후 설명", "N", List.of());
 
-		CollectionVO result = collectionService.update(
-				memberId, saved.getCollectionId(), request);
+		CollectionVO result = collectionService.update(memberId, saved.getCollectionId(), request);
 
 		assertEquals(saved.getCollectionId(), result.getCollectionId());
 		assertEquals(memberId, result.getMemberId());
@@ -472,13 +468,10 @@ class CollectionServiceTest {
 	void updateWithoutPublicState() {
 		int memberId = createMemberId();
 		CollectionVO saved = collectionService.create(memberId,
-				createRequest(
-						"비공개 수정 전 컬렉션", "컬렉션 설명", "N", List.of()));
-		CollectionUpdateRequest request = updateRequest(
-				"비공개 수정 후 컬렉션", "수정 후 설명", List.of());
+				createRequest("비공개 수정 전 컬렉션", "컬렉션 설명", "N", List.of()));
+		CollectionUpdateRequest request = updateRequest("비공개 수정 후 컬렉션", "수정 후 설명", List.of());
 
-		CollectionVO result = collectionService.update(
-				memberId, saved.getCollectionId(), request);
+		CollectionVO result = collectionService.update(memberId, saved.getCollectionId(), request);
 
 		assertEquals("N", result.getIsPublic());
 	}
@@ -488,13 +481,11 @@ class CollectionServiceTest {
 	@DisplayName("비공개 컬렉션을 공개 상태로 수정")
 	void updatePrivateToPublic() {
 		int memberId = createMemberId();
-		CollectionVO saved = collectionService.create(memberId,
-				createRequest("재공개 전 컬렉션", "컬렉션 설명", "N", List.of()));
-		CollectionUpdateRequest request = updateRequest(
-				"재공개 후 컬렉션", "수정 후 설명", "Y", List.of());
+		CollectionVO saved = collectionService
+				.create(memberId, createRequest("재공개 전 컬렉션", "컬렉션 설명", "N", List.of()));
+		CollectionUpdateRequest request = updateRequest("재공개 후 컬렉션", "수정 후 설명", "Y", List.of());
 
-		CollectionVO result = collectionService.update(
-				memberId, saved.getCollectionId(), request);
+		CollectionVO result = collectionService.update(memberId, saved.getCollectionId(), request);
 
 		assertEquals("Y", result.getIsPublic());
 	}
@@ -506,18 +497,12 @@ class CollectionServiceTest {
 		int memberId = createMemberId();
 		ContentVO content = createContent("전체 제거");
 		CollectionVO saved = collectionService.create(memberId,
-				createRequest(
-						"작품 목록 수정 전",
-						"컬렉션 설명",
-						List.of(content.getContentId())));
-		CollectionUpdateRequest request = updateRequest(
-				"작품 목록 수정 후", "컬렉션 설명", null);
+				createRequest("작품 목록 수정 전", "컬렉션 설명", List.of(content.getContentId())));
+		CollectionUpdateRequest request = updateRequest("작품 목록 수정 후", "컬렉션 설명", null);
 
 		collectionService.update(memberId, saved.getCollectionId(), request);
 
-		assertTrue(collectionItemMapper
-				.selectContentIdsByCollectionId(saved.getCollectionId())
-				.isEmpty());
+		assertTrue(collectionItemMapper.selectContentIdsByCollectionId(saved.getCollectionId()).isEmpty());
 	}
 
 	/** 작품 추가와 제거를 동시에 처리하면서 유지 작품의 ADDED_DT를 보존하는지 검증 */
@@ -529,29 +514,16 @@ class CollectionServiceTest {
 		ContentVO removed = createContent("제거");
 		ContentVO added = createContent("추가");
 		CollectionVO saved = collectionService.create(memberId,
-				createRequest(
-						"작품 diff 수정 전",
-						"컬렉션 설명",
-						List.of(retained.getContentId(), removed.getContentId())));
-		CollectionItemVO retainedKey = createItemKey(
-				saved.getCollectionId(), retained.getContentId());
-		String retainedAddedDt = collectionItemMapper
-				.doSelectOne(retainedKey).getAddedDt();
+				createRequest("작품 diff 수정 전", "컬렉션 설명", List.of(retained.getContentId(), removed.getContentId())));
+		CollectionItemVO retainedKey = createItemKey(saved.getCollectionId(), retained.getContentId());
+		String retainedAddedDt = collectionItemMapper.doSelectOne(retainedKey).getAddedDt();
 
-		collectionService.update(
-				memberId,
-				saved.getCollectionId(),
-				updateRequest(
-						"작품 diff 수정 후",
-						"수정 후 설명",
-						List.of(retained.getContentId(), added.getContentId())));
+		collectionService.update(memberId, saved.getCollectionId(),
+				updateRequest("작품 diff 수정 후", "수정 후 설명", List.of(retained.getContentId(), added.getContentId())));
 
-		assertEquals(retainedAddedDt,
-				collectionItemMapper.doSelectOne(retainedKey).getAddedDt());
-		assertNull(collectionItemMapper.doSelectOne(createItemKey(
-				saved.getCollectionId(), removed.getContentId())));
-		assertNotNull(collectionItemMapper.doSelectOne(createItemKey(
-				saved.getCollectionId(), added.getContentId())));
+		assertEquals(retainedAddedDt, collectionItemMapper.doSelectOne(retainedKey).getAddedDt());
+		assertNull(collectionItemMapper.doSelectOne(createItemKey(saved.getCollectionId(), removed.getContentId())));
+		assertNotNull(collectionItemMapper.doSelectOne(createItemKey(saved.getCollectionId(), added.getContentId())));
 	}
 
 	/** 실제 DB에서 컬렉션 삭제 결과 검증 */
@@ -559,21 +531,19 @@ class CollectionServiceTest {
 	@DisplayName("컬렉션 삭제")
 	void delete() {
 		int memberId = createMemberId();
-		CollectionVO saved = collectionService.create(memberId,
-				createRequest("삭제 컬렉션", "컬렉션 설명", List.of()));
+		CollectionVO saved = collectionService.create(memberId, createRequest("삭제 컬렉션", "컬렉션 설명", List.of()));
 
 		collectionService.delete(memberId, saved.getCollectionId());
 
-		assertThrows(
-				NoSuchElementException.class,
-				() -> collectionService.get(
-						saved.getCollectionId(), OptionalLong.of(memberId)));
+		assertThrows(NoSuchElementException.class,
+				() -> collectionService.get(saved.getCollectionId(), OptionalLong.of(memberId)));
 	}
 
 	/** 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록 */
 	private int createMemberId() {
 		String token = UUID.randomUUID().toString().replace("-", "");
 		MemberVO member = new MemberVO();
+
 		member.setEmail("collection-" + token + "@test.local");
 		member.setPassword("encoded-password");
 		member.setNickname("컬렉션" + token.substring(0, 8));
@@ -589,19 +559,11 @@ class CollectionServiceTest {
 	/** 작품 스냅샷 테스트에 사용할 콘텐츠 등록 */
 	private ContentVO createContent(String titleSuffix) {
 		String token = UUID.randomUUID().toString().replace("-", "");
-		ContentVO content = new ContentVO(
-				0,
-				"COLLECTION_" + token,
-				"컬렉션 작품 " + titleSuffix,
-				"Collection Content " + titleSuffix,
-				"컬렉션 작품 스냅샷 테스트",
-				"2026-08-31",
-				120,
-				"KR",
-				"https://example.com/poster.jpg",
-				"https://example.com/backdrop.jpg",
-				null);
+		ContentVO content = new ContentVO(0, "COLLECTION_" + token, "컬렉션 작품 " + titleSuffix,
+				"Collection Content " + titleSuffix, "컬렉션 작품 스냅샷 테스트", "2026-08-31", 120, "KR",
+				"https://example.com/poster.jpg", "https://example.com/backdrop.jpg", null);
 		assertEquals(1, contentMapper.doSave(content));
+
 		return content;
 	}
 
@@ -611,20 +573,10 @@ class CollectionServiceTest {
 	}
 
 	/** Mapper로 공개 여부를 지정해 접근 정책용 컬렉션 등록 */
-	private CollectionVO saveCollection(
-			int memberId,
-			String title,
-			String isPublic) {
-
-		CollectionVO collection = new CollectionVO(
-				0,
-				memberId,
-				title,
-				"접근 정책 통합 테스트",
-				isPublic,
-				null,
-				null);
+	private CollectionVO saveCollection(int memberId, String title, String isPublic) {
+		CollectionVO collection = new CollectionVO(0, memberId, title, "접근 정책 통합 테스트", isPublic, null, null);
 		assertEquals(1, collectionMapper.doSave(collection));
+
 		return collection;
 	}
 
@@ -633,6 +585,7 @@ class CollectionServiceTest {
 		DTO param = new DTO();
 		param.setSearchDiv("10");
 		param.setSearchWord(title);
+
 		return param;
 	}
 

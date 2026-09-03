@@ -200,6 +200,8 @@
                     document.getElementById('profileImg').src = d.profileImgUrl;
                 }
 
+                // stats 키: ratingCnt / commentCnt / collectionCnt / watchlistCnt
+                // 회원별 활동 건수
                 const s = d.stats ?? {};
                 document.getElementById('ratingCnt').textContent     = s.ratingCnt ?? 0;
                 document.getElementById('commentCnt').textContent    = s.commentCnt ?? 0;
