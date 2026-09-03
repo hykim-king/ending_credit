@@ -41,10 +41,10 @@ import com.endit.service.UserCommentService;
 @RequestMapping("/users/{memberId}/records")
 public class MemberContentViewController {
 
-	private static final String TAB_RATINGS = "ratings";
-	private static final String TAB_COMMENTS = "comments";
-	private static final String TAB_COLLECTIONS = "collections";
-	private static final String TAB_WATCHLIST = "watchlist";
+	private static final String TAB_RATINGS = "ratings";		 //
+	private static final String TAB_COMMENTS = "comments";		 //
+	private static final String TAB_COLLECTIONS = "collections"; //
+	private static final String TAB_WATCHLIST = "watchlist";	 //
 
 	private final MemberService memberService;
 	private final MemberContentService memberContentService;
@@ -60,9 +60,9 @@ public class MemberContentViewController {
 	 * @param collectionService    컬렉션 Service
 	 */
 	public MemberContentViewController(
-			MemberService memberService, 
+			MemberService memberService,
 			MemberContentService memberContentService,
-			UserCommentService userCommentService, 
+			UserCommentService userCommentService,
 			CollectionService collectionService) {
 
 		this.memberService = memberService;
@@ -82,7 +82,7 @@ public class MemberContentViewController {
 	 * @return 회원 기록 View 이름
 	 */
 	@GetMapping
-	public String records(@PathVariable int memberId, 
+	public String records(@PathVariable int memberId,
 			@RequestParam(defaultValue = TAB_RATINGS) String tab, Model model) {
 
 		MemberVO member = memberService.getMember(memberId);
@@ -93,7 +93,6 @@ public class MemberContentViewController {
 
 		LoginMember loginMember = LoginMemberHelper.getLoginMember();
 		Long currentMemberId = loginMember == null ? null : loginMember.getMemberId();
-		boolean ownProfile = currentMemberId != null && currentMemberId.longValue() == memberId;
 
 		DTO commentParam = new DTO();
 		commentParam.setSearchDiv("10");
@@ -102,7 +101,6 @@ public class MemberContentViewController {
 		model.addAttribute("memberId", memberId);
 		model.addAttribute("tab", normalizeTab(tab));
 		model.addAttribute("member", member);
-		model.addAttribute("ownProfile", ownProfile);
 		model.addAttribute("ratingCount", memberContentService.countRatingByMember(memberId));
 		model.addAttribute("commentCount", userCommentService.totalCntBySearch(commentParam));
 		model.addAttribute("collectionCount", collectionService.countVisibleByMember(memberId, currentMemberId));
@@ -121,7 +119,7 @@ public class MemberContentViewController {
 		if (tab != null) {
 			String normalizedTab = tab.trim().toLowerCase(Locale.ROOT);
 
-			if (TAB_COMMENTS.equals(normalizedTab) 
+			if (TAB_COMMENTS.equals(normalizedTab)
 					|| TAB_COLLECTIONS.equals(normalizedTab)
 					|| TAB_WATCHLIST.equals(normalizedTab)) {
 

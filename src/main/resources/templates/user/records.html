@@ -3,7 +3,7 @@
 Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-03~U-06 4탭 본문 UI 반영
-2026. 9. 03. jinyoung - 회원 정보·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
+2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -35,33 +35,19 @@ Modification History
               data-watchlist-count=${watchlistCount}">
 
     <!-- ===================================
-         회원 정보와 프로필 이동
+         기록 제목과 좋아요 화면 이동
          =================================== -->
     <header class="member-activity-heading">
-        <div>
-            <!-- 화면 제목 -->
-            <p class="member-activity-kicker">MY RECORDS</p>
+        <h1 class="member-activity-page-title">
+            <span class="member-activity-page-title-label">RECORDS</span>
+            <span class="member-activity-page-title-byline">by</span>
+            <span class="member-activity-page-title-name"
+                  th:text="${member.nickname}">회원 닉네임</span>
+        </h1>
 
-            <!-- 조회 대상 회원 -->
-            <div class="member-record-owner">
-                <span class="member-record-avatar">
-                    <img th:if="${member.profileImgUrl != null and !#strings.isEmpty(member.profileImgUrl)}"
-                         class="member-record-avatar-image"
-                         th:src="${member.profileImgUrl}"
-                         th:alt="|${member.nickname} 프로필 이미지|">
-                    <i class="bi bi-person-fill member-record-avatar-fallback"
-                       th:classappend="${member.profileImgUrl != null and !#strings.isEmpty(member.profileImgUrl)} ? ' d-none'"
-                       aria-hidden="true"></i>
-                </span>
-                <h1 class="member-activity-title mb-0"
-                    th:text="${member.nickname}">회원 닉네임</h1>
-            </div>
-        </div>
-
-        <!-- 프로필 이동 -->
-        <a class="member-profile-link"
-           th:href="${ownProfile} ? @{/members/me} : @{/members/{id}(id=${memberId})}">
-            프로필로 돌아가기
+        <a class="member-heading-link"
+           th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
+            내 좋아요 보기
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
     </header>
