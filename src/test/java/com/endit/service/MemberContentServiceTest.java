@@ -35,6 +35,7 @@ import com.endit.mapper.MemberMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 03. jinyoung    회원별 평가·보고싶어요 건수 조회 검증 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -73,7 +74,7 @@ class MemberContentServiceTest {
 
 		// Given: 한 콘텐츠에는 별점을, 다른 콘텐츠에는 보고싶어요만 등록한다.
 		memberContentService.saveRating(memberId, contentId, 4);
-		
+
 		int watchlistOnlyContentId = createContentId("WATCHLIST_ONLY");
 		memberContentService.addWatchlist(memberId, watchlistOnlyContentId);
 
@@ -101,7 +102,7 @@ class MemberContentServiceTest {
 
 		// Given: 한 콘텐츠에는 보고싶어요를, 다른 콘텐츠에는 별점만 등록한다.
 		memberContentService.addWatchlist(memberId, contentId);
-		
+
 		int ratingOnlyContentId = createContentId("RATING_ONLY");
 		memberContentService.saveRating(memberId, ratingOnlyContentId, 3);
 
@@ -121,6 +122,58 @@ class MemberContentServiceTest {
 		assertEquals(1, param.getTotalCnt());
 		assertEquals("60", param.getSearchDiv());
 		assertEquals(String.valueOf(memberId), param.getSearchWord());
+	}
+
+	@Test
+	@DisplayName("회원별 평가 건수 조회")
+	void countRatingByMember() {
+
+		// Given: 평가 전용, 보고싶어요 전용, 평가와 보고싶어요가 모두 있는 콘텐츠를 준비한다.
+		memberContentService.saveRating(memberId, contentId, 4);
+
+		int watchlistOnlyContentId = createContentId("COUNT_WATCH");
+		memberContentService.addWatchlist(memberId, watchlistOnlyContentId);
+
+		int ratingAndWatchlistContentId = createContentId("COUNT_BOTH");
+		memberContentService.addWatchlist(memberId, ratingAndWatchlistContentId);
+		memberContentService.saveRating(memberId, ratingAndWatchlistContentId, 5);
+
+		// When: 회원의 평가 건수를 조회한다.
+		int result = memberContentService.countRatingByMember(memberId);
+
+		// Then: RATING_SCORE가 있는 두 콘텐츠만 집계되어야 한다.
+		assertEquals(2, result);
+	}
+
+	@Test
+	@DisplayName("회원별 보고싶어요 건수 조회")
+	void countWatchlistByMember() {
+
+		// Given: 보고싶어요 전용, 평가 전용, 평가와 보고싶어요가 모두 있는 콘텐츠를 준비한다.
+		memberContentService.addWatchlist(memberId, contentId);
+
+		int ratingOnlyContentId = createContentId("COUNT_RATING");
+		memberContentService.saveRating(memberId, ratingOnlyContentId, 3);
+
+		int ratingAndWatchlistContentId = createContentId("COUNT_BOTH");
+		memberContentService.saveRating(memberId, ratingAndWatchlistContentId, 5);
+		memberContentService.addWatchlist(memberId, ratingAndWatchlistContentId);
+
+		// When: 회원의 보고싶어요 건수를 조회한다.
+		int result = memberContentService.countWatchlistByMember(memberId);
+
+		// Then: WATCHLIST가 Y인 두 콘텐츠만 집계되어야 한다.
+		assertEquals(2, result);
+	}
+
+	@Test
+	@DisplayName("회원별 콘텐츠 건수 조회 시 회원 번호 검증")
+	void validateCountMemberId() {
+
+		// Then: 실제 회원 PK로 사용할 수 없는 번호는 Mapper 호출 전에 거부해야 한다.
+		assertThrows(IllegalArgumentException.class, () -> memberContentService.countRatingByMember(0));
+
+		assertThrows(IllegalArgumentException.class, () -> memberContentService.countWatchlistByMember(-1));
 	}
 
 	@Test
@@ -279,14 +332,11 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("별점 범위 검증")
 	void validateRatingRange() {
-		assertThrows(IllegalArgumentException.class,
-				() -> memberContentService.saveRating(memberId, contentId, 0));
+		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, 0));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> memberContentService.saveRating(memberId, contentId, 6));
+		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, 6));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> memberContentService.saveRating(memberId, contentId, null));
+		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, null));
 	}
 
 	@Test
@@ -347,18 +397,9 @@ class MemberContentServiceTest {
 	private int createContentId(String prefix) {
 		String token = createToken();
 
-		ContentVO content = new ContentVO(
-				0,
-				prefix + "_" + token,
-				"회원 콘텐츠 통합 테스트 영화",
-				"Member Content Integration Test",
-				"회원 콘텐츠 Service 통합 테스트 영화",
-				"2026-08-27",
-				120,
-				"Korea",
-				"https://example.com/poster.jpg",
-				"https://example.com/backdrop.jpg",
-				null);
+		ContentVO content = new ContentVO(0, prefix + "_" + token, "회원 콘텐츠 통합 테스트 영화",
+				"Member Content Integration Test", "회원 콘텐츠 Service 통합 테스트 영화", "2026-08-27", 120, "Korea",
+				"https://example.com/poster.jpg", "https://example.com/backdrop.jpg", null);
 
 		assertEquals(1, contentMapper.doSave(content));
 

@@ -35,6 +35,7 @@ import com.endit.service.CollectionService;
  * 2026. 8. 29. jinyoung    요청 DTO·작품 스냅샷·공개 여부·전체 목록·U-05 접근 정책 적용
  * 2026. 8. 31. jinyoung    제목·설명 정규화와 contentIds null·중복 권장 정책 적용
  * 2026. 9. 02. jinyoung    전체 목록 조회에 현재 회원 공개 범위 반영
+ * 2026. 9. 03. jinyoung    회원별 컬렉션 및 공개 범위 건수 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -47,6 +48,7 @@ public class CollectionServiceImpl implements CollectionService {
 
 	private static final String PUBLIC_YES = "Y";
 	private static final String PUBLIC_NO = "N";
+	private static final String SEARCH_MEMBER = "20";
 	private static final int DEFAULT_PAGE_SIZE = 10;
 	private static final int MAX_PAGE_SIZE = 100;
 	private static final int MAX_TITLE_LENGTH = 100;
@@ -116,6 +118,49 @@ public class CollectionServiceImpl implements CollectionService {
 		queryParam.setTargetMemberId(memberId);
 
 		return retrieveVisible(param, queryParam);
+	}
+
+	/**
+	 * 회원이 작성한 공개·비공개 컬렉션 전체 건수 조회
+	 *
+	 * CollectionMapper의 searchDiv 20 조건으로 작성 회원만 제한하고,
+	 * 공개 여부에 대한 추가 조건은 적용하지 않는다.
+	 */
+	@Override
+	public int countByMember(int memberId) {
+
+		validateMemberId(memberId);
+
+		DTO param = new DTO();
+		param.setSearchDiv(SEARCH_MEMBER);
+		param.setSearchWord(String.valueOf(memberId));
+
+		return collectionMapper.count(param);
+	}
+
+	/**
+	 * 조회자가 접근할 수 있는 대상 회원의 컬렉션 건수 조회
+	 *
+	 * currentMemberId가 targetMemberId와 같으면 비공개 컬렉션까지 포함하고,
+	 * 다른 회원이거나 null이면 공개 컬렉션만 포함한다.
+	 */
+	@Override
+	public int countVisibleByMember(
+			int targetMemberId,
+			Long currentMemberId) {
+
+		validateMemberId(targetMemberId);
+
+		// 비회원 조회는 null을 허용하고, 로그인 회원 번호만 유효성을 검증한다.
+		if (currentMemberId != null) {
+			validateMemberId(currentMemberId);
+		}
+
+		CollectionQueryParam param = new CollectionQueryParam();
+		param.setTargetMemberId(Long.valueOf(targetMemberId));
+		param.setCurrentMemberId(currentMemberId);
+
+		return collectionMapper.countVisible(param);
 	}
 
 	/** 목록과 전체 건수를 같은 공개 조건으로 조회한다. */
