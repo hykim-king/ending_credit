@@ -6,11 +6,12 @@
 </head>
 <body>
     <!--관리자 사이드 메뉴 (설계서 AD 화면 공통)
-        4조 담당은 신고(AD-09·AD-10)뿐이라 신고 메뉴만 둔다.
+        4조 담당은 신고(AD-09·AD-10)와 회원 관리(AD-07 — 팀 요청으로 추가).
         영화·인물·회원·공지 등은 담당 조가 화면을 만들 때 이 조각에 자기 메뉴를 추가하면 된다.
         ※ 커뮤니티(AD-11)는 팀 결정으로 제외 — USER_COMMENT에 STATUS 컬럼이 없다-->
     <aside th:fragment="admin_side(active)" class="admin-side">
         <div class="side-label">ADMIN</div>
+        <a th:href="@{/admin/users}" th:classappend="${active == 'users'} ? 'active'">회원</a>
         <a th:href="@{/admin/report/doRetrieve}" th:classappend="${active == 'report'} ? 'active'">신고</a>
     </aside>
 </body>
