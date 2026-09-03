@@ -99,7 +99,7 @@
                 }
 
                 // stats 키: ratingCnt / commentCnt / collectionCnt / watchlistCnt
-                // (평가·컬렉션·보고싶어요는 서비스 연결 전이라 아직 0으로 옴)
+                // 회원별 활동 건수
                 const s = d.stats ?? {};
                 document.getElementById('ratingCnt').textContent     = s.ratingCnt ?? 0;
                 document.getElementById('commentCnt').textContent    = s.commentCnt ?? 0;

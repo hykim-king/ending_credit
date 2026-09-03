@@ -12,6 +12,10 @@ Modification History
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
 
+    <!-- ===================================
+            공통 검색 조건
+         =================================== -->
+
     <!-- 공통 검색 조건: 10(제목), 20(회원 번호) -->
     <sql id="collectionSearchCondition">
         <if test="searchWord != null and searchWord != ''">
@@ -26,13 +30,16 @@ Modification History
         </if>
     </sql>
 
+    <!-- 공통 검색 조건을 WHERE 절로 구성 -->
     <sql id="collectionWhere">
         <where>
             <include refid="collectionSearchCondition"/>
         </where>
     </sql>
 
-    <!-- 기본 등록·조회·수정·삭제 -->
+    <!-- ===================================
+            기본 등록·조회·수정·삭제
+         =================================== -->
 
     <!-- 컬렉션 등록 -->
     <insert id="doSave" parameterType="CollectionVO">
@@ -179,28 +186,11 @@ Modification History
          ORDER BY RNUM
     </select>
 
-    <!-- 테스트와 공통 Mapper 지원 쿼리 -->
+    <!-- ===================================
+            화면 목록 공개 범위 조회
+         =================================== -->
 
-    <!-- 컬렉션 전체 삭제 -->
-    <delete id="deleteAll">
-        DELETE FROM COLLECTION
-    </delete>
-
-    <!-- 컬렉션 전체 건수 조회 -->
-    <select id="totalCnt" resultType="int">
-        SELECT COUNT(*)
-          FROM COLLECTION
-    </select>
-
-    <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
-        SELECT COUNT(*)
-          FROM COLLECTION C
-        <include refid="collectionWhere"/>
-    </select>
-
-    <!-- 화면 목록 공개 범위 조회 -->
-
-    <!-- 전체 목록은 공개와 현재 회원 소유 컬렉션을, U-05는 본인일 때 비공개까지 노출한다. -->
+    <!-- 전체 목록은 공개와 현재 회원 소유 컬렉션을, U-05는 본인일 때 비공개까지 노출 -->
     <sql id="visibleCollectionWhere">
         <where>
             <choose>
@@ -285,8 +275,23 @@ Modification History
                    CP.PREVIEW_POSTER_URL3,
                    CP.PREVIEW_POSTER_URL4,
                    CP.PREVIEW_POSTER_URL5,
+                   <!-- searchMap.sort: latest(기본), oldest, likes
+                       좋아요 수가 같을 때는 최근 수정일과 컬렉션 번호로 순서를 고정한다. -->
                    ROW_NUMBER() OVER (
-                       ORDER BY NVL(C.UPDATED_DT, C.CREATED_DT) DESC, C.COLLECTION_ID DESC
+                       ORDER BY
+                       <choose>
+                           <when test="searchMap.sort == 'oldest'">
+                               NVL(C.UPDATED_DT, C.CREATED_DT) ASC, C.COLLECTION_ID ASC
+                           </when>
+                           <when test="searchMap.sort == 'likes'">
+                               NVL(CL.LIKE_COUNT, 0) DESC,
+                               NVL(C.UPDATED_DT, C.CREATED_DT) DESC,
+                               C.COLLECTION_ID DESC
+                           </when>
+                           <otherwise>
+                               NVL(C.UPDATED_DT, C.CREATED_DT) DESC, C.COLLECTION_ID DESC
+                           </otherwise>
+                       </choose>
                    ) AS RNUM
               FROM COLLECTION C
              INNER JOIN MEMBER M
@@ -313,6 +318,7 @@ Modification History
                      GROUP BY COLLECTION_ID
               ) UC
                 ON UC.COLLECTION_ID = C.COLLECTION_ID
+              <!-- 최신 등록 작품 5개의 포스터를 컬렉션 카드 미리보기 열로 변환한다. -->
               LEFT JOIN (
                     SELECT COLLECTION_ID,
                            MAX(CASE WHEN POSTER_ORDER = 1 THEN POSTER_URL END)
@@ -355,6 +361,28 @@ Modification History
         SELECT COUNT(*)
           FROM COLLECTION C
         <include refid="visibleCollectionWhere"/>
+    </select>
+
+    <!-- ===================================
+            테스트와 공통 Mapper 지원 쿼리
+         =================================== -->
+
+    <!-- 컬렉션 전체 삭제 -->
+    <delete id="deleteAll">
+        DELETE FROM COLLECTION
+    </delete>
+
+    <!-- 컬렉션 전체 건수 조회 -->
+    <select id="totalCnt" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION
+    </select>
+
+    <!-- 검색 조건을 반영한 컬렉션 건수 조회 -->
+    <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
+        SELECT COUNT(*)
+          FROM COLLECTION C
+        <include refid="collectionWhere"/>
     </select>
 
 </mapper>
