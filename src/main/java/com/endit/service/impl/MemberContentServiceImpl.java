@@ -21,6 +21,7 @@ import com.endit.service.MemberContentService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 03. jinyoung    회원별 평가·보고싶어요 건수 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -76,6 +77,42 @@ public class MemberContentServiceImpl implements MemberContentService {
 				param,
 				sort,
 				SEARCH_MEMBER_WATCHLIST);
+	}
+
+	/**
+	 * 회원이 평가한 콘텐츠 전체 건수 조회
+	 *
+	 * MemberContentMapper의 searchDiv 50 조건은
+	 * 해당 회원의 RATING_SCORE가 null이 아닌 행만 집계한다.
+	 */
+	@Override
+	public int countRatingByMember(int memberId) {
+
+		validateMemberId(memberId);
+
+		DTO param = new DTO();
+		param.setSearchDiv(SEARCH_MEMBER_RATINGS);
+		param.setSearchWord(String.valueOf(memberId));
+
+		return memberContentMapper.count(param);
+	}
+
+	/**
+	 * 회원이 보고싶어요로 등록한 콘텐츠 전체 건수 조회
+	 *
+	 * MemberContentMapper의 searchDiv 60 조건은
+	 * 해당 회원의 WATCHLIST가 Y인 행만 집계한다.
+	 */
+	@Override
+	public int countWatchlistByMember(int memberId) {
+
+		validateMemberId(memberId);
+
+		DTO param = new DTO();
+		param.setSearchDiv(SEARCH_MEMBER_WATCHLIST);
+		param.setSearchWord(String.valueOf(memberId));
+
+		return memberContentMapper.count(param);
 	}
 
 	@Override
