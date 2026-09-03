@@ -38,14 +38,14 @@ public class NoticePageController {
     /** AD-12 관리자 공지 관리 목록 */
     @GetMapping("/admin/notices")
     public String adminNoticeList(HttpSession session) {
-        NoticeSessionSupport.requireAdminId(session);
+
         return "admin/notice/adminNoticeList";
     }
 
     /** AD-13 관리자 공지 신규 등록 */
     @GetMapping("/admin/notices/new")
     public String adminNoticeCreate(HttpSession session, Model model) {
-        NoticeSessionSupport.requireAdminId(session);
+
 
         NoticeVO notice = new NoticeVO();
         notice.setImportant("N");
@@ -64,7 +64,7 @@ public class NoticePageController {
             HttpSession session,
             Model model
     ) {
-        NoticeSessionSupport.requireAdminId(session);
+
 
         NoticeVO notice = noticeService.getAdminNotice(noticeId);
         model.addAttribute("notice", notice);

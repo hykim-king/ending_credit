@@ -506,3 +506,39 @@ a {
         grid-column: 1 / -1;
     }
 }
+
+
+/* 관리자 화면 서체 - 디자인 원칙의 "문서(관리자 화면 등) 서체: Arial, Fallback: Noto Sans KR".
+   body 규칙은 그대로 두고 .admin-layout 안쪽에만 적용한다 -
+   notice.css 는 일반 공지 화면도 함께 쓰므로 그쪽 서체를 바꾸지 않기 위해서다. */
+.admin-layout {
+    font-family: Arial, "Noto Sans KR", sans-serif;
+}
+
+/* 로고 | 세로선 | 메인으로 나가는 버튼
+   관리자 화면에는 공용 헤더가 없어 여기가 메인(H-01)으로 가는 유일한 통로다.
+   마크업은 fragments/admin_side.html 한 곳에서 나온다. */
+.admin-brandbar {
+    margin-bottom: 34px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 하단 여백은 브랜드바가 갖는다 - 로고에 그대로 두면 선까지 같이 내려간다 */
+.admin-brandbar .admin-logo {
+    margin-bottom: 0;
+}
+
+.admin-home {
+    padding-left: 12px;
+    border-left: 1px solid rgba(255, 255, 255, .18);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #A7A4B2;
+}
+
+.admin-home:hover {
+    color: #fff;
+}

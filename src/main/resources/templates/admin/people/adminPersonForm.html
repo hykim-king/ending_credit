@@ -12,18 +12,7 @@
       th:attr="data-person-id=${person.personId}, data-edit=${isEdit}">
 
 <div class="admin-layout">
-    <aside class="admin-sidebar">
-        <a href="/admin" class="admin-logo">END IT<br>ADMIN</a>
-        <nav class="admin-nav">
-            <a href="/admin">대시보드</a>
-            <a href="/admin/movies">영화</a>
-            <a href="/admin/people" class="active">인물</a>
-            <a href="/admin/users">회원</a>
-            <a href="/admin/reports">신고</a>
-            <a href="/admin/community">커뮤니티</a>
-            <a href="/admin/notices">공지</a>
-        </nav>
-    </aside>
+    <aside th:replace="~{fragments/admin_side :: admin_side('people')}">side</aside>
 
     <main class="admin-content">
         <h1 class="admin-page-title" th:text="${isEdit ? '인물 수정' : '인물 등록'}">인물 등록</h1>
