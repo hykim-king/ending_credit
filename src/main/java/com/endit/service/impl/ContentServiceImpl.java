@@ -99,9 +99,11 @@ public class ContentServiceImpl implements ContentService {
 	private static final String SORT_REGISTERED = "registered";
 	// 인기순 - 매퍼가 아니라 서비스가 순위 목록으로 정렬한다. 순위가 비면 SORT_BOX_OFFICE로 흘린다
 	private static final String SORT_POPULAR = "popular";
+	// 개봉 예정 - 개봉일 오름차순. searchMap["released"]="N"과 짝으로 써야 뜻이 선다
+	private static final String SORT_UPCOMING = "upcoming";
 
 	private static final Set<String> ALLOWED_SORT =
-			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR);
+			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR, SORT_UPCOMING);
 
 	private static final int FIRST_RANK_PAGE = 1;
 	// 순위 목록에 채울 목표 건수
@@ -746,7 +748,6 @@ public class ContentServiceImpl implements ContentService {
 		return content;
 	}
 
-	// 검색+페이징 목록 조회 - 전체 건수는 param.totalCnt에 실어 준다
 	@Override
 	@Transactional(readOnly = true)
 	public List<ContentVO> retrieve(DTO param) {
@@ -759,12 +760,16 @@ public class ContentServiceImpl implements ContentService {
 		ensureSearchMap(param);
 		validateSort(param);
 
+		// 폴백으로 정렬 축을 바꿨는지. searchMap은 호출부가 넘긴 객체라 아래 finally에서 되돌린다
+		boolean popularFellBack = false;
+
 		if (SORT_POPULAR.equals(param.getSearchMap().get(SEARCH_KEY_SORT))) {
 			List<Integer> ranked = rankedIds;
 			// 인기순 경로는 WHERE 조건을 태울 수 없고, 순위가 비면 보여줄 것도 없다. 둘 다 적재순으로 흘린다
 			if (StringUtils.hasText(param.getSearchWord()) || ranked.isEmpty()) {
 				log.warn("인기순 정렬 불가로 적재순 대체: searchWord={}, rankSize={}",
 						param.getSearchWord(), ranked.size());
+				popularFellBack = true;
 				param.getSearchMap().put(SEARCH_KEY_SORT, SORT_BOX_OFFICE);
 			} else {
 				return retrievePopular(param, ranked);
@@ -783,6 +788,11 @@ public class ContentServiceImpl implements ContentService {
 			contents = contentMapper.doRetrieve(param);
 		} finally {
 			param.setSearchWord(rawSearchWord);
+			// 정렬 축도 같은 이유로 원복한다. 덮어쓰기 전 값은 위 if가 popular임을 보장하므로 따로 보관하지 않는다.
+			// 안 돌려놓으면 순위가 늦게 채워져도 그 DTO는 계속 적재순이고, 응답에 실리면 요청하지 않은 축이 나간다
+			if (popularFellBack) {
+				param.getSearchMap().put(SEARCH_KEY_SORT, SORT_POPULAR);
+			}
 		}
 
 		if (contents == null) {

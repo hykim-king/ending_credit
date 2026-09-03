@@ -46,10 +46,17 @@ Modification History
 			</if>
 			<!-- 개봉작만 - release_year DESC는 미래 개봉일을 맨 앞에 올리므로,
 			     "최신 개봉작"처럼 이미 개봉한 것만 보여야 하는 화면이 이 조건을 켠다.
-			     검색은 미개봉작도 찾아야 하므로 켜지 않는다 -->
-			<if test="searchMap.released == 'Y'">
+			     검색은 미개봉작도 찾아야 하므로 켜지 않는다.
+			     searchMap 값은 String인데 OGNL은 작은따옴표 한 글자를 char로 읽어 == 'Y'가 성립하지 않는다.
+			     위 searchDiv 조건들이 '10'·'50'처럼 두 글자라 String 리터럴로 잡히는 것과 다른 경우다 -->
+			<if test='"Y".equals(searchMap.released)'>
 				AND release_year IS NOT NULL
 				AND release_year &lt;= SYSDATE
+			</if>
+			<!-- 개봉 예정작만 - "Y"의 반대편이다. 개봉일을 모르는 콘텐츠는 양쪽 어디에도 들지 않는다 -->
+			<if test='"N".equals(searchMap.released)'>
+				AND release_year IS NOT NULL
+				AND release_year &gt; SYSDATE
 			</if>
 		</where>
 	</sql>
@@ -66,9 +73,17 @@ Modification History
 			<when test="searchMap.sort == 'latest'">
 				release_year DESC NULLS LAST, content_id DESC
 			</when>
-			<!-- 등록순 - TMDB에서 늦게 적재된 순. "최신 등록작"처럼 적재 시점이 뜻인 화면이 쓴다 -->
+			<!-- 개봉 예정 - latest와 반대로 가까운 개봉일부터다. searchMap.released='N'과 짝으로 쓴다.
+			     필터 없이 이 축만 걸면 이미 개봉한 옛날 영화가 앞에 온다 -->
+			<when test="searchMap.sort == 'upcoming'">
+				release_year ASC NULLS LAST, content_id ASC
+			</when>
+			<!-- 등록순 - TMDB에서 늦게 적재된 순. "최신 등록작"처럼 적재 시점이 뜻인 화면이 쓴다.
+			     created_dt가 SYSDATE(초 단위)라 sync 한 번이 넣은 수백 건이 같은 값을 갖는다.
+			     동률을 content_id ASC로 깨면 그 덩어리의 "가장 먼저 들어간 것"이 앞에 와 뜻이 뒤집히고,
+			     sync 한 번으로 채운 DB에서는 정렬 전체가 boxoffice(content_id ASC)와 같아진다 -->
 			<when test="searchMap.sort == 'registered'">
-				created_dt DESC, content_id ASC
+				created_dt DESC, content_id DESC
 			</when>
 			<!-- 관련도 - 정확일치 → 앞일치 → 부분일치 순. 검색어가 없으면 뜻이 없어 기본 정렬로 흘린다.
 			     서비스가 %·_를 escape해 보내므로 등호가 아니라 ESCAPE를 붙인 LIKE로 정확일치를 본다 -->
