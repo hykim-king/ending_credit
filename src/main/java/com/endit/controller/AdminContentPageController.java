@@ -48,7 +48,6 @@ public class AdminContentPageController {
 	// AD-02 목록 - 데이터는 화면이 /api/admin/movies로 직접 읽는다(AD-05와 같은 방식)
 	@GetMapping("/admin/movies")
 	public String list(HttpSession session) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		return CONTENT_LIST_VIEW;
 	}
@@ -56,7 +55,6 @@ public class AdminContentPageController {
 	// AD-03 등록 폼 - 장르 마스터만 미리 실어 준다. 저장은 화면이 POST로 보낸다
 	@GetMapping("/admin/movies/new")
 	public String createForm(HttpSession session, Model model) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		model.addAttribute("content", new ContentVO());
 		model.addAttribute("genres", genreService.retrieveAll());
@@ -67,7 +65,6 @@ public class AdminContentPageController {
 	// AD-04 읽기 전용 상세 - 네 조각을 서버에서 모아 넘긴다. 쓰기 기능은 없다
 	@GetMapping("/admin/movies/{contentId}")
 	public String detail(@PathVariable int contentId, HttpSession session, Model model) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		ContentVO content;
 

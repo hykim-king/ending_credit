@@ -57,7 +57,6 @@ public class AdminPersonApiController {
 			@RequestParam(name = "size", defaultValue = DEFAULT_PAGE_SIZE_TEXT) int pageSize,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		DTO param = new DTO();
 		param.setSearchWord(searchWord);
@@ -73,7 +72,6 @@ public class AdminPersonApiController {
 	// AD-06 인물 등록
 	@PostMapping("/people")
 	public ResponseEntity<PersonVO> create(@RequestBody PersonVO param, HttpSession session) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		PersonVO saved = personService.create(param);
 		log.debug("create personId={}", saved.getPersonId());
@@ -88,7 +86,6 @@ public class AdminPersonApiController {
 			@RequestBody PersonVO param,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		return ResponseEntity.ok(personService.update(personId, param));
 	}
@@ -99,7 +96,6 @@ public class AdminPersonApiController {
 			@RequestBody ContentCreditVO param,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		if (param == null || param.getContentId() <= 0) {
 			throw new IllegalArgumentException("연결할 작품을 선택해 주세요.");
@@ -121,7 +117,6 @@ public class AdminPersonApiController {
 			@RequestBody ContentCreditVO param,
 			HttpSession session) {
 
-		NoticeSessionSupport.requireAdminId(session);
 
 		return ResponseEntity.ok(contentCreditService.update(creditId, param));
 	}
@@ -129,7 +124,6 @@ public class AdminPersonApiController {
 	// AD-06 크레딧 삭제
 	@DeleteMapping("/credits/{creditId}")
 	public ResponseEntity<Void> deleteCredit(@PathVariable int creditId, HttpSession session) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		contentCreditService.delete(creditId);
 
