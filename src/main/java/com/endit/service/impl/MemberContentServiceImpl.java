@@ -224,7 +224,7 @@ public class MemberContentServiceImpl implements MemberContentService {
 		MemberContentVO memberContent = find(memberId, contentId);
 
 		// 기록이 없거나 이미 해제된 요청은 성공 처리
-		if (memberContent == null 
+		if (memberContent == null
 				|| WATCHLIST_NO.equals(memberContent.getWatchlist())) {
 			return;
 		}
@@ -341,10 +341,10 @@ public class MemberContentServiceImpl implements MemberContentService {
 		String normalizedSort = sort.trim().toLowerCase(Locale.ROOT);
 
 		// 평가 목록에서만 별점순 정렬 허용
-		boolean supported = SORT_LATEST.equals(normalizedSort) 
+		boolean supported = SORT_LATEST.equals(normalizedSort)
 				|| SORT_OLDEST.equals(normalizedSort)
 				|| (SEARCH_MEMBER_RATINGS.equals(searchDiv)
-					&& (SORT_RATING_DESC.equals(normalizedSort) 
+					&& (SORT_RATING_DESC.equals(normalizedSort)
 						|| SORT_RATING_ASC.equals(normalizedSort)));
 
 		if (!supported) {

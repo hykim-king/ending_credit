@@ -223,7 +223,7 @@ public class CollectionServiceImpl implements CollectionService {
 
 		// 비공개 컬렉션은 소유 회원이 조회할 때만 결과를 반환한다.
 		if (!PUBLIC_YES.equals(collection.getIsPublic())
-				&& (!currentMemberId.isPresent() || collection.getMemberId() 
+				&& (!currentMemberId.isPresent() || collection.getMemberId()
 						!= currentMemberId.getAsLong())) {
 			throw collectionNotFound(collectionId);
 		}
@@ -604,7 +604,7 @@ public class CollectionServiceImpl implements CollectionService {
 	 */
 	private void insertCollectionItem(int collectionId, int contentId) {
 
-		CollectionItemVO item = 
+		CollectionItemVO item =
 				new CollectionItemVO(collectionId, contentId, null);
 
 		if (collectionItemMapper.doSave(item) != 1) {
@@ -620,7 +620,7 @@ public class CollectionServiceImpl implements CollectionService {
 	 */
 	private void deleteCollectionItem(int collectionId, int contentId) {
 
-		CollectionItemVO item = 
+		CollectionItemVO item =
 				new CollectionItemVO(collectionId, contentId, null);
 
 		if (collectionItemMapper.doDelete(item) != 1) {

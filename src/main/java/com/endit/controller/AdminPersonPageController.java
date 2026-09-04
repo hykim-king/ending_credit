@@ -28,7 +28,6 @@ public class AdminPersonPageController {
 	// AD-05 인물 관리 목록
 	@GetMapping("/admin/people")
 	public String adminPersonList(HttpSession session) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		return PERSON_LIST_VIEW;
 	}
@@ -36,7 +35,6 @@ public class AdminPersonPageController {
 	// AD-06 인물 신규 등록 폼
 	@GetMapping("/admin/people/new")
 	public String adminPersonCreate(HttpSession session, Model model) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		model.addAttribute("person", new PersonVO());
 		model.addAttribute("isEdit", false);
@@ -47,7 +45,6 @@ public class AdminPersonPageController {
 	// AD-06 인물 수정 폼
 	@GetMapping("/admin/people/{personId}")
 	public String adminPersonEdit(@PathVariable int personId, HttpSession session, Model model) {
-		NoticeSessionSupport.requireAdminId(session);
 
 		PersonVO person = personService.get(personId);
 

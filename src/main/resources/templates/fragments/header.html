@@ -16,11 +16,20 @@
                        th:value="${param.query}"
                        placeholder="영화, 인물, 컬렉션 검색" aria-label="검색어">
             </form>
+
             <nav class="ms-auto d-flex align-items-center gap-3">
-                <a class="endit-nav-link" th:href="@{/comment/doRetrieve}">코멘트</a>
-                <a class="endit-nav-link" th:href="@{/admin/report/doRetrieve}">신고 관리</a>
-                <!-- 로그인/프로필: 회원(2조) 시큐리티 연동 시 교체 -->
-                <span class="avatar-circle" title="로그인 연동 전"><i class="bi bi-person"></i></span>
+
+                <!-- 비로그인: 로그인 / 회원가입 버튼 -->
+                <div sec:authorize="isAnonymous()" class="d-flex align-items-center gap-2">
+                    <a class="btn btn-outline-secondary" th:href="@{/login}">로그인</a>
+                    <a class="btn btn-primary" th:href="@{/signup}">회원가입</a>
+                </div>
+
+                <!-- 로그인: 프로필 이미지(→ 내 프로필). 로그인/회원가입 버튼은 숨긴다 -->
+                <a sec:authorize="isAuthenticated()" th:href="@{/members/me}"
+                   class="avatar-circle" title="내 프로필">
+                    <i class="bi bi-person"></i>
+                </a>
             </nav>
         </div>
     </header>

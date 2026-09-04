@@ -62,7 +62,7 @@ public class CollectionController {
 	 * @param currentMemberProvider 현재 로그인 회원 Provider
 	 */
 	public CollectionController(
-			CollectionService collectionService, 
+			CollectionService collectionService,
 			CurrentMemberProvider currentMemberProvider) {
 
 		this.collectionService = collectionService;
@@ -81,7 +81,7 @@ public class CollectionController {
 	@GetMapping("/collections")
 	public ResponseEntity<Map<String, Object>> retrieve(
 			@RequestParam(defaultValue = "1") int pageNo,
-			@RequestParam(defaultValue = "10") int pageSize, 
+			@RequestParam(defaultValue = "10") int pageSize,
 			@RequestParam(defaultValue = "") String searchDiv,
 			@RequestParam(defaultValue = "") String searchWord) {
 
@@ -109,9 +109,9 @@ public class CollectionController {
 	 */
 	@GetMapping("/users/{memberId}/collections")
 	public ResponseEntity<Map<String, Object>> retrieveByMember(@PathVariable int memberId,
-			@RequestParam(defaultValue = "1") int pageNo, 
+			@RequestParam(defaultValue = "1") int pageNo,
 			@RequestParam(defaultValue = "10") int pageSize,
-			@RequestParam(defaultValue = "") String searchDiv, 
+			@RequestParam(defaultValue = "") String searchDiv,
 			@RequestParam(defaultValue = "") String searchWord,
 			@RequestParam(defaultValue = "latest") String sort) {
 
@@ -195,7 +195,7 @@ public class CollectionController {
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<MessageVO> handleBadRequest(IllegalArgumentException exception) {
 
-		MessageVO message = 
+		MessageVO message =
 				new MessageVO("400", exception.getMessage(), "컬렉션 요청값을 확인해 주세요.");
 
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
