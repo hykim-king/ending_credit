@@ -35,6 +35,9 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 	private static final String ROLE_WRITER = "WRITER";
 	private static final String ROLE_PRODUCER = "PRODUCER";
 
+	// getTopPerson이 IN 절에 펼칠 수 있는 최대 개수. Oracle 상한 1000보다 낮게 잡아 여유를 둔다
+	private static final int MAX_TOP_PERSON_POOL = 500;
+
 	// 페이징 없이 "전체 조회"를 흉내낼 때 쓰는 페이지 크기 - 콘텐츠 하나가 가질 수 있는 크레딧 수보다 넉넉하게 잡음
 	private static final int RETRIEVE_ALL_PAGE_SIZE = 100;
 	private static final int FIRST_PAGE_NO = 1;
@@ -159,9 +162,15 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 			return null;
 		}
 
-		ContentCreditVO top = contentCreditMapper.doSelectTopPersonByRole(role, contentIds);
+		// 매퍼가 이 목록을 통째로 IN 절에 펼치는데 Oracle 상한이 표현식 1000개다(초과하면 ORA-01795).
+		// 호출부의 순위 크기가 커져도 여기서 터지지 않도록 앞쪽만 자른다 - 앞쪽이 곧 상위 인기작이라 선별 결과도 그쪽이 지배한다
+		List<Integer> pool = contentIds.size() > MAX_TOP_PERSON_POOL
+				? contentIds.subList(0, MAX_TOP_PERSON_POOL)
+				: contentIds;
+
+		ContentCreditVO top = contentCreditMapper.doSelectTopPersonByRole(role, pool);
 		log.debug("getTopPerson role={} pool={} picked={}",
-				role, contentIds.size(), top == null ? null : top.getNameKo());
+				role, pool.size(), top == null ? null : top.getNameKo());
 
 		return top;
 	}

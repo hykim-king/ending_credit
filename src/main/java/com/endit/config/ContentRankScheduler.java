@@ -24,11 +24,19 @@ public class ContentRankScheduler {
 	// ApplicationReadyEvent는 웹 서버가 이미 요청을 받는 시점이라 TMDB가 느려도 기동을 막지 않는다. @PostConstruct는 막는다
 	@EventListener(ApplicationReadyEvent.class)
 	public void syncOnStartup() {
+		// 둘을 한 try에 묶으면 앞이 죽을 때 뒤가 통째로 안 돈다. 서로 다른 선반을 채우므로 따로 잡는다.
+		// 리스너 밖으로 나가면 기동 실패로 번지고, 순위가 비면 화면이 적재순으로 폴백하므로 로그만 남긴다
 		try {
 			log.info("구동 시 인기순위 동기화: matched={}", contentService.syncRank());
 		} catch (Exception e) {
-			// 리스너 밖으로 나가면 기동 실패로 번진다. 순위가 비면 화면이 적재순으로 폴백하므로 로그만 남긴다
-			log.warn("구동 시 인기순위 동기화 실패. 폴백 정렬로 시작한다", e);
+			log.warn("구동 시 인기순위 동기화 실패. 박스오피스 선반이 적재순으로 시작한다", e);
+		}
+
+		// 장르별은 장르 수만큼 TMDB를 부르므로 전체 순위보다 오래 걸린다. 뒤에 둬서 앞줄이 먼저 살게 한다
+		try {
+			log.info("구동 시 장르별 인기순위 동기화: 장르={}", contentService.syncGenreRank());
+		} catch (Exception e) {
+			log.warn("구동 시 장르별 인기순위 동기화 실패. 장르 선반이 적재순으로 시작한다", e);
 		}
 	}
 
@@ -37,7 +45,9 @@ public class ContentRankScheduler {
 	// 켤 일이 생기면 application.yaml에 endit.rank.cron을 주면 된다(코드 수정 없이)
 	@Scheduled(cron = "${endit.rank.cron:" + Scheduled.CRON_DISABLED + "}", zone = "Asia/Seoul")
 	public void syncDaily() {
+		// 스케줄러가 잡아 주므로 여기서는 안 감싼다. 다만 앞이 던지면 장르는 다음 주기까지 안 돈다
 		contentService.syncRank();
+		contentService.syncGenreRank();
 	}
 
 }

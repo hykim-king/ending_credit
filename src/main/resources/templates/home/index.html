@@ -5,7 +5,7 @@ layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>홈</title>
+<title th:text="#{home.title}">홈</title>
 <style>
     /* 캐러셀 - detail.html 갤러리와 같은 골격(clip + track + translateX) */
     /* 선반 사이 간격. 부트스트랩 mb-5(3rem)에서 3분의 1쯤 줄였다 */
@@ -147,7 +147,7 @@ layout:decorate="~{layout/layout}">
     <div layout:fragment="content">
 
         <p th:if="${#lists.isEmpty(shelves)}" class="text-muted">
-            아직 보여드릴 작품이 없습니다.
+            <span th:text="#{home.empty}">아직 보여드릴 작품이 없습니다.</span>
         </p>
 
         <!-- 선반은 여기서 한 벌만 그린다. 줄을 늘리려면 컨트롤러에서 addShelf를 한 번 더 부르면 된다 -->
@@ -156,7 +156,7 @@ layout:decorate="~{layout/layout}">
             <h5 class="mb-3" th:text="${shelf.title}">선반 제목</h5>
 
             <div class="shelf-viewport" th:style="|--per-view:${shelf.perView}|">
-                <button type="button" class="shelf-nav shelf-prev" aria-label="이전">
+                <button type="button" class="shelf-nav shelf-prev" th:aria-label="#{home.carousel.prev}" aria-label="이전">
                     <i class="bi bi-chevron-left"></i>
                 </button>
 
@@ -168,22 +168,21 @@ layout:decorate="~{layout/layout}">
                                 <div class="poster-wrap">
                                     <img th:if="${!#strings.isEmpty(movie.posterUrl)}"
                                          th:src="${movie.posterUrl}"
-                                         th:alt="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}"
+                                         th:alt="${@localeText.get(movie.titleKo, movie.titleOrg)}"
                                          loading="lazy"
                                          onerror="this.onerror = null; this.classList.add('poster-error');">
-                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty">이미지 없음</div>
+                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty" th:text="#{home.card.noImage}">이미지 없음</div>
 
                                     <!-- no는 인기 순 경로에서만 순위 숫자다(ContentServiceImpl.retrievePopular) -->
                                     <span th:if="${shelf.ranked}" class="rank-badge" th:text="${movie.no}">1</span>
                                 </div>
 
                                 <p class="card-title"
-                                   th:text="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}">제목</p>
+                                   th:text="${@localeText.get(movie.titleKo, movie.titleOrg)}">제목</p>
 
-                                <!-- 연도는 매퍼가 YYYY-MM-DD로 내려주므로 앞 4자리만. 국가는 박스오피스 선반만 쓴다 -->
+                                <!-- 국가는 박스오피스 선반만 쓴다 -->
                                 <p class="card-meta"
-                                   th:with="year=${movie.releaseYear != null and #strings.length(movie.releaseYear) ge 4
-                                                   ? #strings.substring(movie.releaseYear, 0, 4) : ''},
+                                   th:with="year=${movie.releaseYearLabel != null ? movie.releaseYearLabel : ''},
                                             country=${shelf.countryShown ? movie.country : ''}">
                                     <span th:if="${!#strings.isEmpty(year)}" th:text="${year}">2024</span>
                                     <span th:if="${!#strings.isEmpty(year) and !#strings.isEmpty(country)}"> · </span>
@@ -195,7 +194,7 @@ layout:decorate="~{layout/layout}">
                     </div>
                 </div>
 
-                <button type="button" class="shelf-nav shelf-next" aria-label="다음">
+                <button type="button" class="shelf-nav shelf-next" th:aria-label="#{home.carousel.next}" aria-label="다음">
                     <i class="bi bi-chevron-right"></i>
                 </button>
             </div>

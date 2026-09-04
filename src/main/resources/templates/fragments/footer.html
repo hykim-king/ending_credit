@@ -114,9 +114,87 @@
             text-decoration: underline;
         }
         
-        .site-footer .lang {
-            color: #cccccc;
-            font-size: 13px;
+        /* 언어 선택 모달 - 목록·확인 2단이다. 겉껍데기는 아래 tmdb-modal 골격을 그대로 쓴다 */
+        .lang-list {
+            list-style: none;
+            margin: 8px 0 0;
+            padding: 0;
+        }
+
+        .lang-list li + li {
+            border-top: 1px solid #E4E2E9;
+        }
+
+        .lang-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 13px 4px;
+            border: 0;
+            background: none;
+            font: inherit;
+            font-size: 15px;
+            color: #1B1A20;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .lang-option:hover {
+            color: #6550C8;
+        }
+
+        /* 지금 보고 있는 언어 표시. 색만으로 구분하지 않으려고 체크 글리프를 함께 쓴다 */
+        .lang-option[aria-current="true"] {
+            color: #6550C8;
+            font-weight: 700;
+        }
+
+        .lang-check {
+            visibility: hidden;
+        }
+
+        .lang-option[aria-current="true"] .lang-check {
+            visibility: visible;
+        }
+
+        /* 확인 모달은 언어 모달 위에 겹친다 */
+        #langConfirmModal {
+            z-index: 1090;
+        }
+
+        #langConfirmModal .tmdb-dialog {
+            max-width: 320px;
+            text-align: center;
+        }
+
+        .lang-confirm-actions {
+            display: flex;
+            margin-top: 18px;
+            border-top: 1px solid #E4E2E9;
+        }
+
+        .lang-confirm-actions button {
+            flex: 1;
+            padding: 12px 0;
+            border: 0;
+            background: none;
+            font: inherit;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        .lang-confirm-actions button + button {
+            border-left: 1px solid #E4E2E9;
+        }
+
+        .lang-confirm-cancel {
+            color: #56525F;
+        }
+
+        .lang-confirm-ok {
+            color: #6550C8;
+            font-weight: 700;
         }
 
         /* 링크처럼 보이지만 모달을 여는 버튼 - a 로 두면 갈 곳 없는 href 가 남는다 */
@@ -137,7 +215,8 @@
 
         /* 데이터 출처 모달
            부트스트랩이 없는 화면(H-01 등)에도 이 조각이 붙으므로 의존 없이 직접 만든다. */
-        .tmdb-modal {
+        .tmdb-modal,
+        .lang-modal {
             position: fixed;
             inset: 0;
             z-index: 1080;
@@ -148,11 +227,13 @@
             background: rgba(0, 0, 0, .55);
         }
 
-        .tmdb-modal[hidden] {
+        .tmdb-modal[hidden],
+        .lang-modal[hidden] {
             display: none; /* display:flex 를 줬으므로 hidden 을 명시적으로 눌러 준다 */
         }
 
-        .tmdb-modal .tmdb-dialog {
+        .tmdb-modal .tmdb-dialog,
+        .lang-modal .tmdb-dialog {
             position: relative;
             width: 100%;
             max-width: 520px;
@@ -164,7 +245,8 @@
             box-shadow: 0 18px 48px rgba(0, 0, 0, .35);
         }
 
-        .tmdb-modal .tmdb-title {
+        .tmdb-modal .tmdb-title,
+        .lang-modal .tmdb-title {
             margin: 0 0 20px;
             font-size: 15px;
             font-weight: 700;
@@ -172,7 +254,8 @@
             color: #1c1b22;
         }
 
-        .tmdb-modal .tmdb-close {
+        .tmdb-modal .tmdb-close,
+        .lang-modal .tmdb-close {
             position: absolute;
             top: 14px;
             left: 18px;
@@ -191,7 +274,8 @@
             margin-bottom: 16px;
         }
 
-        .tmdb-modal p {
+        .tmdb-modal p,
+        .lang-modal p {
             margin: 0 0 10px;
             font-size: 13px;
             line-height: 1.6;
@@ -222,29 +306,35 @@
 
     <div class="footer-inner">
         <div class="footer-stats">
+            <!--건수를 강조 span으로 감싸야 해서 문구를 앞뒤로 나눠 받는다-->
             <span class="stats-text">
-                지금까지 <span class="stats-count"><span class="stats-star">⭐</span> [[${totalCommentCount}]]개</span>의 댓글이 쌓였어요.
+                <span th:text="#{common.footer.stats.prefix}">지금까지</span>
+                <span class="stats-count"><span class="stats-star">⭐</span>
+                    <span th:text="#{common.footer.stats.count(${totalCommentCount})}">0개</span></span>
+                <span th:text="#{common.footer.stats.suffix}">의 댓글이 쌓였어요.</span>
             </span>
         </div>
 
         <div class="footer-content">
             <div class="footer-col">
                 <span class="footer-logo">END IT</span>
-                <p class="footer-desc">영화 탐색과 기록을 위한<br>Ending Credit 프로젝트</p>
+                <p class="footer-desc" th:utext="#{common.footer.desc}">영화 탐색과 기록을 위한<br>Ending Credit 프로젝트</p>
             </div>
             <div class="footer-col">
-                <h4>서비스</h4>
+                <h4 th:text="#{common.footer.service}">서비스</h4>
                 <ul>
-                    <li><a th:href="@{/notices}">공지사항</a></li>
-                    <li><a href="#">FAQ·문의하기</a></li>
+                    <li><a th:href="@{/notices}" th:text="#{common.footer.notice}">공지사항</a></li>
+                    <li><a href="#" th:text="#{common.footer.faq}">FAQ·문의하기</a></li>
                 </ul>
             </div>
             <div class="footer-col">
-                <h4>데이터·설정</h4>
+                <h4 th:text="#{common.footer.dataSettings}">데이터·설정</h4>
                 <ul>
-                    <li><button type="button" class="footer-linklike" data-tmdb-open>데이터 출처</button></li>
-                    <li><a href="#">DB 수정·추가 요청</a></li>
-                    <li><span class="lang">한국어</span></li>
+                    <li><button type="button" class="footer-linklike" data-tmdb-open
+                            th:text="#{common.footer.dataSource}">데이터 출처</button></li>
+                    <li><a href="#" th:text="#{common.footer.dbRequest}">DB 수정·추가 요청</a></li>
+                    <li><button type="button" class="footer-linklike" data-lang-open
+                            th:text="#{common.lang.current}">한국어</button></li>
                 </ul>
             </div>
         </div>
@@ -261,17 +351,64 @@
     <div class="tmdb-modal" id="tmdbSourceModal" role="dialog" aria-modal="true"
          aria-labelledby="tmdbSourceTitle" hidden>
         <div class="tmdb-dialog">
-            <button type="button" class="tmdb-close" data-tmdb-close aria-label="닫기">×</button>
+            <button type="button" class="tmdb-close" data-tmdb-close
+                    th:aria-label="#{common.lang.close}" aria-label="닫기">×</button>
 
-            <h3 class="tmdb-title" id="tmdbSourceTitle">데이터 출처</h3>
+            <h3 class="tmdb-title" id="tmdbSourceTitle" th:text="#{common.footer.dataSource}">데이터 출처</h3>
 
             <img class="tmdb-logo" alt="TMDB"
                  src="https://www.themoviedb.org/assets/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg">
 
-            <p>영화·인물 메타데이터(제목·개봉일·줄거리·포스터·출연·제작진)는 TMDB에서 제공받습니다.</p>
+            <p th:text="#{common.tmdb.body}">영화·인물 메타데이터(제목·개봉일·줄거리·포스터·출연·제작진)는 TMDB에서 제공받습니다.</p>
 
-            <p class="tmdb-required">This website uses TMDB and the TMDB APIs but is not endorsed,
-                certified, or otherwise approved by TMDB.</p>
+            <p class="tmdb-required" th:text="#{common.tmdb.required}">This website uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.</p>
+        </div>
+    </div>
+
+    <!--언어 선택 모달 (푸터 언어 버튼으로 연다).
+        지금 언어를 고르면 바꿀 것이 없어 그냥 닫고, 다른 언어를 고르면 확인 모달을 위에 띄운다.-->
+    <div class="lang-modal" id="langSelectModal" role="dialog" aria-modal="true"
+         aria-labelledby="langSelectTitle" hidden>
+        <div class="tmdb-dialog">
+            <button type="button" class="tmdb-close" data-lang-close
+                    th:aria-label="#{common.lang.close}" aria-label="닫기">×</button>
+
+            <h3 class="tmdb-title" id="langSelectTitle" th:text="#{common.lang.title}">언어</h3>
+
+            <!--aria-current로 지금 언어를 알린다. 체크 글리프는 색만으로 상태를 구분하지 않기 위한 것이다-->
+            <ul class="lang-list" th:with="current=${#locale.language}">
+                <li>
+                    <button type="button" class="lang-option" data-lang-value="ko"
+                            th:attr="aria-current=${current == 'ko'}">
+                        <span th:text="#{common.lang.name.ko}">한국어</span>
+                        <span class="lang-check" aria-hidden="true">&#10003;</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="lang-option" data-lang-value="en"
+                            th:attr="aria-current=${current == 'en'}">
+                        <span th:text="#{common.lang.name.en}">English</span>
+                        <span class="lang-check" aria-hidden="true">&#10003;</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!--언어 변경 확인 모달. 취소하면 이 모달과 언어 모달을 함께 닫는다-->
+    <div class="lang-modal" id="langConfirmModal" role="dialog" aria-modal="true"
+         aria-labelledby="langConfirmTitle" hidden>
+        <div class="tmdb-dialog">
+            <h3 class="tmdb-title" id="langConfirmTitle" th:text="#{common.lang.confirm.title}">알림</h3>
+
+            <p th:text="#{common.lang.confirm.message}">언어를 변경하시겠습니까?</p>
+
+            <div class="lang-confirm-actions">
+                <button type="button" class="lang-confirm-cancel" data-lang-cancel
+                        th:text="#{common.lang.confirm.cancel}">취소</button>
+                <button type="button" class="lang-confirm-ok" data-lang-confirm
+                        th:text="#{common.lang.confirm.ok}">확인</button>
+            </div>
         </div>
     </div>
 
@@ -317,6 +454,99 @@
             document.addEventListener('keydown', function (event) {
                 if (event.key === 'Escape' && !modal.hidden) {
                     closeModal();
+                }
+            });
+        })();
+
+        // 언어 선택 2단 모달. 위 출처 모달과 같은 골격이며, 확인 모달이 언어 모달 위에 겹치는 것만 다르다
+        (function () {
+            var LOCALE_PARAM = 'lang';
+
+            var selectModal = document.getElementById('langSelectModal');
+            var confirmModal = document.getElementById('langConfirmModal');
+
+            if (!selectModal || !confirmModal) {
+                return;
+            }
+
+            // 확인을 누를 때까지 들고 있는 값. 취소하면 비운다
+            var pendingLang = null;
+
+            function closeAll() {
+                confirmModal.hidden = true;
+                selectModal.hidden = true;
+                pendingLang = null;
+            }
+
+            // 고른 언어만 갈아끼운다. URL을 새로 만들면 pageNo 같은 다른 쿼리가 날아간다
+            function applyLang(lang) {
+                var url = new URL(window.location.href);
+                url.searchParams.set(LOCALE_PARAM, lang);
+                window.location.href = url.toString();
+            }
+
+            document.addEventListener('click', function (event) {
+                var target = event.target;
+
+                if (!(target instanceof Element)) {
+                    return;
+                }
+
+                if (target.closest('[data-lang-open]')) {
+                    event.preventDefault();
+                    selectModal.hidden = false;
+                    return;
+                }
+
+                var option = target.closest('[data-lang-value]');
+
+                if (option) {
+                    // 지금 언어를 다시 고르면 바꿀 것이 없다
+                    if (option.getAttribute('aria-current') === 'true') {
+                        closeAll();
+                        return;
+                    }
+
+                    pendingLang = option.getAttribute('data-lang-value');
+                    confirmModal.hidden = false;
+                    return;
+                }
+
+                if (target.closest('[data-lang-confirm]')) {
+                    if (pendingLang) {
+                        applyLang(pendingLang);
+                    }
+                    return;
+                }
+
+                // 취소는 확인 모달만이 아니라 언어 모달까지 닫는다
+                if (target.closest('[data-lang-cancel]') || target.closest('[data-lang-close]')
+                        || target === selectModal) {
+                    closeAll();
+                    return;
+                }
+
+                // 확인 모달의 배경을 눌렀을 때는 그 모달만 닫아 언어 목록으로 돌아간다
+                if (target === confirmModal) {
+                    confirmModal.hidden = true;
+                    pendingLang = null;
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+
+                // 맨 위에 떠 있는 것 하나만 닫는다
+                if (!confirmModal.hidden) {
+                    confirmModal.hidden = true;
+                    pendingLang = null;
+                    return;
+                }
+
+                if (!selectModal.hidden) {
+                    selectModal.hidden = true;
                 }
             });
         })();

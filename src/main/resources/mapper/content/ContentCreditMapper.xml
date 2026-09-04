@@ -126,13 +126,16 @@
 		</foreach>
 	</select>
 
-	<!-- 화제의 감독·배우 선별 - 넘겨받은 100편 중 참여 편수 많은 순, 동수는 상위작 참여자 우선 -->
+	<!-- 화제의 감독·배우 선별 - 넘겨받은 목록 중 참여 편수 많은 순, 동수는 상위작 참여자 우선.
+	     목록 길이는 호출부가 정하며 Oracle IN 상한(1000) 아래로 잘라 넘긴다 -->
 	<select id="doSelectTopPersonByRole" resultType="ContentCreditVO">
 		SELECT person_id,
-		       name_ko
+		       name_ko,
+		       name_org
 		  FROM (
 			SELECT cc.person_id,
-			       p.name_ko
+			       p.name_ko,
+			       p.name_org
 			  FROM content_credit cc
 			  JOIN person p ON p.person_id = cc.person_id
 			 WHERE cc.role = #{role}
@@ -140,7 +143,7 @@
 			<foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
 				#{contentId}
 			</foreach>
-			 GROUP BY cc.person_id, p.name_ko
+			 GROUP BY cc.person_id, p.name_ko, p.name_org
 			 ORDER BY COUNT(*) DESC, MIN(cc.content_id) ASC, cc.person_id ASC
 		)
 		 WHERE ROWNUM = 1

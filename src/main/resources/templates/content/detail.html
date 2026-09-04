@@ -5,632 +5,79 @@ layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>콘텐츠 상세</title>
+<title th:text="#{detail.title}">콘텐츠 상세</title>
+<link rel="stylesheet" th:href="@{/assets/css/content/detail.css}">
+
+<!--
+  detail.js가 띄우는 문구. JS 파일에서는 #{}를 쓸 수 없어 서버가 여기서 한 번 넘긴다.
+  defer로 로드되는 detail.js보다 이 블록이 먼저 실행되므로 스크립트가 값을 못 받는 경우는 없다.
+  화면과 같은 문구는 detail.* 키를 함께 쓰고, JS에만 있는 것만 detail.js.*다.
+-->
+<script th:inline="javascript">
+	window.ENDIT_MSG = {
+		loginRequired: /*[[#{detail.js.loginRequired}]]*/ "",
+		requestFailed: /*[[#{detail.js.requestFailed}]]*/ "",
+		ratingSaveFailed: /*[[#{detail.js.ratingSaveFailed}]]*/ "",
+		watchlistSaveFailed: /*[[#{detail.js.watchlistSaveFailed}]]*/ "",
+		collectionSaveFailed: /*[[#{detail.js.collectionSaveFailed}]]*/ "",
+		collectionSaveError: /*[[#{detail.js.collectionSaveError}]]*/ "",
+		collectionLoadFailed: /*[[#{detail.js.collectionLoadFailed}]]*/ "",
+		collectionEmpty: /*[[#{detail.js.collectionEmpty}]]*/ "",
+		collectionOn: /*[[#{detail.js.collectionOn}]]*/ "",
+		collectionOff: /*[[#{detail.js.collectionOff}]]*/ "",
+		castLoadFailed: /*[[#{detail.js.castLoadFailed}]]*/ "",
+		castLoadRetry: /*[[#{detail.js.castLoadRetry}]]*/ "",
+		castRoleEmpty: /*[[#{detail.js.castRoleEmpty}]]*/ "",
+		ratingLabel: /*[[#{detail.rating.label}]]*/ "",
+		loading: /*[[#{detail.picker.loading}]]*/ "",
+		profileEmpty: /*[[#{detail.profile.empty}]]*/ "",
+		likeFailed: /*[[#{detail.js.likeFailed}]]*/ "",
+		writeEmpty: /*[[#{detail.js.writeEmpty}]]*/ "",
+		writeFailed: /*[[#{detail.js.writeFailed}]]*/ "",
+		writeDuplicate: /*[[#{detail.js.writeDuplicate}]]*/ "",
+		writeSaving: /*[[#{detail.js.writeSaving}]]*/ "",
+		writeTooLong: /*[[#{detail.js.writeTooLong}]]*/ "",
+		reportReasonEmpty: /*[[#{detail.js.reportReasonEmpty}]]*/ "",
+		reportDetailRequired: /*[[#{detail.js.reportDetailRequired}]]*/ "",
+		reportSaving: /*[[#{detail.js.reportSaving}]]*/ "",
+		reportFailed: /*[[#{detail.js.reportFailed}]]*/ "",
+		reportDone: /*[[#{detail.report.done}]]*/ "",
+		ratingScore: /*[[#{detail.rating.score('{0}')}]]*/ ""
+	};
+</script>
+
 <script th:src="@{/assets/js/content/detail.js}" defer></script>
-<style>
-	.backdrop-header {
-		position: relative;
-		width: 100vw;
-		margin-left: calc(50% - 50vw);
-		/* main의 p-3 상단 여백을 상쇄해 헤더 바로 아래에 붙인다 */
-		margin-top: -1rem;
-		height: 420px;
-		background-color: #222;
-		background-size: cover;
-		background-position: center;
-		color: #fff;
-	}
-	.backdrop-header::after {
-		content: "";
-		position: absolute;
-		inset: 0;
-		background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.1) 100%);
-	}
-	.backdrop-header .backdrop-caption {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 24px;
-		z-index: 1;
-	}
-	/* layout.html의 .endit-main + p-3와 동일한 제약을 재현해 아래 포스터와 왼쪽 끝을 맞춘다 */
-	.backdrop-caption-inner {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 0 1rem;
-	}
-	/* 값이 없는 항목은 span째로 빠지므로 구분자를 CSS로 붙여 " · · "가 남지 않게 한다 */
-	.backdrop-meta span + span::before {
-		content: " · ";
-	}
-	.poster-box {
-		width: 220px;
-		flex: 0 0 220px;
-	}
-	.poster-box img, .poster-placeholder {
-		width: 100%;
-		aspect-ratio: 2 / 3;
-		object-fit: cover;
-		border-radius: 8px;
-		box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-	}
-	.poster-placeholder, .backdrop-placeholder {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: #ccc;
-		color: #666;
-	}
-	.backdrop-placeholder {
-		height: 100%;
-		width: 100%;
-	}
-
-	/* ── C-01 평가·기록 (ACT-C-001~005) ───────────────── */
-	.rating-box {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		flex-wrap: wrap;
-	}
-	.stars {
-		display: flex;
-	}
-	.star {
-		/* 접근성 원칙: 44px 터치 영역. 보이는 별은 그보다 작다 */
-		width: 44px;
-		height: 44px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		border: none;
-		background: none;
-		font-size: 26px;
-		line-height: 1;
-		color: #D6D3DC;
-		cursor: pointer;
-	}
-	/* 채워진 별은 색과 함께 aria-pressed로도 상태를 알린다 */
-	.star.is-on {
-		color: #FFB800;
-	}
-	.rating-label {
-		margin: 0;
-		font-size: 14px;
-		color: #777;
-	}
-	.action-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		margin-top: 12px;
-	}
-	.action-btn {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		/* 접근성 원칙: 44px 터치 영역 */
-		min-height: 44px;
-		padding: 0 18px;
-		border: 1px solid #E4E2E9;
-		border-radius: 12px;
-		background: #fff;
-		font-size: 14px;
-		color: #333;
-		text-decoration: none;
-		cursor: pointer;
-	}
-	.action-btn:hover {
-		border-color: #6550C8;
-		color: #6550C8;
-	}
-	/* 켜진 상태는 채움 아이콘이 함께 바뀌므로 색만으로 구분하지 않는다 */
-	.action-btn.is-on {
-		border-color: #6550C8;
-		background: #6550C8;
-		color: #fff;
-	}
-	.action-btn[disabled] {
-		opacity: 0.6;
-		cursor: default;
-	}
-	.action-notice {
-		margin: 8px 0 0;
-		font-size: 14px;
-		color: #6550C8;
-	}
-
-	/* ── 섹션 머리 (제목 + 건수 + 더보기) ─────────────── */
-	.section-head {
-		display: flex;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 12px;
-		margin-bottom: 12px;
-	}
-	.section-count {
-		color: #6550C8;
-		font-weight: 700;
-	}
-	.section-more {
-		font-size: 14px;
-		color: #777;
-		text-decoration: none;
-		/* 접근성 원칙: 44px 터치 영역을 글자 주변 여백으로 만든다 */
-		display: inline-flex;
-		align-items: center;
-		min-height: 44px;
-		padding: 0 4px;
-		background: none;
-		border: none;
-		cursor: pointer;
-	}
-	.section-more:hover {
-		color: #6550C8;
-	}
-
-	/* ── C-02 코멘트 미리보기 (ACT-C-008) ─────────────── */
-	.comment-grid {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		gap: 12px;
-	}
-	.comment-card {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		min-height: 160px;
-		padding: 16px;
-		border: 1px solid #E4E2E9;
-		border-radius: 12px;
-		background: #FAFAFB;
-	}
-	.comment-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 8px;
-	}
-	.comment-nickname {
-		font-size: 14px;
-		font-weight: 600;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.comment-rating {
-		flex: none;
-		font-size: 13px;
-		color: #FFB800;
-		font-variant-numeric: tabular-nums;
-	}
-	.comment-body {
-		flex-grow: 1;
-		margin: 0;
-		font-size: 14px;
-		line-height: 1.5;
-		/* 카드 높이를 맞추려고 4줄에서 자른다. 전문은 C-04에서 본다 */
-		display: -webkit-box;
-		-webkit-line-clamp: 4;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-	/* 신고 승인된 코멘트는 삭제하지 않고 표시만 가린다(팀 결정) */
-	.comment-blind {
-		flex-grow: 1;
-		margin: 0;
-		font-size: 14px;
-		color: #999;
-	}
-	.comment-spoiler {
-		flex-grow: 1;
-		border: 1px dashed #E4E2E9;
-		border-radius: 8px;
-		background: #fff;
-		font-size: 13px;
-		color: #777;
-		cursor: pointer;
-	}
-	.comment-spoiler:hover {
-		color: #6550C8;
-		border-color: #6550C8;
-	}
-	.comment-foot {
-		font-size: 13px;
-		color: #777;
-	}
-	.comment-foot i {
-		margin-right: 4px;
-	}
-	@media (max-width: 900px) {
-		.comment-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
-	}
-	@media (max-width: 560px) {
-		.comment-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	.gallery-viewport {
-		position: relative;
-	}
-	.gallery-clip {
-		overflow: hidden;
-	}
-	.gallery-track {
-		display: flex;
-		gap: 12px;
-		transition: transform 0.3s ease;
-	}
-	.gallery-item {
-		flex: 0 0 calc((100% - 24px) / 3);
-		aspect-ratio: 16 / 9;
-		border-radius: 8px;
-		overflow: hidden;
-		background-color: #ddd;
-	}
-	.gallery-item img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-	.gallery-nav {
-		position: absolute;
-		top: 50%;
-		transform: translateY(-50%);
-		/* 접근성 원칙: 44px 터치 영역 */
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		border: none;
-		background: rgba(255,255,255,0.9);
-		box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-		/* 버튼은 44px 터치 영역을 유지하고 아이콘만 작게 */
-		font-size: 15px;
-		/* 아이콘을 정확히 가운데 두기 위해 flex로 맞춘다 */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		line-height: 1;
-		cursor: pointer;
-		z-index: 2;
-	}
-	.gallery-prev {
-		left: -22px;
-	}
-	.gallery-next {
-		right: -22px;
-	}
-	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다.
-	   넘어갈 쪽이 없으면 흐리게 두지 않고 아예 감춘다 */
-	.gallery-nav[hidden] {
-		display: none;
-	}
-	.gallery-item img {
-		cursor: pointer;
-	}
-	.gallery-modal {
-		display: none;
-		position: fixed;
-		inset: 0;
-		background: rgba(0,0,0,0.85);
-		align-items: center;
-		justify-content: center;
-		z-index: 1050;
-	}
-	.gallery-modal.active {
-		display: flex;
-	}
-	.gallery-modal-img {
-		max-width: 85vw;
-		max-height: 85vh;
-		object-fit: contain;
-		border-radius: 8px;
-	}
-	.gallery-modal-close {
-		position: absolute;
-		top: 20px;
-		right: 24px;
-		/* 접근성 원칙: 44px 터치 영역 */
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		border: none;
-		background: rgba(255,255,255,0.9);
-		font-size: 17px;
-		/* 아이콘 중앙 정렬 */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		line-height: 1;
-		cursor: pointer;
-		z-index: 1051;
-	}
-	.gallery-modal-prev {
-		left: 24px;
-	}
-	.gallery-modal-next {
-		right: 24px;
-	}
-	/* 접근성 원칙: 명확한 focus. Focus ring #D8D1FF */
-	.gallery-nav:focus-visible,
-	.cast-nav:focus-visible,
-	.gallery-modal-close:focus-visible,
-	.gallery-item img:focus-visible,
-	.star:focus-visible,
-	.action-btn:focus-visible,
-	.section-more:focus-visible,
-	.comment-spoiler:focus-visible,
-	.picker-close:focus-visible,
-	.picker-item:focus-visible {
-		outline: 3px solid #D8D1FF;
-		outline-offset: 2px;
-	}
-	.gallery-item img:focus-visible {
-		outline-offset: -3px;
-	}
-	.gallery-modal-count {
-		position: absolute;
-		bottom: 24px;
-		left: 50%;
-		transform: translateX(-50%);
-		padding: 8px 16px;
-		border-radius: 8px;
-		background: rgba(0,0,0,0.6);
-		color: #fff;
-		font-size: 14px;
-		font-variant-numeric: tabular-nums;
-		z-index: 1051;
-	}
-	.cast-viewport {
-		position: relative;
-	}
-	.cast-grid {
-		display: grid;
-		grid-template-columns: repeat(4, 1fr);
-		column-gap: 24px;
-	}
-	/* .cast-cell의 display:flex가 hidden 속성을 덮어쓰므로 명시적으로 막는다 */
-	.cast-cell[hidden] {
-		display: none;
-	}
-	.cast-cell {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		padding: 12px 0;
-		border-bottom: 1px solid #E4E2E9;
-		min-width: 0;
-		/* ACT-C-007 - 크레딧 줄 전체가 P-01 인물 상세로 가는 링크다 */
-		text-decoration: none;
-		color: inherit;
-	}
-	.cast-cell:hover .cast-name {
-		color: #6550C8;
-	}
-	.cast-cell:focus-visible {
-		outline: 2px solid #6550C8;
-		outline-offset: -2px;
-		border-radius: 8px;
-	}
-	.cast-avatar, .cast-avatar-placeholder {
-		flex: 0 0 48px;
-		width: 48px;
-		height: 48px;
-		border-radius: 8px;
-		object-fit: cover;
-	}
-	.cast-avatar-placeholder {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: #ccc;
-		color: #666;
-		font-size: 11px;
-		text-align: center;
-	}
-	.cast-text {
-		min-width: 0;
-	}
-	/*
-	 * 이름 14px / 역할·배역 12px.
-	 * design-principles.md의 "본문 16px / 보조 14px"를 의도적으로 벗어난다 -
-	 * 한 페이지에 12명을 담는 밀도를 맞추기 위한 예외이며 사용자 승인을 받았다.
-	 */
-	.cast-name {
-		font-size: 14px;
-		font-weight: 600;
-		line-height: 1.4;
-	}
-	.cast-role {
-		font-size: 12px;
-		color: #777;
-		line-height: 1.4;
-	}
-	/* 브랜드 Primary로 감독을 구분한다. "감독" 문구가 함께 있어 색만으로 구분하지 않는다 */
-	.cast-role .is-director {
-		color: #6550C8;
-		font-weight: 600;
-	}
-	.cast-nav {
-		position: absolute;
-		top: 50%;
-		transform: translateY(-50%);
-		/* 접근성 원칙: 44px 터치 영역 */
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
-		border: 1px solid #E4E2E9;
-		background: rgba(255,255,255,0.95);
-		box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-		/* 버튼은 44px 터치 영역을 유지하고 아이콘만 작게 */
-		font-size: 15px;
-		/* 아이콘 중앙 정렬 */
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		line-height: 1;
-		cursor: pointer;
-		z-index: 2;
-	}
-	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다.
-	   12명 이하로 한 페이지에 다 들어갈 때와, 넘어갈 쪽이 없을 때 둘 다 감춘다 */
-	.cast-nav[hidden] {
-		display: none;
-	}
-	.cast-prev {
-		left: -22px;
-	}
-	.cast-next {
-		right: -22px;
-	}
-	@media (max-width: 900px) {
-		.cast-grid {
-			grid-template-columns: repeat(2, 1fr);
-		}
-	}
-	@media (max-width: 560px) {
-		.cast-grid {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	/* ── 목록형 모달 (MOD-05 출연/제작 전체, MOD-13 컬렉션에 추가) ── */
-	.picker-modal {
-		display: flex;
-		position: fixed;
-		inset: 0;
-		background: rgba(0,0,0,0.5);
-		align-items: center;
-		justify-content: center;
-		z-index: 1050;
-	}
-	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다 */
-	.picker-modal[hidden] {
-		display: none;
-	}
-	.picker-dialog {
-		display: flex;
-		flex-direction: column;
-		width: min(720px, 92vw);
-		max-height: 80vh;
-		border-radius: 16px;
-		background: #fff;
-		overflow: hidden;
-	}
-	.picker-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 16px 20px;
-		border-bottom: 1px solid #E4E2E9;
-	}
-	.picker-close {
-		/* 접근성 원칙: 44px 터치 영역 */
-		width: 44px;
-		height: 44px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 0;
-		border: none;
-		border-radius: 50%;
-		background: none;
-		font-size: 15px;
-		line-height: 1;
-		cursor: pointer;
-	}
-	.picker-body {
-		padding: 8px 20px 20px;
-		overflow-y: auto;
-	}
-	.picker-status {
-		margin: 12px 0;
-		font-size: 14px;
-		color: #777;
-	}
-	.picker-list {
-		margin: 0;
-		padding: 0;
-		list-style: none;
-	}
-	.picker-item {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		width: 100%;
-		/* 접근성 원칙: 44px 터치 영역 */
-		min-height: 44px;
-		padding: 8px 0;
-		border: none;
-		border-bottom: 1px solid #E4E2E9;
-		background: none;
-		font-size: 14px;
-		text-align: left;
-		cursor: pointer;
-	}
-	.picker-item:hover .picker-item-title {
-		color: #6550C8;
-	}
-	.picker-item-title {
-		flex-grow: 1;
-		min-width: 0;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		white-space: nowrap;
-	}
-	.picker-item-count {
-		flex: none;
-		font-size: 12px;
-		color: #777;
-	}
-	/* 담긴 컬렉션은 체크 아이콘과 "담김" 문구를 함께 둬 색만으로 구분하지 않는다 */
-	.picker-item-mark {
-		flex: none;
-		width: 24px;
-		color: #6550C8;
-		text-align: center;
-	}
-	/* 모달 안의 출연/제작 전체 목록은 캐러셀 페이징을 타지 않는다 */
-	.picker-body .cast-cell[hidden] {
-		display: flex;
-	}
-</style>
 </head>
 <body>
 <div layout:fragment="content">
 
 	<div th:if="${notFound}" class="container py-5">
-		<p class="text-danger">해당 contentId의 데이터를 찾을 수 없습니다.</p>
+		<p class="text-danger" th:text="#{detail.notFound}">해당 contentId의 데이터를 찾을 수 없습니다.</p>
 	</div>
 
 	<div th:unless="${notFound}">
 		<div class="backdrop-header" th:style="${content.backdropUrl} != null ? 'background-image: url(' + ${content.backdropUrl} + ')' : ''">
-			<div th:if="${content.backdropUrl} == null" class="backdrop-placeholder">백드롭 이미지 없음</div>
+			<div th:if="${content.backdropUrl} == null" class="backdrop-placeholder" th:text="#{detail.backdrop.empty}">백드롭 이미지 없음</div>
 			<div class="backdrop-caption">
 				<div class="backdrop-caption-inner">
 					<div class="container">
-						<h1 class="fw-bold" th:text="${content.titleKo}">제목</h1>
-						<p class="mb-1" th:text="${content.titleOrg}">원제</p>
-						<!-- release_year는 'YYYY-MM-DD'로 내려오므로 연도만 자른다(fragments/cards.html과 같은 가드) -->
+						<h1 class="fw-bold" th:text="${@localeText.get(content.titleKo, content.titleOrg)}">제목</h1>
+						<!-- 부제는 h1의 반대쪽 제목이다. 한국어 제목이 없는 콘텐츠는 둘이 같아 숨긴다 -->
+						<p class="mb-1"
+						   th:with="main=${@localeText.get(content.titleKo, content.titleOrg)},sub=${@localeText.get(content.titleOrg, content.titleKo)}"
+						   th:if="${sub != null and sub != main}"
+						   th:text="${sub}">원제</p>
 						<p class="mb-0 small backdrop-meta">
-							<span th:if="${content.releaseYear != null and #strings.length(content.releaseYear) >= 4}"
-							      th:text="${#strings.substring(content.releaseYear, 0, 4)}">2026</span>
+							<span th:if="${content.releaseDateLabel != null}"
+							      th:text="${content.releaseDateLabel}">2026.12.16</span>
 							<span th:if="${content.country != null and !content.country.isEmpty()}"
 							      th:text="${content.country}">미국</span>
 							<span th:if="${content.runtimeMin > 0}"
-							      th:text="${content.runtimeMin} + '분'">120분</span>
+							      th:text="#{detail.runtime(${content.runtimeMin})}">120분</span>
 						</p>
 						<div th:if="${genres != null and !genres.isEmpty()}" class="mt-2">
-							<span class="badge text-bg-light me-1" th:each="genre : ${genres}" th:text="${genre.genreName}">장르</span>
+							<span class="badge text-bg-light me-1" th:each="genre : ${genres}"
+								      th:text="${#messages.msgOrNull('genre.name.' + genre.externalGenreId)} ?: ${genre.genreName}">장르</span>
 						</div>
 					</div>
 				</div>
@@ -641,107 +88,153 @@ layout:decorate="~{layout/layout}">
 			<div class="d-flex gap-4 flex-wrap">
 				<div class="poster-box">
 					<img th:if="${content.posterUrl} != null" th:src="${content.posterUrl}" alt="poster">
-					<div th:if="${content.posterUrl} == null" class="poster-placeholder">포스터 없음</div>
+					<div th:if="${content.posterUrl} == null" class="poster-placeholder" th:text="#{detail.poster.empty}">포스터 없음</div>
 				</div>
 				<div class="flex-grow-1" style="flex-basis: 0; min-width: 280px;">
 					<!--
 					  평가·기록(ACT-C-001~005). 회원 번호는 서버가 내려 주고 쓰기는 3조 API가 받는다.
-					  MEMBER_CONTENT에 "내 별점·보고싶어요 단건 조회" 계약이 없어 진입 시에는 항상 빈 상태로 시작한다.
+					  MEMBER_CONTENT에 "내 별점·보고싶어요 단건 조회"와 점수별 집계 계약이 없어
+					  진입 시에는 항상 빈 상태로 시작하고 평균·평가 분석도 그리지 못한다.
 					-->
 					<div class="rating-box mb-2" id="ratingBox"
 					     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId}">
-						<div class="stars" role="group" aria-label="별점 주기">
+						<div class="stars" role="group" th:aria-label="#{detail.rating.starsLabel}" aria-label="별점 주기">
 							<button type="button" class="star" th:each="score : ${#numbers.sequence(1, 5)}"
-							        th:attr="data-score=${score},aria-label=${score} + '점'"
+							        th:attr="data-score=${score}" th:aria-label="#{detail.rating.score(${score})}"
 							        aria-pressed="false"><i class="bi bi-star-fill"></i></button>
 						</div>
-						<p class="rating-label" id="ratingLabel">평가하기</p>
+						<p class="rating-label" id="ratingLabel" th:text="#{detail.rating.label}">평가하기</p>
+						<!--
+						  정의서 C-01 - 평균과 내 기록을 함께 보인다.
+						  바로 왼쪽이 내 별점이라 "평균" 라벨과 세로선으로 갈라 준다.
+						-->
+						<p class="rating-average" th:if="${ratingAverage != null}">
+							<span class="rating-average-label" th:text="#{detail.rating.average}">평균</span>
+							<i class="bi bi-star-fill"></i><span th:text="${ratingAverage}">3.9</span>
+							<span class="rating-average-count"
+							      th:text="#{detail.rating.participants(${raterCount})}">500명 참여</span>
+						</p>
+						<p class="rating-empty" th:if="${ratingAverage == null}"
+						   th:text="#{detail.rating.empty}">아직 평가가 없습니다</p>
 					</div>
 					<div class="action-row">
 						<button type="button" class="action-btn" id="watchlistButton" aria-pressed="false">
-							<i class="bi bi-plus-lg"></i><span class="action-label">보고싶어요</span>
+							<i class="bi bi-plus-lg"></i><span class="action-label" th:text="#{detail.action.watchlist}">보고싶어요</span>
 						</button>
-						<a class="action-btn" th:href="@{/comment/doRetrieve(contentId=${content.contentId})}">
-							<i class="bi bi-pencil"></i><span class="action-label">코멘트</span>
-						</a>
 						<button type="button" class="action-btn" id="collectionButton">
-							<i class="bi bi-bookmark-plus"></i><span class="action-label">컬렉션에 추가</span>
+							<i class="bi bi-bookmark-plus"></i><span class="action-label" th:text="#{detail.action.collection}">컬렉션에 추가</span>
+						</button>
+						<button type="button" class="action-btn" id="commentButton">
+							<i class="bi bi-pencil"></i><span class="action-label" th:text="#{detail.action.comment}">코멘트</span>
 						</button>
 					</div>
 					<p class="action-notice" id="actionNotice" hidden></p>
 
-					<h5 class="mt-4">시놉시스</h5>
-					<p th:text="${content.overview}">시놉시스 내용</p>
+					<!-- 수집기가 한국어 줄거리가 없으면 영문으로 채우지 않고 비우므로 제목까지 함께 감춘다 -->
+					<div th:if="${content.overview != null and !content.overview.isEmpty()}">
+						<h5 class="mt-4" th:text="#{detail.section.overview}">줄거리</h5>
+						<p th:text="${content.overview}">줄거리 내용</p>
+					</div>
 				</div>
 			</div>
 		</div>
 
 		<div class="container pb-4" th:if="${castAndCrew != null and !castAndCrew.isEmpty()}">
 			<div class="section-head">
-				<h5 class="mb-0">출연/제작</h5>
-				<!-- ACT-C-006 - 12명을 넘을 때만 뜨고, 이미 받아 둔 목록을 MOD-05 모달에 그대로 뿌린다 -->
-				<button type="button" class="section-more" id="castMoreButton" hidden>전체보기</button>
+				<h5 class="mb-0"><span th:text="#{detail.section.castCrew}">출연/제작</span> <span class="section-count" th:text="${castTotalCnt}">0</span></h5>
+				<!-- ACT-C-006 - 미리보기를 넘을 때만 뜬다. 전체 목록은 MOD-05가 API-007로 따로 받는다 -->
+				<button type="button" class="section-more" id="castMoreButton"
+				        th:if="${castTotalCnt > castAndCrew.size()}" th:text="#{detail.section.viewAll}">전체보기</button>
 			</div>
-			<div class="cast-viewport">
-				<button type="button" class="cast-nav cast-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
-				<!-- 감독 우선 정렬은 ContentCreditServiceImpl.retrieveAll이 이미 해 준다 -->
-				<div class="cast-grid">
-					<a class="cast-cell" th:each="credit : ${castAndCrew}"
-					   th:href="@{'/people/' + ${credit.personId}}"
-					   th:with="roleLabel=${roleLabels.get(credit.role)}">
-						<img th:if="${credit.profileImageUrl} != null" th:src="${credit.profileImageUrl}"
-						     class="cast-avatar" loading="lazy" alt="profile">
-						<div th:if="${credit.profileImageUrl} == null" class="cast-avatar-placeholder">사진 없음</div>
-						<div class="cast-text">
-							<div class="cast-name" th:text="${credit.nameKo}">이름</div>
-							<!-- POL-033 역할 4종. 표에 없는 값이면 라벨을 만들지 않는다 -->
-							<div class="cast-role">
-								<span th:if="${roleLabel != null}"
-								      th:classappend="${credit.role == 'DIRECTOR'} ? 'is-director' : ''"
-								      th:text="${roleLabel}">배우</span><span
-								      th:if="${credit.character != null and !credit.character.isEmpty()}"
-								      th:text="${roleLabel != null} ? ' | ' + ${credit.character} : ${credit.character}"> | 배역</span>
-							</div>
+			<!-- 감독 우선 정렬은 매퍼가 이미 해 준다 -->
+			<div class="cast-grid">
+				<a class="cast-cell" th:each="credit : ${castAndCrew}"
+				   th:href="@{'/people/' + ${credit.personId}}"
+				   th:with="roleLabel=${roleLabels.get(credit.role)}">
+					<img th:if="${credit.profileImageUrl} != null" th:src="${credit.profileImageUrl}"
+					     class="cast-avatar" loading="lazy" alt="profile">
+					<div th:if="${credit.profileImageUrl} == null" class="cast-avatar-placeholder" th:text="#{detail.profile.empty}">사진 없음</div>
+					<div class="cast-text">
+						<div class="cast-name" th:text="${@localeText.get(credit.nameKo, credit.nameOrg)}">이름</div>
+						<!-- POL-033 역할 4종. 표에 없는 값이면 라벨을 만들지 않는다 -->
+						<div class="cast-role">
+							<span th:if="${roleLabel != null}"
+							      th:classappend="${credit.role == 'DIRECTOR'} ? 'is-director' : ''"
+							      th:text="${roleLabel}">배우</span><span
+							      th:if="${credit.character != null and !credit.character.isEmpty()}"
+							      th:text="${roleLabel != null} ? ' | ' + ${credit.character} : ${credit.character}"> | 배역</span>
 						</div>
-					</a>
-				</div>
-				<button type="button" class="cast-nav cast-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+					</div>
+				</a>
 			</div>
 		</div>
 
 		<!-- C-02 코멘트 미리보기. 0건이면 섹션째 사라진다(정의서 "빈 섹션 숨김") -->
 		<div class="container pb-4" th:if="${comments != null and !comments.isEmpty()}">
 			<div class="section-head">
-				<h5 class="mb-0">코멘트 <span class="section-count" th:text="${commentTotalCnt}">0</span></h5>
-				<!-- ACT-C-008 - 전문과 정렬 4종은 C-04가 맡는다 -->
-				<a class="section-more" th:href="@{/comment/doRetrieve(contentId=${content.contentId})}">더보기</a>
+				<h5 class="mb-0"><span th:text="#{detail.section.comment}">코멘트</span> <span class="section-count" th:text="${commentTotalCnt}">0</span></h5>
+				<!-- ACT-C-008 - 미리보기에 다 담겼으면 감춘다. 전문과 정렬 4종은 C-04가 맡는다 -->
+				<a class="section-more" th:if="${commentTotalCnt > comments.size()}"
+				   th:href="@{/comment/doRetrieve(contentId=${content.contentId})}" th:text="#{detail.section.more}">더보기</a>
 			</div>
-			<div class="comment-grid">
+			<!-- 좋아요가 쓸 회원 번호는 카드마다가 아니라 그리드에 한 번만 싣는다. 비회원이면 서버가 아예 안 그린다 -->
+			<div class="comment-grid" id="commentGrid" th:attr="data-member-id=${loginMemberId}">
 				<article class="comment-card" th:each="comment : ${comments}">
 					<div class="comment-head">
-						<span class="comment-nickname" th:text="${comment.nickname}">닉네임</span>
+						<span class="comment-writer">
+							<!-- 프로필 사진은 코멘트 조회에 실려 오지 않아 닉네임 첫 글자로 대신한다 -->
+							<span class="comment-avatar" aria-hidden="true"
+							      th:text="${#strings.isEmpty(comment.nickname)} ? '?' : ${#strings.substring(comment.nickname, 0, 1)}">닉</span>
+							<span class="comment-nickname" th:text="${comment.nickname}">닉네임</span>
+						</span>
 						<span class="comment-rating" th:if="${comment.ratingScore != null}">
-							<i class="bi bi-star-fill"></i><span th:text="${comment.ratingScore}">4</span>
+							<i class="bi bi-star-fill"></i><span th:text="${#numbers.formatDecimal(comment.ratingScore, 1, 1)}">4.0</span>
 						</span>
 					</div>
 					<!-- 신고 승인 건은 지우지 않고 표시만 가린다(팀 결정) -->
-					<p class="comment-blind" th:if="${comment.blindReason != null}">신고가 접수되어 가려진 코멘트입니다.</p>
+					<p class="comment-blind" th:if="${comment.blindReason != null}"
+						   th:text="#{detail.comment.blind}">신고가 접수되어 가려진 코멘트입니다.</p>
+					<!-- 스포일러 버튼 바로 다음 형제가 본문이어야 한다 - detail.js의 initSpoiler가 그 순서를 쓴다 -->
 					<button type="button" class="comment-spoiler"
-					        th:if="${comment.blindReason == null and comment.spoiler == 'Y'}">스포일러 — 눌러서 보기</button>
+					        th:if="${comment.blindReason == null and comment.spoiler == 'Y'}"
+						        th:text="#{detail.comment.spoiler}">스포일러 — 눌러서 보기</button>
+					<!-- 미리보기는 4줄까지만 보이는데 본문은 3000자까지 온다.
+					     넘는 만큼은 그려도 잘려서 안 보이므로 여기서 끊는다 - 전문은 더보기(C-04)에서 본다.
+					     실제 말줄임(…)은 CSS의 4줄 자르기가 넣는다 -->
 					<p class="comment-body" th:if="${comment.blindReason == null}"
 					   th:hidden="${comment.spoiler == 'Y'}"
-					   th:text="${comment.commentDetail}">코멘트 내용</p>
+					   th:text="${#strings.abbreviate(comment.commentDetail, 300)}">코멘트 내용</p>
 					<div class="comment-foot">
-						<i class="bi bi-hand-thumbs-up"></i><span th:text="${comment.likeCnt}">0</span>
+						<!-- 내가 누른 좋아요는 진입 시부터 채워져 보인다(likedCommentIds) -->
+						<button type="button" class="comment-like"
+						        th:with="liked=${likedCommentIds.contains(comment.commentId)}"
+						        th:classappend="${liked} ? 'is-on' : ''"
+						        th:attr="data-comment-id=${comment.commentId},aria-pressed=${liked}"
+						        aria-pressed="false">
+							<i th:class="${liked} ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"
+							   class="bi bi-hand-thumbs-up" aria-hidden="true"></i>
+							<span class="visually-hidden" th:text="#{detail.comment.like}">좋아요</span>
+							<span class="comment-like-count" th:text="${comment.likeCnt}">0</span>
+						</button>
+						<!--
+						  ACT-C-012 신고. 로그인 회원에게만, 그리고 남의 코멘트에만 그린다.
+						  사유 코드 조회가 실패하면 목록이 비어 버튼째 빠진다.
+						-->
+						<button type="button" class="comment-report"
+						        th:if="${loginMemberId != null and !reportReasons.isEmpty()
+						                and comment.memberId != loginMemberId}"
+						        th:attr="data-comment-id=${comment.commentId},
+						                 aria-label=#{detail.report.button},title=#{detail.report.button}"
+						        aria-label="신고" title="신고"><i class="bi bi-flag" aria-hidden="true"></i></button>
 					</div>
 				</article>
 			</div>
 		</div>
 
 		<div class="container pb-5" th:if="${galleryImages != null and !galleryImages.isEmpty()}">
-			<h5 class="mb-3">갤러리</h5>
+			<h5 class="mb-3" th:text="#{detail.section.gallery}">갤러리</h5>
 			<div class="gallery-viewport">
-				<button type="button" class="gallery-nav gallery-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
+				<button type="button" class="gallery-nav gallery-prev" th:aria-label="#{home.carousel.prev}" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
 				<div class="gallery-clip">
 					<div class="gallery-track">
 						<!-- src=썸네일, data-full=확대용. 두 URL 모두 서버가 완성해 준다 -->
@@ -751,7 +244,7 @@ layout:decorate="~{layout/layout}">
 						</div>
 					</div>
 				</div>
-				<button type="button" class="gallery-nav gallery-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+				<button type="button" class="gallery-nav gallery-next" th:aria-label="#{home.carousel.next}" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
 			</div>
 		</div>
 
@@ -762,22 +255,32 @@ layout:decorate="~{layout/layout}">
 		-->
 
 		<div id="galleryModal" class="gallery-modal">
-			<button type="button" class="gallery-modal-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
-			<button type="button" class="gallery-nav gallery-modal-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
+			<button type="button" class="gallery-modal-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+			<button type="button" class="gallery-nav gallery-modal-prev" th:aria-label="#{home.carousel.prev}" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
 			<img id="galleryModalImg" class="gallery-modal-img" src="" alt="gallery large view">
-			<button type="button" class="gallery-nav gallery-modal-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+			<button type="button" class="gallery-nav gallery-modal-next" th:aria-label="#{home.carousel.next}" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
 			<div id="galleryModalCount" class="gallery-modal-count" aria-live="polite">0 / 0</div>
 		</div>
 
-		<!-- MOD-05 출연/제작 전체. 목록은 화면에 이미 있는 크레딧을 복제해 채운다 -->
-		<div id="castModal" class="picker-modal" hidden>
+		<!-- MOD-05 출연/제작 전체. 목록·역할 필터·페이징을 API-007에서 받는다 -->
+		<div id="castModal" class="picker-modal" hidden th:attr="data-content-id=${content.contentId}">
 			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="castModalTitle">
 				<div class="picker-head">
-					<h5 class="mb-0" id="castModalTitle">출연/제작</h5>
-					<button type="button" class="picker-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+					<h5 class="mb-0" id="castModalTitle" th:text="#{detail.section.castCrew}">출연/제작</h5>
+					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+				</div>
+				<!-- 역할 칩. data-role이 POL-033 코드이고 JS는 라벨 표를 여기서 읽는다 -->
+				<div class="role-chips" id="castRoleChips" role="group" th:aria-label="#{detail.picker.roleFilter}" aria-label="역할 필터">
+					<button type="button" class="role-chip is-on" data-role="" aria-pressed="true"
+					        th:text="#{detail.picker.roleAll}">전체</button>
+					<button type="button" class="role-chip" th:each="role : ${roleLabels}"
+					        th:attr="data-role=${role.key}" aria-pressed="false"
+					        th:text="${role.value}">배우</button>
 				</div>
 				<div class="picker-body">
 					<div class="cast-grid" id="castModalGrid"></div>
+					<p class="picker-status" id="castModalStatus" aria-live="polite" th:text="#{detail.picker.loading}">불러오는 중…</p>
+					<button type="button" class="picker-more" id="castMoreLoad" hidden th:text="#{detail.picker.more}">더 보기</button>
 				</div>
 			</div>
 		</div>
@@ -786,12 +289,98 @@ layout:decorate="~{layout/layout}">
 		<div id="collectionModal" class="picker-modal" hidden>
 			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="collectionModalTitle">
 				<div class="picker-head">
-					<h5 class="mb-0" id="collectionModalTitle">컬렉션에 추가</h5>
-					<button type="button" class="picker-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+					<h5 class="mb-0" id="collectionModalTitle" th:text="#{detail.action.collection}">컬렉션에 추가</h5>
+					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
 				</div>
 				<div class="picker-body">
-					<p class="picker-status" id="collectionStatus" aria-live="polite">불러오는 중…</p>
+					<p class="picker-status" id="collectionStatus" aria-live="polite" th:text="#{detail.picker.loading}">불러오는 중…</p>
 					<ul class="picker-list" id="collectionList"></ul>
+				</div>
+			</div>
+		</div>
+
+		<!-- MOD-02 코멘트 작성. 목록 화면(C-04)에는 영화 코멘트 작성 버튼이 없고 여기서 진입한다(팀 약속) -->
+		<div id="commentWriteModal" class="picker-modal" hidden
+		     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId}">
+			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="commentWriteTitle">
+				<div class="picker-head">
+					<!-- 왓챠와 같이 머리에 영화 제목을 둔다. 무엇에 쓰는 코멘트인지는 placeholder가 말한다 -->
+					<h5 class="mb-0" id="commentWriteTitle" th:text="${content.titleKo}">영화 제목</h5>
+					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+				</div>
+				<div class="picker-body">
+					<textarea id="commentWriteBody" class="comment-write-body" rows="7" maxlength="3000"
+					          th:placeholder="#{detail.write.placeholder}" placeholder="생각을 남겨 보세요."></textarea>
+					<label class="comment-write-spoiler">
+						<input type="checkbox" id="commentWriteSpoiler">
+						<span th:text="#{detail.write.spoiler}">스포일러가 포함되어 있어요</span>
+					</label>
+					<p class="picker-status" id="commentWriteStatus" aria-live="polite" hidden></p>
+				</div>
+				<div class="comment-write-foot">
+					<!-- 숫자만이라 번역이 필요 없다. 상한은 JS의 COMMENT_MAX_LENGTH와 textarea maxlength가 함께 잡는다 -->
+					<span class="comment-write-count" id="commentWriteCount" aria-live="polite">0 / 3000</span>
+					<button type="button" class="comment-write-submit" id="commentWriteSubmit"
+					        th:text="#{detail.write.submit}">등록</button>
+				</div>
+			</div>
+		</div>
+
+		<!--
+		  MOD-04 코멘트 신고(ACT-C-012). 접수는 팀원 API(POST /report/doSave)가 받고
+		  여기서는 사유와 상세만 모아 보낸다. 대상 코멘트는 JS가 data-comment-id로 심는다.
+		-->
+		<div id="reportModal" class="picker-modal" hidden
+		     th:attr="data-member-id=${loginMemberId}">
+			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+				<div class="picker-head">
+					<h5 class="mb-0" id="reportTitle" th:text="#{detail.report.title}">코멘트 신고</h5>
+					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+				</div>
+				<div class="picker-body">
+					<!-- 사유·순서는 COMMON_CODE가 정한다. 값은 DB CHECK가 받는 코드 그대로다 -->
+					<fieldset class="report-reasons">
+						<legend class="visually-hidden" th:text="#{detail.report.reasonLabel}">신고 사유</legend>
+						<label class="report-reason" th:each="reason : ${reportReasons}">
+							<input type="radio" name="reportReason" th:value="${reason.code}">
+							<span th:text="${reason.codeName}">사유</span>
+						</label>
+					</fieldset>
+					<label class="report-detail-label" for="reportDetail">
+						<span th:text="#{detail.report.detailLabel}">상세 내용</span>
+						<!-- 기타를 고르면 DB 제약(CK_REPORT_OTHER_DETAIL)이 상세를 요구한다 -->
+						<span class="report-required" id="reportRequired" hidden
+						      th:text="#{detail.report.detailRequired}">기타는 상세 내용이 필요합니다</span>
+					</label>
+					<textarea id="reportDetail" class="comment-write-body" rows="4" maxlength="2000"
+					          th:placeholder="#{detail.report.placeholder}" placeholder="어떤 점이 문제인지 적어 주세요."></textarea>
+					<p class="picker-status" id="reportStatus" aria-live="polite" hidden></p>
+				</div>
+				<div class="comment-write-foot">
+					<span class="comment-write-count" id="reportCount" aria-live="polite">0 / 2000</span>
+					<button type="button" class="comment-write-submit" id="reportSubmit"
+					        th:text="#{detail.report.submit}">신고하기</button>
+				</div>
+			</div>
+		</div>
+
+		<!--
+		  신고 접수 확인. 되돌릴 수 없는 동작이라 한 번 더 묻는다.
+		  picker-modal이 아닌 것은 initModalDismiss가 .picker-close를 요구하기 때문이고,
+		  ESC로 이것만 닫혀야 신고 모달이 살아남기 때문이다.
+		-->
+		<div id="reportConfirmModal" class="confirm-modal" hidden>
+			<div class="confirm-dialog" role="alertdialog" aria-modal="true"
+			     aria-labelledby="reportConfirmTitle" aria-describedby="reportConfirmMessage">
+				<h5 class="confirm-title" id="reportConfirmTitle"
+				    th:text="#{detail.report.confirm.title}">신고 접수</h5>
+				<p class="confirm-message" id="reportConfirmMessage"
+				   th:text="#{detail.report.confirm.message}">신고를 접수하시겠습니까?</p>
+				<div class="confirm-actions">
+					<button type="button" class="confirm-cancel" id="reportConfirmCancel"
+					        th:text="#{detail.report.confirm.cancel}">취소</button>
+					<button type="button" class="confirm-ok" id="reportConfirmOk"
+					        th:text="#{detail.report.confirm.ok}">확인</button>
 				</div>
 			</div>
 		</div>

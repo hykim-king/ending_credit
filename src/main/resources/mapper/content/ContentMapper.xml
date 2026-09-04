@@ -70,10 +70,12 @@ Modification History
 					</if>
 				)
 			</if>
-			<!-- 개봉 연대 - "1990"이면 1990-01-01 이상 2000-01-01 미만 -->
+			<!-- 개봉 연대 - "1990"이면 1990-01-01 이상 2000-01-01 미만.
+			     TRUNC가 필요한 이유: TO_DATE('1990','YYYY')는 빠진 월·일을 SYSDATE에서 채워 와
+			     9월에 돌리면 1990-09-01이 된다. 그대로 두면 경계가 매달 움직인다 -->
 			<if test="searchMap.decade != null and searchMap.decade != ''">
-				AND release_year &gt;= TO_DATE(#{searchMap.decade}, 'YYYY')
-				AND release_year &lt; ADD_MONTHS(TO_DATE(#{searchMap.decade}, 'YYYY'), 120)
+				AND release_year &gt;= TRUNC(TO_DATE(#{searchMap.decade}, 'YYYY'), 'YYYY')
+				AND release_year &lt; ADD_MONTHS(TRUNC(TO_DATE(#{searchMap.decade}, 'YYYY'), 'YYYY'), 120)
 			</if>
 		</where>
 	</sql>
@@ -169,6 +171,17 @@ Modification History
 		<foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
 			#{contentId}
 		</foreach>
+	</select>
+
+	<!-- TMDB id를 우리 id로 옮기기 위한 대응표. 세 칸만 뽑으므로 전체를 읽어도 가볍다.
+	     release_year를 같이 싣는 이유는 인기순 경로가 WHERE를 못 걸어
+	     "개봉작만" 판정을 목록 만들 때 해야 하기 때문이다(contentWhere의 released와 같은 기준) -->
+	<select id="doSelectExternalIdMap" resultType="ContentVO">
+		SELECT content_id,
+		       external_id,
+		       TO_CHAR(release_year, 'YYYY-MM-DD') release_year
+		  FROM content
+		 WHERE external_id IS NOT NULL
 	</select>
 
 	<select id="doSelectOne" parameterType="ContentVO" resultType="ContentVO">

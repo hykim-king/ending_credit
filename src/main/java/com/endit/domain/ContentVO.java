@@ -4,6 +4,11 @@ import com.endit.cmn.DTO;
 
 public class ContentVO extends DTO {
 
+	// 개봉연도 표시 자릿수. releaseYear는 DATE를 'YYYY-MM-DD'로 뽑은 값이다
+	private static final int YEAR_LENGTH = 4;
+	// 개봉일 전체 자릿수(YYYY-MM-DD)
+	private static final int DATE_LENGTH = 10;
+
 	private int contentId;
 	private String externalId;
 	private String titleKo;
@@ -122,6 +127,41 @@ public class ContentVO extends DTO {
 
 	public void setCreatedDt(String createdDt) {
 		this.createdDt = createdDt;
+	}
+
+	/**
+	 * <pre>
+	 * Method Name : getReleaseYearLabel
+	 * Description : 화면에 찍을 개봉연도. 매퍼가 'YYYY-MM-DD'로 뽑으므로 앞 4자만 자른다(POL-031).
+	 *               값이 없거나 4자에 못 미치면 null - 뷰가 그대로 th:if로 쓴다.
+	 * </pre>
+	 * @return String (연도 4자리 또는 null)
+	 */
+	public String getReleaseYearLabel() {
+
+		if (releaseYear == null || releaseYear.length() < YEAR_LENGTH) {
+			return null;
+		}
+
+		return releaseYear.substring(0, YEAR_LENGTH);
+	}
+
+	/**
+	 * <pre>
+	 * Method Name : getReleaseDateLabel
+	 * Description : 화면에 찍을 개봉일 전체. 하이픈을 점으로 바꾼다(2026-12-16 -> 2026.12.16).
+	 *               C-01 상세 헤더만 쓴다 - 카드는 연도만 쓰므로 getReleaseYearLabel 쪽이다(POL-031).
+	 *               값이 없거나 10자에 못 미치면 null - 뷰가 그대로 th:if로 쓴다.
+	 * </pre>
+	 * @return String (yyyy.MM.dd 또는 null)
+	 */
+	public String getReleaseDateLabel() {
+
+		if (releaseYear == null || releaseYear.length() < DATE_LENGTH) {
+			return null;
+		}
+
+		return releaseYear.substring(0, DATE_LENGTH).replace('-', '.');
 	}
 
 	@Override
