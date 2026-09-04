@@ -32,7 +32,9 @@ public class ContentRankScheduler {
 		}
 	}
 
-	// 기본값 "-"는 스프링이 정의한 비활성 값이라 스케줄이 등록되지 않는다. 켜려면 endit.rank.cron을 준다
+	// 기본값 "-"는 스프링이 정의한 비활성 값이라 스케줄이 등록되지 않는다.
+	// 꺼 둔 것이 설계다 - 학습용이라 상시 구동하지 않으므로 구현만 해 두고 기본은 off다.
+	// 켤 일이 생기면 application.yaml에 endit.rank.cron을 주면 된다(코드 수정 없이)
 	@Scheduled(cron = "${endit.rank.cron:" + Scheduled.CRON_DISABLED + "}", zone = "Asia/Seoul")
 	public void syncDaily() {
 		contentService.syncRank();

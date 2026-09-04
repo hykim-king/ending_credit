@@ -26,10 +26,11 @@
             <input type="text" id="nameKo" name="nameKo" maxlength="100"
                    th:value="${person.nameKo}" placeholder="예) 크리스토퍼 놀란">
 
+            <!-- 필수인 이유는 PERSON.NAME_ORG가 NOT NULL이어서다 - 정의서 POL-034는 선택으로 적혀 있어 어긋난다 -->
             <label for="nameOrg">원문명 *</label>
             <input type="text" id="nameOrg" name="nameOrg" maxlength="200" required
                    th:value="${person.nameOrg}" placeholder="예) Christopher Nolan">
-            <p class="form-hint">PERSON.NAME_ORG가 NOT NULL이라 필수입니다(정의서 POL-034는 선택으로 적혀 있습니다).</p>
+            <p class="form-hint">비워 둘 수 없습니다. TMDB에 적힌 표기를 그대로 넣으면 됩니다.</p>
 
             <label for="externalId">외부 ID *</label>
             <input type="text" id="externalId" name="externalId" maxlength="50" required
@@ -41,9 +42,10 @@
 
             <label for="profileImageUrl">프로필 이미지</label>
             <input type="text" id="profileImageUrl" name="profileImageUrl" maxlength="500"
-                   th:value="${person.profileImageUrl}" placeholder="TMDB 이미지 경로 또는 전체 URL">
+                   th:value="${person.profileImageUrl}" placeholder="이미지 주소 또는 TMDB 경로">
             <p class="form-hint">
-                전체 URL을 넣어도 저장할 때 원본 경로만 남깁니다. 비워 두면 기존 이미지를 유지합니다.
+                TMDB 전체 URL, <code>/abc123.jpg</code> 같은 TMDB 경로, 다른 사이트의 이미지 주소 모두 됩니다.
+                TMDB 전체 URL만 저장할 때 경로로 줄입니다. 비워 두면 기존 이미지를 유지합니다.
             </p>
 
             <img class="profile-preview" id="profilePreview" alt="프로필 미리보기"

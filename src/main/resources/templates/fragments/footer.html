@@ -48,19 +48,22 @@
             color: #e50914; 
         }
 
-        /* 왼쪽, 가운데, 오른쪽 메뉴를 균등하게 양끝과 간격으로 배치 */
+        /* 설계서 G-03 공통 푸터: 글자는 왼쪽 정렬이되(칸 안에서), 세 칸 묶음은 가운데에 둔다.
+           왼쪽 끝에 붙이면 넓은 화면에서 오른쪽이 통째로 비어 푸터가 한쪽으로 쏠린다.
+           간격을 넉넉히 벌려 가운데 칸(서비스)이 화면 중앙 가까이 오게 한다. */
         .site-footer .footer-content {
             display: flex;
-            justify-content: space-between; /* 좌우로 균등 분할 배치 */
+            justify-content: center;
             align-items: flex-start;
             text-align: left;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 26px 130px;
+            padding: 0 0 4px;
         }
-        
+
         .site-footer .footer-col {
-            flex: 1; /* 각 컬럼이 동일한 공간을 나눠 가짐 */
-            min-width: 180px;
+            flex: 0 1 auto;
+            min-width: 150px;
         }
         
         .site-footer .footer-logo {
@@ -115,14 +118,101 @@
             color: #cccccc;
             font-size: 13px;
         }
+
+        /* 링크처럼 보이지만 모달을 여는 버튼 - a 로 두면 갈 곳 없는 href 가 남는다 */
+        .site-footer .footer-linklike {
+            padding: 0;
+            border: 0;
+            background: none;
+            font: inherit;
+            font-size: 13px;
+            color: #cccccc;
+            cursor: pointer;
+        }
+
+        .site-footer .footer-linklike:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+
+        /* 데이터 출처 모달
+           부트스트랩이 없는 화면(H-01 등)에도 이 조각이 붙으므로 의존 없이 직접 만든다. */
+        .tmdb-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 1080;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(0, 0, 0, .55);
+        }
+
+        .tmdb-modal[hidden] {
+            display: none; /* display:flex 를 줬으므로 hidden 을 명시적으로 눌러 준다 */
+        }
+
+        .tmdb-modal .tmdb-dialog {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+            padding: 22px 26px 26px;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #1c1b22;
+            text-align: left;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, .35);
+        }
+
+        .tmdb-modal .tmdb-title {
+            margin: 0 0 20px;
+            font-size: 15px;
+            font-weight: 700;
+            text-align: center;
+            color: #1c1b22;
+        }
+
+        .tmdb-modal .tmdb-close {
+            position: absolute;
+            top: 14px;
+            left: 18px;
+            border: 0;
+            background: none;
+            color: #e50914;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .tmdb-modal .tmdb-logo {
+            display: block;
+            width: 76px;
+            height: auto;
+            margin-bottom: 16px;
+        }
+
+        .tmdb-modal p {
+            margin: 0 0 10px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #3b3946;
+        }
+
+        /* TMDB가 문구를 그대로 싣도록 요구하는 문장이라 눈에 띄게 둔다 */
+        .tmdb-modal .tmdb-required {
+            margin-bottom: 0;
+            font-weight: 700;
+            color: #1c1b22;
+        }
         
+        /* 설계서 G-03에서 © 표기는 푸터 오른쪽 아래에 붙는다 */
         .site-footer .footer-bottom {
             margin-top: 14px;
             padding-top: 10px;
             border-top: 1px solid #222222;
             color: #777777;
             font-size: 12px;
-            text-align: center;
+            text-align: right;
         }
 
         .site-footer .footer-bottom p {
@@ -152,6 +242,7 @@
             <div class="footer-col">
                 <h4>데이터·설정</h4>
                 <ul>
+                    <li><button type="button" class="footer-linklike" data-tmdb-open>데이터 출처</button></li>
                     <li><a href="#">DB 수정·추가 요청</a></li>
                     <li><span class="lang">한국어</span></li>
                 </ul>
@@ -162,5 +253,73 @@
             <p>&copy; END IT</p>
         </div>
     </div>
+
+    <!--데이터 출처 모달 (푸터 "데이터 출처"로 연다)
+        TMDB 이용약관이 요구하는 출처 표기다. 아래 굵은 문장은 TMDB가 제시한 원문이라
+        번역하거나 줄이지 않는다 - 대괄호 선택지 중 우리에게 맞는 website 를 넣은 것이 유일한 변경이다.
+        로고는 TMDB 공식 자산(themoviedb.org/about/logos-attribution)을 그대로 참조한다.-->
+    <div class="tmdb-modal" id="tmdbSourceModal" role="dialog" aria-modal="true"
+         aria-labelledby="tmdbSourceTitle" hidden>
+        <div class="tmdb-dialog">
+            <button type="button" class="tmdb-close" data-tmdb-close aria-label="닫기">×</button>
+
+            <h3 class="tmdb-title" id="tmdbSourceTitle">데이터 출처</h3>
+
+            <img class="tmdb-logo" alt="TMDB"
+                 src="https://www.themoviedb.org/assets/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg">
+
+            <p>영화·인물 메타데이터(제목·개봉일·줄거리·포스터·출연·제작진)는 TMDB에서 제공받습니다.</p>
+
+            <p class="tmdb-required">This website uses TMDB and the TMDB APIs but is not endorsed,
+                certified, or otherwise approved by TMDB.</p>
+        </div>
+    </div>
+
+    <script>
+        // 데이터 출처 모달 열고 닫기. 푸터가 붙는 모든 화면에서 도는 코드라 의존을 두지 않는다.
+        (function () {
+            var modal = document.getElementById('tmdbSourceModal');
+
+            if (!modal) {
+                return;
+            }
+
+            function closeModal() {
+                modal.hidden = true;
+            }
+
+            document.addEventListener('click', function (event) {
+                var target = event.target;
+
+                if (!(target instanceof Element)) {
+                    return;
+                }
+
+                if (target.closest('[data-tmdb-open]')) {
+                    event.preventDefault();
+                    modal.hidden = false;
+
+                    var closeButton = modal.querySelector('[data-tmdb-close]');
+
+                    if (closeButton) {
+                        closeButton.focus();
+                    }
+
+                    return;
+                }
+
+                // 배경(모달 자신)이나 닫기 버튼을 누르면 닫는다
+                if (target === modal || target.closest('[data-tmdb-close]')) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !modal.hidden) {
+                    closeModal();
+                }
+            });
+        })();
+    </script>
 </footer>
 </html>

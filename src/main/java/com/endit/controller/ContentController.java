@@ -51,7 +51,9 @@ public class ContentController {
 	 * <pre>
 	 * Method Name : syncRank
 	 * Description : TMDB 인기순위를 지금 즉시 다시 받아 순위 목록을 갱신한다.
-	 *               운영에서는 ContentRankScheduler가 기동 시와 하루 한 번 같은 일을 한다.
+	 *               ContentRankScheduler가 기동 시에도 같은 일을 한다. 하루 한 번 도는 쪽은
+	 *               구현만 해 두고 꺼 놓았으므로(학습용 프로젝트라 상시 구동하지 않는다),
+	 *               기동 이후 순위를 다시 받는 통로는 지금 이 엔드포인트뿐이다.
 	 *               DB에 쓰지는 않지만 외부 호출을 일으키고 서버 상태를 바꾸므로 POST로 둔다.
 	 *
 	 * </pre>

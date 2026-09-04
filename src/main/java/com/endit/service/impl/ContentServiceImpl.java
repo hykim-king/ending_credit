@@ -577,9 +577,22 @@ public class ContentServiceImpl implements ContentService {
 				}
 				// Translation.getName()은 언어 이름("English")이지 인물 이름이 아니다. 인물 이름은 data 안에 있는데,
 				// 라이브러리 people.Data가 biography만 매핑해서 AbstractJsonMapping의 newItems로 흘러든다.
-				// 라이브러리가 name을 정식 매핑하면 여기가 비므로 getData().getName()으로 바꾼다
+				// 라이브러리가 name을 정식 매핑하면 여기가 비므로 getData().getName()으로 바꾼다.
+				// 2026-09-02 실측: id 895706(今岡信治)에서 newItems={name=Shinji Imaoka, primary=false}
 				Object englishName = translation.getData().getNewItems().get(TRANSLATION_NAME_KEY);
-				return englishName != null ? englishName.toString().trim() : null;
+				if (englishName == null) {
+					// en은 en-US·en-GB 등 여러 벌이 온다. 첫 줄이 비었다고 포기하면 뒤에 있는 이름을 놓친다
+					continue;
+				}
+
+				// 사용자 입력이라 en 칸에 한자·가나 이름이 그대로 들어 있는 벌이 있다.
+				// 호출부는 이 값을 그대로 NAME_KO에 넣으므로, 여기서 거르지 않으면 스크립트 검사를 우회한다
+				String candidate = englishName.toString().trim();
+				if (!hasAllowedScript(candidate)) {
+					continue;
+				}
+
+				return candidate;
 			}
 
 			return null;

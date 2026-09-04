@@ -6,6 +6,7 @@ layout:decorate="~{layout/layout}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>콘텐츠 상세</title>
+<script th:src="@{/assets/js/content/detail.js}" defer></script>
 <style>
 	.backdrop-header {
 		position: relative;
@@ -38,6 +39,10 @@ layout:decorate="~{layout/layout}">
 		margin: 0 auto;
 		padding: 0 1rem;
 	}
+	/* 값이 없는 항목은 span째로 빠지므로 구분자를 CSS로 붙여 " · · "가 남지 않게 한다 */
+	.backdrop-meta span + span::before {
+		content: " · ";
+	}
 	.poster-box {
 		width: 220px;
 		flex: 0 0 220px;
@@ -60,6 +65,195 @@ layout:decorate="~{layout/layout}">
 		height: 100%;
 		width: 100%;
 	}
+
+	/* ── C-01 평가·기록 (ACT-C-001~005) ───────────────── */
+	.rating-box {
+		display: flex;
+		align-items: center;
+		gap: 16px;
+		flex-wrap: wrap;
+	}
+	.stars {
+		display: flex;
+	}
+	.star {
+		/* 접근성 원칙: 44px 터치 영역. 보이는 별은 그보다 작다 */
+		width: 44px;
+		height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		background: none;
+		font-size: 26px;
+		line-height: 1;
+		color: #D6D3DC;
+		cursor: pointer;
+	}
+	/* 채워진 별은 색과 함께 aria-pressed로도 상태를 알린다 */
+	.star.is-on {
+		color: #FFB800;
+	}
+	.rating-label {
+		margin: 0;
+		font-size: 14px;
+		color: #777;
+	}
+	.action-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 12px;
+	}
+	.action-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		/* 접근성 원칙: 44px 터치 영역 */
+		min-height: 44px;
+		padding: 0 18px;
+		border: 1px solid #E4E2E9;
+		border-radius: 12px;
+		background: #fff;
+		font-size: 14px;
+		color: #333;
+		text-decoration: none;
+		cursor: pointer;
+	}
+	.action-btn:hover {
+		border-color: #6550C8;
+		color: #6550C8;
+	}
+	/* 켜진 상태는 채움 아이콘이 함께 바뀌므로 색만으로 구분하지 않는다 */
+	.action-btn.is-on {
+		border-color: #6550C8;
+		background: #6550C8;
+		color: #fff;
+	}
+	.action-btn[disabled] {
+		opacity: 0.6;
+		cursor: default;
+	}
+	.action-notice {
+		margin: 8px 0 0;
+		font-size: 14px;
+		color: #6550C8;
+	}
+
+	/* ── 섹션 머리 (제목 + 건수 + 더보기) ─────────────── */
+	.section-head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 12px;
+	}
+	.section-count {
+		color: #6550C8;
+		font-weight: 700;
+	}
+	.section-more {
+		font-size: 14px;
+		color: #777;
+		text-decoration: none;
+		/* 접근성 원칙: 44px 터치 영역을 글자 주변 여백으로 만든다 */
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		padding: 0 4px;
+		background: none;
+		border: none;
+		cursor: pointer;
+	}
+	.section-more:hover {
+		color: #6550C8;
+	}
+
+	/* ── C-02 코멘트 미리보기 (ACT-C-008) ─────────────── */
+	.comment-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 12px;
+	}
+	.comment-card {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		min-height: 160px;
+		padding: 16px;
+		border: 1px solid #E4E2E9;
+		border-radius: 12px;
+		background: #FAFAFB;
+	}
+	.comment-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 8px;
+	}
+	.comment-nickname {
+		font-size: 14px;
+		font-weight: 600;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.comment-rating {
+		flex: none;
+		font-size: 13px;
+		color: #FFB800;
+		font-variant-numeric: tabular-nums;
+	}
+	.comment-body {
+		flex-grow: 1;
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.5;
+		/* 카드 높이를 맞추려고 4줄에서 자른다. 전문은 C-04에서 본다 */
+		display: -webkit-box;
+		-webkit-line-clamp: 4;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	/* 신고 승인된 코멘트는 삭제하지 않고 표시만 가린다(팀 결정) */
+	.comment-blind {
+		flex-grow: 1;
+		margin: 0;
+		font-size: 14px;
+		color: #999;
+	}
+	.comment-spoiler {
+		flex-grow: 1;
+		border: 1px dashed #E4E2E9;
+		border-radius: 8px;
+		background: #fff;
+		font-size: 13px;
+		color: #777;
+		cursor: pointer;
+	}
+	.comment-spoiler:hover {
+		color: #6550C8;
+		border-color: #6550C8;
+	}
+	.comment-foot {
+		font-size: 13px;
+		color: #777;
+	}
+	.comment-foot i {
+		margin-right: 4px;
+	}
+	@media (max-width: 900px) {
+		.comment-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+	@media (max-width: 560px) {
+		.comment-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+
 	.gallery-viewport {
 		position: relative;
 	}
@@ -168,7 +362,13 @@ layout:decorate="~{layout/layout}">
 	.gallery-nav:focus-visible,
 	.cast-nav:focus-visible,
 	.gallery-modal-close:focus-visible,
-	.gallery-item img:focus-visible {
+	.gallery-item img:focus-visible,
+	.star:focus-visible,
+	.action-btn:focus-visible,
+	.section-more:focus-visible,
+	.comment-spoiler:focus-visible,
+	.picker-close:focus-visible,
+	.picker-item:focus-visible {
 		outline: 3px solid #D8D1FF;
 		outline-offset: 2px;
 	}
@@ -301,30 +501,107 @@ layout:decorate="~{layout/layout}">
 			grid-template-columns: 1fr;
 		}
 	}
-	/* 브랜드 Primary. "감독" 문구와 함께 쓰므로 색만으로 역할을 구분하지 않는다 */
-	.role-badge {
-		background-color: #6550C8;
-		color: #fff;
-	}
-	.action-row {
+
+	/* ── 목록형 모달 (MOD-05 출연/제작 전체, MOD-13 컬렉션에 추가) ── */
+	.picker-modal {
 		display: flex;
-		flex-wrap: wrap;
-		gap: 12px;
-		margin-top: 12px;
-	}
-	.action-placeholder {
-		display: inline-flex;
+		position: fixed;
+		inset: 0;
+		background: rgba(0,0,0,0.5);
 		align-items: center;
+		justify-content: center;
+		z-index: 1050;
+	}
+	/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다 */
+	.picker-modal[hidden] {
+		display: none;
+	}
+	.picker-dialog {
+		display: flex;
+		flex-direction: column;
+		width: min(720px, 92vw);
+		max-height: 80vh;
+		border-radius: 16px;
+		background: #fff;
+		overflow: hidden;
+	}
+	.picker-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 16px 20px;
+		border-bottom: 1px solid #E4E2E9;
+	}
+	.picker-close {
+		/* 접근성 원칙: 44px 터치 영역 */
+		width: 44px;
+		height: 44px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: none;
+		font-size: 15px;
+		line-height: 1;
+		cursor: pointer;
+	}
+	.picker-body {
+		padding: 8px 20px 20px;
+		overflow-y: auto;
+	}
+	.picker-status {
+		margin: 12px 0;
+		font-size: 14px;
+		color: #777;
+	}
+	.picker-list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.picker-item {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
 		/* 접근성 원칙: 44px 터치 영역 */
 		min-height: 44px;
-		border: 1px dashed rgba(0,0,0,0.25);
-		border-radius: 12px;
-		padding: 0 22px;
-		font-size: 16px;
-		color: #555;
-		background: rgba(0,0,0,0.04);
-		cursor: default;
-		user-select: none;
+		padding: 8px 0;
+		border: none;
+		border-bottom: 1px solid #E4E2E9;
+		background: none;
+		font-size: 14px;
+		text-align: left;
+		cursor: pointer;
+	}
+	.picker-item:hover .picker-item-title {
+		color: #6550C8;
+	}
+	.picker-item-title {
+		flex-grow: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.picker-item-count {
+		flex: none;
+		font-size: 12px;
+		color: #777;
+	}
+	/* 담긴 컬렉션은 체크 아이콘과 "담김" 문구를 함께 둬 색만으로 구분하지 않는다 */
+	.picker-item-mark {
+		flex: none;
+		width: 24px;
+		color: #6550C8;
+		text-align: center;
+	}
+	/* 모달 안의 출연/제작 전체 목록은 캐러셀 페이징을 타지 않는다 */
+	.picker-body .cast-cell[hidden] {
+		display: flex;
 	}
 </style>
 </head>
@@ -343,8 +620,14 @@ layout:decorate="~{layout/layout}">
 					<div class="container">
 						<h1 class="fw-bold" th:text="${content.titleKo}">제목</h1>
 						<p class="mb-1" th:text="${content.titleOrg}">원제</p>
-						<p class="mb-0 small" th:text="${content.releaseYear} + ' · ' + ${content.country} + ' · ' + ${content.runtimeMin} + '분'">
-							2026 · 미국 · 120분
+						<!-- release_year는 'YYYY-MM-DD'로 내려오므로 연도만 자른다(fragments/cards.html과 같은 가드) -->
+						<p class="mb-0 small backdrop-meta">
+							<span th:if="${content.releaseYear != null and #strings.length(content.releaseYear) >= 4}"
+							      th:text="${#strings.substring(content.releaseYear, 0, 4)}">2026</span>
+							<span th:if="${content.country != null and !content.country.isEmpty()}"
+							      th:text="${content.country}">미국</span>
+							<span th:if="${content.runtimeMin > 0}"
+							      th:text="${content.runtimeMin} + '분'">120분</span>
 						</p>
 						<div th:if="${genres != null and !genres.isEmpty()}" class="mt-2">
 							<span class="badge text-bg-light me-1" th:each="genre : ${genres}" th:text="${genre.genreName}">장르</span>
@@ -361,35 +644,63 @@ layout:decorate="~{layout/layout}">
 					<div th:if="${content.posterUrl} == null" class="poster-placeholder">포스터 없음</div>
 				</div>
 				<div class="flex-grow-1" style="flex-basis: 0; min-width: 280px;">
-					<!-- 별점/보고싶어요: MEMBER_CONTENT 담당 팀 구현 예정 자리 -->
-					<div class="action-row mb-3">
-						<span class="action-placeholder">★ 별점 (추가예정)</span>
-						<span class="action-placeholder">🔖 보고싶어요 (추가예정)</span>
+					<!--
+					  평가·기록(ACT-C-001~005). 회원 번호는 서버가 내려 주고 쓰기는 3조 API가 받는다.
+					  MEMBER_CONTENT에 "내 별점·보고싶어요 단건 조회" 계약이 없어 진입 시에는 항상 빈 상태로 시작한다.
+					-->
+					<div class="rating-box mb-2" id="ratingBox"
+					     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId}">
+						<div class="stars" role="group" aria-label="별점 주기">
+							<button type="button" class="star" th:each="score : ${#numbers.sequence(1, 5)}"
+							        th:attr="data-score=${score},aria-label=${score} + '점'"
+							        aria-pressed="false"><i class="bi bi-star-fill"></i></button>
+						</div>
+						<p class="rating-label" id="ratingLabel">평가하기</p>
 					</div>
-					<h5>시놉시스</h5>
+					<div class="action-row">
+						<button type="button" class="action-btn" id="watchlistButton" aria-pressed="false">
+							<i class="bi bi-plus-lg"></i><span class="action-label">보고싶어요</span>
+						</button>
+						<a class="action-btn" th:href="@{/comment/doRetrieve(contentId=${content.contentId})}">
+							<i class="bi bi-pencil"></i><span class="action-label">코멘트</span>
+						</a>
+						<button type="button" class="action-btn" id="collectionButton">
+							<i class="bi bi-bookmark-plus"></i><span class="action-label">컬렉션에 추가</span>
+						</button>
+					</div>
+					<p class="action-notice" id="actionNotice" hidden></p>
+
+					<h5 class="mt-4">시놉시스</h5>
 					<p th:text="${content.overview}">시놉시스 내용</p>
 				</div>
 			</div>
 		</div>
 
 		<div class="container pb-4" th:if="${castAndCrew != null and !castAndCrew.isEmpty()}">
-			<h5 class="mb-3">출연진</h5>
+			<div class="section-head">
+				<h5 class="mb-0">출연/제작</h5>
+				<!-- ACT-C-006 - 12명을 넘을 때만 뜨고, 이미 받아 둔 목록을 MOD-05 모달에 그대로 뿌린다 -->
+				<button type="button" class="section-more" id="castMoreButton" hidden>전체보기</button>
+			</div>
 			<div class="cast-viewport">
 				<button type="button" class="cast-nav cast-prev" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
 				<!-- 감독 우선 정렬은 ContentCreditServiceImpl.retrieveAll이 이미 해 준다 -->
 				<div class="cast-grid">
 					<a class="cast-cell" th:each="credit : ${castAndCrew}"
-					   th:href="@{'/people/' + ${credit.personId}}">
+					   th:href="@{'/people/' + ${credit.personId}}"
+					   th:with="roleLabel=${roleLabels.get(credit.role)}">
 						<img th:if="${credit.profileImageUrl} != null" th:src="${credit.profileImageUrl}"
 						     class="cast-avatar" loading="lazy" alt="profile">
 						<div th:if="${credit.profileImageUrl} == null" class="cast-avatar-placeholder">사진 없음</div>
 						<div class="cast-text">
 							<div class="cast-name" th:text="${credit.nameKo}">이름</div>
+							<!-- POL-033 역할 4종. 표에 없는 값이면 라벨을 만들지 않는다 -->
 							<div class="cast-role">
-								<span th:classappend="${credit.role == 'DIRECTOR'} ? 'is-director' : ''"
-								      th:text="${credit.role == 'DIRECTOR'} ? '감독' : '배우'">배우</span><span
+								<span th:if="${roleLabel != null}"
+								      th:classappend="${credit.role == 'DIRECTOR'} ? 'is-director' : ''"
+								      th:text="${roleLabel}">배우</span><span
 								      th:if="${credit.character != null and !credit.character.isEmpty()}"
-								      th:text="' | ' + ${credit.character}"> | 배역</span>
+								      th:text="${roleLabel != null} ? ' | ' + ${credit.character} : ${credit.character}"> | 배역</span>
 							</div>
 						</div>
 					</a>
@@ -398,10 +709,32 @@ layout:decorate="~{layout/layout}">
 			</div>
 		</div>
 
-		<div class="container pb-4">
-			<!-- 코멘트: USER_COMMENT 담당 팀 구현 예정 자리 -->
-			<div class="action-row">
-				<span class="action-placeholder">💬 코멘트 (추가예정)</span>
+		<!-- C-02 코멘트 미리보기. 0건이면 섹션째 사라진다(정의서 "빈 섹션 숨김") -->
+		<div class="container pb-4" th:if="${comments != null and !comments.isEmpty()}">
+			<div class="section-head">
+				<h5 class="mb-0">코멘트 <span class="section-count" th:text="${commentTotalCnt}">0</span></h5>
+				<!-- ACT-C-008 - 전문과 정렬 4종은 C-04가 맡는다 -->
+				<a class="section-more" th:href="@{/comment/doRetrieve(contentId=${content.contentId})}">더보기</a>
+			</div>
+			<div class="comment-grid">
+				<article class="comment-card" th:each="comment : ${comments}">
+					<div class="comment-head">
+						<span class="comment-nickname" th:text="${comment.nickname}">닉네임</span>
+						<span class="comment-rating" th:if="${comment.ratingScore != null}">
+							<i class="bi bi-star-fill"></i><span th:text="${comment.ratingScore}">4</span>
+						</span>
+					</div>
+					<!-- 신고 승인 건은 지우지 않고 표시만 가린다(팀 결정) -->
+					<p class="comment-blind" th:if="${comment.blindReason != null}">신고가 접수되어 가려진 코멘트입니다.</p>
+					<button type="button" class="comment-spoiler"
+					        th:if="${comment.blindReason == null and comment.spoiler == 'Y'}">스포일러 — 눌러서 보기</button>
+					<p class="comment-body" th:if="${comment.blindReason == null}"
+					   th:hidden="${comment.spoiler == 'Y'}"
+					   th:text="${comment.commentDetail}">코멘트 내용</p>
+					<div class="comment-foot">
+						<i class="bi bi-hand-thumbs-up"></i><span th:text="${comment.likeCnt}">0</span>
+					</div>
+				</article>
 			</div>
 		</div>
 
@@ -422,12 +755,11 @@ layout:decorate="~{layout/layout}">
 			</div>
 		</div>
 
-		<div class="container pb-5">
-			<!-- 컬렉션에 추가: 컬렉션 담당 팀 구현 예정 자리 -->
-			<div class="action-row">
-				<span class="action-placeholder">＋ 컬렉션에 추가 (추가예정)</span>
-			</div>
-		</div>
+		<!--
+		  C-02 "이 작품이 담긴 컬렉션"이 들어올 자리.
+		  CollectionItemService가 collectionId 기준 조회만 열어 둬 contentId 역방향 계약이 없다.
+		  3조가 retrieveByContent를 열면 여기에 카드 목록만 붙이면 된다(docs/known-issues.md).
+		-->
 
 		<div id="galleryModal" class="gallery-modal">
 			<button type="button" class="gallery-modal-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
@@ -436,169 +768,34 @@ layout:decorate="~{layout/layout}">
 			<button type="button" class="gallery-nav gallery-modal-next" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
 			<div id="galleryModalCount" class="gallery-modal-count" aria-live="polite">0 / 0</div>
 		</div>
+
+		<!-- MOD-05 출연/제작 전체. 목록은 화면에 이미 있는 크레딧을 복제해 채운다 -->
+		<div id="castModal" class="picker-modal" hidden>
+			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="castModalTitle">
+				<div class="picker-head">
+					<h5 class="mb-0" id="castModalTitle">출연/제작</h5>
+					<button type="button" class="picker-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+				</div>
+				<div class="picker-body">
+					<div class="cast-grid" id="castModalGrid"></div>
+				</div>
+			</div>
+		</div>
+
+		<!-- MOD-13 컬렉션에 추가. 목록은 3조 API에서 받아 JS가 그린다 -->
+		<div id="collectionModal" class="picker-modal" hidden>
+			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="collectionModalTitle">
+				<div class="picker-head">
+					<h5 class="mb-0" id="collectionModalTitle">컬렉션에 추가</h5>
+					<button type="button" class="picker-close" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+				</div>
+				<div class="picker-body">
+					<p class="picker-status" id="collectionStatus" aria-live="polite">불러오는 중…</p>
+					<ul class="picker-list" id="collectionList"></ul>
+				</div>
+			</div>
+		</div>
 	</div>
-
-	<script>
-		// 출연진 4열 x 3행 = 12명 페이징. 갤러리 캐러셀과 변수가 섞이지 않게 별도 블록에 담는다
-		document.addEventListener('DOMContentLoaded', function () {
-			var PAGE_SIZE = 12;
-
-			var grid = document.querySelector('.cast-grid');
-			var prevBtn = document.querySelector('.cast-prev');
-			var nextBtn = document.querySelector('.cast-next');
-			if (!grid || !prevBtn || !nextBtn) {
-				return;
-			}
-
-			var cells = Array.prototype.slice.call(grid.querySelectorAll('.cast-cell'));
-			var pageCount = Math.ceil(cells.length / PAGE_SIZE);
-			var pageNo = 0;
-
-			// 한 페이지에 다 들어가면 화살표를 띄우지 않는다
-			if (pageCount <= 1) {
-				prevBtn.hidden = true;
-				nextBtn.hidden = true;
-				return;
-			}
-
-			function render() {
-				cells.forEach(function (cell, index) {
-					var page = Math.floor(index / PAGE_SIZE);
-					cell.hidden = page !== pageNo;
-				});
-				// 넘어갈 페이지가 없으면 흐리게 두지 않고 감춘다
-				prevBtn.hidden = pageNo === 0;
-				nextBtn.hidden = pageNo === pageCount - 1;
-			}
-
-			prevBtn.addEventListener('click', function () {
-				if (pageNo > 0) {
-					pageNo--;
-					render();
-				}
-			});
-			nextBtn.addEventListener('click', function () {
-				if (pageNo < pageCount - 1) {
-					pageNo++;
-					render();
-				}
-			});
-
-			render();
-		});
-	</script>
-
-	<script>
-		document.addEventListener('DOMContentLoaded', function () {
-			var track = document.querySelector('.gallery-track');
-			var prevBtn = document.querySelector('.gallery-prev');
-			var nextBtn = document.querySelector('.gallery-next');
-			if (!track || !prevBtn || !nextBtn) {
-				return;
-			}
-
-			var items = track.children;
-			var pageSize = 3;
-			// 한 화면에 다 들어가면 화살표를 띄우지 않는다
-			if (items.length <= pageSize) {
-				prevBtn.hidden = true;
-				nextBtn.hidden = true;
-				return;
-			}
-
-			var startIndex = 0;
-
-			function update() {
-				var gap = 12;
-				var itemWidth = items[0].getBoundingClientRect().width;
-				var offset = startIndex * (itemWidth + gap);
-				track.style.transform = 'translateX(-' + offset + 'px)';
-				// 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
-				prevBtn.hidden = startIndex === 0;
-				nextBtn.hidden = startIndex + pageSize >= items.length;
-			}
-
-			prevBtn.addEventListener('click', function () {
-				startIndex = Math.max(0, startIndex - pageSize);
-				update();
-			});
-			nextBtn.addEventListener('click', function () {
-				startIndex = Math.min(items.length - pageSize, startIndex + pageSize);
-				update();
-			});
-			window.addEventListener('resize', update);
-
-			update();
-		});
-	</script>
-
-	<script>
-		document.addEventListener('DOMContentLoaded', function () {
-			// 확대용 URL은 서버가 data-full에 완성해 준다. 화면은 이미지 크기를 알지 못한다
-			var images = Array.prototype.map.call(document.querySelectorAll('.gallery-item img'), function (img) {
-				return img.getAttribute('data-full');
-			});
-			var modal = document.getElementById('galleryModal');
-			var modalImg = document.getElementById('galleryModalImg');
-			var modalCount = document.getElementById('galleryModalCount');
-			var closeBtn = modal ? modal.querySelector('.gallery-modal-close') : null;
-			var prevBtn = modal ? modal.querySelector('.gallery-modal-prev') : null;
-			var nextBtn = modal ? modal.querySelector('.gallery-modal-next') : null;
-			if (!modal || !modalImg || images.length === 0) {
-				return;
-			}
-
-			var currentIndex = 0;
-
-			function show(index) {
-				currentIndex = index;
-				modalImg.src = images[currentIndex];
-				// 첫 장·마지막 장에서는 화살표를 감춘다
-				prevBtn.hidden = currentIndex === 0;
-				nextBtn.hidden = currentIndex === images.length - 1;
-				// 전부 서버 렌더링이므로 목록 길이가 곧 전체 건수다
-				modalCount.textContent = (currentIndex + 1) + ' / ' + images.length;
-			}
-
-			function open(index) {
-				show(index);
-				modal.classList.add('active');
-			}
-
-			function close() {
-				modal.classList.remove('active');
-				modalImg.src = '';
-			}
-
-			document.querySelectorAll('.gallery-item img').forEach(function (img, index) {
-				img.addEventListener('click', function () {
-					open(index);
-				});
-			});
-
-			prevBtn.addEventListener('click', function () {
-				if (currentIndex > 0) {
-					show(currentIndex - 1);
-				}
-			});
-			nextBtn.addEventListener('click', function () {
-				if (currentIndex < images.length - 1) {
-					show(currentIndex + 1);
-				}
-			});
-			closeBtn.addEventListener('click', close);
-			modal.addEventListener('click', function (event) {
-				if (event.target === modal) {
-					close();
-				}
-			});
-			document.addEventListener('keydown', function (event) {
-				if (event.key === 'Escape' && modal.classList.contains('active')) {
-					close();
-				}
-			});
-		});
-	</script>
 
 </div>
 </body>
