@@ -6,13 +6,40 @@
 </head>
 <body>
     <!--관리자 사이드 메뉴 (설계서 AD 화면 공통)
-        4조 담당은 신고(AD-09·AD-10)와 회원 관리(AD-07 — 팀 요청으로 추가).
-        영화·인물·회원·공지 등은 담당 조가 화면을 만들 때 이 조각에 자기 메뉴를 추가하면 된다.
-        ※ 커뮤니티(AD-11)는 팀 결정으로 제외 — USER_COMMENT에 STATUS 컬럼이 없다-->
-    <aside th:fragment="admin_side(active)" class="admin-side">
-        <div class="side-label">ADMIN</div>
-        <a th:href="@{/admin/users}" th:classappend="${active == 'users'} ? 'active'">회원</a>
-        <a th:href="@{/admin/report/doRetrieve}" th:classappend="${active == 'report'} ? 'active'">신고</a>
+        관리자 화면 전부가 이 조각 하나를 쓴다. 메뉴가 늘거나 경로가 바뀌면 여기만 고친다.
+        (2026-09-03: 화면마다 복붙돼 있던 사이드바 7벌을 이 조각으로 합쳤다)
+
+        스킨이 두 가지라 클래스를 화면에 따라 하나만 내보낸다.
+          .admin-sidebar/.admin-logo : 영화·인물·공지 (admin/movies.css, admin/people.css, notice/notice.css - 어두운 스킨)
+          .admin-side/.side-label    : 신고 (endit.css - 밝은 카드 스킨)
+        둘을 한꺼번에 달면 endit.css를 함께 로드하는 화면에서 두 스킨이 겹쳐
+        어두운 사이드바에 밝은 카드의 폭·테두리가 섞인다(2026-09-03 관리자 화면에 공용 헤더를 붙이며 확인).
+
+        대시보드(AD-01)는 화면이 아직 없어 누르면 404가 난다.
+        회원(AD-07)은 2026-09-03 4조가 구현해 꼬리표를 뗐다.
+        그래도 링크로 두는 것이 팀 결정이며, 이름 뒤 "-준비중"이 그 사실을 알린다.
+        화면이 생기면 꼬리표만 떼면 된다.
+        커뮤니티(AD-11)는 팀 결정으로 제외 - USER_COMMENT에 STATUS 컬럼이 없다-->
+    <aside th:fragment="admin_side(active)"
+           th:class="${active == 'report'} ? 'admin-side' : 'admin-sidebar'">
+        <!--로고 오른쪽에 세로선 하나 두고 메인(H-01)으로 나가는 통로를 붙인다.
+            관리자 화면은 공용 헤더를 얹지 않는다 - 헤더를 붙여 보니 본문 폭이 1200px로 묶여
+            표에 쓸 칸이 모자랐다(2026-09-03). 그래서 출구만 사이드바로 가져왔다.-->
+        <div class="admin-brandbar">
+            <a th:href="@{/admin/movies}"
+               th:class="${active == 'report'} ? 'side-label' : 'admin-logo'">END IT<br>ADMIN</a>
+
+            <a th:href="@{/}" class="admin-home">END IT<br>HOME</a>
+        </div>
+
+        <nav class="admin-nav">
+            <a th:href="@{/admin}">대시보드-준비중</a>
+            <a th:href="@{/admin/movies}"  th:classappend="${active == 'movies'}  ? 'active'">영화</a>
+            <a th:href="@{/admin/people}"  th:classappend="${active == 'people'}  ? 'active'">인물</a>
+            <a th:href="@{/admin/users}"   th:classappend="${active == 'users'}   ? 'active'">회원</a>
+            <a th:href="@{/admin/report/doRetrieve}" th:classappend="${active == 'report'} ? 'active'">신고</a>
+            <a th:href="@{/admin/notices}" th:classappend="${active == 'notices'} ? 'active'">공지</a>
+        </nav>
     </aside>
 </body>
 </html>

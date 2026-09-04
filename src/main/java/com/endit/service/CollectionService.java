@@ -20,6 +20,7 @@ import com.endit.domain.CollectionVO;
  * 2026. 8. 21. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    인증 회원·요청 DTO·전체 공개 목록·U-05·소유권 계약 추가
  * 2026. 9. 02. jinyoung    전체 목록에 현재 회원의 비공개 컬렉션 노출
+ * 2026. 9. 03. jinyoung    회원별 컬렉션 및 공개 범위 건수 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -60,6 +61,31 @@ public interface CollectionService {
 	 */
 	List<CollectionVO> retrieveByMember(
 			long memberId, DTO param, OptionalLong currentMemberId);
+
+	/**
+	 * 회원이 작성한 컬렉션 전체 건수 조회
+	 *
+	 * 본인 프로필에서 사용하는 집계로,
+	 * 공개 여부와 관계없이 공개·비공개 컬렉션을 모두 포함한다.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return 회원이 작성한 전체 컬렉션 건수
+	 */
+	int countByMember(int memberId);
+
+	/**
+	 * 조회자가 접근할 수 있는 대상 회원의 컬렉션 건수 조회
+	 *
+	 * 조회자와 대상 회원이 같으면 공개·비공개 컬렉션을 모두 포함한다.
+	 * 조회자가 다른 회원이거나 비회원이면 공개 컬렉션만 포함한다.
+	 *
+	 * @param targetMemberId 프로필 조회 대상 회원 번호
+	 * @param currentMemberId 현재 조회 회원 번호 또는 비회원인 경우 null
+	 * @return 조회자가 접근할 수 있는 대상 회원의 컬렉션 건수
+	 */
+	int countVisibleByMember(
+			int targetMemberId,
+			Long currentMemberId);
 
 	/**
 	 * 컬렉션 번호를 이용한 단건 조회

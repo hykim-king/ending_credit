@@ -10,18 +10,22 @@ layout:decorate="~{layout/layout}">
     /* 캐러셀 - detail.html 갤러리와 같은 골격(clip + track + translateX) */
     .shelf-viewport {
         position: relative;
+        /* 칸 수는 선반마다 다르다. 컨트롤러 값을 th:style로 덮어쓰며 여기 값은 폴백이다.
+           칸 너비(CSS)와 캐러셀 이동량(JS)이 이 한 값을 같이 읽는다 */
+        --per-view: 5;
+        --gap: 16px;
     }
     .shelf-clip {
         overflow: hidden;
     }
     .shelf-track {
         display: flex;
-        gap: 16px;
+        gap: var(--gap);
         transition: transform .3s ease;
     }
-    /* 한 번에 5칸. 칸 사이 간격 4개(16px)를 뺀 나머지를 5등분한다 */
+    /* 칸 사이 간격 (칸수-1)개를 뺀 나머지를 칸 수로 나눈다 */
     .shelf-item {
-        flex: 0 0 calc((100% - 64px) / 5);
+        flex: 0 0 calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
     }
     .shelf-nav {
         position: absolute;
@@ -64,6 +68,27 @@ layout:decorate="~{layout/layout}">
         display: block;
         color: inherit;
         text-decoration: none;
+    }
+    /* 순위 배지를 포스터에 겹치기 위한 기준 상자 */
+    .poster-wrap {
+        position: relative;
+    }
+    /* 인기 순 선반에만 붙는다. 두 자리 순위도 들어가도록 폭을 고정하지 않고 min-width로 연다 */
+    .rank-badge {
+        position: absolute;
+        top: 0;
+        left: 0;
+        min-width: 30px;
+        height: 30px;
+        padding: 0 7px;
+        background: rgba(0, 0, 0, .78);
+        color: #fff;
+        font-size: .95rem;
+        font-weight: 700;
+        line-height: 30px;
+        text-align: center;
+        /* 포스터의 8px 라운드와 만나는 바깥쪽 두 모서리만 둥글게 */
+        border-radius: 8px 0 8px 0;
     }
     .movie-card img, .poster-empty {
         width: 100%;
@@ -114,7 +139,7 @@ layout:decorate="~{layout/layout}">
 
             <h5 class="mb-3" th:text="${shelf.title}">선반 제목</h5>
 
-            <div class="shelf-viewport">
+            <div class="shelf-viewport" th:style="|--per-view:${shelf.perView}|">
                 <button type="button" class="shelf-nav shelf-prev" aria-label="이전">
                     <i class="bi bi-chevron-left"></i>
                 </button>
@@ -124,12 +149,17 @@ layout:decorate="~{layout/layout}">
                         <div class="shelf-item" th:each="movie : ${shelf.movies}">
                             <a class="movie-card" th:href="@{/movies/{id}(id=${movie.contentId})}">
 
-                                <img th:if="${!#strings.isEmpty(movie.posterUrl)}"
-                                     th:src="${movie.posterUrl}"
-                                     th:alt="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}"
-                                     loading="lazy"
-                                     onerror="this.onerror = null; this.classList.add('poster-error');">
-                                <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty">이미지 없음</div>
+                                <div class="poster-wrap">
+                                    <img th:if="${!#strings.isEmpty(movie.posterUrl)}"
+                                         th:src="${movie.posterUrl}"
+                                         th:alt="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}"
+                                         loading="lazy"
+                                         onerror="this.onerror = null; this.classList.add('poster-error');">
+                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty">이미지 없음</div>
+
+                                    <!-- no는 인기 순 경로에서만 순위 숫자다(ContentServiceImpl.retrievePopular) -->
+                                    <span th:if="${shelf.ranked}" class="rank-badge" th:text="${movie.no}">1</span>
+                                </div>
 
                                 <p class="card-title"
                                    th:text="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}">제목</p>
@@ -159,8 +189,14 @@ layout:decorate="~{layout/layout}">
             // 선반마다 독립 인스턴스로 돈다. detail.html의 갤러리 캐러셀은 querySelector 단일 전제라
             // 섹션이 여러 줄로 늘어나는 순간 첫 줄만 움직인다 - 그 함정을 여기서 피해 둔다
             document.addEventListener('DOMContentLoaded', function () {
-                var VISIBLE_COUNT = 5;
-                var GAP = 16;
+                var FALLBACK_VISIBLE_COUNT = 5;
+                var FALLBACK_GAP = 16;
+
+                // 칸 수와 간격은 CSS 변수가 유일한 출처다. 여기서 다시 적으면 선반마다 다른 값과 어긋난다
+                function readVar(el, name, fallback) {
+                    var value = parseInt(getComputedStyle(el).getPropertyValue(name), 10);
+                    return isNaN(value) ? fallback : value;
+                }
 
                 document.querySelectorAll('.shelf-viewport').forEach(function (shelf) {
                     var track = shelf.querySelector('.shelf-track');
@@ -170,9 +206,12 @@ layout:decorate="~{layout/layout}">
                         return;
                     }
 
+                    var visibleCount = readVar(shelf, '--per-view', FALLBACK_VISIBLE_COUNT);
+                    var gap = readVar(shelf, '--gap', FALLBACK_GAP);
+
                     var items = track.children;
                     // 한 화면에 다 들어가면 화살표를 띄우지 않는다
-                    if (items.length <= VISIBLE_COUNT) {
+                    if (items.length <= visibleCount) {
                         prevBtn.hidden = true;
                         nextBtn.hidden = true;
                         return;
@@ -182,18 +221,18 @@ layout:decorate="~{layout/layout}">
 
                     function update() {
                         var itemWidth = items[0].getBoundingClientRect().width;
-                        track.style.transform = 'translateX(-' + (startIndex * (itemWidth + GAP)) + 'px)';
+                        track.style.transform = 'translateX(-' + (startIndex * (itemWidth + gap)) + 'px)';
                         // 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
                         prevBtn.hidden = startIndex === 0;
-                        nextBtn.hidden = startIndex + VISIBLE_COUNT >= items.length;
+                        nextBtn.hidden = startIndex + visibleCount >= items.length;
                     }
 
                     prevBtn.addEventListener('click', function () {
-                        startIndex = Math.max(0, startIndex - VISIBLE_COUNT);
+                        startIndex = Math.max(0, startIndex - visibleCount);
                         update();
                     });
                     nextBtn.addEventListener('click', function () {
-                        startIndex = Math.min(items.length - VISIBLE_COUNT, startIndex + VISIBLE_COUNT);
+                        startIndex = Math.min(items.length - visibleCount, startIndex + visibleCount);
                         update();
                     });
                     // 창 크기가 바뀌면 칸 너비가 달라지므로 위치를 다시 계산한다

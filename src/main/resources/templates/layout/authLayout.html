@@ -11,6 +11,36 @@
     <link rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" th:href="@{/assets/css/endit.css}">
+
+    <!-- 인증 화면(로그인·회원가입·구글가입) 카드 공통 스타일.
+         Bootstrap 기본값을 덮어써야 하므로 CSS 링크들보다 뒤에 둔다. -->
+    <style>
+        /* 카드: 모서리 둥글게 + 안쪽 여백 크게 */
+        .card {
+            border-radius: 80px !important;
+            padding: 7rem 4rem !important;   /* 기존 p-4(1.5rem)보다 넉넉하게 */
+        }
+
+        /* 제목 조금 크게 */
+        .card h3 {
+            font-size: 1.6rem;
+            margin-bottom: 1.75rem;
+        }
+
+        /* 입력칸·버튼 높이/글자 시원하게 */
+        .card .form-control,
+        .card .btn {
+            padding-top: 0.7rem;
+            padding-bottom: 0.7rem;
+            font-size: 1.02rem;
+        }
+
+        /* 입력칸 사이 간격 살짝 넓힘 */
+        .card .mb-3 {
+            margin-bottom: 1.25rem !important;
+        }
+    </style>
+
     <title layout:title-pattern="$CONTENT_TITLE | ENDIT">ENDIT</title>
     <script th:src="@{/assets/js/cmn/common.js}" defer></script>
     <script th:src="@{/assets/js/cmn/common_fetch.js}" defer></script>
@@ -19,7 +49,8 @@
 
     <!-- 헤더·푸터 없이 가운데 정렬된 인증 박스만 -->
     <main class="d-flex justify-content-center align-items-center min-vh-100">
-        <div class="w-100" style="max-width: 420px;">
+        <!-- 카드 전체 너비 키움 (420 → 560) -->
+        <div class="w-100" style="max-width: 560px;">
             <div layout:fragment="content">
             </div>
         </div>

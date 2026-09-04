@@ -15,6 +15,7 @@ import com.endit.domain.MemberContentVO;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 03. jinyoung    회원별 평가·보고싶어요 건수 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -48,6 +49,26 @@ public interface MemberContentService {
 			int memberId,
 			DTO param,
 			String sort);
+
+	/**
+	 * 회원이 평가한 콘텐츠 전체 건수 조회
+	 *
+	 * 평가 점수(RATING_SCORE)가 등록된 콘텐츠만 집계한다.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return 회원이 평가한 콘텐츠 건수
+	 */
+	int countRatingByMember(int memberId);
+
+	/**
+	 * 회원이 보고싶어요로 등록한 콘텐츠 전체 건수 조회
+	 *
+	 * 보고싶어요 상태(WATCHLIST)가 Y인 콘텐츠만 집계한다.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return 회원의 보고싶어요 콘텐츠 건수
+	 */
+	int countWatchlistByMember(int memberId);
 
 	/**
 	 * 별점 등록 또는 변경

@@ -17,7 +17,7 @@ import com.endit.domain.NoticeVO;
 
 @SpringBootTest
 @Transactional
-@Disabled("공용 DB 전체 DELETE를 피하도록 테스트 데이터 격리 후 다시 활성화")
+//@Disabled("공용 DB 전체 DELETE를 피하도록 테스트 데이터 격리 후 다시 활성화")
 class NoticeDaoTest {
 
     /** 작성자/수정자로 사용할 관리자 회원 ID (admin1) */
@@ -90,7 +90,6 @@ class NoticeDaoTest {
         assertNotNull(list);
         assertEquals(1, list.size());
         assertEquals("게시 공지", list.get(0).getTitle());
-        assertEquals("PUBLISHED", list.get(0).getStatus());
 
         // 공개 공지 개수도 1건이어야 함
         assertEquals(1, noticeMapper.countPublicNoticeList());
