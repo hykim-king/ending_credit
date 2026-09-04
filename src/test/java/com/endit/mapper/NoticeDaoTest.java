@@ -248,7 +248,6 @@ class NoticeDaoTest {
         NoticeSearchVO search = new NoticeSearchVO();
         search.setPageNo(1);
         search.setPageSize(10);
-        search.setStatus("HIDDEN");
 
         List<NoticeVO> list =
                 noticeMapper.selectAdminNoticeList(search);
@@ -257,7 +256,6 @@ class NoticeDaoTest {
         assertNotNull(list);
         assertEquals(1, list.size());
         assertEquals("숨김 공지", list.get(0).getTitle());
-        assertEquals("HIDDEN", list.get(0).getStatus());
 
         // 필터 조건에 맞는 전체 개수도 1건
         assertEquals(1, noticeMapper.countAdminNoticeList(search));

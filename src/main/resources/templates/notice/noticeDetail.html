@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout/layout}">
 <head>
     <title>공지 상세 | END IT</title>
@@ -33,6 +34,12 @@
             게시된 공지사항을 찾을 수 없습니다.
         </div>
     </article>
+
+    <div sec:authorize="hasRole('ADMIN')" class="detail-admin-actions">
+        <a th:href="@{/admin/notices/{id}(id=${noticeId})}"
+           class="primary-button">공지 수정</a>
+        <button type="button" id="publicDeleteButton" class="danger-button">공지 삭제</button>
+    </div>
 </main>
 
 <script src="/assets/js/notice/notice.js"></script>

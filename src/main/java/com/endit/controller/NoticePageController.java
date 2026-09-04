@@ -11,7 +11,6 @@ import com.endit.domain.NoticeVO;
 import com.endit.service.NoticeService;
 
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 @Controller
 public class NoticePageController {
@@ -41,7 +40,7 @@ public class NoticePageController {
 
     /** AD-12 관리자 공지 관리 목록 */
     @GetMapping("/admin/notices")
-    public String adminNoticeList(HttpSession session) {
+    public String adminNoticeList() {
 
         return "admin/notice/adminNoticeList";
     }
@@ -49,7 +48,6 @@ public class NoticePageController {
     /** AD-13 관리자 공지 신규 등록 */
     @GetMapping("/admin/notices/new")
     public String adminNoticeCreate(
-            HttpSession session,
             Model model
     ) {
 
@@ -71,7 +69,6 @@ public class NoticePageController {
     @GetMapping("/admin/notices/{noticeId}")
     public String adminNoticeEdit(
             @PathVariable Long noticeId,
-            HttpSession session,
             Model model
     ) {
 
