@@ -399,9 +399,10 @@ layout:decorate="~{layout/layout}">
 		</div>
 
 		<div class="container pb-4">
-			<!-- 코멘트: USER_COMMENT 담당 팀 구현 예정 자리 -->
+			<!-- 코멘트(C-04): 4조 화면으로 진입한다. 대상은 이 영화로 고정된다 -->
 			<div class="action-row">
-				<span class="action-placeholder">💬 코멘트 (추가예정)</span>
+				<a class="action-placeholder text-decoration-none"
+				   th:href="@{/comment/doRetrieve(contentId=${content.contentId})}">💬 코멘트</a>
 			</div>
 		</div>
 
