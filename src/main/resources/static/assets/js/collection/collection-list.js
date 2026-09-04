@@ -3,12 +3,23 @@
  * 2026. 8. 31. jinyoung - 제목 검색 적용
  * 2026. 9. 01. jinyoung - 목록 카드·포스터 콜라주·검색 결과 UI 적용
  * 2026. 9. 02. jinyoung - 빈 설명과 내 컬렉션 표시 개선
+ * 2026. 9. 03. jinyoung - 5개 단위 페이지 이동 표시
  */
-const DEFAULT_PAGE_SIZE = "12";
-const PAGE_GROUP_SIZE = 10;
-const TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342";
+
+/** ===================================
+ *  상수 및 화면 상태
+ *  =================================== */
+const DEFAULT_PAGE_SIZE = "12"; // 기본 페이지 크기
+const PAGE_GROUP_SIZE = 5; // 한 구간의 최대 페이지 수
+const TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"; // TMDB 포스터 주소
+let collectionPaginationIndicatorState = null; // 이전 활성 페이지 위치
+
+/** ===================================
+ *  화면 초기화 및 이벤트 연결
+ *  =================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
+
     const searchForm = document.querySelector("#searchForm");
     const pageSize = document.querySelector("#pageSize");
     const query = new URLSearchParams(window.location.search);
@@ -34,10 +45,13 @@ document.addEventListener("DOMContentLoaded", () => {
     loadCollections(initialPage);
 });
 
-// 목록 조회와 상태 표시
+/** ===================================
+ *  목록 조회 및 로딩 상태
+ *  =================================== */
 
-/** REST API에서 컬렉션 목록을 가져와 카드와 페이지 버튼을 갱신한다. */
+/** 컬렉션 목록 조회 및 화면 갱신 */
 async function loadCollections(pageNo) {
+
     const errorMessage = document.querySelector("#errorMessage");
     const searchWord = document.querySelector("#searchWord").value.trim();
     const pageSize = document.querySelector("#pageSize").value;
@@ -61,23 +75,28 @@ async function loadCollections(pageNo) {
         updateResultHeading(searchWord, totalCount);
         updateLocation(pageNo, pageSize, searchWord);
         setSearchResultMode(searchWord);
+
     } catch (error) {
         showLoadFailure(errorMessage, error.message);
     }
 }
 
-/** 목록을 요청하는 동안 로딩 상태만 표시한다. */
+/** 목록 로딩 상태 표시 */
 function showLoading() {
+
     document.querySelector("#collectionLoading").classList.remove("d-none");
     document.querySelector("#collectionList").classList.add("d-none");
     document.querySelector("#collectionListEmpty").classList.add("d-none");
     document.querySelector("#paginationNavigation").classList.add("d-none");
 }
 
-// 컬렉션 카드 생성
+/** ===================================
+ *  컬렉션 카드 생성
+ *  =================================== */
 
-/** 조회 결과에 따라 카드 목록이나 빈 상태를 표시한다. */
+/** 컬렉션 목록 또는 빈 상태 렌더링 */
 function renderCollections(collections, searchWord, currentMemberId) {
+
     const collectionList = document.querySelector("#collectionList");
     const loading = document.querySelector("#collectionLoading");
     const empty = document.querySelector("#collectionListEmpty");
@@ -88,17 +107,20 @@ function renderCollections(collections, searchWord, currentMemberId) {
     if (collections.length === 0) {
         updateEmptyState(searchWord);
         empty.classList.remove("d-none");
+
         return;
     }
 
     collections.forEach((collection) => {
         collectionList.append(createCollectionCard(collection, currentMemberId));
     });
+
     collectionList.classList.remove("d-none");
 }
 
-/** 컬렉션 한 건을 링크 카드로 만든다. */
+/** 컬렉션 링크 카드 생성 */
 function createCollectionCard(collection, currentMemberId) {
+
     const article = document.createElement("article");
     article.className = "collection-list-card";
 
@@ -123,15 +145,10 @@ function createCollectionCard(collection, currentMemberId) {
         visual.append(createCollectionPosterCollage(previewPosters, visual));
     }
 
-    const isOwnedByCurrentMember = Number(currentMemberId) > 0
-        && Number(collection.memberId) === Number(currentMemberId);
+    const isOwnedByCurrentMember = Number(currentMemberId) > 0 && Number(collection.memberId) === Number(currentMemberId);
     const visualLabel = document.createElement("span");
-    visualLabel.className = isOwnedByCurrentMember
-        ? "collection-list-card-owner-badge"
-        : "collection-list-card-label";
-    visualLabel.textContent = isOwnedByCurrentMember
-        ? "내 컬렉션"
-        : "COLLECTION";
+    visualLabel.className = isOwnedByCurrentMember ? "collection-list-card-owner-badge" : "collection-list-card-label";
+    visualLabel.textContent = isOwnedByCurrentMember ? "내 컬렉션" : "COLLECTION";
 
     const symbol = document.createElement("span");
     symbol.className = "collection-list-card-symbol";
@@ -178,25 +195,27 @@ function createCollectionCard(collection, currentMemberId) {
     );
 
     body.append(title);
+
     if (descriptionText) {
         const description = document.createElement("p");
         description.className = "collection-list-card-description";
         description.textContent = descriptionText;
         body.append(description);
     }
+
     body.append(author, stats);
     link.append(visual, body);
     article.append(link);
 
     requestAnimationFrame(() => configureScrollableTitle(title, titleText));
+
     return article;
 }
 
-/** 긴 카드 제목이 hover 시 끝까지 보이도록 이동 거리를 계산한다. */
+/** 긴 컬렉션 제목의 이동 거리 계산 */
 function configureScrollableTitle(title, titleText) {
-    const overflowWidth = Math.ceil(
-        titleText.getBoundingClientRect().width - title.clientWidth
-    );
+
+    const overflowWidth = Math.ceil(titleText.getBoundingClientRect().width - title.clientWidth);
     const isOverflowing = overflowWidth > 0;
 
     title.classList.toggle("is-overflowing", isOverflowing);
@@ -205,6 +224,7 @@ function configureScrollableTitle(title, titleText) {
     if (!isOverflowing) {
         title.style.removeProperty("--collection-title-scroll-distance");
         title.style.removeProperty("--collection-title-scroll-duration");
+
         return;
     }
 
@@ -219,10 +239,12 @@ function configureScrollableTitle(title, titleText) {
     );
 }
 
-/** 대표 포스터 수에 맞는 카드 콜라주를 만든다. */
+/** 대표 포스터 콜라주 생성 */
 function createCollectionPosterCollage(posterUrls, visual) {
+
     const collage = document.createElement("div");
     const usesSevenSlotLayout = posterUrls.length === 5;
+    // 포스터가 5개일 때는 두 장을 반복 배치하여 일곱 칸 콜라주를 채운다.
     const posterIndexes = usesSevenSlotLayout
         ? [0, 1, 2, 3, 3, 4, 4]
         : posterUrls.map((_, index) => index);
@@ -255,8 +277,9 @@ function createCollectionPosterCollage(posterUrls, visual) {
     return collage;
 }
 
-/** 프로필 이미지가 없거나 깨지면 기본 아이콘을 반환한다. */
+/** 작성자 프로필 이미지 생성 */
 function createAuthorAvatar(profileImgUrl, nickname) {
+
     const fallback = document.createElement("span");
     fallback.className = "collection-list-card-avatar collection-list-card-avatar-fallback";
     fallback.setAttribute("aria-hidden", "true");
@@ -274,10 +297,11 @@ function createAuthorAvatar(profileImgUrl, nickname) {
     image.decoding = "async";
     image.addEventListener("error", () => image.replaceWith(fallback));
     image.setAttribute("title", `${nickname} 프로필`);
+
     return image;
 }
 
-/** TMDB 상대 포스터 경로를 화면에서 사용할 URL로 바꾼다. */
+/** TMDB 포스터 URL 정규화 */
 function resolveCollectionPosterUrl(posterUrl) {
     if (/^https?:\/\//i.test(posterUrl)) {
         return posterUrl;
@@ -286,8 +310,9 @@ function resolveCollectionPosterUrl(posterUrl) {
     return `${TMDB_POSTER_BASE_URL}${posterUrl}`;
 }
 
-/** 프로필 이미지 경로를 현재 사이트 기준의 절대 URL로 바꾼다. */
+/** 프로필 이미지 URL 정규화 */
 function resolveCollectionProfileUrl(profileImgUrl) {
+
     try {
         return new URL(profileImgUrl, `${window.location.origin}/`).href;
     } catch {
@@ -295,8 +320,9 @@ function resolveCollectionProfileUrl(profileImgUrl) {
     }
 }
 
-/** 아이콘과 건수를 묶은 카드 통계 항목을 만든다. */
+/** 컬렉션 통계 항목 생성 */
 function createStat(icon, label, count, active = false) {
+
     const stat = document.createElement("span");
     stat.classList.toggle("is-active", active);
     stat.innerHTML = `<i class="bi bi-${icon}" aria-hidden="true"></i>`;
@@ -304,10 +330,15 @@ function createStat(icon, label, count, active = false) {
     const text = document.createElement("span");
     text.textContent = `${label} ${Number(count || 0)}`;
     stat.append(text);
+
     return stat;
 }
 
-/** 검색어와 전체 건수에 맞춰 결과 제목을 바꾼다. */
+/** ===================================
+ *  검색 결과 및 빈 상태
+ *  =================================== */
+
+/** 검색 결과 제목 갱신 */
 function updateResultHeading(searchWord, totalCount) {
     document.querySelector("#collectionResultHeading").textContent = searchWord
         ? `“${searchWord}” 검색 결과`
@@ -315,10 +346,9 @@ function updateResultHeading(searchWord, totalCount) {
     document.querySelector("#resultCount").textContent = `${totalCount}개`;
 }
 
-// 빈 결과와 페이지 이동
-
-/** 검색 결과 화면에서는 검색 폼을 숨기고 결과에 집중한다. */
+/** 검색 결과 화면 전환 */
 function setSearchResultMode(searchWord) {
+
     const collectionListPage = document.querySelector("#collectionListPage");
     const collectionListHero = document.querySelector(".collection-list-hero");
     const isSearchResult = Boolean(searchWord);
@@ -327,8 +357,9 @@ function setSearchResultMode(searchWord) {
     collectionListHero.classList.toggle("d-none", isSearchResult);
 }
 
-/** 검색 여부에 맞는 빈 목록 안내 문구를 표시한다. */
+/** 빈 목록 안내 문구 갱신 */
 function updateEmptyState(searchWord) {
+
     const title = document.querySelector("#collectionEmptyTitle");
     const description = document.querySelector("#collectionEmptyDescription");
 
@@ -342,8 +373,13 @@ function updateEmptyState(searchWord) {
     description.textContent = "새로운 컬렉션이 만들어지면 이곳에 표시됩니다.";
 }
 
-/** 전체 건수와 현재 페이지로 페이지 버튼을 만든다. */
+/** ===================================
+ *  페이지네이션
+ *  =================================== */
+
+/** 페이지 이동 버튼 렌더링 */
 function renderPagination(page, currentPage) {
+
     const navigation = document.querySelector("#paginationNavigation");
     const pagination = document.querySelector("#pagination");
     const pageSize = Number(page.pageSize || 12);
@@ -357,26 +393,83 @@ function renderPagination(page, currentPage) {
         return;
     }
 
-    const startPage = Math.floor((currentPage - 1) / PAGE_GROUP_SIZE)
-        * PAGE_GROUP_SIZE + 1;
+    const startPage = Math.floor((currentPage - 1) / PAGE_GROUP_SIZE) * PAGE_GROUP_SIZE + 1;
     const endPage = Math.min(startPage + PAGE_GROUP_SIZE - 1, totalPages);
 
     pagination.append(createPageItem("이전", startPage - 1, startPage === 1, false));
 
-    for (let pageNo = startPage; pageNo <= endPage; pageNo += 1) {
-        pagination.append(createPageItem(
-            String(pageNo),
-            pageNo,
-            false,
-            pageNo === currentPage
-        ));
+    for (let pageNo = startPage;pageNo <= endPage;pageNo += 1) {
+        pagination.append(createPageItem(String(pageNo), pageNo, false, pageNo === currentPage));
     }
 
     pagination.append(createPageItem("다음", endPage + 1, endPage === totalPages, false));
+    decorateCollectionPagination(pagination);
 }
 
-/** 페이지 이동 버튼 한 개를 만든다. */
+/** 활성 페이지 이동 표시선 생성 */
+function decorateCollectionPagination(pagination) {
+
+    const pageItems = Array.from(pagination.querySelectorAll(".page-item"));
+    const previousButton = pageItems[0].querySelector(".page-link");
+    const nextButton = pageItems[pageItems.length - 1].querySelector(".page-link");
+    const numberItems = pageItems.slice(1, -1);
+    const previousIcon = document.createElement("i");
+    const nextIcon = document.createElement("i");
+
+    previousIcon.className = "bi bi-chevron-left collection-page-arrow-icon";
+    previousIcon.setAttribute("aria-hidden", "true");
+    nextIcon.className = "bi bi-chevron-right collection-page-arrow-icon";
+    nextIcon.setAttribute("aria-hidden", "true");
+    previousButton.replaceChildren(previousIcon);
+    previousButton.setAttribute("aria-label", "이전 페이지");
+    nextButton.replaceChildren(nextIcon);
+    nextButton.setAttribute("aria-label", "다음 페이지");
+    numberItems.forEach((item) => item.classList.add("collection-page-number"));
+
+    const activeIndex = numberItems.findIndex((item) => item.classList.contains("active"));
+
+    if (activeIndex < 0) {
+        return;
+    }
+
+    const track = document.createElement("li");
+    const indicator = document.createElement("span");
+    const firstRect = numberItems[0].getBoundingClientRect();
+    const lastRect = numberItems[numberItems.length - 1].getBoundingClientRect();
+    const activeRect = numberItems[activeIndex].getBoundingClientRect();
+    const paginationRect = pagination.getBoundingClientRect();
+    const startPage = Number(numberItems[0].querySelector(".page-link").textContent);
+    // 같은 페이지 구간에서는 직전 위치를 시작점으로 사용하여 표시선이 자연스럽게 이동한다.
+    const previousIndex = collectionPaginationIndicatorState?.startPage === startPage
+        ? Math.min(
+            collectionPaginationIndicatorState.activeIndex,
+            numberItems.length - 1
+        )
+        : activeIndex;
+    const previousRect = numberItems[previousIndex].getBoundingClientRect();
+
+    track.className = "collection-page-indicator-track";
+    track.setAttribute("aria-hidden", "true");
+    track.style.left = `${firstRect.left - paginationRect.left}px`;
+    track.style.width = `${lastRect.right - firstRect.left}px`;
+    indicator.className = "collection-page-indicator";
+    indicator.style.width = `${activeRect.width}px`;
+    indicator.style.transform = `translateX(${previousRect.left - firstRect.left}px)`;
+    track.append(indicator);
+    pagination.append(track);
+
+    // 시작 위치를 먼저 반영한 뒤 다음 프레임에서 활성 페이지로 이동시킨다.
+    void indicator.offsetWidth;
+    window.requestAnimationFrame(() => {
+        indicator.style.transform =
+            `translateX(${activeRect.left - firstRect.left}px)`;
+    });
+    collectionPaginationIndicatorState = { startPage, activeIndex };
+}
+
+/** 단일 페이지 버튼 생성 */
 function createPageItem(label, pageNo, disabled, active) {
+
     const item = document.createElement("li");
     item.className = `page-item${disabled ? " disabled" : ""}${active ? " active" : ""}`;
 
@@ -385,7 +478,6 @@ function createPageItem(label, pageNo, disabled, active) {
     button.type = "button";
     button.textContent = label;
     button.disabled = disabled;
-    button.toggleAttribute("aria-current", active);
     if (active) {
         button.setAttribute("aria-current", "page");
     }
@@ -398,11 +490,13 @@ function createPageItem(label, pageNo, disabled, active) {
     });
 
     item.append(button);
+
     return item;
 }
 
-/** 현재 검색·페이지 조건을 주소 표시줄에 반영한다. */
+/** 검색·페이지 조건의 URL 반영 */
 function updateLocation(pageNo, pageSize, searchWord) {
+
     const query = new URLSearchParams();
 
     if (searchWord) {
@@ -419,20 +513,28 @@ function updateLocation(pageNo, pageSize, searchWord) {
     history.replaceState(null, "", queryString ? `/collections?${queryString}` : "/collections");
 }
 
-/** 목록 조회 실패 상태와 오류 메시지를 표시한다. */
+/** ===================================
+ *  오류 상태
+ *  =================================== */
+
+/** 목록 조회 실패 상태 표시 */
 function showLoadFailure(element, message) {
+
     document.querySelector("#collectionLoading").classList.add("d-none");
     document.querySelector("#collectionList").classList.add("d-none");
     document.querySelector("#collectionListEmpty").classList.add("d-none");
     document.querySelector("#paginationNavigation").classList.add("d-none");
+
     element.textContent = message || "컬렉션 목록을 불러오지 못했습니다.";
     element.classList.remove("d-none");
     element.focus();
+
     setSearchResultMode("");
 }
 
-/** 이전 오류 메시지를 숨긴다. */
+/** 오류 상태 초기화 */
 function hideError(element) {
+
     element.textContent = "";
     element.classList.add("d-none");
 }

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<!-- TODO 확인: 로그인 메인 레이아웃 fragment 이름 (CollectionView 화면들이 쓰는 것과 동일하게).
-     authLayout(가운데 좁은 카드)이 아니라 G-02 헤더가 들어가는 메인 레이아웃이어야 함. -->
+<!-- TODO 확인: 로그인 메인 레이아웃 fragment 이름 (CollectionView 화면들이 쓰는 것과 동일하게). -->
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
@@ -11,13 +10,11 @@
 
 <div layout:fragment="content">
 
-    <!-- 서버가 넘긴 memberId. /me 전용 API라 JS에서 안 써도 되지만, 필요 시 참조용 -->
     <div class="mypage" th:data-member-id="${memberId}"
          style="max-width:900px; margin:0 auto; padding:24px 16px;">
 
         <!-- ===== 프로필 헤더 ===== -->
         <section class="d-flex align-items-center gap-3 mb-4">
-            <!-- 이미지 없으면 JS가 기본 아바타 유지 -->
             <img id="profileImg" alt="프로필 이미지"
                  src="/images/default-avatar.png"
                  style="width:72px; height:72px; border-radius:50%; object-fit:cover; background:#E4E2E9;">
@@ -25,11 +22,12 @@
                 <h2 id="nickname" class="mb-1" style="font-size:22px;">&nbsp;</h2>
                 <p id="introduction" class="text-muted mb-0" style="font-size:14px;"></p>
             </div>
-            <!-- 내 프로필: 설정 버튼 (U-02에서는 신고 버튼으로 대체) -->
-            <a href="/members/me/settings" class="btn btn-outline-secondary">설정</a>
+            <!-- 설정: 페이지 이동이 아니라 모달을 연다 (T-01) -->
+            <button type="button" class="btn btn-outline-secondary"
+                    data-bs-toggle="modal" data-bs-target="#settingsModal">설정</button>
         </section>
 
-        <!-- ===== 기록 카운트 4종 (평가·코멘트·컬렉션·보고싶어요) ===== -->
+        <!-- ===== 기록 카운트 4종 ===== -->
         <section class="d-flex text-center mb-5"
                  style="border:1px solid #E4E2E9; border-radius:12px; overflow:hidden;">
             <a th:href="@{/members/me/records(tab='ratings')}"
@@ -61,7 +59,6 @@
                 <span style="font-weight:600;">좋아한 인물 <span id="personLikeCount">0</span>명</span>
                 <span class="text-muted">›</span>
             </a>
-            <!-- JS가 카드 채움. 비면 안내 문구 -->
             <div id="personLikeList" class="d-flex gap-3"></div>
         </section>
 
@@ -77,15 +74,120 @@
 
     </div>
 
+
+    <!-- ============================================================
+         T-01 설정 단일 모달
+         중첩 모달 금지: 모달은 하나. 내부에서 .settings-panel 만 교체한다.
+         data-panel 값으로 어느 패널을 보여줄지 정한다.
+    ============================================================= -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px;">
+
+          <div class="modal-header">
+            <!-- 하위 패널일 때만 뒤로가기 표시 -->
+            <button type="button" id="settingsBackBtn" class="btn btn-link p-0 me-2 d-none"
+                    aria-label="뒤로">‹</button>
+            <h5 class="modal-title" id="settingsTitle">설정</h5>
+            <button type="button" class="btn-close ms-auto"
+                    data-bs-dismiss="modal" aria-label="닫기"></button>
+          </div>
+
+          <div class="modal-body">
+
+            <!-- ===== 패널: 메뉴 (기본 화면) ===== -->
+            <div class="settings-panel" data-panel="menu">
+              <div class="text-muted small mb-2">계정 설정</div>
+              <button type="button" class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent settings-menu"
+                      data-target="account">계정 정보 <span class="float-end text-muted">›</span></button>
+              <button type="button" class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent settings-menu"
+                      data-target="profile">프로필 수정 <span class="float-end text-muted">›</span></button>
+
+              <hr>
+              <div class="text-muted small mb-2">고객센터</div>
+              <button type="button" class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent settings-menu"
+                      data-target="support">문의하기 / FAQ <span class="float-end text-muted">›</span></button>
+              <!-- DB 요청: 외부 Google Form 새 탭 (URL 확정되면 href 교체) -->
+              <a href="#" target="_blank" rel="noopener noreferrer"
+                 class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent d-block text-decoration-none text-dark">
+                 DB 수정·추가 요청 <span class="float-end text-muted">↗</span></a>
+              <!-- 공지사항: T-06 독립 페이지로 이동 (모달 닫힘) -->
+              <a th:href="@{/notices}"
+                 class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent d-block text-decoration-none text-dark">
+                 공지사항 <span class="float-end text-muted">›</span></a>
+
+              <hr>
+              <button type="button" class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent settings-menu"
+                      data-target="logout">로그아웃 <span class="float-end text-muted">›</span></button>
+              <button type="button" class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent settings-menu text-danger"
+                      data-target="withdraw">회원 탈퇴 <span class="float-end text-muted">›</span></button>
+            </div>
+
+            <!-- ===== 패널: 계정 정보 (T-03) ===== -->
+            <div class="settings-panel d-none" data-panel="account">
+
+              <div class="mb-3">
+                <label class="form-label text-muted small mb-1">로그인 방식</label>
+                <div id="acc-loginType">-</div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label text-muted small mb-1">이메일</label>
+                <div id="acc-email">-</div>
+              </div>
+
+              <!-- 비밀번호 변경: Email 회원만 표시. 구글 전용(socialOnly)이면 통째로 숨김 -->
+              <div id="acc-passwordArea">
+                <hr>
+                <!-- 변경 결과/오류 메시지 -->
+                <div id="pw-msg" class="small mb-2"></div>
+
+                <div class="mb-3">
+                  <label class="form-label">현재 비밀번호 <span class="text-danger">*</span></label>
+                  <input type="password" id="pw-current" class="form-control" placeholder="현재 비밀번호">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">새 비밀번호 <span class="text-danger">*</span></label>
+                  <input type="password" id="pw-new" class="form-control" placeholder="8자 이상">
+                </div>
+                <button type="button" id="pw-submit" class="btn btn-primary w-100">비밀번호 변경</button>
+              </div>
+
+              <!-- 구글 전용 회원 안내 (비밀번호 영역 대신 표시) -->
+              <p id="acc-socialNote" class="text-muted small d-none mb-0">
+                Google 계정은 비밀번호 변경이 제공되지 않습니다.
+              </p>
+            </div>
+
+            <!-- ===== 패널: 나머지 (다음 단계에 채움) ===== -->
+            <div class="settings-panel d-none" data-panel="profile">
+              <p class="text-muted mb-0">프로필 수정 — 준비 중</p>
+            </div>
+            <div class="settings-panel d-none" data-panel="support">
+              <p class="text-muted mb-0">문의하기 / FAQ — 준비 중</p>
+            </div>
+            <div class="settings-panel d-none" data-panel="logout">
+              <p class="text-muted mb-0">로그아웃 — 준비 중</p>
+            </div>
+            <div class="settings-panel d-none" data-panel="withdraw">
+              <p class="text-muted mb-0">회원 탈퇴 — 준비 중</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+
     <script>
-        // 마이페이지는 CSR: 화면 뜨면 JS가 API 불러 채운다 (팀 관례)
+        // ===== 마이페이지 데이터 (CSR) =====
         document.addEventListener('DOMContentLoaded', () => {
             loadProfile();
             loadPersonLikes();
             loadCollectionLikes();
+            initSettingsModal();
         });
 
-        // 내 프로필 + 기록 카운트
         async function loadProfile() {
             try {
                 const res = await fetch('/api/members/me/account');
@@ -99,7 +201,7 @@
                 }
 
                 // stats 키: ratingCnt / commentCnt / collectionCnt / watchlistCnt
-                // (평가·컬렉션·보고싶어요는 서비스 연결 전이라 아직 0으로 옴)
+                // 회원별 활동 건수
                 const s = d.stats ?? {};
                 document.getElementById('ratingCnt').textContent     = s.ratingCnt ?? 0;
                 document.getElementById('commentCnt').textContent    = s.commentCnt ?? 0;
@@ -110,21 +212,17 @@
             }
         }
 
-        // 좋아한 인물 미리보기 3명 + 전체 건수
         async function loadPersonLikes() {
             const list = document.getElementById('personLikeList');
             try {
                 const res = await fetch('/api/members/me/likes/persons');
                 if (!res.ok) return;
                 const d = await res.json();
-
                 document.getElementById('personLikeCount').textContent = d.totalCount ?? 0;
-
                 if (!d.items || d.items.length === 0) {
                     list.innerHTML = '<p class="text-muted" style="font-size:14px;">좋아한 인물이 없어요.</p>';
                     return;
                 }
-                // 이름 + 이미지만 (역할은 DB에 없어 표시하지 않음)
                 list.innerHTML = d.items.map(p => `
                     <a href="/people/${p.personId}" class="text-center text-decoration-none text-dark">
                         <img src="${p.profileImgUrl || '/images/default-avatar.png'}" alt=""
@@ -137,16 +235,13 @@
             }
         }
 
-        // 좋아한 컬렉션 미리보기 3개 + 전체 건수 (썸네일은 DB 준비 후 추가)
         async function loadCollectionLikes() {
             const list = document.getElementById('collectionLikeList');
             try {
                 const res = await fetch('/api/members/me/likes/collections');
                 if (!res.ok) return;
                 const d = await res.json();
-
                 document.getElementById('collectionLikeCount').textContent = d.totalCount ?? 0;
-
                 if (!d.items || d.items.length === 0) {
                     list.innerHTML = '<p class="text-muted" style="font-size:14px;">좋아한 컬렉션이 없어요.</p>';
                     return;
@@ -163,11 +258,117 @@
             }
         }
 
-        // XSS 방지: 닉네임·제목 등 사용자 입력을 innerHTML에 넣기 전 이스케이프
         function escapeHtml(str) {
             const div = document.createElement('div');
             div.textContent = str;
             return div.innerHTML;
+        }
+
+
+        // ===== 설정 모달 =====
+        function initSettingsModal() {
+            const modalEl = document.getElementById('settingsModal');
+            const titleEl = document.getElementById('settingsTitle');
+            const backBtn = document.getElementById('settingsBackBtn');
+
+            const titles = {
+                menu: '설정', account: '계정 정보', profile: '프로필 수정',
+                support: '문의하기 / FAQ', logout: '로그아웃', withdraw: '회원 탈퇴'
+            };
+
+            // 내부 패널 전환 (중첩 모달 없이 패널만 교체)
+            function showPanel(name) {
+                modalEl.querySelectorAll('.settings-panel').forEach(p => {
+                    p.classList.toggle('d-none', p.dataset.panel !== name);
+                });
+                titleEl.textContent = titles[name] ?? '설정';
+                // 메뉴가 아니면 뒤로가기 버튼 표시
+                backBtn.classList.toggle('d-none', name === 'menu');
+
+                if (name === 'account') loadAccount();
+            }
+
+            // 메뉴 항목 클릭 → 해당 패널로
+            modalEl.querySelectorAll('.settings-menu').forEach(btn => {
+                btn.addEventListener('click', () => showPanel(btn.dataset.target));
+            });
+            // 뒤로가기 → 메뉴로
+            backBtn.addEventListener('click', () => showPanel('menu'));
+            // 모달 열 때마다 항상 메뉴부터
+            modalEl.addEventListener('show.bs.modal', () => showPanel('menu'));
+
+            // 비밀번호 변경
+            document.getElementById('pw-submit').addEventListener('click', changePassword);
+        }
+
+        // 계정 정보 로드 (로그인 방식 / 이메일 / 비번영역 표시 여부)
+        async function loadAccount() {
+            const msg = document.getElementById('pw-msg');
+            msg.textContent = '';
+            try {
+                const res = await fetch('/api/members/me/account');
+                if (!res.ok) return;
+                const d = await res.json();
+
+                // socialOnly=true → 구글 전용(비밀번호 없음)
+                const isGoogle = d.socialOnly === true;
+                document.getElementById('acc-loginType').textContent = isGoogle ? 'Google' : 'Email';
+                document.getElementById('acc-email').textContent = d.email ?? '-';
+
+                // 구글 전용이면 비밀번호 영역 숨기고 안내 표시
+                document.getElementById('acc-passwordArea').classList.toggle('d-none', isGoogle);
+                document.getElementById('acc-socialNote').classList.toggle('d-none', !isGoogle);
+            } catch (e) {
+                console.error('계정 정보 조회 실패', e);
+            }
+        }
+
+        // 비밀번호 변경 (Email 회원)
+        async function changePassword() {
+            const msg = document.getElementById('pw-msg');
+            const current = document.getElementById('pw-current').value;
+            const next = document.getElementById('pw-new').value;
+
+            msg.textContent = '';
+            msg.className = 'small mb-2';
+
+            if (!current.trim()) { showPwMsg('현재 비밀번호를 입력하세요', true); return; }
+            if (next.length < 8)  { showPwMsg('새 비밀번호는 8자 이상이어야 합니다', true); return; }
+
+            try {
+                const res = await fetch('/api/members/me/password', {
+                    method: 'PATCH',
+                    headers: withCsrf({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ currentPassword: current, newPassword: next })
+                });
+
+                if (res.ok) {
+                    showPwMsg('비밀번호가 변경되었습니다.', false);
+                    document.getElementById('pw-current').value = '';
+                    document.getElementById('pw-new').value = '';
+                } else {
+                    // 서버 오류 메시지(현재 비번 불일치 등) 표시
+                    let text = '변경에 실패했습니다.';
+                    try { const err = await res.json(); if (err && err.message) text = err.message; } catch (_) {}
+                    showPwMsg(text, true);
+                }
+            } catch (e) {
+                showPwMsg('변경 중 오류가 발생했습니다.', true);
+            }
+        }
+
+        function showPwMsg(text, isError) {
+            const msg = document.getElementById('pw-msg');
+            msg.textContent = text;
+            msg.className = 'small mb-2 ' + (isError ? 'text-danger' : 'text-success');
+        }
+
+        // CSRF 토큰을 헤더에 실어 주는 헬퍼 (메타태그에서 읽음)
+        function withCsrf(headers) {
+            const token  = document.querySelector('meta[name="_csrf"]')?.content;
+            const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+            if (token && header) headers[header] = token;
+            return headers;
         }
     </script>
 

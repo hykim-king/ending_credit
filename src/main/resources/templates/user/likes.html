@@ -2,131 +2,115 @@
 <!--
 Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
+2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-07 본문 UI와 본인 취소 동작 반영
+2026. 9. 03. jinyoung - 화면 제목·2열 탭·조회 카드·고정형 페이지네이션 UI 반영
 -->
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>회원 좋아요</title>
-<link rel="stylesheet" th:href="@{/assets/css/bootstrap.min.css}">
-</head>
-<!-- 회원 번호와 최초 유형은 View Controller가 전달하고 목록은 REST API로 조회한다. -->
-<body class="bg-light"
-      th:attr="data-member-id=${memberId},data-initial-type=${type}">
+    <title th:text="${member.nickname + '님의 좋아요 | ENDIT'}">회원 좋아요 | ENDIT</title>
 
-    <header class="border-bottom bg-white">
-        <div class="container py-3 d-flex justify-content-between align-items-center">
-            <a class="text-decoration-none text-dark fs-4 fw-bold" th:href="@{/}">
-                Ending Credit
-            </a>
-            <a class="btn btn-outline-dark"
-               th:href="@{/users/{id}(id=${memberId})}">
-                프로필로 돌아가기
-            </a>
-        </div>
+    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
+
+    <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
+    <script th:src="@{/assets/js/user/member-likes.js}" defer></script>
+</head>
+<body>
+<div layout:fragment="content"
+     id="memberLikesPage"
+     class="member-activity-page"
+     th:attr="data-member-id=${memberId},data-current-member-id=${currentMemberId},data-initial-type=${type}">
+
+    <!-- 좋아요 제목과 회원 기록 화면 이동 -->
+    <header class="member-activity-heading">
+        <h1 class="member-activity-page-title">
+            <span class="member-activity-page-title-label">FAVORITES</span>
+            <span class="member-activity-page-title-byline">by</span>
+            <span class="member-activity-page-title-name"
+                  th:text="${member.nickname}">회원 닉네임</span>
+        </h1>
+        <a class="member-heading-link"
+           th:href="@{/users/{id}/records(id=${memberId})}">
+            내 기록 보기
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </a>
     </header>
 
-    <main class="container py-4">
-        <section class="card border-0 shadow-sm mb-4">
-            <div class="card-body p-4">
-                <p class="text-secondary mb-1">프로필 좋아요</p>
-                <h1 class="h3 mb-0"
-                    th:text="|회원 #${memberId}의 좋아요|">
-                    회원의 좋아요
-                </h1>
-            </div>
-        </section>
+    <!-- 인물·컬렉션 좋아요 탭 -->
+    <nav class="member-tabs-wrap" aria-label="회원 좋아요 유형">
+        <div id="likeTabs" class="member-tabs member-like-tabs" role="tablist">
+            <a id="personLikeTab"
+               class="member-tab"
+               role="tab"
+               data-type="person"
+               th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
+                인물
+            </a>
+            <a id="collectionLikeTab"
+               class="member-tab"
+               role="tab"
+               data-type="collection"
+               th:href="@{/users/{id}/likes(id=${memberId},type='collection')}">
+                컬렉션
+            </a>
+        </div>
+    </nav>
 
-        <!-- U-07은 같은 화면에서 인물과 컬렉션 좋아요 유형을 전환한다. -->
-        <nav class="mb-4" aria-label="회원 좋아요 유형">
-            <div id="likeTabs" class="nav nav-tabs">
-                <a id="personLikeTab"
-                   class="nav-link"
-                   data-type="person"
-                   th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
-                    인물
-                </a>
-                <a id="collectionLikeTab"
-                   class="nav-link"
-                   data-type="collection"
-                   th:href="@{/users/{id}/likes(id=${memberId},type='collection')}">
-                    컬렉션
-                </a>
-            </div>
+    <!-- 선택한 좋아요 유형의 목록 -->
+    <section class="member-activity-content" aria-labelledby="likeTitle">
+        <div class="member-content-heading">
+            <h2 id="likeTitle" class="member-content-title">
+                <span id="likeTitleText">좋아요한 인물</span>
+                <span id="likeTotalCount"
+                      class="member-content-count"
+                      aria-live="polite">0</span>
+            </h2>
+        </div>
+
+        <!-- 조회 상태 -->
+        <div id="likeLoading"
+             class="member-skeleton-grid"
+             role="status"
+             aria-live="polite"
+             aria-label="좋아요 목록을 불러오는 중입니다">
+            <div class="member-card-skeleton member-like-skeleton"></div>
+            <div class="member-card-skeleton member-like-skeleton"></div>
+            <div class="member-card-skeleton member-like-skeleton"></div>
+            <div class="member-card-skeleton member-like-skeleton"></div>
+            <div class="member-card-skeleton member-like-skeleton"></div>
+            <div class="member-card-skeleton member-like-skeleton"></div>
+        </div>
+
+        <div id="likeError" class="member-state d-none" role="alert">
+            <i class="bi bi-exclamation-circle member-state-icon" aria-hidden="true"></i>
+            <strong>좋아요 목록을 불러오지 못했습니다.</strong>
+            <p id="likeErrorMessage" class="mb-3"></p>
+            <button id="likeRetryButton"
+                    class="btn btn-outline-primary btn-sm"
+                    type="button">다시 시도</button>
+        </div>
+
+        <div id="likeEmpty" class="member-state d-none" role="status">
+            <i class="bi bi-heart member-state-icon" aria-hidden="true"></i>
+            <strong>아직 좋아요한 항목이 없습니다.</strong>
+            <p id="likeEmptyMessage" class="mb-0"></p>
+        </div>
+
+        <div id="likeList"
+             class="d-none"
+             aria-live="polite"></div>
+
+        <!-- 인물·컬렉션 공통 페이지네이션 -->
+        <nav id="likePaginationNavigation"
+             class="member-record-pagination d-none"
+             aria-label="회원 좋아요 페이지">
+            <ul id="likePagination"
+                class="pagination justify-content-center mb-0"></ul>
         </nav>
-
-        <section class="card border-0 shadow-sm">
-            <div class="card-body p-4">
-                <div class="d-flex flex-column flex-sm-row justify-content-between
-                            align-items-sm-center gap-3 mb-4">
-                    <div>
-                        <h2 id="likeTitle"
-                            class="h4 mb-1"
-                            th:text="${type == 'collection'} ? '좋아한 컬렉션' : '좋아한 인물'">
-                            좋아한 인물
-                        </h2>
-                        <span id="likeTotalCount"
-                              class="text-secondary small"
-                              th:text="${type == 'collection'} ? '0개' : '0명'">
-                            0명
-                        </span>
-                    </div>
-
-                    <div>
-                        <label class="visually-hidden" for="likeSort">정렬</label>
-                        <select id="likeSort"
-                                class="form-select form-select-sm"
-                                disabled>
-                            <option value="latest">최신순</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="likeLoading"
-                     class="py-5 text-center text-secondary"
-                     role="status"
-                     aria-live="polite">
-                    좋아요 목록을 불러오는 중입니다.
-                </div>
-
-                <div id="likeError"
-                     class="alert alert-danger d-none"
-                     role="alert">
-                    <p id="likeErrorMessage" class="mb-3"></p>
-                    <button id="likeRetryButton"
-                            class="btn btn-outline-danger btn-sm"
-                            type="button">
-                        다시 시도
-                    </button>
-                </div>
-
-                <div id="likeEmpty"
-                     class="alert alert-secondary text-center d-none"
-                     role="status"
-                     th:text="${type == 'collection'}
-                             ? '아직 좋아요한 컬렉션이 없습니다.'
-                             : '아직 좋아요한 인물이 없습니다.'">
-                    아직 좋아요한 인물이 없습니다.
-                </div>
-
-                <!-- GET /api/users/{memberId}/likes의 유형별 응답으로 생성한다. -->
-                <div id="likeList"
-                     class="row row-cols-2 row-cols-md-3 row-cols-lg-4
-                            row-cols-xl-5 g-3 d-none"
-                     aria-live="polite">
-                </div>
-
-                <nav class="mt-4" aria-label="회원 좋아요 페이지">
-                    <ul id="likePagination"
-                        class="pagination pagination-sm justify-content-center mb-0">
-                    </ul>
-                </nav>
-            </div>
-        </section>
-    </main>
-
-    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
-    <script th:src="@{/assets/js/user/user-list-ui.js}"></script>
-    <script th:src="@{/assets/js/user/member-likes.js}"></script>
+    </section>
+</div>
 </body>
 </html>

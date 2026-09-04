@@ -6,6 +6,7 @@
 <!--
 Modification History
 2026. 8. 29. jinyoung - 회원별 좋아요 목록에 현재 조회자 기준 공개 범위 적용
+2026. 9. 03. jinyoung - 회원별 좋아요 목록에 컬렉션 카드 표시 정보 추가
 -->
 <mapper namespace="com.endit.mapper.CollectionLikeMapper">
 
@@ -16,13 +17,25 @@ Modification History
         <result property="createdDt"    column="CREATED_DT" />
     </resultMap>
 
-    <!-- COLLECTION_LIKE + COLLECTION JOIN 결과 <-> CollectionLikeItemVO 필드 매핑 -->
+    <!-- 좋아요 컬렉션 카드 조회 결과 <-> CollectionLikeItemVO 필드 매핑 -->
     <resultMap id="collectionLikeItemResultMap" type="com.endit.domain.CollectionLikeItemVO">
-        <id     property="collectionId" column="COLLECTION_ID" />
-        <result property="title"        column="TITLE" />
-        <result property="description"  column="DESCRIPTION" />
-        <result property="isPublic"     column="IS_PUBLIC" />
-        <result property="likedDt"      column="LIKED_DT" />
+        <id     property="collectionId"        column="COLLECTION_ID" />
+        <result property="memberId"            column="MEMBER_ID" />
+        <result property="title"               column="TITLE" />
+        <result property="description"         column="DESCRIPTION" />
+        <result property="isPublic"            column="IS_PUBLIC" />
+        <result property="likedDt"             column="LIKED_DT" />
+        <result property="nickname"            column="NICKNAME" />
+        <result property="profileImgUrl"       column="PROFILE_IMG_URL" />
+        <result property="itemCount"           column="ITEM_COUNT" />
+        <result property="likeCount"           column="LIKE_COUNT" />
+        <result property="likedByCurrentMember" column="LIKED_BY_CURRENT_MEMBER" />
+        <result property="commentCount"        column="COMMENT_COUNT" />
+        <result property="previewPosterUrl1"   column="PREVIEW_POSTER_URL1" />
+        <result property="previewPosterUrl2"   column="PREVIEW_POSTER_URL2" />
+        <result property="previewPosterUrl3"   column="PREVIEW_POSTER_URL3" />
+        <result property="previewPosterUrl4"   column="PREVIEW_POSTER_URL4" />
+        <result property="previewPosterUrl5"   column="PREVIEW_POSTER_URL5" />
     </resultMap>
 
     <!-- 좋아요 등록 (CREATED_DT는 DEFAULT SYSDATE라 별도로 넣지 않음) -->
@@ -65,38 +78,116 @@ Modification History
         OFFSET/FETCH는 Oracle 12c 이상 문법. pageNo는 1부터 시작.
     -->
     <select id="selectLikedCollectionListByMember" resultMap="collectionLikeItemResultMap">
-        SELECT c.COLLECTION_ID,
-               c.TITLE,
-               c.DESCRIPTION,
-               c.IS_PUBLIC,
-               TO_CHAR(cl.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS LIKED_DT
-          FROM COLLECTION_LIKE cl
-          JOIN COLLECTION c
-            ON cl.COLLECTION_ID = c.COLLECTION_ID
-         WHERE cl.MEMBER_ID = #{memberId}
+        SELECT C.COLLECTION_ID,
+               C.MEMBER_ID,
+               C.TITLE,
+               C.DESCRIPTION,
+               C.IS_PUBLIC,
+               TO_CHAR(CL.CREATED_DT, 'YYYY-MM-DD HH24:MI:SS') AS LIKED_DT,
+               M.NICKNAME,
+               M.PROFILE_IMG_URL,
+               NVL(CI.ITEM_COUNT, 0) AS ITEM_COUNT,
+               NVL(CLC.LIKE_COUNT, 0) AS LIKE_COUNT,
+               <choose>
+                   <when test="currentMemberId != null">
+                       CASE
+                           WHEN EXISTS (
+                               SELECT 1
+                                 FROM COLLECTION_LIKE MY_CL
+                                WHERE MY_CL.COLLECTION_ID = C.COLLECTION_ID
+                                  AND MY_CL.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                           )
+                           THEN 1
+                           ELSE 0
+                       END
+                   </when>
+                   <otherwise>0</otherwise>
+               </choose> AS LIKED_BY_CURRENT_MEMBER,
+               NVL(UC.COMMENT_COUNT, 0) AS COMMENT_COUNT,
+               CP.PREVIEW_POSTER_URL1,
+               CP.PREVIEW_POSTER_URL2,
+               CP.PREVIEW_POSTER_URL3,
+               CP.PREVIEW_POSTER_URL4,
+               CP.PREVIEW_POSTER_URL5
+          FROM COLLECTION_LIKE CL
+          JOIN COLLECTION C
+            ON CL.COLLECTION_ID = C.COLLECTION_ID
+          JOIN MEMBER M
+            ON M.MEMBER_ID = C.MEMBER_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       COUNT(*) AS ITEM_COUNT
+                  FROM COLLECTION_ITEM
+                 GROUP BY COLLECTION_ID
+          ) CI
+            ON CI.COLLECTION_ID = C.COLLECTION_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       COUNT(*) AS LIKE_COUNT
+                  FROM COLLECTION_LIKE
+                 GROUP BY COLLECTION_ID
+          ) CLC
+            ON CLC.COLLECTION_ID = C.COLLECTION_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       COUNT(*) AS COMMENT_COUNT
+                  FROM USER_COMMENT
+                 WHERE COLLECTION_ID IS NOT NULL
+                 GROUP BY COLLECTION_ID
+          ) UC
+            ON UC.COLLECTION_ID = C.COLLECTION_ID
+          LEFT JOIN (
+                SELECT COLLECTION_ID,
+                       MAX(CASE WHEN POSTER_ORDER = 1 THEN POSTER_URL END)
+                           AS PREVIEW_POSTER_URL1,
+                       MAX(CASE WHEN POSTER_ORDER = 2 THEN POSTER_URL END)
+                           AS PREVIEW_POSTER_URL2,
+                       MAX(CASE WHEN POSTER_ORDER = 3 THEN POSTER_URL END)
+                           AS PREVIEW_POSTER_URL3,
+                       MAX(CASE WHEN POSTER_ORDER = 4 THEN POSTER_URL END)
+                           AS PREVIEW_POSTER_URL4,
+                       MAX(CASE WHEN POSTER_ORDER = 5 THEN POSTER_URL END)
+                           AS PREVIEW_POSTER_URL5
+                  FROM (
+                        SELECT CI.COLLECTION_ID,
+                               CONTENT.POSTER_URL,
+                               ROW_NUMBER() OVER (
+                                   PARTITION BY CI.COLLECTION_ID
+                                   ORDER BY CI.ADDED_DT DESC, CI.CONTENT_ID DESC
+                               ) AS POSTER_ORDER
+                          FROM COLLECTION_ITEM CI
+                          JOIN CONTENT
+                            ON CONTENT.CONTENT_ID = CI.CONTENT_ID
+                         WHERE CONTENT.POSTER_URL IS NOT NULL
+                  )
+                 WHERE POSTER_ORDER &lt;= 5
+                 GROUP BY COLLECTION_ID
+          ) CP
+            ON CP.COLLECTION_ID = C.COLLECTION_ID
+         WHERE CL.MEMBER_ID = #{memberId}
            AND (
-                c.IS_PUBLIC = 'Y'
-                OR c.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                C.IS_PUBLIC = 'Y'
+                OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
            )
-         ORDER BY cl.CREATED_DT DESC, c.COLLECTION_ID DESC
+         ORDER BY CL.CREATED_DT DESC, C.COLLECTION_ID DESC
         OFFSET (#{pageNo} - 1) * #{pageSize} ROWS
         FETCH NEXT #{pageSize} ROWS ONLY
     </select>
 
-    <!-- 특정 회원이 좋아요 누른 컬렉션 전체 건수 (페이징 total count용) -->
+    <!-- 특정 회원이 좋아요한 공개 가능 컬렉션 전체 건수 -->
     <select id="selectLikedCollectionCountByMember" resultType="int">
         SELECT COUNT(*)
-          FROM COLLECTION_LIKE cl
-          JOIN COLLECTION c
-            ON cl.COLLECTION_ID = c.COLLECTION_ID
-         WHERE cl.MEMBER_ID = #{memberId}
+          FROM COLLECTION_LIKE CL
+          JOIN COLLECTION C
+            ON CL.COLLECTION_ID = C.COLLECTION_ID
+         WHERE CL.MEMBER_ID = #{memberId}
            AND (
-                c.IS_PUBLIC = 'Y'
-                OR c.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
+                C.IS_PUBLIC = 'Y'
+                OR C.MEMBER_ID = #{currentMemberId,jdbcType=NUMERIC}
            )
     </select>
 
-    <!-- 특정 컬렉션에 좋아요 누른 회원 목록 (페이징 미적용: 화면에 회원목록 UI 없음, 카운트만 표시) -->
+    <!-- 특정 컬렉션에 좋아요한 회원 목록(화면 목록이 없어 페이징 미적용) -->
     <select id="selectCollectionLikeListByCollection" parameterType="int" resultMap="collectionLikeResultMap">
         SELECT MEMBER_ID,
                COLLECTION_ID,
@@ -118,7 +209,7 @@ Modification History
         SELECT COUNT(*) FROM COLLECTION_LIKE
     </select>
 
-    <!-- JUnit전용: 전체 삭제 -->
+    <!-- JUnit 전용: 전체 삭제 -->
     <delete id="deleteAll">
         DELETE FROM COLLECTION_LIKE
     </delete>

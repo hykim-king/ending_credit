@@ -11,6 +11,7 @@ package com.endit.domain;
  * ------------------------------------------------------------
  * 2026. 8. 12.	jinyoung    최초 생성
  * 2026. 8. 19. jinyoung    목록 조회용 인물 정보 추가
+ * 2026. 9. 03. jinyoung    목록 조회용 역할 및 최근 참여 작품 정보 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -19,13 +20,15 @@ package com.endit.domain;
  */
 public class PersonLikeVO {
 
-	private int memberId;       // 회원 번호
-	private int personId;       // 인물 번호
-	private String createdDt;   // 좋아요 등록 일시
-	private String externalId;  // 외부 인물 식별값
-	private String nameKo;      // 인물명 국문
-	private String nameOrg;     // 인물명 원문
-	private String profileImageUrl; // 프로필 이미지 URL
+	private int memberId;                 // 회원 번호
+	private int personId;                 // 인물 번호
+	private String createdDt;             // 좋아요 등록 일시
+	private String externalId;            // 외부 인물 식별값
+	private String nameKo;                // 인물명 국문
+	private String nameOrg;               // 인물명 원문
+	private String profileImageUrl;       // 프로필 이미지 URL
+	private String role;                  // 대표 표시 역할
+	private String latestContentTitle;    // 최근 참여 작품명
 
 	public PersonLikeVO() {
 		super();
@@ -94,10 +97,27 @@ public class PersonLikeVO {
 		this.profileImageUrl = profileImageUrl;
 	}
 
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+
+	public String getLatestContentTitle() {
+		return latestContentTitle;
+	}
+
+	public void setLatestContentTitle(String latestContentTitle) {
+		this.latestContentTitle = latestContentTitle;
+	}
+
 	@Override
 	public String toString() {
 		return "PersonLikeVO [memberId=" + memberId + ", personId=" + personId + ", createdDt=" + createdDt
 				+ ", externalId=" + externalId + ", nameKo=" + nameKo + ", nameOrg=" + nameOrg
-				+ ", profileImageUrl=" + profileImageUrl + "]";
+				+ ", profileImageUrl=" + profileImageUrl + ", role=" + role + ", latestContentTitle="
+				+ latestContentTitle + "]";
 	}
 }

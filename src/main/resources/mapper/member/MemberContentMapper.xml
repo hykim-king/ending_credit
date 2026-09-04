@@ -3,7 +3,16 @@
     PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
+<!--
+Modification History
+2026. 9. 03. jinyoung - 회원 기록 정렬 및 전체 회원 평균 별점 조회 설명 추가
+-->
+
 <mapper namespace="com.endit.mapper.MemberContentMapper">
+
+    <!-- ===================================
+            공통 검색 조건
+         =================================== -->
 
     <!-- searchDiv: 10(회원 번호), 20(콘텐츠 번호), 30(보고 싶어요 여부), 40(별점),
                     50(회원별 평가 목록), 60(회원별 보고 싶어요 목록) -->
@@ -35,6 +44,10 @@
             </if>
         </where>
     </sql>
+
+    <!-- ===================================
+            기본 등록·단건 조회·수정·삭제
+         =================================== -->
 
     <!-- 회원별 콘텐츠 평가 및 보고 싶어요 등록 -->
     <insert id="doSave" parameterType="MemberContentVO">
@@ -104,6 +117,13 @@
            AND CONTENT_ID = #{contentId}
     </delete>
 
+    <!-- ===================================
+            회원 기록 목록 조회
+         ===================================
+
+        평가와 보고싶어요 목록을 같은 쿼리로 조회한다.
+        searchMap.sort는 Service에서 허용값으로 정규화되며, RNUM으로 Oracle 페이징을 적용한다.
+    -->
     <select id="doRetrieve" parameterType="com.endit.cmn.DTO" resultType="MemberContentVO">
         SELECT MEMBER_ID,
                CONTENT_ID,
@@ -115,7 +135,8 @@
                TITLE_KO,
                TITLE_ORG,
                RELEASE_YEAR,
-               POSTER_URL
+               POSTER_URL,
+               AVERAGE_RATING
           FROM (
             SELECT MC.MEMBER_ID,
                    MC.CONTENT_ID,
@@ -128,11 +149,29 @@
                    C.TITLE_ORG,
                    TO_CHAR(C.RELEASE_YEAR, 'YYYY') AS RELEASE_YEAR,
                    C.POSTER_URL,
+                   MR.AVERAGE_RATING,
+                   <!--
+                       평가: latest, oldest, rating_desc, rating_asc
+                       보고싶어요: latest, oldest
+                       같은 정렬값은 회원 번호와 콘텐츠 번호로 순서를 고정한다.
+                   -->
                    ROW_NUMBER() OVER (
                        ORDER BY
                        <choose>
+                           <when test="searchDiv == '50' and searchMap.sort == 'oldest'">
+                               MC.RATED_DT ASC,
+                           </when>
+                           <when test="searchDiv == '50' and searchMap.sort == 'rating_desc'">
+                               MC.RATING_SCORE DESC, MC.RATED_DT DESC,
+                           </when>
+                           <when test="searchDiv == '50' and searchMap.sort == 'rating_asc'">
+                               MC.RATING_SCORE ASC, MC.RATED_DT DESC,
+                           </when>
                            <when test="searchDiv == '50'">
                                MC.RATED_DT DESC,
+                           </when>
+                           <when test="searchDiv == '60' and searchMap.sort == 'oldest'">
+                               MC.WATCHLIST_DT ASC,
                            </when>
                            <when test="searchDiv == '60'">
                                MC.WATCHLIST_DT DESC,
@@ -146,6 +185,15 @@
               FROM MEMBER_CONTENT MC
               JOIN CONTENT C
                 ON C.CONTENT_ID = MC.CONTENT_ID
+              <!-- 콘텐츠별 전체 회원 평가의 평균 별점 -->
+              LEFT JOIN (
+                    SELECT CONTENT_ID,
+                           ROUND(AVG(RATING_SCORE), 1) AS AVERAGE_RATING
+                      FROM MEMBER_CONTENT
+                     WHERE RATING_SCORE IS NOT NULL
+                     GROUP BY CONTENT_ID
+              ) MR
+                ON MR.CONTENT_ID = MC.CONTENT_ID
             <include refid="memberContentWhere"/>
         )
         <if test="pageNo > 0 and pageSize > 0">
@@ -154,6 +202,10 @@
         </if>
          ORDER BY RNUM
     </select>
+
+    <!-- ===================================
+            테스트와 공통 Mapper 지원 쿼리
+         =================================== -->
 
     <!-- 회원별 콘텐츠 전체 삭제 -->
     <delete id="deleteAll">
@@ -166,6 +218,7 @@
           FROM MEMBER_CONTENT
     </select>
 
+    <!-- 공통 검색 조건을 반영한 목록 건수 -->
     <select id="count" parameterType="com.endit.cmn.DTO" resultType="int">
         SELECT COUNT(*)
           FROM MEMBER_CONTENT MC

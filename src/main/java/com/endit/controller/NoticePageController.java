@@ -30,8 +30,12 @@ public class NoticePageController {
 
     /** T-06 사용자 공지 상세 */
     @GetMapping("/notices/{noticeId}")
-    public String noticeDetail(@PathVariable Long noticeId, Model model) {
+    public String noticeDetail(
+            @PathVariable Long noticeId,
+            Model model
+    ) {
         model.addAttribute("noticeId", noticeId);
+
         return "notice/noticeDetail";
     }
 
@@ -44,12 +48,18 @@ public class NoticePageController {
 
     /** AD-13 관리자 공지 신규 등록 */
     @GetMapping("/admin/notices/new")
-    public String adminNoticeCreate(HttpSession session, Model model) {
-
+    public String adminNoticeCreate(
+            HttpSession session,
+            Model model
+    ) {
 
         NoticeVO notice = new NoticeVO();
+
         notice.setImportant("N");
-        notice.setStatus("DRAFT");
+
+        // 게시 상태 선택 기능을 사용하지 않으므로
+        // 신규 공지는 항상 공개 상태로 생성
+        notice.setStatus("PUBLISHED");
 
         model.addAttribute("notice", notice);
         model.addAttribute("isEdit", false);
@@ -65,8 +75,9 @@ public class NoticePageController {
             Model model
     ) {
 
+        NoticeVO notice =
+                noticeService.getAdminNotice(noticeId);
 
-        NoticeVO notice = noticeService.getAdminNotice(noticeId);
         model.addAttribute("notice", notice);
         model.addAttribute("isEdit", true);
 
@@ -80,12 +91,20 @@ public class NoticePageController {
             HttpServletResponse response,
             Model model
     ) {
-        response.setStatus(exception.getStatusCode().value());
+
+        response.setStatus(
+                exception.getStatusCode().value()
+        );
+
         model.addAttribute(
                 "message",
-                exception.getReason() == null ? "요청을 처리할 수 없습니다." : exception.getReason()
+                exception.getReason() == null
+                        ? "요청을 처리할 수 없습니다."
+                        : exception.getReason()
         );
+
         model.addAttribute("errorTrace", "");
+
         return "error/business_error";
     }
 
@@ -96,9 +115,18 @@ public class NoticePageController {
             HttpServletResponse response,
             Model model
     ) {
-        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        model.addAttribute("message", "서비스 처리 중 오류가 발생했습니다.");
+
+        response.setStatus(
+                HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+        );
+
+        model.addAttribute(
+                "message",
+                "서비스 처리 중 오류가 발생했습니다."
+        );
+
         model.addAttribute("errorTrace", "");
+
         return "error/error";
     }
 }
