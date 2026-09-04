@@ -24,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 01. jinyoung    코멘트·컬렉션 기록 탭 렌더링 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -68,6 +69,30 @@ class MemberContentViewControllerTest {
 				.andExpect(content().string(
 						containsString(
 								"data-initial-tab=\"watchlist\"")));
+	}
+
+	@Test
+	@DisplayName("코멘트 기록 화면 반환")
+	void comments() throws Exception {
+		mockMvc.perform(get("/users/{memberId}/records", 10)
+					.param("tab", "comments"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("user/records"))
+				.andExpect(model().attribute("tab", "comments"))
+				.andExpect(content().string(
+						containsString("data-initial-tab=\"comments\"")));
+	}
+
+	@Test
+	@DisplayName("컬렉션 기록 화면 반환")
+	void collections() throws Exception {
+		mockMvc.perform(get("/users/{memberId}/records", 10)
+					.param("tab", "collections"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("user/records"))
+				.andExpect(model().attribute("tab", "collections"))
+				.andExpect(content().string(
+						containsString("data-initial-tab=\"collections\"")));
 	}
 
 	@Test

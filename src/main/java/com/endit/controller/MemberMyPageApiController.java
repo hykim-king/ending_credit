@@ -21,14 +21,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CollectionLikeItemVO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonLikeVO;
 import com.endit.security.LoginMemberHelper;
+import com.endit.service.CollectionService;
 import com.endit.service.CollectionLikeService;
+import com.endit.service.MemberContentService;
 import com.endit.service.MemberService;
 import com.endit.service.PersonLikeService;
+import com.endit.service.UserCommentService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -65,6 +69,9 @@ public class MemberMyPageApiController {
 	private final MemberService memberService;
 	private final PersonLikeService personLikeService;
 	private final CollectionLikeService collectionLikeService;
+	private final MemberContentService memberContentService;
+	private final UserCommentService userCommentService;
+	private final CollectionService collectionService;
 
 	/**
 	 * MemberService를 주입받아 Controller 생성
@@ -74,11 +81,17 @@ public class MemberMyPageApiController {
 	public MemberMyPageApiController(
 			MemberService memberService,
 			PersonLikeService personLikeService,
-			CollectionLikeService collectionLikeService) {
+			CollectionLikeService collectionLikeService,
+			MemberContentService memberContentService,
+			UserCommentService userCommentService,
+			CollectionService collectionService) {
 	 
 		this.memberService = memberService;
 		this.personLikeService = personLikeService;
 		this.collectionLikeService = collectionLikeService;
+		this.memberContentService = memberContentService;
+		this.userCommentService = userCommentService;
+		this.collectionService = collectionService;
 	}
 
 	// ===================== 내 계정 =====================
@@ -279,7 +292,8 @@ public class MemberMyPageApiController {
 		response.put("createdDt",     member.getCreatedDt());
 		response.put("updatedDt",     member.getUpdatedDt());
 		response.put("socialOnly",    member.getPassword() == null);
-		response.put("stats",         toEmptyStats());
+		response.put("stats",         toActivityStats(
+				member.getMemberId(), member.getMemberId()));
 
 		return response;
 	}
@@ -301,7 +315,12 @@ public class MemberMyPageApiController {
 		response.put("profileImgUrl", member.getProfileImgUrl());
 		response.put("introduction",  member.getIntroduction());
 		response.put("createdDt",     member.getCreatedDt());
-		response.put("stats",         toEmptyStats());
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+		Long currentMemberId = loginMember == null
+				? null
+				: loginMember.getMemberId();
+		response.put("stats",         toActivityStats(
+				member.getMemberId(), currentMemberId));
 
 		return response;
 	}
@@ -387,29 +406,30 @@ public class MemberMyPageApiController {
 	}	
 
 	/**
-	 * 프로필 화면에 표시할 활동 집계.
+	 * 프로필 화면에 표시할 회원별 활동 건수를 조회한다.
 	 *
-	 * 현재 각 도메인에 '회원별 집계'를 제공하는 Service 메서드가 없어 0으로 채운다.
-	 * (Mapper에 일부 건수 조회가 있으나 Controller가 다른 도메인의 Mapper를 직접
-	 *  주입하면 Controller → Service → Mapper 계층 규칙이 깨지므로 연결하지 않았다)
-	 * 각 도메인에 Service 메서드가 생기면 그때 주입받아 값을 채운다.
-	 *
-	 * @return 0으로 채워진 집계 정보
+	 * @param targetMemberId 조회 대상 회원 ID
+	 * @param currentMemberId 현재 로그인 회원 ID
+	 * @return 평가, 코멘트, 컬렉션, 보고싶어요 집계 정보
 	 */
-	private Map<String, Object> toEmptyStats() {
+	private Map<String, Object> toActivityStats(
+			Long targetMemberId,
+			Long currentMemberId) {
 
 		Map<String, Object> stats = new LinkedHashMap<>();
+		int memberId = Math.toIntExact(targetMemberId);
+		DTO commentParam = new DTO();
+		commentParam.setSearchDiv("10");
+		commentParam.setSearchWord(String.valueOf(memberId));
 
-		// TODO: 평가 도메인 집계 서비스 연결 필요 (회원별 평가 수)
-		stats.put("ratingCnt", 0);
-
-		// TODO: 코멘트 도메인 집계 서비스 연결 필요 (회원별 코멘트 수)
-		stats.put("commentCnt", 0);
-
-		// TODO: 컬렉션 도메인 집계 서비스 연결 필요 (회원별 컬렉션 수)
-		stats.put("collectionCnt", 0);
-
-		// TODO: 좋아요 도메인 집계 서비스 연결 필요 (회원별 좋아요 수)
+		stats.put("ratingCnt", memberContentService.countRatingByMember(memberId));
+		stats.put("commentCnt", userCommentService.totalCntBySearch(commentParam));
+		stats.put("collectionCnt", currentMemberId != null
+				&& currentMemberId.equals(targetMemberId)
+				? collectionService.countByMember(memberId)
+				: collectionService.countVisibleByMember(memberId, currentMemberId));
+		stats.put("watchlistCnt", memberContentService.countWatchlistByMember(memberId));
+		// 기존 응답 키는 다른 화면 호환을 위해 유지한다.
 		stats.put("likeCnt", 0);
 
 		return stats;

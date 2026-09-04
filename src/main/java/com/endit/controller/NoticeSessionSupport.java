@@ -1,6 +1,6 @@
 package com.endit.controller;
 
-import org.springframework.http.HttpStatus; 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.endit.domain.MemberVO;

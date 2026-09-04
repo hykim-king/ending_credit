@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 8. 28. jinyoung    컬렉션 좋아요 유형 검증 추가
+ * 2026. 9. 01. jinyoung    본인 좋아요 취소용 인증 회원 모델 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -39,6 +41,9 @@ class PersonLikeViewControllerTest {
 	@Autowired
 	private MockMvc mockMvc;
 
+	@Value("${endit.dev-auth.member-id}")
+	private long authenticatedMemberId;
+
 	@Test
 	@DisplayName("기본 인물 좋아요 화면 반환")
 	void personLikes() throws Exception {
@@ -48,6 +53,9 @@ class PersonLikeViewControllerTest {
 				.andExpect(view().name("user/likes"))
 				.andExpect(model().attribute("memberId", 10))
 				.andExpect(model().attribute("type", "person"))
+				.andExpect(model().attribute(
+						"currentMemberId",
+						authenticatedMemberId))
 				.andExpect(content()
 						.contentTypeCompatibleWith("text/html"))
 				.andExpect(content().string(

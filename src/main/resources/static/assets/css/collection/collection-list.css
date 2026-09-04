@@ -1,5 +1,9 @@
-/* 컬렉션 목록 */
+/**
+ * 컬렉션 목록 화면과 회원 기록에서 공유하는 컬렉션 카드 스타일.
+ * 회원 기록 전용 차이는 member-activity.css에서 범위를 한정해 덮어쓴다.
+ */
 
+/* 검색 영역과 새 컬렉션 버튼 */
 .collection-list-hero {
     margin-bottom: 36px;
     padding: 0;
@@ -80,6 +84,7 @@
     margin-bottom: 18px;
 }
 
+/* 컬렉션 카드 목록과 상호작용 */
 .collection-card-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -136,6 +141,7 @@
     display: none;
 }
 
+/* 최대 5개 대표 포스터 콜라주 */
 .collection-list-poster-collage {
     position: absolute;
     z-index: 1;
@@ -217,6 +223,7 @@
     object-fit: cover;
 }
 
+/* 카드 시각 영역의 유형·소유자·작품 수 배지 */
 .collection-list-card-label,
 .collection-list-card-owner-badge,
 .collection-list-card-visual-count {
@@ -262,6 +269,7 @@
     opacity: .9;
 }
 
+/* 제목, 선택적 설명, 작성자, 좋아요·코멘트 정보 */
 .collection-list-card-body {
     display: flex;
     flex: 1;
@@ -270,7 +278,7 @@
 }
 
 .collection-list-card-title {
-    margin: 0 0 6px;
+    margin: 0;
     overflow: hidden;
     font-size: 1rem;
     font-weight: 700;
@@ -300,7 +308,8 @@
 .collection-list-card-description {
     display: block;
     overflow: hidden;
-    margin-bottom: 12px;
+    margin-top: 6px;
+    margin-bottom: 0;
     min-height: 1.408rem;
     color: #777180;
     font-size: .88rem;
@@ -314,6 +323,7 @@
     align-items: center;
     gap: 12px;
     overflow: hidden;
+    margin-top: 12px;
     margin-bottom: 0;
     color: #5f5967;
     font-size: .82rem;
@@ -361,16 +371,100 @@
     color: #f04465;
 }
 
+/* 5개 단위 숫자 페이지네이션과 활성 페이지 이동 표시선 */
 .collection-list-pagination {
     margin-top: 32px;
 }
 
-.collection-list-pagination .page-link {
-    min-width: 40px;
-    min-height: 40px;
-    border-color: var(--endit-border);
+.collection-list-pagination .pagination {
+    position: relative;
+    align-items: center;
+    gap: 2px;
+    padding-bottom: 5px;
 }
 
+.collection-list-pagination .collection-page-number {
+    width: 36px;
+    flex: 0 0 36px;
+}
+
+.collection-list-pagination .page-link {
+    display: grid;
+    min-width: 36px;
+    height: 46px;
+    place-items: center;
+    margin: 0;
+    padding: 0;
+    color: #6f6877;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font-size: 1.04rem;
+    font-weight: 650;
+    line-height: 1;
+    box-shadow: none;
+}
+
+.collection-list-pagination .collection-page-number .page-link {
+    width: 36px;
+    min-width: 36px;
+    justify-content: center;
+    text-align: center;
+}
+
+.collection-list-pagination .page-link:hover,
+.collection-list-pagination .page-link:focus-visible {
+    color: #4e38b5;
+    background: transparent;
+    box-shadow: none;
+}
+
+.collection-list-pagination .page-item.active .page-link {
+    color: var(--endit-primary);
+    background: transparent;
+    font-weight: 800;
+}
+
+.collection-list-pagination .collection-page-indicator-track {
+    position: absolute;
+    bottom: 3px;
+    height: 3px;
+    padding: 0;
+    pointer-events: none;
+}
+
+.collection-list-pagination .collection-page-indicator {
+    display: block;
+    height: 3px;
+    background: var(--endit-primary);
+    border-radius: 999px;
+    transition: transform .28s cubic-bezier(.22, .8, .3, 1);
+    will-change: transform;
+}
+
+.collection-list-pagination .page-item.disabled .page-link {
+    color: #c0bac6;
+    background: transparent;
+}
+
+.collection-list-pagination .page-item:first-child .page-link,
+.collection-list-pagination .page-item:last-child .page-link {
+    min-width: 38px;
+    color: #655e6d;
+    font-size: 1.28rem;
+}
+
+.collection-list-pagination .page-item.disabled:first-child .page-link,
+.collection-list-pagination .page-item.disabled:last-child .page-link {
+    color: #cbc6cf;
+}
+
+.collection-list-pagination .collection-page-arrow-icon {
+    display: block;
+    line-height: 1;
+}
+
+/* 목록 로딩 상태와 결과 건수 */
 .collection-list-skeleton {
     min-height: 280px;
     background: linear-gradient(100deg, #eeeaf3 30%, #f8f6fa 50%, #eeeaf3 70%);
@@ -388,12 +482,14 @@
     font-size: .86rem;
 }
 
+/* 태블릿: 컬렉션 2열 */
 @media (min-width: 768px) and (max-width: 991.98px) {
     .collection-card-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
+/* 모바일: 검색 도구 축약과 컬렉션 1열 */
 @media (max-width: 767.98px) {
     .collection-list-hero {
         margin-bottom: 28px;
@@ -468,7 +564,7 @@
     }
 
     .collection-list-card-description {
-        margin-bottom: 12px;
+        margin-bottom: 0;
     }
 
     .collection-list-skeleton {
