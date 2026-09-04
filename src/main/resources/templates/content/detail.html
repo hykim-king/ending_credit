@@ -326,6 +326,25 @@ layout:decorate="~{layout/layout}">
 		cursor: default;
 		user-select: none;
 	}
+	/* 구현된 진입 링크 — 자리표시(점선·회색)와 구분되게 실선·브랜드색으로 둔다 */
+	.action-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		min-height: 44px;
+		border: 1px solid #6f42c1;
+		border-radius: 12px;
+		padding: 0 22px;
+		font-size: 16px;
+		color: #6f42c1;
+		background: #fff;
+		text-decoration: none;
+		transition: background .15s, color .15s;
+	}
+	.action-link:hover {
+		background: #6f42c1;
+		color: #fff;
+	}
 </style>
 </head>
 <body>
@@ -401,7 +420,7 @@ layout:decorate="~{layout/layout}">
 		<div class="container pb-4">
 			<!-- 코멘트(C-04): 4조 화면으로 진입한다. 대상은 이 영화로 고정된다 -->
 			<div class="action-row">
-				<a class="action-placeholder text-decoration-none"
+				<a class="action-link"
 				   th:href="@{/comment/doRetrieve(contentId=${content.contentId})}">💬 코멘트</a>
 			</div>
 		</div>
