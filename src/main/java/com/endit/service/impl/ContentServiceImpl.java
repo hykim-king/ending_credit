@@ -1,5 +1,6 @@
 package com.endit.service.impl;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -9,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +26,7 @@ import com.endit.domain.ContentCreditVO;
 import com.endit.domain.ContentGenreVO;
 import com.endit.domain.ContentImageVO;
 import com.endit.domain.ContentVO;
+import com.endit.domain.EnglishContentVO;
 import com.endit.domain.GenreVO;
 import com.endit.domain.PersonVO;
 import com.endit.mapper.ContentCreditMapper;
@@ -32,6 +37,7 @@ import com.endit.mapper.GenreMapper;
 import com.endit.mapper.PersonMapper;
 import com.endit.service.ContentImageService;
 import com.endit.service.ContentService;
+import com.endit.service.GenreService;
 
 import info.movito.themoviedbapi.TmdbApi;
 import info.movito.themoviedbapi.model.core.Genre;
@@ -45,11 +51,15 @@ import info.movito.themoviedbapi.model.movies.Crew;
 import info.movito.themoviedbapi.model.movies.Data;
 import info.movito.themoviedbapi.model.movies.Images;
 import info.movito.themoviedbapi.model.movies.MovieDb;
+import info.movito.themoviedbapi.model.movies.ReleaseDate;
+import info.movito.themoviedbapi.model.movies.ReleaseInfo;
 import info.movito.themoviedbapi.model.movies.Translation;
 import info.movito.themoviedbapi.model.people.PersonDb;
 import info.movito.themoviedbapi.tools.TmdbException;
 import info.movito.themoviedbapi.tools.appendtoresponse.MovieAppendToResponse;
 import info.movito.themoviedbapi.tools.appendtoresponse.PersonAppendToResponse;
+import info.movito.themoviedbapi.tools.builders.discover.DiscoverMovieParamBuilder;
+import info.movito.themoviedbapi.tools.sortby.DiscoverMovieSortBy;
 
 /**
  * <pre>
@@ -90,6 +100,13 @@ public class ContentServiceImpl implements ContentService {
 
 	// 정렬 축 - searchWord를 검색 조건이 쓰고 있어 searchMap의 이 키로 받는다
 	private static final String SEARCH_KEY_SORT = "sort";
+
+	// 매퍼 contentWhere가 받는 필터 통로. 인기순 경로가 어떤 필터를 감당할 수 있는지 판정하는 데 쓴다.
+	// released는 목록을 만들 때 이미 개봉작만 담으므로(syncGenreRank의 releaseDateLte) 여기 세지 않는다
+	private static final String SEARCH_KEY_GENRE_ID = "genreId";
+	private static final String SEARCH_KEY_PERSON_ID = "personId";
+	private static final String SEARCH_KEY_DECADE = "decade";
+	private static final String SEARCH_KEY_EXTERNAL_ID = "externalId";
 	// 최신순 - 개봉일 기준이다. 적재 시점이 필요하면 SORT_REGISTERED를 쓴다
 	private static final String SORT_LATEST = "latest";
 	private static final String SORT_BOX_OFFICE = "boxoffice";
@@ -99,23 +116,47 @@ public class ContentServiceImpl implements ContentService {
 	private static final String SORT_REGISTERED = "registered";
 	// 인기순 - 매퍼가 아니라 서비스가 순위 목록으로 정렬한다. 순위가 비면 SORT_BOX_OFFICE로 흘린다
 	private static final String SORT_POPULAR = "popular";
-	// 개봉 예정 - 개봉일 오름차순. searchMap["released"]="N"과 짝으로 써야 뜻이 선다
-	private static final String SORT_UPCOMING = "upcoming";
 
 	private static final Set<String> ALLOWED_SORT =
-			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR, SORT_UPCOMING);
+			Set.of(SORT_LATEST, SORT_BOX_OFFICE, SORT_RELEVANCE, SORT_REGISTERED, SORT_POPULAR);
 
 	private static final int FIRST_RANK_PAGE = 1;
-	// 순위 목록에 채울 목표 건수
-	private static final int TARGET_RANK_SIZE = 100;
-	// 목표를 못 채워도 여기서 멈춘다. 한 페이지 20건이므로 최대 300건까지 훑는다
-	private static final int MAX_RANK_PAGE = 15;
+	// 순위 목록에 채울 목표 건수. 화면이 쓰는 건 앞의 20건뿐이고 나머지는 교차검증용 표본이다.
+	// ContentCreditServiceImpl.MAX_TOP_PERSON_POOL과 같은 값이라 getTopPerson이 목록을 자르지 않는다
+	private static final int TARGET_RANK_SIZE = 500;
+	// 목표를 못 채워도 여기서 멈춘다. 한 페이지 20건이므로 최대 800건까지 훑는다
+	private static final int MAX_RANK_PAGE = 40;
+
+	// 장르별 순위는 홈 선반 한 줄(21건)이면 되지만, 교차검증 표본으로 쓰려고 여유를 뒀다
+	private static final int TARGET_GENRE_RANK_SIZE = 50;
+	// 장르 수만큼 곱해지는 상한이다. 장르 19개면 호출이 최대 95회이므로 함부로 올리지 않는다
+	private static final int MAX_GENRE_RANK_PAGE = 5;
 
 	// LIKE 이스케이프 - 매퍼의 ESCAPE '\'와 짝이다. 역슬래시를 먼저 바꿔야 이중 이스케이프가 안 난다
 	private static final String LIKE_ESCAPE_CHAR = "\\";
 
 	// limit을 안 주거나 0 이하로 준 호출의 기본 수집 건수
 	private static final int DEFAULT_SYNC_LIMIT = 100;
+
+	// 성인물 차단 - TMDB의 adult 플래그는 포르노 전용이라 항상 false다. 국가별 등급으로만 판정된다
+	private static final String CERTIFICATION_COUNTRY_KR = "KR";
+	// 이 나이 이상의 숫자 등급을 성인으로 본다(19·18). 12·15는 통과
+	private static final int ADULT_AGE_LIMIT = 18;
+	private static final int MAX_AGE_DIGITS = 3;
+	// "19+"처럼 기호가 붙은 변종이 실제로 온다. 숫자 부분만 떼어 나이로 읽는다
+	private static final Pattern AGE_IN_CERTIFICATION = Pattern.compile("\\d+");
+	private static final String CERTIFICATION_ADULT_ONLY = "청소년관람불가";
+	private static final String CERTIFICATION_RESTRICTED = "제한상영";
+
+	// 영문 줄거리를 받을 때 쓰는 언어. tmdbProperties.getLanguage()는 ko-KR이라 그대로 쓸 수 없다
+	private static final String LANGUAGE_EN = "en-US";
+
+	// 한국 등급이 없는 작품이 20%쯤 되어 미국 등급으로 보완한다
+	private static final String CERTIFICATION_COUNTRY_US = "US";
+
+	// 나이 숫자로는 못 잡는 미국 성인 등급. R·X·AO는 숫자가 없고, NC-17은 숫자만 뽑으면 17이라 미성년으로 읽힌다.
+	// R을 넣는 것은 "아이 원트 유어 섹스"(KR 없음·US R)처럼 R에서 새어 나온 사례가 실제로 있었기 때문이다
+	private static final Set<String> ADULT_CERTIFICATIONS = Set.of("R", "NC-17", "X", "AO");
 
 	private static final int FIRST_PAGE_NO = 1;
 	private static final int DEFAULT_PAGE_SIZE = 12;
@@ -130,6 +171,8 @@ public class ContentServiceImpl implements ContentService {
 	private final GenreMapper genreMapper;
 	private final ContentGenreMapper contentGenreMapper;
 	private final ContentImageService contentImageService;
+	// 장르 마스터 읽기는 GenreService 계약을 그대로 쓴다. 쓰기(syncGenreMaster)만 genreMapper로 직접 간다
+	private final GenreService genreService;
 
 
 	// 라이브러리 진입점.
@@ -139,6 +182,13 @@ public class ContentServiceImpl implements ContentService {
 	// 스케줄러 스레드가 쓰고 웹 요청 스레드가 읽는다. 통째로 교체하므로 잠금 없이도 중간 상태가 보이지 않는다
 	private volatile List<Integer> rankedIds = List.of();
 
+	// 장르별 순위. rankedIds와 같은 이유로 통째로 교체한다. 키는 GENRE.genre_id다
+	private volatile Map<Integer, List<Integer>> genreRankedIds = Map.of();
+
+	// 영문 표시값 캐시. 위 둘과 달리 통째로 갈지 않고 조회할 때마다 한 칸씩 채우므로 ConcurrentHashMap이다.
+	// 줄거리·포스터·배경이 상세 응답 하나에서 함께 오므로 묶어서 담는다 - 따로 담으면 같은 호출을 두 번 하게 된다
+	private final Map<Integer, EnglishContentVO> englishContents = new ConcurrentHashMap<>();
+
 	public ContentServiceImpl(
 			ContentMapper contentMapper,
 			PersonMapper personMapper,
@@ -147,6 +197,7 @@ public class ContentServiceImpl implements ContentService {
 			GenreMapper genreMapper,
 			ContentGenreMapper contentGenreMapper,
 			ContentImageService contentImageService,
+			GenreService genreService,
 			TmdbApi tmdbApi,
 			TmdbProperties tmdbProperties) {
 		this.contentMapper = contentMapper;
@@ -156,6 +207,7 @@ public class ContentServiceImpl implements ContentService {
 		this.genreMapper = genreMapper;
 		this.contentGenreMapper = contentGenreMapper;
 		this.contentImageService = contentImageService;
+		this.genreService = genreService;
 		this.tmdbApi = tmdbApi;
 		this.tmdbProperties = tmdbProperties;
 	}
@@ -175,6 +227,9 @@ public class ContentServiceImpl implements ContentService {
 
 		int processedCount = 0;
 		int insertedCount = 0;
+		// 스킵 사유를 나눠 센다. 등급은 DB에 안 남으므로 몇 편이 왜 빠졌는지는 이 로그로만 확인된다
+		int skippedCount = 0;
+		int adultSkippedCount = 0;
 		// TMDB 인기 목록은 한 페이지에 20건이다
 		int page = 1;
 
@@ -196,11 +251,17 @@ public class ContentServiceImpl implements ContentService {
 					processedCount++;
 					// 이미 기존에 있는 영화(영화 ID) 라면, 상세 조회 하지 않고 넘어가기
 					if (existsTmdbContent(movie.getId())) {
+						skippedCount++;
 						log.debug("TMDB 영화 skip. 기존 데이터: externalId={}", movie.getId());
 						continue;
 					}
-					saveFromTmdb(movie.getId());
-					insertedCount++;
+
+					// 한국 성인등급이면 저장하지 않는다. 저장 안 한 건은 limit에 세지 않으므로 다음 페이지로 보충된다
+					if (saveFromTmdb(movie.getId())) {
+						insertedCount++;
+					} else {
+						adultSkippedCount++;
+					}
 				}
 
 				if (results.getTotalPages() == null || page >= results.getTotalPages()) {
@@ -208,7 +269,8 @@ public class ContentServiceImpl implements ContentService {
 				}
 				page++;
 			}
-			log.info("TMDB 인기 영화 import: processed={}, inserted={}", processedCount, insertedCount);
+			log.info("TMDB 인기 영화 import: processed={}, inserted={}, 기존보유 skip={}, 성인등급 skip={}",
+					processedCount, insertedCount, skippedCount, adultSkippedCount);
 			return insertedCount;
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 인기 영화 조회 실패", e);
@@ -223,6 +285,9 @@ public class ContentServiceImpl implements ContentService {
 		List<Integer> matched = new ArrayList<>();
 		// 페이지를 넘기는 사이 popularity가 밀리면 같은 영화가 두 번 온다
 		Set<Integer> seenTmdbIds = new HashSet<>();
+		// 목표가 500건이라 findContentIdByExternal을 건건이 부르면 기동 시 쿼리가 수천 건이 된다.
+		// 장르별 동기화와 같은 방식으로 대응표를 먼저 한 번에 읽는다
+		Map<String, ContentVO> contentByExternal = toContentByExternal();
 		int skipped = 0;
 		int page = FIRST_RANK_PAGE;
 
@@ -242,12 +307,13 @@ public class ContentServiceImpl implements ContentService {
 					if (!seenTmdbIds.add(movie.getId())) {
 						continue;
 					}
-					Integer contentId = contentMapper.findContentIdByExternal(String.valueOf(movie.getId()));
-					if (contentId == null) {
+					// 전체 순위는 개봉 여부를 안 가린다 - 이 목록을 쓰는 박스오피스 선반이 released를 안 걸기 때문이다
+					ContentVO content = contentByExternal.get(String.valueOf(movie.getId()));
+					if (content == null) {
 						skipped++;
 						continue;
 					}
-					matched.add(contentId);
+					matched.add(content.getContentId());
 				}
 
 				if (results.getTotalPages() == null || page >= results.getTotalPages()) {
@@ -275,6 +341,147 @@ public class ContentServiceImpl implements ContentService {
 	@Override
 	public List<Integer> retrieveRank() {
 		return rankedIds;
+	}
+
+	// syncRank와 같은 이유로 @Transactional을 붙이지 않는다. 장르 수만큼 TMDB를 부르므로 더 오래 걸린다
+	@Override
+	public int syncGenreRank() {
+		validateApiKey();
+
+		List<GenreVO> genres = genreService.retrieveAll();
+
+		if (genres.isEmpty()) {
+			log.warn("보유 장르가 없어 장르별 인기순위를 건너뜁니다.");
+			return 0;
+		}
+
+		// 장르마다 findContentIdByExternal을 건건이 부르면 기동 시 쿼리가 1000건을 넘는다. 대응표를 먼저 한 번에 읽는다
+		Map<String, ContentVO> contentByExternal = toContentByExternal();
+
+		if (contentByExternal.isEmpty()) {
+			log.warn("적재된 콘텐츠가 없어 장르별 인기순위를 건너뜁니다.");
+			return 0;
+		}
+
+		Map<Integer, List<Integer>> ranked = new HashMap<>();
+		// 장르별 건수를 남기지 않으면 "이 장르 선반이 왜 안 뜨지"를 코드를 읽어야 알 수 있다.
+		// 편수 부족으로 후보에서 빠진 것인지 랜덤으로 안 뽑힌 것인지 이 줄로 갈린다
+		StringBuilder counts = new StringBuilder();
+
+		for (GenreVO genre : genres) {
+			List<Integer> matched = toGenreRank(genre, contentByExternal);
+
+			if (counts.length() > 0) {
+				counts.append(", ");
+			}
+			counts.append(genre.getName()).append(' ').append(matched.size());
+
+			if (!matched.isEmpty()) {
+				ranked.put(genre.getGenreId(), List.copyOf(matched));
+			}
+		}
+
+		// 어제 순위가 빈 화면보다 낫다 - syncRank와 같은 판단이다
+		if (ranked.isEmpty()) {
+			log.warn("장르별 인기순위 매칭 0건. 기존 목록 유지: previous={}", genreRankedIds.size());
+			return 0;
+		}
+
+		genreRankedIds = Map.copyOf(ranked);
+		log.info("TMDB 장르별 인기순위 동기화: 장르={}/{}, 건수=[{}]",
+				ranked.size(), genres.size(), counts);
+		return ranked.size();
+	}
+
+	@Override
+	public List<Integer> retrieveRank(int genreId) {
+		return genreRankedIds.getOrDefault(genreId, List.of());
+	}
+
+	// 장르 하나의 순위 목록. TMDB가 막히거나 external_genre_id가 숫자가 아니면 빈 목록이고, 그 장르만 빠진다
+	private List<Integer> toGenreRank(GenreVO genre, Map<String, ContentVO> contentByExternal) {
+		int externalGenreId;
+
+		try {
+			externalGenreId = Integer.parseInt(genre.getExternalGenreId());
+		} catch (NumberFormatException e) {
+			// AD-03에서 수기 등록한 장르는 TMDB id가 아닐 수 있다. Discover를 부를 수 없으니 건너뛴다
+			log.warn("TMDB 장르 id가 숫자가 아니라 건너뜁니다: genreId={}, externalGenreId={}",
+					genre.getGenreId(), genre.getExternalGenreId());
+			return List.of();
+		}
+
+		List<Integer> matched = new ArrayList<>();
+		// 페이지를 넘기는 사이 popularity가 밀리면 같은 영화가 두 번 온다
+		Set<Integer> seenTmdbIds = new HashSet<>();
+		int page = FIRST_RANK_PAGE;
+
+		try {
+			while (matched.size() < TARGET_GENRE_RANK_SIZE && page <= MAX_GENRE_RANK_PAGE) {
+				// releaseDateLte는 미개봉작을 미리 줄여 페이지를 덜 낭비하려는 것이고, 개봉 판정의 근거가 아니다 -
+				// TMDB는 영화제·제한상영 기록도 개봉으로 치므로 최종 판정은 아래 isReleased가 우리 값으로 한다
+				DiscoverMovieParamBuilder params = new DiscoverMovieParamBuilder()
+						.withGenres(List.of(externalGenreId), false)
+						.sortBy(DiscoverMovieSortBy.POPULARITY_DESC)
+						.releaseDateLte(LocalDate.now().toString())
+						.language(tmdbProperties.getLanguage())
+						.page(page);
+
+				MovieResultsPage results = tmdbApi.getDiscover().getMovie(params);
+
+				if (results.getResults() == null || results.getResults().isEmpty()) {
+					break;
+				}
+
+				for (Movie movie : results.getResults()) {
+					if (matched.size() >= TARGET_GENRE_RANK_SIZE) {
+						break;
+					}
+					if (!seenTmdbIds.add(movie.getId())) {
+						continue;
+					}
+					// 보유하지 않은 영화는 건너뛴다 - 여기서 새로 적재하지 않는다.
+					// 개봉 여부는 TMDB가 아니라 우리 release_year로 본다. TMDB의 release_date.lte는
+					// 영화제·제한상영 기록까지 개봉으로 쳐서, 정식 개봉 전인 작품이 통과해 버린다
+					ContentVO content = contentByExternal.get(String.valueOf(movie.getId()));
+					if (content != null && isReleased(content)) {
+						matched.add(content.getContentId());
+					}
+				}
+
+				if (results.getTotalPages() == null || page >= results.getTotalPages()) {
+					break;
+				}
+				page++;
+			}
+		} catch (TmdbException e) {
+			// 한 장르가 막혀도 나머지 장르는 채워야 한다. 모은 데까지만 쓴다
+			log.warn("TMDB 장르 인기순위 조회 실패. 수집분까지만 사용: genre={}, matched={}",
+					genre.getName(), matched.size(), e);
+		}
+
+		return matched;
+	}
+
+	// external_id -> 콘텐츠 대응표. 쿼리 1회로 통째로 읽어 메모리에서 맞춘다.
+	// contentId만이 아니라 VO를 담는 이유는 개봉 여부 판정에 release_year가 필요해서다
+	private Map<String, ContentVO> toContentByExternal() {
+		Map<String, ContentVO> byExternal = new HashMap<>();
+
+		for (ContentVO content : contentMapper.doSelectExternalIdMap()) {
+			byExternal.put(content.getExternalId(), content);
+		}
+
+		return byExternal;
+	}
+
+	// contentWhere의 released와 같은 기준 - 개봉일을 모르면 개봉작이 아니다.
+	// releaseYear는 'YYYY-MM-DD'라 사전순 비교가 곧 날짜 비교다
+	private boolean isReleased(ContentVO content) {
+		String releaseYear = content.getReleaseYear();
+
+		return StringUtils.hasText(releaseYear)
+				&& releaseYear.compareTo(LocalDate.now().toString()) <= 0;
 	}
 
 	// 외부 영화 id (TMDB에서 제공하는 영화 ID값)가 이미 우리 테이블에 있는지 확인하는 메서드
@@ -309,15 +516,25 @@ public class ContentServiceImpl implements ContentService {
 		}
 	}
 
-	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다
-	private void saveFromTmdb(int tmdbMovieId) {
+	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다. 한국 성인등급이면 저장하지 않고 false
+	private boolean saveFromTmdb(int tmdbMovieId) {
 		try {
-			// HTTP GET /movie/영화id + append_to_response=credits,translations
+			// HTTP GET /movie/영화id + append_to_response=credits,translations,release_dates
 			// 이유는 API 호출 횟수를 줄이기 위해서. 항목을 얹는 것뿐이라 호출 수는 늘지 않는다.
-			// TRANSLATIONS는 언어별 제목·줄거리를 함께 받아 제목 폴백에 쓴다
+			// TRANSLATIONS는 언어별 제목·줄거리를 함께 받아 제목 폴백에 쓰고, RELEASE_DATES는 국가별 등급을 받는다
 			MovieDb movie = tmdbApi.getMovies().getDetails(
 					tmdbMovieId, tmdbProperties.getLanguage(),
-					MovieAppendToResponse.CREDITS, MovieAppendToResponse.TRANSLATIONS);
+					MovieAppendToResponse.CREDITS, MovieAppendToResponse.TRANSLATIONS,
+					MovieAppendToResponse.RELEASE_DATES);
+
+			// 비회원도 보는 화면이라 수집 단계에서 막는다. 등급을 담을 컬럼이 없어 표시 단계에서는 거를 수 없다
+			if (isAdultMovie(movie)) {
+				log.info("성인등급 skip: externalId={}, title={}, KR등급={}, US등급={}",
+						tmdbMovieId, movie.getTitle(),
+						toCertification(movie, CERTIFICATION_COUNTRY_KR),
+						toCertification(movie, CERTIFICATION_COUNTRY_US));
+				return false;
+			}
 
 			ContentVO content = toContentVO(movie);
 
@@ -328,9 +545,73 @@ public class ContentServiceImpl implements ContentService {
 			syncImages(contentId, tmdbMovieId);
 			// 장르는 credits가 아님. 상세 JSON에 이미 들어있는 genres로 CONTENT_GENRE만 연결
 			syncContentGenres(contentId, movie);
+
+			return true;
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 영화 조회 실패: " + tmdbMovieId, e);
 		}
+	}
+
+	// 성인물 판정 - 한국 등급이 있으면 그것만 보고, 없을 때만 미국 등급으로 판단한다.
+	// 둘을 OR로 묶으면 미국 R이 한국 판단을 덮어쓴다 - "오디세이"는 KR 15인데 US R이라 함께 빠졌다.
+	// 미국 R은 관람 금지가 아니라 "17세 미만 보호자 동반"이고 폭력·욕설만으로도 붙는다.
+	// 그래도 한국 등급이 없을 때는(전체의 20%쯤) 미국이 유일한 근거라 R까지 성인으로 본다
+	private boolean isAdultMovie(MovieDb movie) {
+		String korean = toCertification(movie, CERTIFICATION_COUNTRY_KR);
+
+		if (StringUtils.hasText(korean)) {
+			return isAdultCertification(korean);
+		}
+
+		return isAdultCertification(toCertification(movie, CERTIFICATION_COUNTRY_US));
+	}
+
+	// RELEASE_DATES 응답에서 그 나라 등급을 꺼낸다. 안 얹었거나 그 나라 개봉 정보가 없으면 null
+	private String toCertification(MovieDb movie, String countryCode) {
+		if (movie.getReleaseDates() == null || movie.getReleaseDates().getResults() == null) {
+			return null;
+		}
+
+		for (ReleaseInfo info : movie.getReleaseDates().getResults()) {
+			if (!countryCode.equals(info.getIso31661()) || info.getReleaseDates() == null) {
+				continue;
+			}
+
+			// 같은 나라에 개봉 유형(극장·디지털 등)별로 여러 벌이 오고 등급이 빈 벌도 섞인다
+			for (ReleaseDate releaseDate : info.getReleaseDates()) {
+				if (StringUtils.hasText(releaseDate.getCertification())) {
+					return releaseDate.getCertification();
+				}
+			}
+		}
+
+		return null;
+	}
+
+	// 한국 성인등급인지. 등급이 없으면 통과시키는 것이 정책이다(미상까지 막으면 보유량이 절반 아래로 떨어진다)
+	private boolean isAdultCertification(String certification) {
+		if (!StringUtils.hasText(certification)) {
+			return false;
+		}
+
+		// 실측값이 "19"·"18"·"19+"·"청소년 관람불가"로 섞여 있어 등호 비교로는 샌다(2026-09-04 전수 500편)
+		String normalized = certification.replaceAll("\\s", "").toUpperCase();
+
+		// 숫자보다 먼저 본다. NC-17은 숫자만 뽑으면 17이라 미성년 등급으로 읽히고, X·AO는 숫자가 아예 없다
+		if (ADULT_CERTIFICATIONS.contains(normalized)) {
+			return true;
+		}
+
+		// 통째로 숫자인지 보면 "19+"가 새어 나간다. 붙어 있는 기호를 넘기고 숫자 부분만 뽑는다.
+		// 자릿수 상한은 값이 터무니없을 때 parseInt가 던지는 것을 막는다
+		Matcher ageMatcher = AGE_IN_CERTIFICATION.matcher(normalized);
+		if (ageMatcher.find() && ageMatcher.group().length() <= MAX_AGE_DIGITS) {
+			// 숫자 등급은 상한만 보면 앞으로 새 값이 생겨도 걸린다. 12·15는 통과한다
+			return Integer.parseInt(ageMatcher.group()) >= ADULT_AGE_LIMIT;
+		}
+
+		return normalized.contains(CERTIFICATION_ADULT_ONLY)
+				|| normalized.contains(CERTIFICATION_RESTRICTED);
 	}
 
 	// 컨텐츠 저장
@@ -579,9 +860,22 @@ public class ContentServiceImpl implements ContentService {
 				}
 				// Translation.getName()은 언어 이름("English")이지 인물 이름이 아니다. 인물 이름은 data 안에 있는데,
 				// 라이브러리 people.Data가 biography만 매핑해서 AbstractJsonMapping의 newItems로 흘러든다.
-				// 라이브러리가 name을 정식 매핑하면 여기가 비므로 getData().getName()으로 바꾼다
+				// 라이브러리가 name을 정식 매핑하면 여기가 비므로 getData().getName()으로 바꾼다.
+				// 2026-09-02 실측: id 895706(今岡信治)에서 newItems={name=Shinji Imaoka, primary=false}
 				Object englishName = translation.getData().getNewItems().get(TRANSLATION_NAME_KEY);
-				return englishName != null ? englishName.toString().trim() : null;
+				if (englishName == null) {
+					// en은 en-US·en-GB 등 여러 벌이 온다. 첫 줄이 비었다고 포기하면 뒤에 있는 이름을 놓친다
+					continue;
+				}
+
+				// 사용자 입력이라 en 칸에 한자·가나 이름이 그대로 들어 있는 벌이 있다.
+				// 호출부는 이 값을 그대로 NAME_KO에 넣으므로, 여기서 거르지 않으면 스크립트 검사를 우회한다
+				String candidate = englishName.toString().trim();
+				if (!hasAllowedScript(candidate)) {
+					continue;
+				}
+
+				return candidate;
 			}
 
 			return null;
@@ -748,6 +1042,54 @@ public class ContentServiceImpl implements ContentService {
 		return content;
 	}
 
+	// 영문 표시값 - DB에 안 쓰고 메모리에만 둔다. @Transactional을 안 붙이는 것은 DB를 안 타서다
+	@Override
+	public EnglishContentVO getEnglishContent(int contentId, String externalId) {
+		if (contentId <= 0 || !StringUtils.hasText(externalId)) {
+			return null;
+		}
+
+		EnglishContentVO cached = englishContents.get(contentId);
+
+		if (cached != null) {
+			return cached;
+		}
+
+		EnglishContentVO english = readEnglishContent(externalId);
+
+		if (english == null) {
+			// 실패는 캐시하지 않는다. 굳혀 두면 TMDB가 돌아와도 영영 한국어로 남는다
+			return null;
+		}
+
+		englishContents.put(contentId, english);
+		log.debug("영문 표시값 캐시: contentId={}, 줄거리={}자, 포스터={}",
+				contentId, english.getOverview().length(), english.getPosterPath());
+
+		return english;
+	}
+
+	// 성공하면 값(없는 항목은 빈 문자열), 실패하면 null. 캐시 여부를 호출부가 가릴 수 있게 둘을 나눈다
+	private EnglishContentVO readEnglishContent(String externalId) {
+		try {
+			MovieDb movie = tmdbApi.getMovies().getDetails(
+					Integer.parseInt(externalId), LANGUAGE_EN);
+
+			if (movie == null) {
+				return new EnglishContentVO("", "", "");
+			}
+
+			// 이미지 경로는 TMDB 원본 그대로 담는다. 크기를 붙이는 것은 ContentImageService 몫이다
+			return new EnglishContentVO(
+					movie.getOverview() == null ? "" : movie.getOverview().trim(),
+					movie.getPosterPath() == null ? "" : movie.getPosterPath(),
+					movie.getBackdropPath() == null ? "" : movie.getBackdropPath());
+		} catch (TmdbException | NumberFormatException e) {
+			log.warn("영문 표시값 조회 실패. 한국어로 대체한다: externalId={}", externalId, e);
+			return null;
+		}
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public List<ContentVO> retrieve(DTO param) {
@@ -764,11 +1106,18 @@ public class ContentServiceImpl implements ContentService {
 		boolean popularFellBack = false;
 
 		if (SORT_POPULAR.equals(param.getSearchMap().get(SEARCH_KEY_SORT))) {
-			List<Integer> ranked = rankedIds;
-			// 인기순 경로는 WHERE 조건을 태울 수 없고, 순위가 비면 보여줄 것도 없다. 둘 다 적재순으로 흘린다
-			if (StringUtils.hasText(param.getSearchWord()) || ranked.isEmpty()) {
-				log.warn("인기순 정렬 불가로 적재순 대체: searchWord={}, rankSize={}",
-						param.getSearchWord(), ranked.size());
+			// 장르는 장르별 순위 목록이 따로 있어 인기순으로 갈 수 있다. 그 밖의 필터는 태울 곳이 없다
+			String genreId = param.getSearchMap().get(SEARCH_KEY_GENRE_ID);
+			List<Integer> ranked = StringUtils.hasText(genreId)
+					? retrieveRank(toGenreId(genreId))
+					: rankedIds;
+
+			// 인기순 경로는 WHERE 조건을 태울 수 없고, 순위가 비면 보여줄 것도 없다. 셋 다 적재순으로 흘린다
+			if (StringUtils.hasText(param.getSearchWord())
+					|| hasFilterBeyondGenre(param)
+					|| ranked.isEmpty()) {
+				log.warn("인기순 정렬 불가로 적재순 대체: searchWord={}, genreId={}, rankSize={}",
+						param.getSearchWord(), genreId, ranked.size());
 				popularFellBack = true;
 				param.getSearchMap().put(SEARCH_KEY_SORT, SORT_BOX_OFFICE);
 			} else {
@@ -939,6 +1288,26 @@ public class ContentServiceImpl implements ContentService {
 
 		if (!ALLOWED_SORT.contains(sort)) {
 			throw new IllegalArgumentException("지원하지 않는 정렬입니다. sort=" + sort);
+		}
+	}
+
+	// 인기순 경로는 순위 목록을 그대로 읽어 오므로 WHERE를 못 건다. 장르 외의 필터가 섞였는지 본다.
+	// 여기서 true면 필터를 조용히 버리는 대신 적재순으로 폴백한다
+	private boolean hasFilterBeyondGenre(DTO param) {
+		Map<String, String> searchMap = param.getSearchMap();
+
+		return StringUtils.hasText(searchMap.get(SEARCH_KEY_PERSON_ID))
+				|| StringUtils.hasText(searchMap.get(SEARCH_KEY_DECADE))
+				|| StringUtils.hasText(searchMap.get(SEARCH_KEY_EXTERNAL_ID));
+	}
+
+	// 화면이 넘긴 genreId 문자열을 순위 목록 키로 바꾼다. 숫자가 아니면 그 장르 순위가 없는 것과 같게 둔다
+	private int toGenreId(String genreId) {
+		try {
+			return Integer.parseInt(genreId.trim());
+		} catch (NumberFormatException e) {
+			log.warn("장르 id가 숫자가 아니라 인기순을 건너뜁니다: genreId={}", genreId);
+			return 0;
 		}
 	}
 

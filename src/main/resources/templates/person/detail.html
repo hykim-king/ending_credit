@@ -79,10 +79,8 @@ layout:decorate="~{layout/layout}">
 			<ol class="filmography-list" id="filmographyList">
 				<li class="filmo-row" th:each="credit : ${filmography}">
 					<a class="filmo-link" th:href="@{'/movies/' + ${credit.contentId}}">
-						<!-- release_year가 YYYY-MM-DD 문자열이라 앞 4자리만 쓴다 -->
 						<span class="filmo-year"
-						      th:text="${credit.releaseYear != null and #strings.length(credit.releaseYear) >= 4}
-						               ? ${#strings.substring(credit.releaseYear, 0, 4)} : ''">2026</span>
+						      th:text="${credit.releaseYearLabel != null ? credit.releaseYearLabel : ''}">2026</span>
 
 						<span class="filmo-poster">
 							<img th:if="${credit.posterUrl != null}" th:src="${credit.posterUrl}"
