@@ -105,7 +105,7 @@ public class MemberMyPageController {
 		return "member/settings";
 	}
 
-	/** 내 회원 기록 화면을 기존 회원별 기록 경로로 연결한다. */
+	/** 기존 내 회원 기록 주소를 본인 전용 기록 경로로 연결한다. */
 	@GetMapping("/me/records")
 	public String myRecords(
 			@RequestParam(defaultValue = "ratings") String tab) {
@@ -115,8 +115,20 @@ public class MemberMyPageController {
 			return REDIRECT_LOGIN;
 		}
 
-		return "redirect:/users/" + me.getMemberId()
-				+ "/records?tab=" + normalizeRecordTab(tab);
+		return "redirect:/members/records?tab=" + normalizeRecordTab(tab);
+	}
+
+	/** 기존 내 좋아요 주소를 본인 전용 좋아요 경로로 연결한다. */
+	@GetMapping("/me/likes")
+	public String myLikes(
+			@RequestParam(defaultValue = "person") String type) {
+
+		LoginMember me = LoginMemberHelper.getLoginMember();
+		if (me == null) {
+			return REDIRECT_LOGIN;
+		}
+
+		return "redirect:/members/likes?type=" + normalizeLikeType(type);
 	}
 
 	// ===================== 다른 유저 프로필 =====================
@@ -157,16 +169,6 @@ public class MemberMyPageController {
 		return "member/profile";
 	}
 
-	/** 공개 프로필의 회원 기록 경로를 기존 기록 화면으로 연결한다. */
-	@GetMapping("/{memberId:[0-9]+}/records")
-	public String memberRecords(
-			@PathVariable long memberId,
-			@RequestParam(defaultValue = "ratings") String tab) {
-
-		return "redirect:/users/" + memberId
-				+ "/records?tab=" + normalizeRecordTab(tab);
-	}
-
 	private String normalizeRecordTab(String tab) {
 		if ("comments".equalsIgnoreCase(tab)
 				|| "collections".equalsIgnoreCase(tab)
@@ -175,5 +177,9 @@ public class MemberMyPageController {
 		}
 
 		return "ratings";
+	}
+
+	private String normalizeLikeType(String type) {
+		return "collection".equalsIgnoreCase(type) ? "collection" : "person";
 	}
 }

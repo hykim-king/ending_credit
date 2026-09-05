@@ -6,12 +6,10 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.endit.cmn.DTO;
-import com.endit.cmn.LoginMember;
 import com.endit.domain.MemberVO;
 import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionService;
@@ -22,7 +20,7 @@ import com.endit.service.UserCommentService;
 /**
  * <pre>
  * Class Name  : MemberContentViewController 
- * Description : 회원의 작품, 코멘트, 컬렉션, 보고싶어요 기록 화면을 처리하는 Controller
+ * Description : 로그인 회원의 작품, 코멘트, 컬렉션, 보고싶어요 기록 화면을 처리하는 Controller
  *
  * Modification History
  * ------------------------------------------------------------
@@ -31,6 +29,8 @@ import com.endit.service.UserCommentService;
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 9. 01. jinyoung    U-03~U-06 기록 화면 4개 탭 경로 지원
  * 2026. 9. 03. jinyoung    기록 화면 설명 및 탭 정규화 코드 정리
+ * 2026. 9. 05. jinyoung    로그인 회원 본인 전용 기록 경로로 변경
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
  * ------------------------------------------------------------
  * </pre>
  *
@@ -38,7 +38,7 @@ import com.endit.service.UserCommentService;
  * @since 2026. 8. 27.
  */
 @Controller
-@RequestMapping("/users/{memberId}/records")
+@RequestMapping("/members/records")
 public class MemberContentViewController {
 
 	private static final String TAB_RATINGS = "ratings";		 //
@@ -72,27 +72,25 @@ public class MemberContentViewController {
 	}
 
 	/**
-	 * 회원 기록 화면 반환
+	 * 로그인 회원 본인의 기록 화면 반환
 	 *
 	 * 네 가지 기록은 같은 HTML에서 탭으로 전환하고, 실제 목록 데이터는 JavaScript가 REST API로 조회한다.
 	 *
-	 * @param memberId 조회할 회원 번호
 	 * @param tab      최초 표시할 기록 탭
 	 * @param model    View에 전달할 데이터
 	 * @return 회원 기록 View 이름
 	 */
 	@GetMapping
-	public String records(@PathVariable int memberId,
+	public String records(
 			@RequestParam(defaultValue = TAB_RATINGS) String tab, Model model) {
+
+		int memberId = Math.toIntExact(LoginMemberHelper.getMemberId());
 
 		MemberVO member = memberService.getMember(memberId);
 
 		if (member == null) {
 			throw new NoSuchElementException("회원을 찾을 수 없습니다.");
 		}
-
-		LoginMember loginMember = LoginMemberHelper.getLoginMember();
-		Long currentMemberId = loginMember == null ? null : loginMember.getMemberId();
 
 		DTO commentParam = new DTO();
 		commentParam.setSearchDiv("10");
@@ -103,7 +101,8 @@ public class MemberContentViewController {
 		model.addAttribute("member", member);
 		model.addAttribute("ratingCount", memberContentService.countRatingByMember(memberId));
 		model.addAttribute("commentCount", userCommentService.totalCntBySearch(commentParam));
-		model.addAttribute("collectionCount", collectionService.countVisibleByMember(memberId, currentMemberId));
+		model.addAttribute("collectionCount", collectionService.countVisibleByMember(
+				memberId, Long.valueOf(memberId)));
 		model.addAttribute("watchlistCount", memberContentService.countWatchlistByMember(memberId));
 
 		return "user/records";

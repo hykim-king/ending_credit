@@ -120,7 +120,12 @@
                      tt1.nickname,
                      tt1.like_cnt,
                      tt1.rating_score,
-                     tt1.blind_reason
+                     tt1.blind_reason,
+                     tt1.target_type,
+                     tt1.target_title,
+                     tt1.release_year,
+                     tt1.collection_author_nickname,
+                     tt1.liked_by_member
                 FROM(
                       SELECT ROWNUM rnum, t1.*
                         FROM (
@@ -130,7 +135,29 @@
                                      mc.rating_score,
                                      (SELECT MAX(rc.reason) FROM report_comment rc
                                        WHERE rc.comment_id = uc.comment_id
-                                         AND rc.status = 'ACCEPTED') AS blind_reason
+                                         AND rc.status = 'ACCEPTED') AS blind_reason,
+                                     CASE
+                                         WHEN uc.content_id IS NOT NULL THEN 'MOVIE'
+                                         ELSE 'COLLECTION'
+                                     END target_type,
+                                     CASE
+                                         WHEN uc.content_id IS NOT NULL
+                                             THEN NVL(c.title_ko, c.title_org)
+                                         ELSE col.title
+                                     END target_title,
+                                     TO_CHAR(c.release_year, 'YYYY') release_year,
+                                     col_owner.nickname collection_author_nickname,
+                                     <choose>
+                                         <when test="searchMap.viewerMemberId != null">
+                                             CASE WHEN EXISTS (
+                                                 SELECT 1
+                                                   FROM comment_like viewer_like
+                                                  WHERE viewer_like.comment_id = uc.comment_id
+                                                    AND viewer_like.member_id = #{searchMap.viewerMemberId}
+                                             ) THEN 1 ELSE 0 END
+                                         </when>
+                                         <otherwise>0</otherwise>
+                                     </choose> liked_by_member
                                 FROM user_comment uc
                                 JOIN member m ON m.member_id = uc.member_id
                                 LEFT JOIN (SELECT comment_id, COUNT(*) like_cnt
@@ -140,11 +167,20 @@
                                 LEFT JOIN member_content mc
                                        ON mc.member_id = uc.member_id
                                       AND mc.content_id = uc.content_id
+                                LEFT JOIN content c
+                                       ON c.content_id = uc.content_id
+                                LEFT JOIN collection col
+                                       ON col.collection_id = uc.collection_id
+                                LEFT JOIN member col_owner
+                                       ON col_owner.member_id = col.member_id
                                <include refid="userCommentWhere"></include>
                                ORDER BY
                                <choose>
                                    <when test=" searchMap.sort == 'likes' ">
                                        like_cnt DESC, uc.created_dt DESC, uc.comment_id DESC
+                                   </when>
+                                   <when test=" searchMap.sort == 'oldest' ">
+                                       uc.created_dt ASC, uc.comment_id ASC
                                    </when>
                                    <when test=" searchMap.sort == 'rating_desc' ">
                                        rating_score DESC NULLS LAST, uc.created_dt DESC, uc.comment_id DESC

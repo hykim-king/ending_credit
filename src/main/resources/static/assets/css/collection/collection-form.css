@@ -167,8 +167,14 @@
     font-size: 1.55rem;
 }
 
-.collection-update-submit-button {
+.collection-update-actions {
+    display: flex;
     align-self: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.collection-update-submit-button {
     min-height: 34px;
     padding: 6px 12px;
     color: var(--endit-primary);
@@ -190,6 +196,36 @@
     color: #aaa4b1;
     background: #f6f5f8;
     border-color: #e4e1e8;
+}
+
+.collection-update-delete-button {
+    min-height: 34px;
+    padding: 6px 12px;
+    color: #c43e4d;
+    background: #fff;
+    border: 1px solid #e8c7cc;
+    border-radius: 6px;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.collection-update-delete-button:hover,
+.collection-update-delete-button:focus-visible {
+    color: #fff;
+    background: #dc3545;
+    border-color: #dc3545;
+}
+
+.collection-form-delete-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    margin: 0 auto 12px;
+    color: #b33434;
+    background: #fff1f1;
+    border-radius: 50%;
+    font-size: 1.2rem;
 }
 
 .collection-editor-page .collection-editor-panel {

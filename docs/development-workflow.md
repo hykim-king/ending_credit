@@ -86,18 +86,9 @@ main
 | --- | --- | --- |
 | 1조 | 김신우(조장), 이기준 | `CONTENT`, `CONTENTS_IMAGE`, `GENRE`, `CONTENT_GENRE`, `PERSON`, `CONTENT_CREDIT` |
 | 2조 | 김희태(조장), 장재영 | `MEMBER`, `MEMBER_SOCIAL_ACCOUNT`, `NOTICE` |
-| 3조 | 이진영(조장), 김건우, 장소은 | `COLLECTION`, `COLLECTION_ITEM`, `COLLECTION_LIKE`, `MEMBER_CONTENT`, `PERSON_LIKE` |
+| 3조 | 이진영(조장) | `COLLECTION`, `COLLECTION_ITEM`, `COLLECTION_LIKE`, `MEMBER_CONTENT`, `PERSON_LIKE` |
 | 4조 | 홍선기(조장), 강은후 | `USER_COMMENT`, `COMMENT_LIKE`, `REPORT` |
 
-### 3조 개인 담당
-
-| 담당자 | 담당 DB 테이블 |
-| --- | --- |
-| 이진영 | `COLLECTION`, `COLLECTION_ITEM`, `MEMBER_CONTENT`, `PERSON_LIKE` |
-| 김건우 | `COLLECTION_LIKE` |
-| 장소은 | 현재 공유된 개인 담당 테이블 없음 |
-
-개인 담당이 명시되지 않은 조는 위 표를 조 전체 범위로만 사용한다. 개인별 세부 배정은 조에서 확정한 뒤 문서에 추가한다.
 
 ## 커밋 메시지 규칙
 

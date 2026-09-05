@@ -4,6 +4,7 @@
  * 2026. 8. 31. jinyoung - 작품 추가 모달과 미저장 변경 경고 적용
  * 2026. 9. 01. jinyoung - 등록·수정 화면과 공개 정책 UI 적용
  * 2026. 9. 02. jinyoung - 길이 경고와 작품 추가·제거 흐름 개선
+ * 2026. 9. 05. jinyoung - 수정 화면 컬렉션 삭제 확인·요청 추가
  */
 // 등록과 수정은 필드 구성이 같으므로 하나의 form.html과 JavaScript를 재사용한다.
 const UPDATE_FORM_MODE = "update";
@@ -41,6 +42,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmEmptyCollectionButton = document.querySelector(
         "#confirmEmptyCollectionButton"
     );
+    const confirmDeleteCollectionButton = document.querySelector(
+        "#confirmDeleteCollectionButton"
+    );
 
     currentFormMode = page.dataset.formMode;
     collectionForm.addEventListener("submit", submitCollection);
@@ -50,6 +54,12 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmEmptyCollectionButton.addEventListener(
             "click",
             confirmEmptyCollectionCreation
+        );
+    }
+    if (confirmDeleteCollectionButton) {
+        confirmDeleteCollectionButton.addEventListener(
+            "click",
+            deleteCollectionFromForm
         );
     }
     contentSearchInput.addEventListener("keydown", handleContentSearchKeydown);
@@ -313,6 +323,42 @@ function requestPatch(url, data) {
             ...getCsrfHeaders()
         },
         body: JSON.stringify(data)
+    });
+}
+
+/** 수정 화면에서 컬렉션 삭제 후 내 컬렉션 기록으로 이동한다. */
+async function deleteCollectionFromForm() {
+    const page = document.querySelector("#collectionFormPage");
+    const collectionId = Number(page.dataset.collectionId);
+    const deleteButton = document.querySelector("#confirmDeleteCollectionButton");
+    const errorMessage = document.querySelector("#errorMessage");
+
+    deleteButton.disabled = true;
+    deleteButton.textContent = "삭제 중...";
+    isSubmitting = true;
+
+    try {
+        await requestDelete(`/api/collections/${collectionId}`);
+        window.location.href = "/members/records?tab=collections";
+    } catch (error) {
+        bootstrap.Modal.getInstance(
+            document.querySelector("#deleteCollectionFormModal")
+        )?.hide();
+        showFormError(errorMessage, error.message);
+        deleteButton.disabled = false;
+        deleteButton.textContent = "삭제";
+        isSubmitting = false;
+    }
+}
+
+/** 공통 요청 함수로 DELETE 요청을 보낸다. */
+function requestDelete(url) {
+    return requestFetch(url, {
+        method: "DELETE",
+        headers: {
+            "Accept": "application/json",
+            ...getCsrfHeaders()
+        }
     });
 }
 

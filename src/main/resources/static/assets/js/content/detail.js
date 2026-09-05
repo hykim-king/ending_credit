@@ -8,10 +8,7 @@
     const RATING_API_PATH = "/api/movies/";
     const WATCHLIST_API_PATH = "/api/watchlist/";
     const COLLECTION_API_PATH = "/api/collections/";
-    const MEMBER_COLLECTION_API_PATH = "/api/users/";
-
-    // 로그인 병합 전까지 쓰는 임시 회원 식별 헤더(MemberContentController와 같은 약속)
-    const MEMBER_ID_HEADER = "X-Member-Id";
+    const MEMBER_COLLECTION_API_PATH = "/api/members/collections";
 
     // MOD-05가 API-007에서 한 번에 받는 크레딧 수. 본문 미리보기와 같은 4열 x 3행이다
     const CAST_PAGE_SIZE = 12;
@@ -164,7 +161,7 @@
         }
 
         async function send(url, method, body) {
-            const headers = Object.assign({ [MEMBER_ID_HEADER]: memberId }, csrfHeaders());
+            const headers = csrfHeaders();
 
             if (body) {
                 headers["Content-Type"] = "application/json";
@@ -365,7 +362,7 @@
 
             try {
                 const response = await fetch(
-                    MEMBER_COLLECTION_API_PATH + memberId + "/collections?pageNo=1&pageSize=" + COLLECTION_PAGE_SIZE,
+                    MEMBER_COLLECTION_API_PATH + "?pageNo=1&pageSize=" + COLLECTION_PAGE_SIZE,
                     { credentials: "same-origin" });
 
                 if (!response.ok) {

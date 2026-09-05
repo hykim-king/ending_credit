@@ -21,7 +21,6 @@ const LIKE_ROLE_LABELS = Object.freeze({
  *  화면 요소 및 탭별 상태
  *  =================================== */
 const likesPage = document.querySelector("#memberLikesPage"); // 좋아요 화면 루트 요소
-const memberId = Number(likesPage.dataset.memberId); // 조회 대상 회원 번호
 const currentMemberId = Number(likesPage.dataset.currentMemberId || 0); // 현재 로그인 회원 번호
 // 페이지 번호, 조회 결과, 스크롤 위치를 보관하는 탭별 상태
 const likeState = {
@@ -61,11 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     configureLikeTypeView();
-
-    if (!Number.isInteger(memberId) || memberId <= 0) {
-        showLikeError("올바른 회원 번호가 필요합니다.");
-        return;
-    }
 
     loadLikes(activeLikeType, 1);
 });
@@ -175,7 +169,7 @@ async function loadLikes(type, pageNo) {
         };
 
         const data = await requestGet(
-            `/api/users/${memberId}/likes`,
+            "/api/members/likes",
             requestParam
         );
 

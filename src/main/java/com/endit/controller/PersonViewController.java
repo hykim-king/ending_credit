@@ -5,7 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.OptionalLong;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -17,15 +16,27 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-import com.endit.auth.CurrentMemberProvider;
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.domain.ContentCreditVO;
 import com.endit.domain.PersonVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.ContentCreditService;
 import com.endit.service.PersonLikeService;
 import com.endit.service.PersonService;
 
-// P-01 인물 상세 - 프로필·역할 요약·필모그래피·좋아요를 한 화면에 그린다
+/**
+ * <pre>
+ * P-01 인물 상세 - 프로필·역할 요약·필모그래피·좋아요를 한 화면에 그린다.
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
+ * ------------------------------------------------------------
+ * </pre>
+ */
 @Controller
 public class PersonViewController {
 
@@ -45,19 +56,16 @@ public class PersonViewController {
 	private final PersonService personService;
 	private final ContentCreditService contentCreditService;
 	private final PersonLikeService personLikeService;
-	private final CurrentMemberProvider currentMemberProvider;
 	private final MessageSource messageSource;
 
 	public PersonViewController(
 			PersonService personService,
 			ContentCreditService contentCreditService,
 			PersonLikeService personLikeService,
-			CurrentMemberProvider currentMemberProvider,
 			MessageSource messageSource) {
 		this.personService = personService;
 		this.contentCreditService = contentCreditService;
 		this.personLikeService = personLikeService;
-		this.currentMemberProvider = currentMemberProvider;
 		this.messageSource = messageSource;
 	}
 
@@ -154,11 +162,11 @@ public class PersonViewController {
 		}
 	}
 
-	// P-01 좋아요용 로그인 회원 번호 - PersonLikeController가 X-Member-Id 헤더를 받는 동안만 필요하다
+	// P-01 화면에서 로그인 여부를 판별할 때 사용할 현재 회원 번호
 	private Integer toCurrentMemberId() {
-		OptionalLong memberId = currentMemberProvider.findCurrentMemberId();
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
 
-		return memberId.isPresent() ? (int) memberId.getAsLong() : null;
+		return loginMember == null ? null : Math.toIntExact(loginMember.getMemberId());
 	}
 
 }

@@ -6,7 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import com.endit.auth.CurrentMemberProvider;
+import com.endit.cmn.LoginMember;
+import com.endit.security.LoginMemberHelper;
 
 /**
  * <pre>
@@ -19,6 +20,7 @@ import com.endit.auth.CurrentMemberProvider;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    상세 화면에 인증 회원 식별 정보 전달
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
  * ------------------------------------------------------------
  * </pre>
  *
@@ -28,12 +30,6 @@ import com.endit.auth.CurrentMemberProvider;
 @Controller
 @RequestMapping("/collections")
 public class CollectionViewController {
-
-	private final CurrentMemberProvider currentMemberProvider;
-
-	public CollectionViewController(CurrentMemberProvider currentMemberProvider) {
-		this.currentMemberProvider = currentMemberProvider;
-	}
 
 	/** 컬렉션 목록 화면 */
 	@GetMapping
@@ -59,9 +55,9 @@ public class CollectionViewController {
 
 		// 상세 데이터는 REST API로 조회하고, View에는 조회 키와 화면 권한 판별값만 전달한다.
 		model.addAttribute("collectionId", collectionId);
-		model.addAttribute(
-				"currentMemberId",
-				currentMemberProvider.findCurrentMemberId().orElse(0));
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+		model.addAttribute("currentMemberId",
+				loginMember == null ? 0 : loginMember.getMemberId());
 
 		return "collection/detail";
 	}

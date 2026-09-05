@@ -10,7 +10,7 @@ Modification History
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
 <head>
-    <title th:text="${member.nickname + '님의 좋아요 | ENDIT'}">회원 좋아요 | ENDIT</title>
+    <title th:text="${member.nickname + '님의 좋아요'}">회원 좋아요 | ENDIT</title>
 
     <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
     <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
@@ -22,7 +22,7 @@ Modification History
 <div layout:fragment="content"
      id="memberLikesPage"
      class="member-activity-page"
-     th:attr="data-member-id=${memberId},data-current-member-id=${currentMemberId},data-initial-type=${type}">
+     th:attr="data-current-member-id=${currentMemberId},data-initial-type=${type}">
 
     <!-- 좋아요 제목과 회원 기록 화면 이동 -->
     <header class="member-activity-heading">
@@ -33,7 +33,7 @@ Modification History
                   th:text="${member.nickname}">회원 닉네임</span>
         </h1>
         <a class="member-heading-link"
-           th:href="@{/users/{id}/records(id=${memberId})}">
+           th:href="@{/members/records}">
             내 기록 보기
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
@@ -46,14 +46,14 @@ Modification History
                class="member-tab"
                role="tab"
                data-type="person"
-               th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
+               th:href="@{/members/likes(type='person')}">
                 인물
             </a>
             <a id="collectionLikeTab"
                class="member-tab"
                role="tab"
                data-type="collection"
-               th:href="@{/users/{id}/likes(id=${memberId},type='collection')}">
+               th:href="@{/members/likes(type='collection')}">
                 컬렉션
             </a>
         </div>

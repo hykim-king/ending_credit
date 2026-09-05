@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,6 +20,14 @@ import com.endit.security.OAuth2SuccessHandler;
  * <pre>
  * Class Name : SecurityConfig
  * Description : 스프링 시큐리티 설정. "어느 URL을 열고/잠글지"와 "로그인을 어떻게 처리할지"를 정한다.
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 9. 05. jinyoung    회원 기록 댓글 API를 로그인 필수 경로로 추가
+ * ------------------------------------------------------------
+ * </pre>
  */
 @Configuration
 @EnableWebSecurity
@@ -70,6 +79,25 @@ public class SecurityConfig {
 				// 관리자 영역만 ADMIN 권한 필요 (role "ADMIN" → 권한 "ROLE_ADMIN")
 				.requestMatchers("/admin/**").hasRole("ADMIN")
 				.requestMatchers("/api/admin/**").hasRole("ADMIN")
+				// 로그인 회원 본인의 기록·좋아요 화면과 조회 API
+				.requestMatchers("/members/records", "/members/likes",
+						"/members/me/records", "/members/me/likes").authenticated()
+				.requestMatchers("/api/members/comments", "/api/members/comments/**").authenticated()
+				.requestMatchers(HttpMethod.GET,
+						"/api/members/ratings",
+						"/api/members/watchlist",
+						"/api/members/collections",
+						"/api/members/likes").authenticated()
+				// 컬렉션 등록·수정 화면
+				.requestMatchers("/collections/new", "/collections/*/edit").authenticated()
+				// 별점·보고싶어요·인물 좋아요 변경
+				.requestMatchers("/api/movies/*/rating", "/api/watchlist/*",
+						"/api/people/*/likes").authenticated()
+				// 컬렉션 변경과 로그인 회원의 좋아요 상태 조회
+				.requestMatchers(HttpMethod.POST, "/api/collections/**").authenticated()
+				.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
+				.requestMatchers(HttpMethod.DELETE, "/api/collections/**").authenticated()
+				.requestMatchers(HttpMethod.GET, "/api/collections/*/likes").authenticated()
 				// 그 외 모든 요청은 개발 편의상 일단 전부 허용
 				.anyRequest().permitAll()
 			)

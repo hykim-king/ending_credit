@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.PersonLikeVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.PersonLikeService;
 
 /**
@@ -32,6 +32,8 @@ import com.endit.service.PersonLikeService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 05. jinyoung    인물 좋아요 변경 요청을 Spring Security 로그인 회원 기준으로 통일
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
  * ------------------------------------------------------------
  * </pre>
  *
@@ -42,12 +44,6 @@ import com.endit.service.PersonLikeService;
 @RequestMapping("/api")
 public class PersonLikeController {
 
-	/*
-	 * 로그인 기능 병합 전까지 사용하는 임시 회원 식별 헤더다.
-	 * 최종 통합 시 RequestHeader를 제거하고 LoginMemberHelper에서 로그인 회원 번호를 조회하도록 변경한다.
-	 */
-	private static final String TEMP_MEMBER_ID_HEADER = "X-Member-Id";
-
 	private final PersonLikeService personLikeService;
 
 	/**
@@ -55,8 +51,7 @@ public class PersonLikeController {
 	 *
 	 * @param personLikeService 인물 좋아요 Service
 	 */
-	public PersonLikeController(
-			PersonLikeService personLikeService) {
+	public PersonLikeController(PersonLikeService personLikeService) {
 
 		this.personLikeService = personLikeService;
 	}
@@ -89,18 +84,32 @@ public class PersonLikeController {
 		return ResponseEntity.ok(createListResponse(items, param));
 	}
 
+	/** 로그인 회원이 좋아요한 인물 목록 조회 */
+	@GetMapping(value = "/members/likes", params = "type=person")
+	public ResponseEntity<Map<String, Object>> retrieveMyLikes(
+			@RequestParam(name = "page", defaultValue = "1") int pageNo,
+			@RequestParam(name = "size", defaultValue = "12") int pageSize,
+			@RequestParam(defaultValue = "latest") String sort) {
+
+		int memberId = requireMemberId();
+		DTO param = createPagingParam(pageNo, pageSize);
+		List<PersonLikeVO> items =
+				personLikeService.retrieveLikes(memberId, param, sort);
+
+		return ResponseEntity.ok(createListResponse(items, param));
+	}
+
 	/**
 	 * 로그인 회원의 인물 좋아요 등록
 	 *
-	 * @param memberId 임시 로그인 회원 번호
 	 * @param personId 인물 번호
 	 * @return 등록되었거나 이미 존재하는 인물 좋아요 정보
 	 */
 	@PostMapping("/people/{personId}/likes")
 	public ResponseEntity<PersonLikeVO> addLike(
-			@RequestHeader(TEMP_MEMBER_ID_HEADER) int memberId,
 			@PathVariable int personId) {
 
+		int memberId = requireMemberId();
 		PersonLikeVO saved =
 				personLikeService.addLike(memberId, personId);
 
@@ -110,18 +119,22 @@ public class PersonLikeController {
 	/**
 	 * 로그인 회원의 인물 좋아요 해제
 	 *
-	 * @param memberId 임시 로그인 회원 번호
 	 * @param personId 인물 번호
 	 * @return 본문이 없는 응답
 	 */
 	@DeleteMapping("/people/{personId}/likes")
 	public ResponseEntity<Void> deleteLike(
-			@RequestHeader(TEMP_MEMBER_ID_HEADER) int memberId,
 			@PathVariable int personId) {
 
+		int memberId = requireMemberId();
 		personLikeService.deleteLike(memberId, personId);
 
 		return ResponseEntity.noContent().build();
+	}
+
+	/** Spring Security 로그인 회원 번호 조회 */
+	private int requireMemberId() {
+		return Math.toIntExact(LoginMemberHelper.getMemberId());
 	}
 
 	/**

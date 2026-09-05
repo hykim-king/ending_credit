@@ -9,6 +9,7 @@
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
  * 2026. 8. 19.  홍선기   조회 전용 join 필드 추가(작성자 닉네임·좋아요 수·별점) — 8/18 공지 보완점2
+ * 2026. 9. 05.  이진영   회원 기록 댓글의 대상 정보·로그인 회원 좋아요 여부 추가
  * </pre>
  *
  * @author 홍선기
@@ -38,6 +39,11 @@ public class UserCommentVO extends DTO {
 	private int likeCnt;          // 좋아요 수 (COMMENT_LIKE 집계, 없으면 0)
 	private Integer ratingScore;  // 작성자가 그 영화에 준 별점 (MEMBER_CONTENT join — 없거나 컬렉션 코멘트면 null)
 	private String blindReason;   // 승인(ACCEPTED)된 신고의 사유 — 값이 있으면 화면에서 안내 문구로 가린다(팀 결정: 삭제 없음)
+	private String targetType;    // 대상 유형(MOVIE 또는 COLLECTION)
+	private String targetTitle;   // 영화 또는 컬렉션 제목
+	private String releaseYear;   // 영화 개봉 연도(컬렉션 코멘트면 null)
+	private String collectionAuthorNickname; // 컬렉션 작성자 닉네임(영화 코멘트면 null)
+	private boolean likedByMember; // 조회 중인 로그인 회원의 좋아요 여부
 
 	public UserCommentVO() {
 		super();
@@ -152,12 +158,54 @@ public class UserCommentVO extends DTO {
 		this.blindReason = blindReason;
 	}
 
+	public String getTargetType() {
+		return targetType;
+	}
+
+	public void setTargetType(String targetType) {
+		this.targetType = targetType;
+	}
+
+	public String getTargetTitle() {
+		return targetTitle;
+	}
+
+	public void setTargetTitle(String targetTitle) {
+		this.targetTitle = targetTitle;
+	}
+
+	public String getReleaseYear() {
+		return releaseYear;
+	}
+
+	public void setReleaseYear(String releaseYear) {
+		this.releaseYear = releaseYear;
+	}
+
+	public String getCollectionAuthorNickname() {
+		return collectionAuthorNickname;
+	}
+
+	public void setCollectionAuthorNickname(String collectionAuthorNickname) {
+		this.collectionAuthorNickname = collectionAuthorNickname;
+	}
+
+	public boolean isLikedByMember() {
+		return likedByMember;
+	}
+
+	public void setLikedByMember(boolean likedByMember) {
+		this.likedByMember = likedByMember;
+	}
+
 	@Override
 	public String toString() {
 		return "UserCommentVO [commentId=" + commentId + ", memberId=" + memberId + ", contentId=" + contentId
 				+ ", collectionId=" + collectionId + ", commentDetail=" + commentDetail + ", spoiler=" + spoiler
 				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", nickname=" + nickname
 				+ ", likeCnt=" + likeCnt + ", ratingScore=" + ratingScore + ", blindReason=" + blindReason
+				+ ", targetType=" + targetType + ", targetTitle=" + targetTitle + ", releaseYear=" + releaseYear
+				+ ", collectionAuthorNickname=" + collectionAuthorNickname + ", likedByMember=" + likedByMember
 				+ ", toString()=" + super.toString() + "]";
 	}
 

@@ -1,4 +1,7 @@
-/** U-03~U-07 회원 기록·좋아요 화면 공통 스타일. */
+/**
+ * U-03~U-07 회원 기록·좋아요 화면 공통 스타일.
+ * 2026. 9. 05. jinyoung - 회원 기록 코멘트 카드·수정 모달 스타일 추가
+ */
 
 /** ===================================
  *  회원 기록·좋아요 공통 레이아웃
@@ -361,6 +364,203 @@
 .member-media-card:hover .member-card-poster-placeholder {
     box-shadow: 0 8px 24px rgba(40, 32, 56, .14);
     transform: translateY(-2px);
+}
+
+/** ===================================
+ *  회원 기록 코멘트 카드
+ *  =================================== */
+.member-comment-list {
+    display: grid;
+    gap: 10px;
+}
+
+.member-comment-card {
+    padding: 12px 16px 8px;
+    background: #fff;
+    border: 1px solid #e5e0e9;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(45, 36, 57, .04);
+}
+
+.member-comment-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0edf2;
+}
+
+.member-comment-target {
+    display: inline-flex;
+    align-items: baseline;
+    min-width: 0;
+    overflow: hidden;
+    color: #332d39;
+    font-size: .93rem;
+    font-weight: 400;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.member-comment-target-title {
+    color: #332d39;
+    font-weight: 800;
+}
+
+.member-comment-target-info {
+    margin-left: .7em;
+    color: #817987;
+    font-weight: 400;
+}
+
+.member-comment-target:hover,
+.member-comment-target:focus-visible {
+    color: var(--endit-primary);
+}
+
+.member-comment-target:hover .member-comment-target-title,
+.member-comment-target:focus-visible .member-comment-target-title,
+.member-comment-target:hover .member-comment-target-info,
+.member-comment-target:focus-visible .member-comment-target-info {
+    color: var(--endit-primary);
+}
+
+.member-comment-rating {
+    flex: 0 0 auto;
+    margin-left: 0;
+    font-size: 1rem;
+}
+
+.member-comment-body {
+    min-height: 0;
+    padding: 9px 0 4px;
+}
+
+.member-comment-detail {
+    margin: 0;
+    overflow: hidden;
+    color: #48414f;
+    font-size: .96rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.member-comment-detail.is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.member-comment-detail.is-expanded {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: initial;
+}
+
+.member-comment-more,
+.member-comment-spoiler-button {
+    padding: 0;
+    color: var(--endit-primary);
+    background: transparent;
+    border: 0;
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.member-comment-more {
+    margin-top: 5px;
+}
+
+.member-comment-spoiler {
+    margin: 0;
+    color: #625b69;
+    font-size: .94rem;
+    font-weight: 700;
+}
+
+.member-comment-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 2px;
+}
+
+.member-comment-like,
+.member-comment-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    color: #7a7281;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.member-comment-like {
+    gap: 7px;
+    padding: 0 8px;
+}
+
+.member-comment-like i {
+    font-size: 1.05rem;
+}
+
+.member-comment-like[aria-pressed="true"] {
+    color: var(--endit-primary);
+}
+
+.member-comment-like:hover,
+.member-comment-action:hover,
+.member-comment-like:focus-visible,
+.member-comment-action:focus-visible {
+    color: var(--endit-primary);
+    background: #f3f0ff;
+    outline: none;
+}
+
+.member-comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.member-comment-action {
+    padding: 0 10px;
+}
+
+.member-comment-action.is-delete:hover,
+.member-comment-action.is-delete:focus-visible {
+    color: #c43e4d;
+    background: #fff0f2;
+}
+
+.member-comment-edit-modal {
+    border: 0;
+    border-radius: 16px;
+}
+
+.member-comment-edit-modal textarea {
+    resize: vertical;
+}
+
+.member-comment-delete-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    margin: 0 auto 12px;
+    color: #b33434;
+    background: #fff1f1;
+    border-radius: 50%;
+    font-size: 1.2rem;
 }
 
 /** ===================================
@@ -806,6 +1006,25 @@
 
     .member-state {
         min-height: 240px;
+    }
+
+    .member-comment-card {
+        padding: 11px 13px 7px;
+    }
+
+    .member-comment-header {
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .member-comment-target {
+        font-size: .84rem;
+        white-space: normal;
+    }
+
+    .member-comment-body {
+        min-height: 0;
+        padding: 8px 0 3px;
     }
 }
 

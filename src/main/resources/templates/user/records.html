@@ -4,15 +4,18 @@ Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-03~U-06 4탭 본문 UI 반영
 2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
+2026. 9. 05. jinyoung - 본인 코멘트 카드와 수정 모달 추가
+2026. 9. 05. jinyoung - 기존 컬렉션 화면과 동일한 코멘트 삭제 확인 모달 추가
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
 <head>
-    <title th:text="${member.nickname + '님의 기록 | ENDIT'}">회원 기록 | ENDIT</title>
+    <title th:text="${member.nickname + '님의 기록'}">회원 기록 | ENDIT</title>
 
     <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
     <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
 
     <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
@@ -27,8 +30,7 @@ Modification History
 <div layout:fragment="content"
      id="memberRecordsPage"
      class="member-activity-page"
-     th:attr="data-member-id=${memberId},
-              data-initial-tab=${tab},
+     th:attr="data-initial-tab=${tab},
               data-ratings-count=${ratingCount},
               data-comments-count=${commentCount},
               data-collections-count=${collectionCount},
@@ -46,7 +48,7 @@ Modification History
         </h1>
 
         <a class="member-heading-link"
-           th:href="@{/users/{id}/likes(id=${memberId},type='person')}">
+           th:href="@{/members/likes(type='person')}">
             내 좋아요 보기
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
@@ -61,7 +63,7 @@ Modification History
                class="member-tab"
                role="tab"
                data-tab="ratings"
-               th:href="@{/users/{id}/records(id=${memberId},tab='ratings')}">
+               th:href="@{/members/records(tab='ratings')}">
                 작품
             </a>
 
@@ -69,7 +71,7 @@ Modification History
                class="member-tab"
                role="tab"
                data-tab="comments"
-               th:href="@{/users/{id}/records(id=${memberId},tab='comments')}">
+               th:href="@{/members/records(tab='comments')}">
                 코멘트
             </a>
 
@@ -77,7 +79,7 @@ Modification History
                class="member-tab"
                role="tab"
                data-tab="collections"
-               th:href="@{/users/{id}/records(id=${memberId},tab='collections')}">
+               th:href="@{/members/records(tab='collections')}">
                 컬렉션
             </a>
 
@@ -85,7 +87,7 @@ Modification History
                class="member-tab"
                role="tab"
                data-tab="watchlist"
-               th:href="@{/users/{id}/records(id=${memberId},tab='watchlist')}">
+               th:href="@{/members/records(tab='watchlist')}">
                 보고싶어요
             </a>
         </div>
@@ -183,6 +185,74 @@ Modification History
                     type="button">더보기</button>
         </div>
     </section>
+
+	<!-- 본인 코멘트 수정 모달 -->
+	<div id="commentEditModal"
+		 class="modal fade"
+		 tabindex="-1"
+		 aria-labelledby="commentEditModalTitle"
+		 aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content member-comment-edit-modal">
+				<div class="modal-header">
+					<h2 id="commentEditModalTitle" class="modal-title fs-5">코멘트 수정</h2>
+					<button type="button"
+							class="btn-close"
+							data-bs-dismiss="modal"
+							aria-label="닫기"></button>
+				</div>
+				<div class="modal-body">
+					<input id="commentEditId" type="hidden">
+					<label class="form-label fw-semibold" for="commentEditDetail">코멘트 내용</label>
+					<textarea id="commentEditDetail"
+							  class="form-control"
+							  rows="6"
+							  maxlength="1000"></textarea>
+					<div class="form-check mt-3">
+						<input id="commentEditSpoiler"
+							   class="form-check-input"
+							   type="checkbox">
+						<label class="form-check-label" for="commentEditSpoiler">스포일러가 있어요</label>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+					<button id="commentEditSaveButton" type="button" class="btn btn-primary">저장</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 본인 코멘트 삭제 확인 모달 -->
+	<div id="commentDeleteModal"
+		 class="modal fade"
+		 tabindex="-1"
+		 aria-label="코멘트 삭제 확인"
+		 aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content collection-delete-modal">
+				<button type="button"
+						class="btn-close collection-delete-close"
+						data-bs-dismiss="modal"
+						aria-label="닫기"></button>
+				<div class="modal-body">
+					<div class="member-comment-delete-icon" aria-hidden="true">
+						<i class="bi bi-trash3"></i>
+					</div>
+					<p class="collection-delete-question">해당 코멘트를 삭제할까요?</p>
+					<p class="collection-delete-description">코멘트와 좋아요 기록이 모두 삭제되며 되돌릴 수 없습니다.</p>
+					<div class="collection-delete-actions">
+						<button type="button"
+								class="btn collection-delete-button collection-delete-cancel"
+								data-bs-dismiss="modal">취소</button>
+						<button id="commentDeleteConfirmButton"
+								type="button"
+								class="btn btn-danger collection-delete-button">삭제</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 </body>
 </html>

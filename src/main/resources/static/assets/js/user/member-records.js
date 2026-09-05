@@ -3,6 +3,7 @@
  * 2026. 8. 31. jinyoung - 평가·보고싶어요 카드의 TMDB 이미지·공통 페이지네이션 적용
  * 2026. 9. 01. jinyoung - U-03~U-06 4탭 UI와 회원 컬렉션 조회 연결
  * 2026. 9. 03. jinyoung - 작품 정렬·평균 별점·컬렉션 카드 및 더보기 UI 적용
+ * 2026. 9. 05. jinyoung - 본인 영화·컬렉션 코멘트 조회와 수정·삭제·좋아요 UI 적용
  */
 
 /** ===================================
@@ -26,10 +27,13 @@ const RECORD_CONFIG = Object.freeze({
     },
     comments: {
         title: "작성한 코멘트",
-        empty: "코멘트 API가 연결되면 작성한 코멘트가 표시됩니다.",
+        empty: "아직 작성한 코멘트가 없습니다.",
         countKey: "commentsCount",
-        sorts: [],
-        integrationPending: true
+        sorts: [
+            ["latest", "최신 순"],
+            ["oldest", "오래된 순"],
+            ["likes", "좋아요 많은 순"]
+        ]
     },
     collections: {
         title: "만든 컬렉션",
@@ -57,7 +61,6 @@ const RECORD_CONFIG = Object.freeze({
  *  =================================== */
 
 const recordsPage = document.querySelector("#memberRecordsPage"); // 기록 화면 루트 요소
-const memberId = Number(recordsPage.dataset.memberId); // 조회 대상 회원 번호
 // 서버에서 전달받은 탭별 전체 건수
 const recordCounts = Object.fromEntries(
     RECORD_TABS.map((tab) => [
@@ -83,12 +86,24 @@ const paginationIndicatorState = Object.fromEntries(
 );
 
 let activeTab = normalizeTab(recordsPage.dataset.initialTab || new URLSearchParams(window.location.search).get("tab")); // 현재 탭
+let commentEditModal;
+let commentDeleteModal;
+let pendingDeleteCommentId = null;
 
 /** ===================================
  *  화면 초기화 및 이벤트 연결
  *  =================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
+	const commentEditModalElement = document.querySelector("#commentEditModal");
+	commentEditModal = commentEditModalElement
+		? new bootstrap.Modal(commentEditModalElement)
+		: null;
+	const commentDeleteModalElement = document.querySelector("#commentDeleteModal");
+	commentDeleteModal = commentDeleteModalElement
+		? new bootstrap.Modal(commentDeleteModalElement)
+		: null;
+
     document.querySelectorAll("#recordTabs [data-tab]").forEach((tabLink) => tabLink.addEventListener("click", changeTab));
 
     document.querySelector("#recordRetryButton")
@@ -117,17 +132,21 @@ document.addEventListener("DOMContentLoaded", () => {
             loadRecords("collections", state.pageNo + 1, true);
         });
 
+	document.querySelector("#recordList").addEventListener("click", handleCommentAction);
+	document.querySelector("#commentEditSaveButton")
+		?.addEventListener("click", saveCommentEdit);
+	document.querySelector("#commentDeleteConfirmButton")
+		?.addEventListener("click", deleteComment);
+	commentDeleteModalElement?.addEventListener("hidden.bs.modal", () => {
+		pendingDeleteCommentId = null;
+	});
+
     window.addEventListener("popstate", () => {
         const tab = normalizeTab(new URLSearchParams(window.location.search).get("tab"));
         switchTab(tab, false);
     });
 
     updateTabView();
-
-    if (!Number.isInteger(memberId) || memberId <= 0) {
-        showRecordError("올바른 회원 번호가 필요합니다.");
-        return;
-    }
 
     loadRecords(activeTab, 1);
 });
@@ -312,23 +331,6 @@ function closeSortMenu(returnFocus = false) {
 async function loadRecords(tab, pageNo, append = false) {
 
     const requestTab = tab;
-    const config = RECORD_CONFIG[tab];
-
-    // 코멘트 API 연결 전에는 서버를 호출하지 않고 준비 상태 데이터를 사용한다.
-    if (config.integrationPending) {
-        const pendingData = {
-            items: [],
-            page: {
-                pageNo: 1,
-                pageSize: RECORD_PAGE_SIZE,
-                totalCnt: recordCounts.comments
-            },
-            integrationPending: true
-        };
-        recordState[tab].data = pendingData;
-        renderRecords(tab, pendingData);
-        return;
-    }
 
     if (append) {
         setLoadMoreLoading(true);
@@ -364,10 +366,13 @@ async function loadRecords(tab, pageNo, append = false) {
 function createRecordEndpoint(tab) {
 
     if (tab === "collections") {
-        return `/api/users/${memberId}/collections`;
+        return "/api/members/collections";
     }
+	if (tab === "comments") {
+		return "/api/members/comments";
+	}
 
-    return tab === "ratings" ? `/api/users/${memberId}/ratings` : `/api/users/${memberId}/watchlist`;
+    return tab === "ratings" ? "/api/members/ratings" : "/api/members/watchlist";
 }
 
 /** 탭별 API 요청 조건 생성 */
@@ -380,6 +385,13 @@ function createRecordParams(tab, pageNo) {
             sort: recordState[tab].sort
         };
     }
+	if (tab === "comments") {
+		return {
+			page: pageNo,
+			size: RECORD_PAGE_SIZE,
+			sort: recordState[tab].sort
+		};
+	}
 
     return {
         page: pageNo,
@@ -403,20 +415,13 @@ function renderRecords(tab, data) {
     hideRecordStatus();
     document.querySelector("#recordTotalCount").textContent = String(totalCount);
 
-    if (data.integrationPending) {
-        showRecordEmpty(
-            "코멘트 연동 준비 중",
-            RECORD_CONFIG.comments.empty,
-            "bi-chat-square-text"
-        );
-        return;
-    }
-
     if (items.length === 0) {
         showRecordEmpty(
             "아직 기록이 없습니다.",
             RECORD_CONFIG[tab].empty,
-            tab === "collections" ? "bi-collection" : "bi-film"
+            tab === "collections"
+                ? "bi-collection"
+                : tab === "comments" ? "bi-chat-square-text" : "bi-film"
         );
         return;
     }
@@ -424,10 +429,283 @@ function renderRecords(tab, data) {
     if (tab === "collections") {
         renderCollectionCards(items);
         renderCollectionLoadMore(items.length, totalCount);
+    } else if (tab === "comments") {
+		renderCommentCards(items);
+		renderPagination(page, Number(page.pageNo || recordState[tab].pageNo));
     } else {
         renderMovieCards(items);
         renderPagination(page, Number(page.pageNo || recordState[tab].pageNo));
     }
+}
+
+/** ===================================
+ *  회원 코멘트 카드
+ *  =================================== */
+
+/** 영화·컬렉션 코멘트 카드 목록 렌더링 */
+function renderCommentCards(items) {
+
+	const recordList = document.querySelector("#recordList");
+
+	recordList.className = "member-comment-list";
+	recordList.replaceChildren();
+	items.forEach((item) => recordList.append(createCommentCard(item)));
+	recordList.classList.remove("d-none");
+}
+
+/** 회원 코멘트 카드 생성 */
+function createCommentCard(item) {
+
+	const card = document.createElement("article");
+	const header = document.createElement("header");
+	const target = document.createElement("a");
+	const targetTitleText = document.createElement("span");
+	const targetInfo = document.createElement("span");
+	const body = document.createElement("div");
+	const detail = document.createElement("p");
+	const moreButton = document.createElement("button");
+	const footer = document.createElement("footer");
+	const likeButton = document.createElement("button");
+	const actions = document.createElement("div");
+	const editButton = document.createElement("button");
+	const deleteButton = document.createElement("button");
+	const isMovie = item.targetType === "MOVIE" || item.contentId != null;
+	const targetTitle = item.targetTitle || (isMovie
+		? `영화 ${item.contentId}`
+		: `컬렉션 ${item.collectionId}`);
+	const targetInfoText = isMovie
+		? `${item.releaseYear || "개봉년도 미상"} | 영화`
+		: `${item.collectionAuthorNickname || "작성자 미상"} | 컬렉션`;
+
+	card.className = "member-comment-card";
+	card.dataset.commentId = String(item.commentId);
+	card.dataset.commentDetail = item.commentDetail || "";
+	card.dataset.spoiler = item.spoiler || "N";
+
+	header.className = "member-comment-header";
+	target.className = "member-comment-target";
+	target.href = isMovie
+		? `/movies/${item.contentId}`
+		: `/collections/${item.collectionId}`;
+	targetTitleText.className = "member-comment-target-title";
+	targetTitleText.textContent = targetTitle;
+	targetInfo.className = "member-comment-target-info";
+	targetInfo.textContent = targetInfoText;
+	target.append(targetTitleText, targetInfo);
+	header.append(target);
+
+	if (item.ratingScore != null && Number.isFinite(Number(item.ratingScore))) {
+		const rating = createMemberRatingStars(Number(item.ratingScore));
+		rating.classList.add("member-comment-rating");
+		header.append(rating);
+	}
+
+	body.className = "member-comment-body";
+	detail.className = "member-comment-detail is-clamped";
+	detail.textContent = item.commentDetail || "";
+	moreButton.className = "member-comment-more d-none";
+	moreButton.type = "button";
+	moreButton.dataset.action = "expand";
+	moreButton.textContent = "더보기";
+
+	if (item.spoiler === "Y") {
+		const spoilerNotice = document.createElement("p");
+		const spoilerButton = document.createElement("button");
+		spoilerNotice.className = "member-comment-spoiler";
+		spoilerNotice.append("스포일러가 있어요!! ");
+		spoilerButton.className = "member-comment-spoiler-button";
+		spoilerButton.type = "button";
+		spoilerButton.dataset.action = "spoiler";
+		spoilerButton.textContent = "보기";
+		spoilerNotice.append(spoilerButton);
+		detail.classList.add("d-none");
+		body.append(spoilerNotice, detail, moreButton);
+	} else {
+		body.append(detail, moreButton);
+		configureCommentOverflow(detail, moreButton);
+	}
+
+	footer.className = "member-comment-footer";
+	likeButton.className = "member-comment-like";
+	likeButton.type = "button";
+	likeButton.dataset.action = "like";
+	likeButton.setAttribute("aria-pressed", String(Boolean(item.likedByMember)));
+	likeButton.innerHTML = `<i class="bi ${item.likedByMember ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up"}" aria-hidden="true"></i>`;
+	const likeCount = document.createElement("span");
+	likeCount.className = "member-comment-like-count";
+	likeCount.textContent = String(Number(item.likeCnt || 0));
+	likeButton.append(likeCount);
+
+	actions.className = "member-comment-actions";
+	editButton.className = "member-comment-action";
+	editButton.type = "button";
+	editButton.dataset.action = "edit";
+	editButton.textContent = "수정";
+	deleteButton.className = "member-comment-action is-delete";
+	deleteButton.type = "button";
+	deleteButton.dataset.action = "delete";
+	deleteButton.textContent = "삭제";
+	actions.append(editButton, deleteButton);
+	footer.append(likeButton, actions);
+
+	card.append(header, body, footer);
+	return card;
+}
+
+/** 세 줄을 넘는 코멘트에만 더보기 버튼 표시 */
+function configureCommentOverflow(detail, moreButton) {
+	window.requestAnimationFrame(() => {
+		const overflowing = detail.scrollHeight > detail.clientHeight + 1;
+		moreButton.classList.toggle("d-none", !overflowing);
+	});
+}
+
+/** 코멘트 카드 버튼 이벤트 처리 */
+function handleCommentAction(event) {
+
+	const actionButton = event.target.closest("[data-action]");
+	const card = event.target.closest(".member-comment-card");
+
+	if (!actionButton || !card) {
+		return;
+	}
+
+	const action = actionButton.dataset.action;
+	if (action === "spoiler") {
+		showSpoilerComment(card, actionButton);
+	} else if (action === "expand") {
+		toggleCommentDetail(card, actionButton);
+	} else if (action === "like") {
+		toggleCommentLike(card, actionButton);
+	} else if (action === "edit") {
+		openCommentEdit(card);
+	} else if (action === "delete") {
+		openCommentDelete(card);
+	}
+}
+
+/** 스포일러 안내를 숨기고 실제 코멘트를 표시 */
+function showSpoilerComment(card, button) {
+	const notice = button.closest(".member-comment-spoiler");
+	const detail = card.querySelector(".member-comment-detail");
+	const moreButton = card.querySelector(".member-comment-more");
+	notice.classList.add("d-none");
+	detail.classList.remove("d-none");
+	configureCommentOverflow(detail, moreButton);
+}
+
+/** 코멘트 세 줄 제한 열기·닫기 */
+function toggleCommentDetail(card, button) {
+	const detail = card.querySelector(".member-comment-detail");
+	const expanded = detail.classList.toggle("is-expanded");
+	button.textContent = expanded ? "접기" : "더보기";
+}
+
+/** 코멘트 수정 모달 열기 */
+function openCommentEdit(card) {
+	document.querySelector("#commentEditId").value = card.dataset.commentId;
+	document.querySelector("#commentEditDetail").value = card.dataset.commentDetail;
+	document.querySelector("#commentEditSpoiler").checked = card.dataset.spoiler === "Y";
+	commentEditModal?.show();
+}
+
+/** 코멘트 수정 저장 */
+async function saveCommentEdit() {
+	const commentId = document.querySelector("#commentEditId").value;
+	const detail = document.querySelector("#commentEditDetail").value.trim();
+	const spoiler = document.querySelector("#commentEditSpoiler").checked ? "Y" : "N";
+
+	if (!detail) {
+		alert("코멘트 내용을 입력해 주세요.");
+		return;
+	}
+
+	try {
+		await requestCommentChange(`/api/members/comments/${commentId}`, "PATCH", {
+			commentDetail: detail,
+			spoiler
+		});
+		commentEditModal?.hide();
+		await reloadComments();
+	} catch (error) {
+		alert(error.message);
+	}
+}
+
+/** 코멘트 삭제 확인 모달 열기 */
+function openCommentDelete(card) {
+	pendingDeleteCommentId = card.dataset.commentId;
+	commentDeleteModal?.show();
+}
+
+/** 삭제 확인 후 코멘트 삭제 */
+async function deleteComment() {
+	if (!pendingDeleteCommentId) {
+		return;
+	}
+
+	const deleteButton = document.querySelector("#commentDeleteConfirmButton");
+	deleteButton.disabled = true;
+	deleteButton.textContent = "삭제 중...";
+
+	try {
+		await requestCommentChange(
+			`/api/members/comments/${pendingDeleteCommentId}`,
+			"DELETE"
+		);
+		commentDeleteModal?.hide();
+		await reloadComments();
+	} catch (error) {
+		alert(error.message);
+	} finally {
+		deleteButton.disabled = false;
+		deleteButton.textContent = "삭제";
+	}
+}
+
+/** 코멘트 좋아요 토글 */
+async function toggleCommentLike(card, button) {
+	button.disabled = true;
+
+	try {
+		const result = await requestCommentChange(
+			`/api/members/comments/${card.dataset.commentId}/likes`,
+			"POST"
+		);
+		button.setAttribute("aria-pressed", String(Boolean(result.liked)));
+		button.querySelector("i").className =
+			`bi ${result.liked ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up"}`;
+		button.querySelector(".member-comment-like-count").textContent =
+			String(Number(result.likeCount || 0));
+	} catch (error) {
+		alert(error.message);
+	} finally {
+		button.disabled = false;
+	}
+}
+
+/** 현재 코멘트 페이지 다시 조회 */
+async function reloadComments() {
+	resetTabState("comments", true);
+	await loadRecords("comments", 1);
+}
+
+/** 회원 코멘트 변경용 JSON 요청 */
+function requestCommentChange(url, method, data = null) {
+	const options = {
+		method,
+		headers: {
+			"Accept": "application/json",
+			...getCsrfHeaders()
+		}
+	};
+
+	if (data) {
+		options.headers["Content-Type"] = "application/json";
+		options.body = JSON.stringify(data);
+	}
+
+	return requestFetch(url, options);
 }
 
 /** 평가·보고싶어요 작품 카드 렌더링 */

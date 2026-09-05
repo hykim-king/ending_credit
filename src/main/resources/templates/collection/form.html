@@ -5,6 +5,7 @@ Modification History
 2026. 8. 31. jinyoung - 작품 추가 모달과 미저장 변경 경고 적용
 2026. 9. 01. jinyoung - 등록·수정 화면과 공개 정책 UI 적용
 2026. 9. 02. jinyoung - 작품 추가·제거 흐름 개선
+2026. 9. 05. jinyoung - 수정 화면 상단에 컬렉션 삭제 버튼·확인 모달 추가
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -24,10 +25,18 @@ Modification History
     <div class="collection-editor collection-detail-block collection-update-block">
         <!-- 화면 제목과 저장 버튼 -->
         <header class="collection-page-heading collection-update-heading">
-            <button id="submitButton" class="btn collection-update-submit-button" type="submit" form="collectionForm"
-                    th:text="${formMode == 'update' ? '수정 완료' : '만들기'}">
-                만들기
-            </button>
+			<div class="collection-update-actions">
+				<button id="deleteCollectionButton"
+						class="btn collection-update-delete-button"
+						type="button"
+						data-bs-toggle="modal"
+						data-bs-target="#deleteCollectionFormModal"
+						th:if="${formMode == 'update'}">삭제</button>
+				<button id="submitButton" class="btn collection-update-submit-button" type="submit" form="collectionForm"
+						th:text="${formMode == 'update' ? '수정 완료' : '만들기'}">
+					만들기
+				</button>
+			</div>
             <h1 id="formTitle" class="collection-page-title mb-0"
                 th:text="${formMode == 'update' ? '컬렉션 수정' : '새 컬렉션'}">
                 새 컬렉션
@@ -177,6 +186,34 @@ Modification History
             </div>
         </div>
     </div>
+
+	<!-- 수정 화면 컬렉션 삭제 확인 모달 -->
+	<div id="deleteCollectionFormModal"
+		 class="modal fade"
+		 tabindex="-1"
+		 aria-label="컬렉션 삭제 확인"
+		 aria-hidden="true"
+		 th:if="${formMode == 'update'}">
+		<div class="modal-dialog modal-dialog-centered">
+			<div class="modal-content collection-delete-modal">
+				<button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
+						aria-label="닫기"></button>
+				<div class="modal-body">
+					<div class="collection-form-delete-icon" aria-hidden="true">
+						<i class="bi bi-trash3"></i>
+					</div>
+					<p class="collection-delete-question">해당 컬렉션을 삭제할까요?</p>
+					<p class="collection-delete-description">컬렉션에 기록된 좋아요와 댓글 기록이 모두 삭제되며 되돌릴 수 없습니다.</p>
+					<div class="collection-delete-actions">
+						<button type="button" class="btn collection-delete-button collection-delete-cancel"
+								data-bs-dismiss="modal">취소</button>
+						<button id="confirmDeleteCollectionButton" type="button"
+								class="btn btn-danger collection-delete-button">삭제</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
     <!-- 저장 필요 안내 -->
     <div class="collection-save-notice">

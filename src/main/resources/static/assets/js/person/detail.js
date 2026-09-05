@@ -4,9 +4,6 @@
     const MOVIE_DETAIL_PATH = "/movies/";
     const PEOPLE_API_PATH = "/api/people/";
 
-    // 로그인 병합 전까지 쓰는 임시 회원 식별 헤더(PersonLikeController와 같은 약속)
-    const MEMBER_ID_HEADER = "X-Member-Id";
-
     // POL-033이 정한 역할 4종. PersonViewController.ROLE_LABELS와 같은 표다 -
     // 더보기로 붙는 행은 서버 렌더를 거치지 않아 여기서 같은 표기를 만들어야 한다
     const ROLE_LABELS = {
@@ -70,7 +67,7 @@
                 const response = await fetch(PEOPLE_API_PATH + personId + "/likes", {
                     method: liked ? "POST" : "DELETE",
                     credentials: "same-origin",
-                    headers: Object.assign({ [MEMBER_ID_HEADER]: memberId }, csrfHeaders())
+                    headers: csrfHeaders()
                 });
 
                 if (!response.ok) {

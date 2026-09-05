@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -20,9 +21,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
-import com.endit.auth.CurrentMemberProvider;
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.domain.CollectionItemVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionItemService;
 
 /**
@@ -36,6 +39,7 @@ import com.endit.service.CollectionItemService;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    부모 컬렉션 공개 범위·소유권 및 인증 처리 추가
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
  * ------------------------------------------------------------
  * </pre>
  *
@@ -47,15 +51,11 @@ import com.endit.service.CollectionItemService;
 public class CollectionItemController {
 
 	private final CollectionItemService collectionItemService;
-	private final CurrentMemberProvider currentMemberProvider;
 
 	/** CollectionItemService를 주입받아 Controller 생성 */
-	public CollectionItemController(
-			CollectionItemService collectionItemService,
-			CurrentMemberProvider currentMemberProvider) {
+	public CollectionItemController(CollectionItemService collectionItemService) {
 
 		this.collectionItemService = collectionItemService;
-		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/** 컬렉션 작품 목록 조회 */
@@ -74,7 +74,7 @@ public class CollectionItemController {
 				collectionItemService.retrieve(
 						collectionId,
 						param,
-						currentMemberProvider.findCurrentMemberId());
+						findCurrentMemberId());
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		
@@ -94,7 +94,7 @@ public class CollectionItemController {
 				collectionItemService.get(
 						collectionId,
 						contentId,
-						currentMemberProvider.findCurrentMemberId()));
+						findCurrentMemberId()));
 	}
 
 	/** 컬렉션에 작품 추가 */
@@ -103,7 +103,7 @@ public class CollectionItemController {
 			@PathVariable int collectionId,
 			@RequestBody CollectionItemVO param) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		CollectionItemVO created = collectionItemService.create(
 				memberId, collectionId, param);
 
@@ -120,10 +120,19 @@ public class CollectionItemController {
 			@PathVariable int collectionId,
 			@PathVariable int contentId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		collectionItemService.delete(memberId, collectionId, contentId);
 
 		return ResponseEntity.noContent().build();
+	}
+
+	/** 비회원 조회를 지원하기 위한 현재 로그인 회원 번호 */
+	private static OptionalLong findCurrentMemberId() {
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		return loginMember == null
+				? OptionalLong.empty()
+				: OptionalLong.of(loginMember.getMemberId());
 	}
 
 	/** 잘못된 요청값 예외를 HTTP 400 응답으로 변환 */
@@ -137,6 +146,17 @@ public class CollectionItemController {
 				"컬렉션 작품 요청값을 확인해 주세요.");
 
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
+	}
+
+	/** 인증 회원이 소유하지 않은 컬렉션 작품 변경을 HTTP 403으로 변환 */
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<MessageVO> handleForbidden(
+			ForbiddenOperationException exception) {
+
+		MessageVO message = new MessageVO(
+				"403", exception.getMessage(), "컬렉션 작품을 변경할 권한이 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
 	}
 
 	/** 외래 키 등 데이터 무결성 예외를 HTTP 400 응답으로 변환 */

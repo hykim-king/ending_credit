@@ -539,7 +539,7 @@ async function deleteCollection() {
     try {
         await requestDelete(`/api/collections/${collectionId}`);
         window.location.href = currentMemberId > 0
-            ? `/users/${currentMemberId}/records?tab=collections`
+            ? "/members/records?tab=collections"
             : "/collections";
     } catch (error) {
         showDetailError(errorMessage, error.message);

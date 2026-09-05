@@ -16,19 +16,25 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.DTO;
 import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CollectionLikeItemVO;
+import com.endit.domain.CommentLikeVO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonLikeVO;
+import com.endit.domain.UserCommentVO;
 import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionService;
 import com.endit.service.CollectionLikeService;
+import com.endit.service.CommentLikeService;
 import com.endit.service.MemberContentService;
 import com.endit.service.MemberService;
 import com.endit.service.PersonLikeService;
@@ -53,6 +59,13 @@ import jakarta.servlet.http.HttpSession;
  *      (서비스/VO는 건드리지 않고 이 컨트롤러에서만 걸러 낸다)
  *   3) 다른 유저 프로필은 공개 필드(닉네임/프로필이미지/소개)만 내보낸다.
  *      이메일·권한·비밀번호는 포함하지 않는다.
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 9. 05. jinyoung    본인 댓글 목록·수정·삭제·좋아요 API 추가
+ * ------------------------------------------------------------
  */
 @RestController
 @RequestMapping("/api/members")
@@ -66,12 +79,17 @@ public class MemberMyPageApiController {
 	/** 좋아요 미리보기로 보여줄 개수 */
 	private static final int LIKE_PREVIEW_SIZE = 3;
 
+	/** 회원 기록 댓글 탭에서 허용하는 정렬값 */
+	private static final List<String> COMMENT_SORTS =
+			List.of("latest", "oldest", "likes");
+
 	private final MemberService memberService;
 	private final PersonLikeService personLikeService;
 	private final CollectionLikeService collectionLikeService;
 	private final MemberContentService memberContentService;
 	private final UserCommentService userCommentService;
 	private final CollectionService collectionService;
+	private final CommentLikeService commentLikeService;
 
 	/**
 	 * MemberService를 주입받아 Controller 생성
@@ -84,7 +102,8 @@ public class MemberMyPageApiController {
 			CollectionLikeService collectionLikeService,
 			MemberContentService memberContentService,
 			UserCommentService userCommentService,
-			CollectionService collectionService) {
+			CollectionService collectionService,
+			CommentLikeService commentLikeService) {
 	 
 		this.memberService = memberService;
 		this.personLikeService = personLikeService;
@@ -92,6 +111,7 @@ public class MemberMyPageApiController {
 		this.memberContentService = memberContentService;
 		this.userCommentService = userCommentService;
 		this.collectionService = collectionService;
+		this.commentLikeService = commentLikeService;
 	}
 
 	// ===================== 내 계정 =====================
@@ -405,6 +425,141 @@ public class MemberMyPageApiController {
 		return ResponseEntity.ok(response);
 	}	
 
+	// ===================== 내 댓글 기록 =====================
+
+	/** 로그인 회원이 작성한 영화·컬렉션 댓글 목록 조회 */
+	@GetMapping("/comments")
+	public ResponseEntity<Map<String, Object>> getMyComments(
+			@RequestParam(name = "page", defaultValue = "1") int pageNo,
+			@RequestParam(name = "size", defaultValue = "12") int pageSize,
+			@RequestParam(defaultValue = "latest") String sort) {
+
+		Long memberId = LoginMemberHelper.getMemberId();
+		validateCommentPaging(pageNo, pageSize, sort);
+
+		DTO param = new DTO();
+		param.setPageNo(pageNo);
+		param.setPageSize(pageSize);
+		param.setSearchDiv("10");
+		param.setSearchWord(String.valueOf(memberId));
+		param.getSearchMap().put("sort", sort);
+		param.getSearchMap().put("viewerMemberId", String.valueOf(memberId));
+
+		List<UserCommentVO> items = userCommentService.doRetrieve(param);
+		param.setTotalCnt(items.isEmpty() ? 0 : items.get(0).getTotalCnt());
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("page", param);
+
+		return ResponseEntity.ok(response);
+	}
+
+	/** 로그인 회원이 작성한 댓글의 내용과 스포일러 여부 수정 */
+	@PatchMapping("/comments/{commentId}")
+	public ResponseEntity<Void> updateMyComment(
+			@PathVariable long commentId,
+			@RequestBody(required = false) UserCommentVO request) {
+
+		long memberId = LoginMemberHelper.getMemberId();
+		requireOwnedComment(commentId, memberId);
+
+		if (request == null || request.getCommentDetail() == null
+				|| request.getCommentDetail().trim().isEmpty()) {
+			throw new IllegalArgumentException("코멘트 내용을 입력해 주세요.");
+		}
+		if (request.getCommentDetail().trim().length() > 1000) {
+			throw new IllegalArgumentException("코멘트는 1,000자 이내로 입력해 주세요.");
+		}
+
+		UserCommentVO target = new UserCommentVO();
+		target.setCommentId(commentId);
+		target.setMemberId(memberId);
+		target.setCommentDetail(request.getCommentDetail().trim());
+		target.setSpoiler(UserCommentVO.SPOILER_YES.equals(request.getSpoiler())
+				? UserCommentVO.SPOILER_YES
+				: UserCommentVO.SPOILER_NO);
+
+		if (userCommentService.doUpdate(target) != 1) {
+			throw new IllegalStateException("코멘트 수정에 실패했습니다.");
+		}
+
+		return ResponseEntity.noContent().build();
+	}
+
+	/** 로그인 회원이 작성한 댓글 삭제 */
+	@DeleteMapping("/comments/{commentId}")
+	public ResponseEntity<Void> deleteMyComment(@PathVariable long commentId) {
+
+		long memberId = LoginMemberHelper.getMemberId();
+		requireOwnedComment(commentId, memberId);
+
+		UserCommentVO target = new UserCommentVO();
+		target.setCommentId(commentId);
+		target.setMemberId(memberId);
+
+		if (userCommentService.doDelete(target) != 1) {
+			throw new IllegalStateException("코멘트 삭제에 실패했습니다.");
+		}
+
+		return ResponseEntity.noContent().build();
+	}
+
+	/** 로그인 회원의 댓글 좋아요 상태 토글 */
+	@PostMapping("/comments/{commentId}/likes")
+	public ResponseEntity<Map<String, Object>> toggleCommentLike(
+			@PathVariable long commentId) {
+
+		long memberId = LoginMemberHelper.getMemberId();
+		UserCommentVO commentKey = new UserCommentVO();
+		commentKey.setCommentId(commentId);
+
+		if (userCommentService.doSelectOne(commentKey) == null) {
+			throw new NoSuchElementException("코멘트를 찾을 수 없습니다.");
+		}
+
+		CommentLikeVO like = new CommentLikeVO();
+		like.setMemberId(memberId);
+		like.setCommentId(commentId);
+
+		int state = commentLikeService.upToggleLike(like);
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("liked", state == CommentLikeService.LIKE_ON);
+		response.put("likeCount", commentLikeService.getLikeCnt(commentId));
+
+		return ResponseEntity.ok(response);
+	}
+
+	/** 회원 기록 댓글의 페이징 및 정렬 요청값 확인 */
+	private static void validateCommentPaging(int pageNo, int pageSize, String sort) {
+		if (pageNo < 1) {
+			throw new IllegalArgumentException("페이지 번호는 1 이상이어야 합니다.");
+		}
+		if (pageSize < 1 || pageSize > 50) {
+			throw new IllegalArgumentException("페이지 크기는 1~50 사이여야 합니다.");
+		}
+		if (!COMMENT_SORTS.contains(sort)) {
+			throw new IllegalArgumentException("지원하지 않는 코멘트 정렬 조건입니다.");
+		}
+	}
+
+	/** 댓글이 존재하고 로그인 회원이 작성자인지 확인 */
+	private UserCommentVO requireOwnedComment(long commentId, long memberId) {
+		UserCommentVO key = new UserCommentVO();
+		key.setCommentId(commentId);
+
+		UserCommentVO comment = userCommentService.doSelectOne(key);
+
+		if (comment == null) {
+			throw new NoSuchElementException("코멘트를 찾을 수 없습니다.");
+		}
+		if (comment.getMemberId() != memberId) {
+			throw new ForbiddenOperationException("본인이 작성한 코멘트만 변경할 수 있습니다.");
+		}
+
+		return comment;
+	}
+
 	/**
 	 * 프로필 화면에 표시할 회원별 활동 건수를 조회한다.
 	 *
@@ -492,6 +647,21 @@ public class MemberMyPageApiController {
 
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
+					.body(message);
+	}
+
+	/** 본인이 작성하지 않은 댓글 변경 요청을 HTTP 403으로 변환 */
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<MessageVO> handleForbidden(
+			ForbiddenOperationException exception) {
+
+		MessageVO message = new MessageVO(
+				"403",
+				exception.getMessage(),
+				"본인 코멘트만 변경할 수 있습니다.");
+
+		return ResponseEntity
+				.status(HttpStatus.FORBIDDEN)
 				.body(message);
 	}
 

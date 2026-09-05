@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -16,11 +17,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.endit.auth.CurrentMemberProvider;
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CollectionLikeItemVO;
 import com.endit.domain.CollectionLikeVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionLikeService;
 
 /**
@@ -35,6 +38,8 @@ import com.endit.service.CollectionLikeService;
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 규격 및 예외 처리 보완
  * 2026. 8. 29. jinyoung    인증·공개 범위·본인 제한 및 좋아요 상태 조회 적용
+ * 2026. 9. 05. jinyoung    로그인 회원 본인 좋아요 목록 API 추가
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
  * ------------------------------------------------------------
  * </pre>
  *
@@ -47,20 +52,15 @@ public class CollectionLikeController {
 	private static final String TYPE_COLLECTION = "collection";
 
 	private final CollectionLikeService collectionLikeService;
-	private final CurrentMemberProvider currentMemberProvider;
 
 	/**
 	 * CollectionLikeService를 주입받아 Controller 생성
 	 *
 	 * @param collectionLikeService 컬렉션 좋아요 Service
-	 * @param currentMemberProvider 현재 로그인 회원 Provider
 	 */
-	public CollectionLikeController(
-			CollectionLikeService collectionLikeService,
-			CurrentMemberProvider currentMemberProvider) {
+	public CollectionLikeController(CollectionLikeService collectionLikeService) {
 
 		this.collectionLikeService = collectionLikeService;
-		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/**
@@ -76,7 +76,7 @@ public class CollectionLikeController {
 	public ResponseEntity<CollectionLikeVO> like(
 			@PathVariable int collectionId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		CollectionLikeVO like = collectionLikeService.create(
 				memberId, collectionId);
 
@@ -93,7 +93,7 @@ public class CollectionLikeController {
 	public ResponseEntity<Void> unlike(
 			@PathVariable int collectionId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		collectionLikeService.delete(memberId, collectionId);
 
 		return ResponseEntity.noContent().build();
@@ -104,7 +104,7 @@ public class CollectionLikeController {
 	public ResponseEntity<Map<String, Boolean>> likeStatus(
 			@PathVariable int collectionId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		boolean liked = collectionLikeService.isLiked(memberId, collectionId);
 
 		return ResponseEntity.ok(Map.of("liked", liked));
@@ -130,13 +130,43 @@ public class CollectionLikeController {
 		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(
 				memberId,
 				param,
-				currentMemberProvider.findCurrentMemberId());
+				findCurrentMemberId());
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("items", items);
 		response.put("page", param);
 
 		return ResponseEntity.ok(response);
+	}
+
+	/** 로그인 회원이 좋아요한 컬렉션 목록 조회 */
+	@GetMapping(value = "/api/members/likes", params = "type=collection")
+	public ResponseEntity<Map<String, Object>> retrieveMine(
+			@RequestParam(name = "page", defaultValue = "1") int pageNo,
+			@RequestParam(name = "size", defaultValue = "12") int pageSize) {
+
+		long memberId = LoginMemberHelper.getMemberId();
+		DTO param = new DTO();
+		param.setPageNo(pageNo);
+		param.setPageSize(pageSize);
+
+		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(
+				Math.toIntExact(memberId), param, OptionalLong.of(memberId));
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("page", param);
+
+		return ResponseEntity.ok(response);
+	}
+
+	/** 비회원 조회를 지원하기 위한 현재 로그인 회원 번호 */
+	private static OptionalLong findCurrentMemberId() {
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		return loginMember == null
+				? OptionalLong.empty()
+				: OptionalLong.of(loginMember.getMemberId());
 	}
 
 	/**잘못된 요청값 예외를 HTTP 400 응답으로 변환*/
@@ -152,6 +182,17 @@ public class CollectionLikeController {
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
 				.body(message);
+	}
+
+	/** 인증 회원에게 허용되지 않은 컬렉션 좋아요를 HTTP 403으로 변환 */
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<MessageVO> handleForbidden(
+			ForbiddenOperationException exception) {
+
+		MessageVO message = new MessageVO(
+				"403", exception.getMessage(), "요청한 좋아요 작업을 수행할 권한이 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
 	}
 
 	/**존재하지 않는 회원 또는 컬렉션 등의 데이터 무결성 예외를 HTTP 400 응답으로 변환*/

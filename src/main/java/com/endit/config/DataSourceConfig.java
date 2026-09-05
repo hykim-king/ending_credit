@@ -23,12 +23,12 @@ public class DataSourceConfig {
 		ds.setUsername("endit_test");
 		ds.setPassword("qwer1234");
 
-		// Oracle DataSource - (공용) ENDITPCWK
-		// ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-		// ds.setJdbcUrl("jdbc:oracle:thin:@//192.168.100.30:1522/XE");
-		// ds.setUsername("enditpcwk");
-		// ds.setPassword("qwer1234");
-
+//		// Oracle DataSource - (공용) ENDITPCWK
+//		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
+//		ds.setJdbcUrl("jdbc:oracle:thin:@//192.168.100.30:1522/XE");
+//		ds.setUsername("enditpcwk");
+//		ds.setPassword("qwer1234");
+	 
 		// Hikari
 		ds.setPoolName("PCWK-HikariCP");
 		ds.setMaximumPoolSize(10);
