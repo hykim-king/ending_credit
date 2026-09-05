@@ -27,6 +27,11 @@ public class ContentImageServiceImpl implements ContentImageService {
 	private static final int MAX_PAGE_SIZE = 100;
 	private static final String TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/";
 
+	// 이미지 값 판별에 쓰는 조각 - TMDB 경로 구분자와 절대 주소 접두사
+	private static final String IMAGE_PATH_PREFIX = "/";
+	private static final String HTTP_PREFIX = "http://";
+	private static final String HTTPS_PREFIX = "https://";
+
 	// ── 이미지 크기는 전부 여기에 모은다 ──
 	// 다른 ServiceImpl은 크기를 알지 못하고 용도별 to*Url() 메서드만 호출한다.
 	// 기본 크기(tmdb.image-size, 현재 w500)를 쓰는 용도는 상수를 따로 두지 않는다.
@@ -217,6 +222,11 @@ public class ContentImageServiceImpl implements ContentImageService {
 			return null;
 		}
 
+		// TMDB 밖 주소에는 크기 구간을 끼워 넣을 자리가 없다. 받은 값이 곧 완성 URL이다
+		if (isAbsoluteUrl(storedPath)) {
+			return storedPath;
+		}
+
 		return TMDB_IMAGE_BASE_URL + size + storedPath;
 	}
 
@@ -224,18 +234,31 @@ public class ContentImageServiceImpl implements ContentImageService {
 	// PersonServiceImpl의 쓰기 경로도 같은 역변환이 필요해 인터페이스로 열어 뒀다
 	@Override
 	public String toStoredPath(String url) {
-		if (!StringUtils.hasText(url) || !url.startsWith(TMDB_IMAGE_BASE_URL)) {
+		if (!StringUtils.hasText(url)) {
 			return url;
 		}
 
-		String sizeAndPath = url.substring(TMDB_IMAGE_BASE_URL.length());
-		int pathIndex = sizeAndPath.indexOf('/');
+		String trimmed = url.trim();
 
-		if (pathIndex < 0) {
-			return url;
+		if (trimmed.startsWith(TMDB_IMAGE_BASE_URL)) {
+			String sizeAndPath = trimmed.substring(TMDB_IMAGE_BASE_URL.length());
+			int pathIndex = sizeAndPath.indexOf(IMAGE_PATH_PREFIX);
+
+			return pathIndex < 0 ? trimmed : sizeAndPath.substring(pathIndex);
 		}
 
-		return sizeAndPath.substring(pathIndex);
+		// TMDB 밖 주소는 크기를 갈아 끼울 수 없어 통째로 저장하고 통째로 내보낸다
+		if (isAbsoluteUrl(trimmed)) {
+			return trimmed;
+		}
+
+		// 경로만 붙여 넣은 경우다. 앞의 '/'는 채워 준다
+		return trimmed.startsWith(IMAGE_PATH_PREFIX) ? trimmed : IMAGE_PATH_PREFIX + trimmed;
+	}
+
+	// http(s)로 시작하면 TMDB 경로가 아니라 그 자체로 완성된 주소다
+	private boolean isAbsoluteUrl(String value) {
+		return value.startsWith(HTTP_PREFIX) || value.startsWith(HTTPS_PREFIX);
 	}
 
 	// 페이지 번호와 페이지 크기를 허용 범위의 기본값으로 보정

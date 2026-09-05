@@ -44,19 +44,38 @@ Modification History
 			<if test="searchMap.externalId != null and searchMap.externalId != ''">
 				AND external_id = #{searchMap.externalId}
 			</if>
-			<!-- 개봉작만 - release_year DESC는 미래 개봉일을 맨 앞에 올리므로,
-			     "최신 개봉작"처럼 이미 개봉한 것만 보여야 하는 화면이 이 조건을 켠다.
-			     검색은 미개봉작도 찾아야 하므로 켜지 않는다.
-			     searchMap 값은 String인데 OGNL은 작은따옴표 한 글자를 char로 읽어 == 'Y'가 성립하지 않는다.
-			     위 searchDiv 조건들이 '10'·'50'처럼 두 글자라 String 리터럴로 잡히는 것과 다른 경우다 -->
+			<!-- 개봉작만 - 검색은 미개봉작도 찾아야 하므로 켜지 않는다. equals인 이유는 OGNL이 'Y' 한 글자를 char로 읽어서다 -->
 			<if test='"Y".equals(searchMap.released)'>
 				AND release_year IS NOT NULL
 				AND release_year &lt;= SYSDATE
 			</if>
-			<!-- 개봉 예정작만 - "Y"의 반대편이다. 개봉일을 모르는 콘텐츠는 양쪽 어디에도 들지 않는다 -->
-			<if test='"N".equals(searchMap.released)'>
-				AND release_year IS NOT NULL
-				AND release_year &gt; SYSDATE
+			<!-- 아래 셋은 홈 큐레이션용. JOIN이 아니라 서브쿼리인 이유는 이 조각에 별칭이 없어 doRetrieve의 SELECT *가 깨지기 때문이다 -->
+
+			<!-- 장르 - 이름이 아니라 genre_id로 건다 -->
+			<if test="searchMap.genreId != null and searchMap.genreId != ''">
+				AND content_id IN (
+					SELECT cg.content_id
+					  FROM content_genre cg
+					 WHERE cg.genre_id = #{searchMap.genreId}
+				)
+			</if>
+			<!-- 인물 - role을 같이 주면 그 역할로 참여한 작품만. 안 주면 참여작 전부 -->
+			<if test="searchMap.personId != null and searchMap.personId != ''">
+				AND content_id IN (
+					SELECT cc.content_id
+					  FROM content_credit cc
+					 WHERE cc.person_id = #{searchMap.personId}
+					<if test="searchMap.personRole != null and searchMap.personRole != ''">
+						 AND cc.role = #{searchMap.personRole}
+					</if>
+				)
+			</if>
+			<!-- 개봉 연대 - "1990"이면 1990-01-01 이상 2000-01-01 미만.
+			     TRUNC가 필요한 이유: TO_DATE('1990','YYYY')는 빠진 월·일을 SYSDATE에서 채워 와
+			     9월에 돌리면 1990-09-01이 된다. 그대로 두면 경계가 매달 움직인다 -->
+			<if test="searchMap.decade != null and searchMap.decade != ''">
+				AND release_year &gt;= TRUNC(TO_DATE(#{searchMap.decade}, 'YYYY'), 'YYYY')
+				AND release_year &lt; ADD_MONTHS(TRUNC(TO_DATE(#{searchMap.decade}, 'YYYY'), 'YYYY'), 120)
 			</if>
 		</where>
 	</sql>
@@ -72,11 +91,6 @@ Modification History
 			     개봉일을 모르는 콘텐츠는 뒤로 보낸다 -->
 			<when test="searchMap.sort == 'latest'">
 				release_year DESC NULLS LAST, content_id DESC
-			</when>
-			<!-- 개봉 예정 - latest와 반대로 가까운 개봉일부터다. searchMap.released='N'과 짝으로 쓴다.
-			     필터 없이 이 축만 걸면 이미 개봉한 옛날 영화가 앞에 온다 -->
-			<when test="searchMap.sort == 'upcoming'">
-				release_year ASC NULLS LAST, content_id ASC
 			</when>
 			<!-- 등록순 - TMDB에서 늦게 적재된 순. "최신 등록작"처럼 적재 시점이 뜻인 화면이 쓴다.
 			     created_dt가 SYSDATE(초 단위)라 sync 한 번이 넣은 수백 건이 같은 값을 갖는다.
@@ -157,6 +171,17 @@ Modification History
 		<foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
 			#{contentId}
 		</foreach>
+	</select>
+
+	<!-- TMDB id를 우리 id로 옮기기 위한 대응표. 세 칸만 뽑으므로 전체를 읽어도 가볍다.
+	     release_year를 같이 싣는 이유는 인기순 경로가 WHERE를 못 걸어
+	     "개봉작만" 판정을 목록 만들 때 해야 하기 때문이다(contentWhere의 released와 같은 기준) -->
+	<select id="doSelectExternalIdMap" resultType="ContentVO">
+		SELECT content_id,
+		       external_id,
+		       TO_CHAR(release_year, 'YYYY-MM-DD') release_year
+		  FROM content
+		 WHERE external_id IS NOT NULL
 	</select>
 
 	<select id="doSelectOne" parameterType="ContentVO" resultType="ContentVO">

@@ -15,19 +15,20 @@
 <!-- 영화 카드 - 포스터/제목/연도/국가. 상세로 가는 링크는 포스터에만 건다 -->
 <div th:fragment="movieCard(movie)" class="ec-card">
 	<a th:href="@{'/movies/' + ${movie.contentId}}" class="ec-poster-link"
-	   th:title="${movie.titleKo}">
+	   th:title="${@localeText.get(movie.titleKo, movie.titleOrg)}">
 		<div class="ec-poster">
 			<img th:if="${movie.posterUrl != null}" th:src="${movie.posterUrl}"
-			     th:alt="${movie.titleKo}" loading="lazy">
-			<div th:if="${movie.posterUrl == null}" class="ec-poster-empty">이미지 없음</div>
+			     th:alt="${@localeText.get(movie.titleKo, movie.titleOrg)}" loading="lazy">
+			<div th:if="${movie.posterUrl == null}" class="ec-poster-empty"
+			     th:text="#{home.card.noImage}">이미지 없음</div>
 		</div>
 	</a>
 	<div class="ec-card-body">
-		<div class="ec-card-title" th:text="${movie.titleKo}">제목</div>
+		<div class="ec-card-title"
+		     th:text="${@localeText.get(movie.titleKo, movie.titleOrg)}">제목</div>
 		<div class="ec-card-meta">
-			<!-- release_year는 YYYY-MM-DD 문자열이라 앞 4자리만 쓴다 -->
-			<span th:if="${movie.releaseYear != null and #strings.length(movie.releaseYear) >= 4}"
-			      th:text="${#strings.substring(movie.releaseYear, 0, 4)}">2026</span>
+			<span th:if="${movie.releaseYearLabel != null}"
+			      th:text="${movie.releaseYearLabel}">2026</span>
 			<span th:if="${movie.country != null and !movie.country.isEmpty()}"
 			      th:text="' · ' + ${movie.country}"> · US</span>
 		</div>

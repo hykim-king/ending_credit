@@ -9,19 +9,10 @@ import com.endit.cmn.DTO;
  */
 public class NoticeSearchVO extends DTO {
 
-    private String status;
     private String important;
 
     public NoticeSearchVO() {
         super();
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
     }
 
     public String getImportant() {
@@ -38,10 +29,9 @@ public class NoticeSearchVO extends DTO {
 
     @Override
     public String toString() {
-        return "NoticeSearchVO [status=" + status
-                + ", important=" + important
-                + ", pageNo=" + getPageNo()
-                + ", pageSize=" + getPageSize()
-                + ", searchWord=" + getSearchWord() + "]";
+    	return "NoticeSearchVO [important=" + important
+    	        + ", pageNo=" + getPageNo()
+    	        + ", pageSize=" + getPageSize()
+    	        + ", searchWord=" + getSearchWord() + "]";
     }
 }

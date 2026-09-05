@@ -29,13 +29,18 @@
 
                 <div class="field-grid">
                     <div class="field">
-                        <label for="externalId">외부 ID</label>
+                        <div class="field-label">
+                            <label for="externalId">외부 ID</label>
+                            <!-- TMDB ID를 어디서 얻는지 아는 사람이 적어 라벨 옆에 안내를 붙였다 -->
+                            <button type="button" class="hint-button" id="externalIdHelp"
+                                    aria-label="TMDB 영화 ID 받는 곳 안내">?</button>
+                        </div>
                         <div class="field-with-button">
                             <input type="text" id="externalId" maxlength="50" placeholder="TMDB 영화 ID">
                             <button type="button" class="outline-button" id="checkButton">중복 확인</button>
                         </div>
                         <p class="check-result" id="checkResult" hidden></p>
-                        <p class="form-hint">POL-030 - 이미 등록된 ID면 저장할 때 막힙니다.</p>
+                        <p class="form-hint">이미 등록된 ID면 저장할 때 막힙니다.</p>
                     </div>
 
                     <div class="field">
@@ -70,18 +75,18 @@
 
                     <div class="field">
                         <label for="posterUrl">포스터</label>
-                        <input type="text" id="posterUrl" maxlength="500" placeholder="TMDB 경로 또는 전체 URL">
+                        <input type="text" id="posterUrl" maxlength="500" placeholder="이미지 주소 또는 TMDB 경로">
                     </div>
 
                     <div class="field">
                         <label for="backdropUrl">배경 이미지</label>
-                        <input type="text" id="backdropUrl" maxlength="500" placeholder="TMDB 경로 또는 전체 URL">
+                        <input type="text" id="backdropUrl" maxlength="500" placeholder="이미지 주소 또는 TMDB 경로">
                     </div>
                 </div>
 
                 <p class="form-hint" style="margin-top:12px">
-                    TMDB 이미지 주소(<code>https://image.tmdb.org/t/p/…</code>)나 <code>/</code>로 시작하는 경로만 받습니다.
-                    전체 URL을 넣으면 저장할 때 경로만 남깁니다. 다른 사이트 주소는 저장되지 않습니다.
+                    이미지 주소는 형태를 가리지 않습니다. TMDB 전체 URL, <code>/abc123.jpg</code> 같은 TMDB 경로,
+                    다른 사이트의 이미지 주소 모두 됩니다. TMDB 전체 URL만 저장할 때 경로로 줄입니다.
                 </p>
             </section>
 
@@ -171,6 +176,25 @@
                 <button type="submit" class="primary-button" id="saveButton" disabled>등록</button>
             </div>
         </form>
+
+        <!-- 외부 ID 안내 - form 안에 두면 닫기 버튼의 form이 중첩된다 -->
+        <dialog class="help-dialog" id="externalIdHelpDialog">
+            <h2>TMDB 영화 ID는 어디서 받나요?</h2>
+            <ol>
+                <li>
+                    <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">themoviedb.org</a>에서
+                    등록할 영화를 검색해 상세 화면으로 들어갑니다.
+                </li>
+                <li>주소창이 <code>themoviedb.org/movie/157336-interstellar</code> 형태가 됩니다.</li>
+                <li><code>/movie/</code> 바로 뒤의 숫자 <code>157336</code>이 영화 ID입니다. 뒤에 붙은 제목은 빼고 숫자만 넣습니다.</li>
+            </ol>
+            <p class="form-hint">
+                포스터·배경 이미지 주소도 같은 상세 화면에서 이미지를 열어 주소를 복사해 오면 됩니다.
+            </p>
+            <form method="dialog" class="help-dialog-actions">
+                <button class="primary-button">닫기</button>
+            </form>
+        </dialog>
     </main>
 </div>
 
