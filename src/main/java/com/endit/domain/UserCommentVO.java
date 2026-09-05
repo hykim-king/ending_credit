@@ -10,6 +10,7 @@
  * 2026. 8. 12.  홍선기   최초 생성
  * 2026. 8. 19.  홍선기   조회 전용 join 필드 추가(작성자 닉네임·좋아요 수·별점) — 8/18 공지 보완점2
  * 2026. 9. 05.  이진영   회원 기록 댓글의 대상 정보·로그인 회원 좋아요 여부 추가
+ * 2026. 9. 05.  이진영   컬렉션 상세 댓글 작성자 프로필 이미지 추가
  * </pre>
  *
  * @author 홍선기
@@ -36,6 +37,7 @@ public class UserCommentVO extends DTO {
 
 	// ── 조회 전용(join 결과) — 목록/단건조회에서만 채워진다. 등록·수정 파라미터로는 쓰지 않는다 ──
 	private String nickname;      // 작성자 닉네임 (MEMBER join)
+	private String profileImgUrl; // 작성자 프로필 이미지 URL (MEMBER join)
 	private int likeCnt;          // 좋아요 수 (COMMENT_LIKE 집계, 없으면 0)
 	private Integer ratingScore;  // 작성자가 그 영화에 준 별점 (MEMBER_CONTENT join — 없거나 컬렉션 코멘트면 null)
 	private String blindReason;   // 승인(ACCEPTED)된 신고의 사유 — 값이 있으면 화면에서 안내 문구로 가린다(팀 결정: 삭제 없음)
@@ -134,6 +136,14 @@ public class UserCommentVO extends DTO {
 		this.nickname = nickname;
 	}
 
+	public String getProfileImgUrl() {
+		return profileImgUrl;
+	}
+
+	public void setProfileImgUrl(String profileImgUrl) {
+		this.profileImgUrl = profileImgUrl;
+	}
+
 	public int getLikeCnt() {
 		return likeCnt;
 	}
@@ -203,6 +213,7 @@ public class UserCommentVO extends DTO {
 		return "UserCommentVO [commentId=" + commentId + ", memberId=" + memberId + ", contentId=" + contentId
 				+ ", collectionId=" + collectionId + ", commentDetail=" + commentDetail + ", spoiler=" + spoiler
 				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", nickname=" + nickname
+				+ ", profileImgUrl=" + profileImgUrl
 				+ ", likeCnt=" + likeCnt + ", ratingScore=" + ratingScore + ", blindReason=" + blindReason
 				+ ", targetType=" + targetType + ", targetTitle=" + targetTitle + ", releaseYear=" + releaseYear
 				+ ", collectionAuthorNickname=" + collectionAuthorNickname + ", likedByMember=" + likedByMember

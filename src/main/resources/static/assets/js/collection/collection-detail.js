@@ -4,8 +4,11 @@
  * 2026. 8. 31. jinyoung - 링크 복사·댓글 연결·작품 평가 정보 적용
  * 2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
  * 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
+ * 2026. 9. 05. jinyoung - 컬렉션 댓글 작성·대표 댓글·전체 댓글 모달 적용
  */
 const ITEMS_PER_PAGE = 12;
+const COMMENTS_PER_PAGE = 10;
+const COMMENT_MAX_LENGTH = 1000;
 const COPY_FEEDBACK_DURATION_MS = 2400;
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
 const TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500";
@@ -21,6 +24,8 @@ let isOwner = false;
 let isLiked = false;
 let isPublicCollection = false;
 let copyFeedbackTimer = null;
+let currentCommentsPage = 0;
+let isCommentSubmitting = false;
 
 document.addEventListener("DOMContentLoaded", initializeDetail);
 
@@ -41,6 +46,7 @@ async function initializeDetail() {
         () => setMovieView("list")
     );
     document.querySelector("#loadMoreButton").addEventListener("click", loadMoreItems);
+    initializeCommentComposer();
 
     // 소유자 여부를 먼저 확정한 뒤 상세 화면의 버튼 노출을 결정한다.
     const collectionLoaded = await loadCollection();
@@ -48,6 +54,7 @@ async function initializeDetail() {
         return;
     }
     await loadItems(1);
+    await loadCommentPreview();
 }
 
 // 상세 정보와 사용자 동작
@@ -422,6 +429,285 @@ function scrollToComments() {
     const comments = document.querySelector("#collectionComments");
     comments.scrollIntoView({ behavior: "smooth", block: "start" });
     window.setTimeout(() => comments.focus({ preventScroll: true }), 450);
+}
+
+// 컬렉션 댓글
+
+/** 로그인 상태에 맞게 댓글 작성 영역과 이벤트를 초기화한다. */
+function initializeCommentComposer() {
+    const input = document.querySelector("#collectionCommentInput");
+    const spoiler = document.querySelector("#collectionCommentSpoiler");
+
+    if (currentMemberId <= 0) {
+        input.readOnly = true;
+        input.placeholder = "로그인 후, 컬렉션에 댓글을 남겨보세요.";
+        spoiler.disabled = true;
+    }
+
+    input.addEventListener("beforeinput", guardCommentLength);
+    input.addEventListener("paste", notifyLongCommentPaste);
+    input.addEventListener("input", enforceCommentLength);
+    document.querySelector("#submitCommentButton").addEventListener("click", submitComment);
+    document.querySelector("#allCommentsButton").addEventListener("click", openAllCommentsModal);
+    document.querySelector("#loadMoreCommentsButton").addEventListener(
+        "click",
+        () => loadAllComments(currentCommentsPage + 1)
+    );
+}
+
+/** 입력 결과가 최대 글자 수를 넘는 키 입력을 막고 토스트를 표시한다. */
+function guardCommentLength(event) {
+    if (event.inputType.startsWith("delete") || event.data === null) {
+        return;
+    }
+
+    const input = event.currentTarget;
+    const selectionLength = input.selectionEnd - input.selectionStart;
+    const nextLength = input.value.length - selectionLength + event.data.length;
+
+    if (nextLength > COMMENT_MAX_LENGTH) {
+        event.preventDefault();
+        showCommentToast(`댓글은 최대 ${COMMENT_MAX_LENGTH.toLocaleString()}자까지 작성 가능해요.`);
+    }
+}
+
+/** 붙여넣기로 최대 글자 수를 넘길 때 안내한다. */
+function notifyLongCommentPaste(event) {
+    const input = event.currentTarget;
+    const pastedText = event.clipboardData?.getData("text") || "";
+    const selectionLength = input.selectionEnd - input.selectionStart;
+
+    if (input.value.length - selectionLength + pastedText.length > COMMENT_MAX_LENGTH) {
+        showCommentToast(`댓글은 최대 ${COMMENT_MAX_LENGTH.toLocaleString()}자까지 작성 가능해요.`);
+    }
+}
+
+/** 자동완성 등으로 제한을 넘긴 입력값을 자른다. */
+function enforceCommentLength(event) {
+    const input = event.currentTarget;
+
+    if (input.value.length <= COMMENT_MAX_LENGTH) {
+        return;
+    }
+
+    input.value = input.value.slice(0, COMMENT_MAX_LENGTH);
+    showCommentToast(`댓글은 최대 ${COMMENT_MAX_LENGTH.toLocaleString()}자까지 작성 가능해요.`);
+}
+
+/** 로그인 회원의 댓글을 등록하고 대표 댓글과 집계를 갱신한다. */
+async function submitComment() {
+    if (currentMemberId <= 0) {
+        bootstrap.Modal.getOrCreateInstance(
+            document.querySelector("#commentLoginModal")
+        ).show();
+        return;
+    }
+
+    if (isCommentSubmitting) {
+        return;
+    }
+
+    const input = document.querySelector("#collectionCommentInput");
+    const spoiler = document.querySelector("#collectionCommentSpoiler");
+    const commentDetail = input.value.trim();
+
+    if (!commentDetail) {
+        showCommentToast("댓글 내용을 입력해 주세요.");
+        input.focus();
+        return;
+    }
+
+    const submitButton = document.querySelector("#submitCommentButton");
+    isCommentSubmitting = true;
+    submitButton.disabled = true;
+    submitButton.textContent = "등록 중";
+
+    try {
+        await requestPost(`/api/collections/${collectionId}/comments`, {
+            commentDetail,
+            spoiler: spoiler.checked ? "Y" : "N"
+        });
+
+        input.value = "";
+        spoiler.checked = false;
+        await loadCommentPreview();
+        showCommentToast("댓글을 등록했어요.");
+    } catch (error) {
+        showCommentToast(error.message);
+    } finally {
+        isCommentSubmitting = false;
+        submitButton.disabled = false;
+        submitButton.textContent = "등록";
+    }
+}
+
+/** 대표 댓글 한 건과 전체 댓글 수를 조회한다. */
+async function loadCommentPreview() {
+    try {
+        const data = await requestGet(`/api/collections/${collectionId}/comments`, {
+            pageNo: 1,
+            pageSize: 1
+        });
+        const items = data.items || [];
+        const totalCount = Number(data.totalCount || 0);
+        const empty = document.querySelector("#collectionCommentEmpty");
+        const preview = document.querySelector("#collectionCommentPreview");
+
+        updateCommentCounts(totalCount);
+        empty.classList.toggle("d-none", totalCount > 0);
+        preview.classList.toggle("d-none", items.length === 0);
+
+        if (items.length > 0) {
+            renderCommentCard(preview, items[0]);
+        } else {
+            preview.replaceChildren();
+        }
+    } catch (error) {
+        showCommentToast(error.message);
+    }
+}
+
+/** 전체 댓글 모달을 열고 첫 페이지를 조회한다. */
+async function openAllCommentsModal() {
+    currentCommentsPage = 0;
+    document.querySelector("#allCommentsList").replaceChildren();
+    document.querySelector("#allCommentsEmpty").classList.add("d-none");
+    document.querySelector("#loadMoreCommentsButton").classList.add("d-none");
+
+    bootstrap.Modal.getOrCreateInstance(
+        document.querySelector("#allCommentsModal")
+    ).show();
+    await loadAllComments(1);
+}
+
+/** 전체 댓글 모달에 지정한 페이지를 추가한다. */
+async function loadAllComments(pageNo) {
+    const loadMoreButton = document.querySelector("#loadMoreCommentsButton");
+    loadMoreButton.disabled = true;
+    loadMoreButton.textContent = "불러오는 중";
+
+    try {
+        const data = await requestGet(`/api/collections/${collectionId}/comments`, {
+            pageNo,
+            pageSize: COMMENTS_PER_PAGE
+        });
+        const list = document.querySelector("#allCommentsList");
+        const items = data.items || [];
+        const totalCount = Number(data.totalCount || 0);
+
+        items.forEach((comment) => {
+            const card = document.createElement("article");
+            card.className = "collection-comment-card";
+            renderCommentCard(card, comment);
+            list.append(card);
+        });
+
+        currentCommentsPage = pageNo;
+        updateCommentCounts(totalCount);
+        document.querySelector("#allCommentsEmpty").classList.toggle(
+            "d-none",
+            totalCount > 0
+        );
+        loadMoreButton.classList.toggle("d-none", data.hasNext !== true);
+    } catch (error) {
+        showCommentToast(error.message);
+    } finally {
+        loadMoreButton.disabled = false;
+        loadMoreButton.textContent = "댓글 더보기";
+    }
+}
+
+/** 댓글 한 건을 프로필·좋아요 수·스포일러 상태와 함께 만든다. */
+function renderCommentCard(card, comment) {
+    const header = document.createElement("div");
+    const author = document.createElement("div");
+    const avatar = createCommentAvatar(comment.profileImgUrl, comment.nickname);
+    const nickname = document.createElement("strong");
+    const likes = document.createElement("span");
+    const detail = document.createElement("div");
+
+    header.className = "collection-comment-card-header";
+    author.className = "collection-comment-author";
+    nickname.textContent = comment.nickname || `회원 ${comment.memberId}`;
+    likes.className = "collection-comment-likes";
+    likes.innerHTML = '<i class="bi bi-heart" aria-hidden="true"></i>';
+    likes.append(document.createTextNode(` 좋아요 ${Number(comment.likeCnt || 0)}`));
+    author.append(avatar, nickname);
+    header.append(author, likes);
+
+    detail.className = "collection-comment-detail";
+    renderCommentDetail(detail, comment);
+    card.replaceChildren(header, detail);
+}
+
+/** 신고 승인 및 스포일러 상태에 맞춰 댓글 본문을 표시한다. */
+function renderCommentDetail(detail, comment) {
+    if (comment.blindReason) {
+        detail.classList.add("is-blinded");
+        detail.textContent = comment.blindReason === "SPOILER"
+            ? "스포일러 댓글입니다."
+            : (comment.blindReason === "INAPPROPRIATE"
+                ? "부적절한 댓글입니다."
+                : "신고 승인된 댓글입니다.");
+        return;
+    }
+
+    if (comment.spoiler !== "Y") {
+        detail.textContent = comment.commentDetail || "";
+        return;
+    }
+
+    const warning = document.createElement("span");
+    const revealButton = document.createElement("button");
+    warning.textContent = "스포일러가 있어요!";
+    revealButton.type = "button";
+    revealButton.className = "collection-comment-reveal";
+    revealButton.textContent = "보기";
+    revealButton.addEventListener("click", () => {
+        detail.classList.remove("is-spoiler");
+        detail.textContent = comment.commentDetail || "";
+    });
+    detail.classList.add("is-spoiler");
+    detail.append(warning, revealButton);
+}
+
+/** 댓글 작성자의 프로필 이미지 또는 기본 아바타를 만든다. */
+function createCommentAvatar(profileImgUrl, nickname) {
+    const avatar = document.createElement("span");
+    avatar.className = "collection-comment-avatar";
+
+    if (!profileImgUrl) {
+        avatar.classList.add("is-fallback");
+        avatar.textContent = (nickname || "회").trim().charAt(0) || "회";
+        return avatar;
+    }
+
+    const image = document.createElement("img");
+    image.src = resolveCollectionProfileUrl(profileImgUrl);
+    image.alt = "";
+    image.addEventListener("error", () => {
+        avatar.replaceChildren();
+        avatar.classList.add("is-fallback");
+        avatar.textContent = (nickname || "회").trim().charAt(0) || "회";
+    });
+    avatar.append(image);
+
+    return avatar;
+}
+
+/** 상세 상단·댓글 영역·전체 댓글 모달의 댓글 수를 함께 갱신한다. */
+function updateCommentCounts(totalCount) {
+    const normalizedCount = Math.max(0, Number(totalCount || 0));
+    document.querySelector("#commentCount").textContent = String(normalizedCount);
+    document.querySelector("#commentSectionCount").textContent = String(normalizedCount);
+    document.querySelector("#allCommentsCount").textContent = String(normalizedCount);
+}
+
+/** 컬렉션 댓글 관련 안내를 Bootstrap 토스트로 표시한다. */
+function showCommentToast(message) {
+    const toast = document.querySelector("#collectionCommentToast");
+    toast.querySelector(".toast-body").textContent = message;
+    bootstrap.Toast.getOrCreateInstance(toast).show();
 }
 
 /** 작성자 이름과 프로필 이미지를 표시한다. */

@@ -66,6 +66,7 @@
              TO_CHAR(uc.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
              TO_CHAR(uc.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
              m.nickname,
+             m.profile_img_url,
              NVL(lc.like_cnt, 0) like_cnt,
              mc.rating_score,
              (SELECT MAX(rc.reason) FROM report_comment rc
@@ -118,6 +119,7 @@
                      TO_CHAR(tt1.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
                      TO_CHAR(tt1.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
                      tt1.nickname,
+                     tt1.profile_img_url,
                      tt1.like_cnt,
                      tt1.rating_score,
                      tt1.blind_reason,
@@ -131,6 +133,7 @@
                         FROM (
                               SELECT uc.*,
                                      m.nickname,
+                                     m.profile_img_url,
                                      NVL(lc.like_cnt, 0) like_cnt,
                                      mc.rating_score,
                                      (SELECT MAX(rc.reason) FROM report_comment rc

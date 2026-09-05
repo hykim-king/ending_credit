@@ -5,6 +5,7 @@ Modification History
 2026. 8. 31. jinyoung - 링크 복사·댓글 연결·작품 평가 정보 적용
 2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
+2026. 9. 05. jinyoung - 컬렉션 댓글 작성·대표 댓글·전체 댓글 모달 적용
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -133,24 +134,95 @@ Modification History
             </div>
         </section>
 
-        <!-- 댓글 안내 -->
+        <!-- 댓글 작성 및 대표 댓글 -->
         <section id="collectionComments" class="collection-comments-section"
                  aria-labelledby="collectionCommentsHeading"
                  tabindex="-1">
-            <h2 id="collectionCommentsHeading" class="collection-section-title">댓글 <span id="commentSectionCount">0</span></h2>
-            <div class="collection-comment-composer">
-                <label class="visually-hidden" for="collectionCommentInput">컬렉션 댓글</label>
-                <textarea id="collectionCommentInput" rows="1" placeholder="컬렉션에 댓글을 남겨보세요." disabled></textarea>
-                <button type="button" disabled>
-                    <i class="bi bi-chat" aria-hidden="true"></i>
-                    등록
+            <div class="collection-comments-heading-row">
+                <h2 id="collectionCommentsHeading" class="collection-section-title">
+                    댓글 <span id="commentSectionCount">0</span>
+                </h2>
+                <button id="allCommentsButton" class="collection-all-comments-button" type="button">
+                    모든 댓글 <i class="bi bi-chevron-right" aria-hidden="true"></i>
                 </button>
             </div>
+            <div class="collection-comment-composer">
+                <div class="collection-comment-input-wrap">
+                    <label class="visually-hidden" for="collectionCommentInput">컬렉션 댓글</label>
+                    <textarea id="collectionCommentInput" rows="1" maxlength="1000"
+                              placeholder="컬렉션에 댓글을 남겨보세요."></textarea>
+                    <label class="collection-comment-spoiler" for="collectionCommentSpoiler">
+                        <input id="collectionCommentSpoiler" type="checkbox">
+                        <span>스포일러 포함</span>
+                    </label>
+                </div>
+                <button id="submitCommentButton" type="button">등록</button>
+            </div>
+
+            <div id="collectionCommentEmpty" class="collection-comment-empty d-none">
+                <i class="bi bi-chat-square-text" aria-hidden="true"></i>
+                <p>아직 등록된 댓글이 없어요. 첫 번째 댓글을 남겨보세요 :)</p>
+            </div>
+
+            <article id="collectionCommentPreview" class="collection-comment-card d-none"></article>
         </section>
     </div>
 
     <!-- 링크 복사 안내 -->
     <p id="copyLinkFeedback" class="collection-copy-feedback" role="status" aria-live="polite">링크를 복사했어요</p>
+
+    <!-- 댓글 안내 토스트 -->
+    <div class="collection-comment-toast-wrap">
+        <div id="collectionCommentToast" class="toast collection-comment-toast" role="status"
+             aria-live="polite" aria-atomic="true" data-bs-delay="3000">
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <!-- 전체 댓글 모달 -->
+    <div class="modal fade" id="allCommentsModal" tabindex="-1" aria-labelledby="allCommentsModalTitle"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable collection-comments-modal-dialog">
+            <div class="modal-content collection-comments-modal">
+                <div class="collection-comments-modal-header">
+                    <h2 id="allCommentsModalTitle">모든 댓글 <span id="allCommentsCount">0</span></h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="allCommentsList" class="collection-comments-modal-list"></div>
+                    <div id="allCommentsEmpty" class="collection-comment-empty d-none">
+                        <i class="bi bi-chat-square-text" aria-hidden="true"></i>
+                        <p>아직 등록된 댓글이 없어요.</p>
+                    </div>
+                    <button id="loadMoreCommentsButton" class="collection-comments-load-more d-none"
+                            type="button">댓글 더보기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 비회원 로그인 안내 모달 -->
+    <div class="modal fade" id="commentLoginModal" tabindex="-1" aria-label="로그인 안내"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content collection-delete-modal">
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
+                        aria-label="닫기"></button>
+                <div class="modal-body">
+                    <div class="collection-login-icon" aria-hidden="true">
+                        <i class="bi bi-person-lock"></i>
+                    </div>
+                    <p class="collection-delete-question">로그인이 필요해요</p>
+                    <p class="collection-delete-description">로그인 후 컬렉션에 댓글을 남길 수 있어요.</p>
+                    <div class="collection-delete-actions">
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel"
+                                data-bs-dismiss="modal">취소</button>
+                        <a class="btn btn-primary collection-delete-button" th:href="@{/login}">로그인</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 삭제 확인 모달 -->
     <div class="modal fade" id="deleteCollectionModal" tabindex="-1" aria-label="컬렉션 삭제 확인"
@@ -178,7 +250,6 @@ Modification History
 
     <script th:src="@{/assets/js/bootstrap.js}"></script>
     <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
-    <script th:src="@{/assets/js/collection/collection-detail.js}"></script>
     <script th:src="@{/assets/js/collection/collection-like.js}"></script>
 
 </div>
