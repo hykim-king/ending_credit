@@ -19,19 +19,19 @@
         그래도 링크로 두는 것이 팀 결정이며, 이름 뒤 "-준비중"이 그 사실을 알린다.
         화면이 생기면 꼬리표만 떼면 된다.
         커뮤니티(AD-11)는 팀 결정으로 제외 - USER_COMMENT에 STATUS 컬럼이 없다-->
-    <aside th:fragment="admin_side(active)"
-           th:class="${active == 'report'} ? 'admin-side' : 'admin-sidebar'">
+ <aside th:fragment="admin_side(active)"
+       class="admin-side">
         <!--로고 오른쪽에 세로선 하나 두고 메인(H-01)으로 나가는 통로를 붙인다.
             관리자 화면은 공용 헤더를 얹지 않는다 - 헤더를 붙여 보니 본문 폭이 1200px로 묶여
             표에 쓸 칸이 모자랐다(2026-09-03). 그래서 출구만 사이드바로 가져왔다.-->
-        <div class="admin-brandbar">
-            <a th:href="@{/admin/movies}"
-               th:class="${active == 'report'} ? 'side-label' : 'admin-logo'">END IT<br>ADMIN</a>
+          <!-- 09-04 관리자 사이드바 로고로 수정 위 주석 내용은 변경 전 사항 -->
+<div class="admin-brandbar">
+    <div class="side-label">
+        END IT<br>ADMIN
+    </div>
+</div>
 
-            <a th:href="@{/}" class="admin-home">END IT<br>HOME</a>
-        </div>
-
-        <nav class="admin-nav">
+        <nav>
             <a th:href="@{/admin}">대시보드-준비중</a>
             <a th:href="@{/admin/movies}"  th:classappend="${active == 'movies'}  ? 'active'">영화</a>
             <a th:href="@{/admin/people}"  th:classappend="${active == 'people'}  ? 'active'">인물</a>

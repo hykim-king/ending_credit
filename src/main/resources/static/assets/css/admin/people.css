@@ -39,61 +39,6 @@ a {
 	text-decoration: none;
 }
 
-/* 접근성 원칙: 44px 터치 영역 */
-button,
-input,
-select,
-textarea,
-a {
-	min-height: 44px;
-}
-
-/* 레이아웃 */
-.admin-layout {
-	min-height: 100vh;
-	display: grid;
-	grid-template-columns: 220px 1fr;
-}
-
-.admin-sidebar {
-	padding: 36px 24px;
-	color: #D7D5DF;
-	background: #222129;
-}
-
-.admin-logo {
-	margin-bottom: 34px;
-	display: block;
-	color: #fff;
-	font-weight: 700;
-}
-
-.admin-nav {
-	display: grid;
-	gap: 7px;
-}
-
-.admin-nav a {
-	padding: 0 14px;
-	display: flex;
-	align-items: center;
-	border-radius: 8px;
-}
-
-.admin-nav a:hover,
-.admin-nav a.active {
-	background: rgba(255, 255, 255, .08);
-}
-
-.admin-nav a.active {
-	color: #FF5A82;
-}
-
-.admin-content {
-	min-width: 0;
-	padding: 42px;
-}
-
 .admin-page-title {
 	margin: 0 0 28px;
 	font-size: 30px;
@@ -455,16 +400,6 @@ a {
    notice.css 는 일반 공지 화면도 함께 쓰므로 그쪽 서체를 바꾸지 않기 위해서다. */
 .admin-layout {
 	font-family: Arial, "Noto Sans KR", sans-serif;
-}
-
-/* 로고 | 세로선 | 메인으로 나가는 버튼
-   관리자 화면에는 공용 헤더가 없어 여기가 메인(H-01)으로 가는 유일한 통로다.
-   마크업은 fragments/admin_side.html 한 곳에서 나온다. */
-.admin-brandbar {
-	margin-bottom: 34px;
-	display: flex;
-	align-items: center;
-	gap: 12px;
 }
 
 /* 하단 여백은 브랜드바가 갖는다 - 로고에 그대로 두면 선까지 같이 내려간다 */

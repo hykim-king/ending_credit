@@ -3,6 +3,7 @@ package com.endit.domain;
 public class NoticeVO {
 
     private Long noticeId;
+    private Integer displayNo;
     private String title;
     private String content;
     private String important;
@@ -43,6 +44,15 @@ public class NoticeVO {
 
     public void setNoticeId(Long noticeId) {
         this.noticeId = noticeId;
+    }
+
+    /** 화면에 보여 줄 번호. DB PK(NOTICE_ID)와 분리된 최신순 순번이다. */
+    public Integer getDisplayNo() {
+        return displayNo;
+    }
+
+    public void setDisplayNo(Integer displayNo) {
+        this.displayNo = displayNo;
     }
 
     public String getTitle() {
@@ -129,6 +139,7 @@ public class NoticeVO {
     @Override
     public String toString() {
         return "NoticeVO [noticeId=" + noticeId
+                + ", displayNo=" + displayNo
                 + ", title=" + title
                 + ", content=" + content
                 + ", important=" + important
