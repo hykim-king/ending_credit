@@ -1,6 +1,24 @@
 spring:
   application:
     name: ending_credit
+
+#--------------------------------------
+# messages (F-01 다국어)
+#--------------------------------------
+  messages:
+    basename: messages
+    encoding: UTF-8
+    # 끄지 않으면 messages_ko가 없는 탓에 JVM 기본 로케일이 영어인 서버에서 한국어 방문자에게 영어가 나간다
+    fallback-to-system-locale: false
+#--------------------------------------
+# Thymeleaf
+# 개발: cache: false
+#--------------------------------------
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+    encoding: UTF-8
 #--------------------------------------
 # dev/run
 #-------------------------------------- 
@@ -31,15 +49,6 @@ mybatis:
     map-underscore-to-camel-case: true
     cache-enabled: false
     
-#--------------------------------------
-# Thymeleaf
-# 개발: cache: false
-#--------------------------------------      
-  thymeleaf:
-    prefix: classpath:/templates/
-    suffix: .html
-    cache: false
-    encoding: UTF-8
 #--------------------------------------
 # server
 #--------------------------------------     

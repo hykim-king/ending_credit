@@ -1,6 +1,7 @@
 package com.endit.service;
 
 import java.util.List;
+import java.util.Map;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentVO;
@@ -102,6 +103,22 @@ public interface ContentService {
 	 * @return List<ContentVO> (없으면 빈 목록)
 	 */
 	List<ContentVO> retrieve(DTO param);
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : retrieveAverageRatings
+	 * Description : content_id별 회원 평가 평균. 카드 여러 장의 평균을 한 번에 얻는 통로다(H-01).
+	 *               평가가 하나도 없는 콘텐츠는 0.0이 아니라 키 자체가 없다 - 호출부가 "없음"으로 그린다.
+	 *               값은 소수점 1자리로 반올림되며 상세(C-01)의 평균과 같은 식이라 값도 같다.
+	 *               contentIds가 null이거나 비면 조회하지 않고 빈 Map.
+	 *
+	 * </pre>
+	 *
+	 * @param contentIds
+	 * @return Map&lt;Integer, Double&gt; (content_id - 평균, 평가 없는 콘텐츠는 빠진다)
+	 */
+	Map<Integer, Double> retrieveAverageRatings(List<Integer> contentIds);
 
 	/**
 	 *

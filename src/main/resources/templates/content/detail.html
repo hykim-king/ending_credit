@@ -7,6 +7,11 @@ layout:decorate="~{layout/layout}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title th:text="#{detail.title}">콘텐츠 상세</title>
 <link rel="stylesheet" th:href="@{/assets/css/content/detail.css}">
+<!-- 컬렉션 카드는 3조 목록 화면의 것을 그대로 쓴다(collection-list.js의 createCollectionCard).
+     그 파일은 #searchForm이 없으면 목록 초기화를 건너뛰므로 여기서는 카드 공장으로만 산다.
+     member-records.js·member-likes.js에 같은 이름의 다른 함수가 있어 함께 싣지 않는다 -->
+<link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+<script th:src="@{/assets/js/collection/collection-list.js}" defer></script>
 
 <!--
   detail.js가 띄우는 문구. JS 파일에서는 #{}를 쓸 수 없어 서버가 여기서 한 번 넘긴다.
@@ -39,13 +44,15 @@ layout:decorate="~{layout/layout}">
 		writeTooLong: /*[[#{detail.js.writeTooLong}]]*/ "",
 		reportReasonEmpty: /*[[#{detail.js.reportReasonEmpty}]]*/ "",
 		reportDetailRequired: /*[[#{detail.js.reportDetailRequired}]]*/ "",
-		reportSaving: /*[[#{detail.js.reportSaving}]]*/ "",
+		reportTooLong: /*[[#{detail.js.reportTooLong}]]*/ "",
+		reportDone: /*[[#{detail.js.reportDone}]]*/ "",
 		reportFailed: /*[[#{detail.js.reportFailed}]]*/ "",
-		reportDone: /*[[#{detail.report.done}]]*/ "",
 		ratingScore: /*[[#{detail.rating.score('{0}')}]]*/ ""
 	};
 </script>
 
+<script th:src="@{/assets/js/common/carousel.js}" defer></script>
+<script th:src="@{/assets/js/common/collection-grid.js}" defer></script>
 <script th:src="@{/assets/js/content/detail.js}" defer></script>
 </head>
 <body>
@@ -89,15 +96,44 @@ layout:decorate="~{layout/layout}">
 				<div class="poster-box">
 					<img th:if="${content.posterUrl} != null" th:src="${content.posterUrl}" alt="poster">
 					<div th:if="${content.posterUrl} == null" class="poster-placeholder" th:text="#{detail.poster.empty}">포스터 없음</div>
+
+					<!--
+					  평가 분석(C-01). 점수별 인원은 addRating이 이미 읽은 행을 센 값이라 조회가 늘지 않는다.
+					  막대 길이는 가장 많은 점수를 100%로 잡는다. 평가가 하나도 없으면 섹션째 빠진다.
+					-->
+					<div class="rating-chart" th:if="${ratingAverage != null}">
+						<h6 class="rating-chart-title">
+							<span th:text="#{detail.section.ratingAnalysis}">평가 분석</span>
+							<span class="rating-chart-average">
+								<span class="visually-hidden" th:text="#{detail.rating.averageLabel}">평균 별점</span>
+								<i class="bi bi-star-fill" aria-hidden="true"></i><span th:text="${ratingAverage}">3.9</span>
+								<span class="rating-chart-raters"
+								      th:text="'(' + #{detail.rating.participants(${raterCount})} + ')'">(571명 참여)</span>
+							</span>
+						</h6>
+						<div class="rating-chart-row" th:each="score : ${#numbers.sequence(5, 1)}"
+						     th:with="count=${ratingCounts.get(score)}">
+							<span class="rating-chart-score">
+								<span th:text="${score}">5</span><i class="bi bi-star-fill" aria-hidden="true"></i>
+							</span>
+							<!-- 막대는 모양일 뿐이라 뜻은 라벨이 진다("5점 12명") -->
+							<span class="rating-chart-bar" role="img"
+							      th:attr="aria-label=#{detail.rating.bucket(${score},${count})}">
+								<span class="rating-chart-fill"
+								      th:style="'width:' + ${ratingMaxCount > 0 ? count * 100 / ratingMaxCount : 0} + '%'"></span>
+							</span>
+							<span class="rating-chart-count" th:text="${count}">0</span>
+						</div>
+					</div>
+
 				</div>
 				<div class="flex-grow-1" style="flex-basis: 0; min-width: 280px;">
 					<!--
-					  평가·기록(ACT-C-001~005). 회원 번호는 서버가 내려 주고 쓰기는 3조 API가 받는다.
-					  MEMBER_CONTENT에 "내 별점·보고싶어요 단건 조회"와 점수별 집계 계약이 없어
-					  진입 시에는 항상 빈 상태로 시작하고 평균·평가 분석도 그리지 못한다.
+					  평가·기록(ACT-C-001~005). 회원 번호와 내 기록은 서버가 내려 주고 쓰기는 3조 API가 받는다.
+					  MEMBER_CONTENT에 점수별 집계 계약이 없어 평가 분석은 아직 그리지 못한다.
 					-->
 					<div class="rating-box mb-2" id="ratingBox"
-					     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId}">
+					     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId},data-my-score=${myRatingScore},data-my-watchlist=${myWatchlist}">
 						<div class="stars" role="group" th:aria-label="#{detail.rating.starsLabel}" aria-label="별점 주기">
 							<button type="button" class="star" th:each="score : ${#numbers.sequence(1, 5)}"
 							        th:attr="data-score=${score}" th:aria-label="#{detail.rating.score(${score})}"
@@ -198,7 +234,7 @@ layout:decorate="~{layout/layout}">
 					<button type="button" class="comment-spoiler"
 					        th:if="${comment.blindReason == null and comment.spoiler == 'Y'}"
 						        th:text="#{detail.comment.spoiler}">스포일러 — 눌러서 보기</button>
-					<!-- 미리보기는 4줄까지만 보이는데 본문은 3000자까지 온다.
+					<!-- 미리보기는 4줄까지만 보이는데 본문은 1000자까지 온다.
 					     넘는 만큼은 그려도 잘려서 안 보이므로 여기서 끊는다 - 전문은 더보기(C-04)에서 본다.
 					     실제 말줄임(…)은 CSS의 4줄 자르기가 넣는다 -->
 					<p class="comment-body" th:if="${comment.blindReason == null}"
@@ -211,8 +247,8 @@ layout:decorate="~{layout/layout}">
 						        th:classappend="${liked} ? 'is-on' : ''"
 						        th:attr="data-comment-id=${comment.commentId},aria-pressed=${liked}"
 						        aria-pressed="false">
-							<i th:class="${liked} ? 'bi bi-hand-thumbs-up-fill' : 'bi bi-hand-thumbs-up'"
-							   class="bi bi-hand-thumbs-up" aria-hidden="true"></i>
+							<i th:class="${liked} ? 'bi bi-heart-fill' : 'bi bi-heart'"
+							   class="bi bi-heart" aria-hidden="true"></i>
 							<span class="visually-hidden" th:text="#{detail.comment.like}">좋아요</span>
 							<span class="comment-like-count" th:text="${comment.likeCnt}">0</span>
 						</button>
@@ -249,10 +285,34 @@ layout:decorate="~{layout/layout}">
 		</div>
 
 		<!--
-		  C-02 "이 작품이 담긴 컬렉션"이 들어올 자리.
-		  CollectionItemService가 collectionId 기준 조회만 열어 둬 contentId 역방향 계약이 없다.
-		  3조가 retrieveByContent를 열면 여기에 카드 목록만 붙이면 된다(docs/known-issues.md).
+		  C-02 이 작품이 담긴 컬렉션. 카드는 collection-list.js가 그리고 건수·공개범위는 서버가 정한다 -
+		  검색 S-02와 같은 방식이다. 담긴 컬렉션이 없으면 섹션째 빠진다.
 		-->
+		<div class="container pb-5" th:if="${collections != null and !collections.isEmpty()}">
+			<div class="section-head">
+				<h5 class="mb-0"><span th:text="#{detail.section.collections}">이 작품이 담긴 컬렉션</span>
+					<span class="section-count" th:text="${collectionTotalCnt}">0</span></h5>
+				<!-- 캐러셀에 못 실은 만큼은 전체보기가 받는다 -->
+				<a class="section-more" th:if="${collectionTotalCnt > collections.size()}"
+				   th:href="@{/movies/{id}/collections(id=${content.contentId})}"
+				   th:text="#{detail.section.more}">더보기</a>
+			</div>
+			<div class="collection-row-viewport">
+				<button type="button" class="collection-row-nav collection-row-prev"
+				        th:aria-label="#{home.carousel.prev}" aria-label="이전"><i class="bi bi-chevron-left"></i></button>
+				<div class="collection-row-clip">
+					<!-- 카드는 detail.js의 initCollectionRow가 채운다 -->
+					<div class="collection-row-track"></div>
+				</div>
+				<button type="button" class="collection-row-nav collection-row-next"
+				        th:aria-label="#{home.carousel.next}" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
+			</div>
+		</div>
+
+		<script th:inline="javascript" th:if="${collections != null and !collections.isEmpty()}">
+			window.enditCollections = /*[[${collections}]]*/ [];
+			window.enditCollectionMemberId = /*[[${loginMemberId}]]*/ 0;
+		</script>
 
 		<div id="galleryModal" class="gallery-modal">
 			<button type="button" class="gallery-modal-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
@@ -309,7 +369,7 @@ layout:decorate="~{layout/layout}">
 					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
 				</div>
 				<div class="picker-body">
-					<textarea id="commentWriteBody" class="comment-write-body" rows="7" maxlength="3000"
+					<textarea id="commentWriteBody" class="comment-write-body" rows="7" maxlength="1000"
 					          th:placeholder="#{detail.write.placeholder}" placeholder="생각을 남겨 보세요."></textarea>
 					<label class="comment-write-spoiler">
 						<input type="checkbox" id="commentWriteSpoiler">
@@ -319,7 +379,7 @@ layout:decorate="~{layout/layout}">
 				</div>
 				<div class="comment-write-foot">
 					<!-- 숫자만이라 번역이 필요 없다. 상한은 JS의 COMMENT_MAX_LENGTH와 textarea maxlength가 함께 잡는다 -->
-					<span class="comment-write-count" id="commentWriteCount" aria-live="polite">0 / 3000</span>
+					<span class="comment-write-count" id="commentWriteCount" aria-live="polite">0 / 1000</span>
 					<button type="button" class="comment-write-submit" id="commentWriteSubmit"
 					        th:text="#{detail.write.submit}">등록</button>
 				</div>
@@ -327,63 +387,60 @@ layout:decorate="~{layout/layout}">
 		</div>
 
 		<!--
-		  MOD-04 코멘트 신고(ACT-C-012). 접수는 팀원 API(POST /report/doSave)가 받고
-		  여기서는 사유와 상세만 모아 보낸다. 대상 코멘트는 JS가 data-comment-id로 심는다.
+		  MOD-04 코멘트 신고(ACT-C-012). 3조 코멘트 목록(comment_list.html)의 신고 모달을 그대로 가져왔다 -
+		  같은 기능이 화면마다 다르게 보이지 않도록 골격·id·저장 흐름·글자 수 상한(1000)을 그쪽에 맞춘다.
+		  문구만 번들 키로 물려 뒀다(F-01). 접수는 팀원 API(POST /report/doSave)가 받는다.
 		-->
-		<div id="reportModal" class="picker-modal" hidden
-		     th:attr="data-member-id=${loginMemberId}">
-			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
-				<div class="picker-head">
-					<h5 class="mb-0" id="reportTitle" th:text="#{detail.report.title}">코멘트 신고</h5>
-					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
-				</div>
-				<div class="picker-body">
-					<!-- 사유·순서는 COMMON_CODE가 정한다. 값은 DB CHECK가 받는 코드 그대로다 -->
-					<fieldset class="report-reasons">
-						<legend class="visually-hidden" th:text="#{detail.report.reasonLabel}">신고 사유</legend>
-						<label class="report-reason" th:each="reason : ${reportReasons}">
-							<input type="radio" name="reportReason" th:value="${reason.code}">
-							<span th:text="${reason.codeName}">사유</span>
-						</label>
-					</fieldset>
-					<label class="report-detail-label" for="reportDetail">
-						<span th:text="#{detail.report.detailLabel}">상세 내용</span>
-						<!-- 기타를 고르면 DB 제약(CK_REPORT_OTHER_DETAIL)이 상세를 요구한다 -->
-						<span class="report-required" id="reportRequired" hidden
-						      th:text="#{detail.report.detailRequired}">기타는 상세 내용이 필요합니다</span>
-					</label>
-					<textarea id="reportDetail" class="comment-write-body" rows="4" maxlength="2000"
-					          th:placeholder="#{detail.report.placeholder}" placeholder="어떤 점이 문제인지 적어 주세요."></textarea>
-					<p class="picker-status" id="reportStatus" aria-live="polite" hidden></p>
-				</div>
-				<div class="comment-write-foot">
-					<span class="comment-write-count" id="reportCount" aria-live="polite">0 / 2000</span>
-					<button type="button" class="comment-write-submit" id="reportSubmit"
-					        th:text="#{detail.report.submit}">신고하기</button>
+		<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true"
+		     aria-labelledby="reportModalTitle" th:attr="data-member-id=${loginMemberId}">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="reportModalTitle" th:text="#{detail.report.title}">코멘트 신고</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal"
+						        th:aria-label="#{common.lang.close}" aria-label="닫기"></button>
+					</div>
+					<div class="modal-body">
+						<input type="hidden" id="rpCommentId" value="0">
+						<div class="mb-2">
+							<label for="rpReason" class="form-label" th:text="#{detail.report.reasonLabel}">신고 사유</label>
+							<!-- 사유·순서는 COMMON_CODE가 정한다. 값은 DB CHECK가 받는 코드 그대로다 -->
+							<select id="rpReason" class="form-select form-select-sm">
+								<option value="" th:text="#{detail.report.reasonPlaceholder}">사유를 선택해 주세요</option>
+								<option th:each="reason : ${reportReasons}"
+								        th:value="${reason.code}" th:text="${reason.codeName}">스포일러</option>
+							</select>
+						</div>
+						<div class="mb-1">
+							<!-- 기타를 고르면 DB 제약(CK_REPORT_OTHER_DETAIL)이 상세를 요구한다 -->
+							<label for="rpDetail" class="form-label">
+								<span th:text="#{detail.report.detailLabel}">상세 내용</span>
+								<span class="text-muted" th:text="'(' + #{detail.report.detailRequired} + ')'">(기타는 상세 내용이 필요합니다)</span>
+							</label>
+							<textarea id="rpDetail" class="form-control" rows="3" maxlength="1000"
+							          th:placeholder="#{detail.report.placeholder}"
+							          placeholder="어떤 점이 문제인지 적어 주세요."></textarea>
+						</div>
+						<p class="picker-status" id="rpStatus" aria-live="polite" hidden></p>
+					</div>
+					<div class="modal-footer d-flex justify-content-between align-items-center gap-1">
+						<span class="comment-write-count" id="rpCount" aria-live="polite">0 / 1000</span>
+						<span class="d-flex gap-1">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+						        th:text="#{common.lang.confirm.cancel}">취소</button>
+						<button type="button" class="btn btn-primary" id="btnRpSave"
+						        th:text="#{detail.report.submit}">신고</button>
+						</span>
+					</div>
 				</div>
 			</div>
 		</div>
 
-		<!--
-		  신고 접수 확인. 되돌릴 수 없는 동작이라 한 번 더 묻는다.
-		  picker-modal이 아닌 것은 initModalDismiss가 .picker-close를 요구하기 때문이고,
-		  ESC로 이것만 닫혀야 신고 모달이 살아남기 때문이다.
-		-->
-		<div id="reportConfirmModal" class="confirm-modal" hidden>
-			<div class="confirm-dialog" role="alertdialog" aria-modal="true"
-			     aria-labelledby="reportConfirmTitle" aria-describedby="reportConfirmMessage">
-				<h5 class="confirm-title" id="reportConfirmTitle"
-				    th:text="#{detail.report.confirm.title}">신고 접수</h5>
-				<p class="confirm-message" id="reportConfirmMessage"
-				   th:text="#{detail.report.confirm.message}">신고를 접수하시겠습니까?</p>
-				<div class="confirm-actions">
-					<button type="button" class="confirm-cancel" id="reportConfirmCancel"
-					        th:text="#{detail.report.confirm.cancel}">취소</button>
-					<button type="button" class="confirm-ok" id="reportConfirmOk"
-					        th:text="#{detail.report.confirm.ok}">확인</button>
-				</div>
-			</div>
-		</div>
+		<!-- 맨 위로. 홈(H-01)과 같은 버튼이다 - 처음에는 감춰 두고 스크롤이 내려간 뒤에만 detail.js가 띄운다 -->
+		<button type="button" class="scroll-top" id="scrollTopButton" hidden
+		        th:aria-label="#{home.scrollTop}" aria-label="맨 위로">
+			<i class="bi bi-arrow-up" aria-hidden="true"></i>
+		</button>
 	</div>
 
 </div>

@@ -27,9 +27,12 @@ layout:decorate="~{layout/layout}">
         gap: var(--gap);
         transition: transform .3s ease;
     }
-    /* 칸 사이 간격 (칸수-1)개를 뺀 나머지를 칸 수로 나눈다 */
+    /* 칸 사이 간격 (칸수-1)개를 뺀 나머지를 칸 수로 나눈다.
+       min-width:0이 없으면 긴 단어가 든 제목("Thundermans")이 min-content를 밀어 올려
+       그 칸만 넓어진다 - 플렉스 아이템의 기본값이 min-width:auto라서다 */
     .shelf-item {
         flex: 0 0 calc((100% - (var(--per-view) - 1) * var(--gap)) / var(--per-view));
+        min-width: 0;
     }
     .shelf-nav {
         position: absolute;
@@ -141,6 +144,108 @@ layout:decorate="~{layout/layout}">
         font-size: .875rem;
         color: #5B5867;
     }
+    /* 회색 메타 줄에서 별점만 도드라져야 한다. 상세의 .rating-average i와 같은 브랜드색을 쓴다 */
+    .card-rating {
+        /* 굵어서 연도(.875rem)보다 커 보인다. 한 단계 내려 무게만 남긴다 */
+        font-size: .8125rem;
+        color: var(--endit-primary);
+        font-weight: 600;
+    }
+    /* 색도 무게도 별·숫자와 같이 간다 - 라벨만 얇으면 별과 따로 노는 덩어리로 읽힌다 */
+    .card-rating-label {
+        margin-right: 3px;
+    }
+    .card-rating i {
+        font-size: .8em;
+        margin-right: 2px;
+    }
+    /* bootstrap-icons가 .bi::before에 vertical-align: -.125em을 걸어 별만 내려앉는다 */
+    .card-rating i::before {
+        vertical-align: 0;
+    }
+
+    /* 좁은 화면에서는 선반마다 다른 칸 수(박스오피스 5 / 큐레이션 7)를 버리고 모두 같은 수로 맞춘다 -
+       7칸을 그대로 두면 포스터가 엄지손톱만 해지고 줄마다 카드 크기가 달라 보인다.
+       컨트롤러가 th:style로 심은 인라인 값을 이겨야 해서 !important를 쓴다.
+       JS도 이 변수를 읽어 이동량을 정하므로 화살표 한 번에 한 화면씩 그대로 넘어간다 */
+    @media (max-width: 991.98px) {
+        .shelf-viewport {
+            --per-view: 4 !important;
+        }
+    }
+    @media (max-width: 767.98px) {
+        .shelf-viewport {
+            --per-view: 3 !important;
+            --gap: 12px;
+        }
+        .card-title {
+            font-size: .875rem;
+        }
+        .card-meta, .card-rating {
+            font-size: .8125rem;
+        }
+    }
+    /* 더 좁아져도 3칸을 유지한다 - 2칸이면 포스터가 화면 반쪽씩 차지해 한 줄에 두 편만 보인다.
+       대신 글자와 간격을 한 번 더 줄여 3칸이 들어갈 자리를 만든다 */
+    @media (max-width: 479.98px) {
+        .shelf-viewport {
+            --gap: 8px;
+        }
+        .card-title {
+            font-size: .8125rem;
+            margin-top: .35rem;
+        }
+        .card-meta, .card-rating {
+            font-size: .75rem;
+        }
+        .rank-badge {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 5px;
+            font-size: .8rem;
+            line-height: 22px;
+        }
+        /* 44px 터치 영역은 유지하고 보이는 원만 더 작게 그린다 */
+        .shelf-nav::before {
+            width: 26px;
+            height: 26px;
+        }
+    }
+
+    /* 선반이 여섯 줄이라 아래로 내려가면 헤더가 멀다. 스크롤이 THRESHOLD를 넘을 때만 JS가 띄운다 */
+    .scroll-top {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        /* 접근성 원칙의 44px 터치 영역. 원 자체를 그만큼 그린다 */
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: none;
+        background: var(--endit-primary);
+        color: #fff;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+        cursor: pointer;
+        z-index: 3;
+    }
+    .scroll-top:hover {
+        background: var(--endit-hover);
+    }
+    .scroll-top:active {
+        background: var(--endit-active);
+    }
+    .scroll-top:focus-visible {
+        outline: 3px solid #D8D1FF;
+        outline-offset: 2px;
+    }
+    /* display:flex가 hidden을 덮어쓴다(.shelf-nav과 같은 함정) */
+    .scroll-top[hidden] {
+        display: none;
+    }
 </style>
 </head>
 <body>
@@ -180,13 +285,21 @@ layout:decorate="~{layout/layout}">
                                 <p class="card-title"
                                    th:text="${@localeText.get(movie.titleKo, movie.titleOrg)}">제목</p>
 
-                                <!-- 국가는 박스오피스 선반만 쓴다 -->
+                                <!-- 평균이 없는(아직 아무도 평가 안 한) 영화는 연도만 남는다.
+                                     score는 소수점이 0이면 자리를 떼고(4.0 -> 4) 아니면 한 자리로 고정한다 -->
                                 <p class="card-meta"
                                    th:with="year=${movie.releaseYearLabel != null ? movie.releaseYearLabel : ''},
-                                            country=${shelf.countryShown ? movie.country : ''}">
+                                            average=${ratingAverages.get(movie.contentId)},
+                                            score=${average == null ? null
+                                                    : (average % 1 == 0 ? #numbers.formatInteger(average, 1)
+                                                                        : #numbers.formatDecimal(average, 1, 1))}">
                                     <span th:if="${!#strings.isEmpty(year)}" th:text="${year}">2024</span>
-                                    <span th:if="${!#strings.isEmpty(year) and !#strings.isEmpty(country)}"> · </span>
-                                    <span th:if="${!#strings.isEmpty(country)}" th:text="${country}">국가</span>
+                                    <span th:if="${!#strings.isEmpty(year) and average != null}"> · </span>
+                                    <span th:if="${average != null}" class="card-rating">
+                                        <span class="card-rating-label" th:text="#{home.card.rating}">평균</span><i
+                                            class="bi bi-star-fill" aria-hidden="true"></i><span
+                                            th:text="${score}">4.1</span>
+                                    </span>
                                 </p>
 
                             </a>
@@ -201,70 +314,53 @@ layout:decorate="~{layout/layout}">
 
         </section>
 
+        <!-- 맨 위로. 처음에는 감춰 두고 스크롤이 내려간 뒤에만 JS가 띄운다 -->
+        <button type="button" class="scroll-top" id="scrollTopButton" hidden
+                th:aria-label="#{home.scrollTop}" aria-label="맨 위로">
+            <i class="bi bi-arrow-up" aria-hidden="true"></i>
+        </button>
+
+        <script th:src="@{/assets/js/common/carousel.js}"></script>
         <script>
-            // 선반마다 독립 인스턴스로 돈다. detail.html의 갤러리 캐러셀은 querySelector 단일 전제라
-            // 섹션이 여러 줄로 늘어나는 순간 첫 줄만 움직인다 - 그 함정을 여기서 피해 둔다
+            // 선반마다 독립 인스턴스로 돈다 - 한 벌만 걸면 첫 줄만 움직인다
             document.addEventListener('DOMContentLoaded', function () {
                 var FALLBACK_VISIBLE_COUNT = 5;
                 var FALLBACK_GAP = 16;
 
-                // 칸 수와 간격은 CSS 변수가 유일한 출처다. 여기서 다시 적으면 선반마다 다른 값과 어긋난다
-                function readVar(el, name, fallback) {
-                    var value = parseInt(getComputedStyle(el).getPropertyValue(name), 10);
-                    return isNaN(value) ? fallback : value;
+                // 캐러셀 골격은 assets/js/common/carousel.js 한 벌을 쓴다 -
+                // 상세의 갤러리·담긴 컬렉션과 같은 것이라 여기에 다시 적지 않는다.
+                // 섹션이 여러 줄로 늘어나도 각 줄이 자기 인스턴스를 갖는다
+                document.querySelectorAll('.shelf-viewport').forEach(function (shelf) {
+                    window.enditCarousel.create({
+                        viewport: shelf,
+                        track: shelf.querySelector('.shelf-track'),
+                        prevBtn: shelf.querySelector('.shelf-prev'),
+                        nextBtn: shelf.querySelector('.shelf-next'),
+                        perViewVar: '--per-view',
+                        gapVar: '--gap',
+                        perViewFallback: FALLBACK_VISIBLE_COUNT,
+                        gapFallback: FALLBACK_GAP,
+                        onUpdate: window.enditCarousel.centerNavOn('.poster-wrap')
+                    });
+                });
+
+                // 선반 여섯 줄이라 아래에서 헤더까지 되돌아가는 거리가 길다
+                var SCROLL_TOP_THRESHOLD = 150;
+                var topButton = document.getElementById('scrollTopButton');
+
+                function updateTopButton() {
+                    topButton.hidden = window.scrollY < SCROLL_TOP_THRESHOLD;
                 }
 
-                document.querySelectorAll('.shelf-viewport').forEach(function (shelf) {
-                    var track = shelf.querySelector('.shelf-track');
-                    var prevBtn = shelf.querySelector('.shelf-prev');
-                    var nextBtn = shelf.querySelector('.shelf-next');
-                    if (!track || !prevBtn || !nextBtn) {
-                        return;
-                    }
-
-                    var visibleCount = readVar(shelf, '--per-view', FALLBACK_VISIBLE_COUNT);
-                    var gap = readVar(shelf, '--gap', FALLBACK_GAP);
-
-                    var items = track.children;
-                    // 한 화면에 다 들어가면 화살표를 띄우지 않는다
-                    if (items.length <= visibleCount) {
-                        prevBtn.hidden = true;
-                        nextBtn.hidden = true;
-                        return;
-                    }
-
-                    var startIndex = 0;
-                    var poster = shelf.querySelector('.poster-wrap');
-
-                    function update() {
-                        var itemWidth = items[0].getBoundingClientRect().width;
-
-                        // 화살표는 포스터 세로 중앙에 둔다 - 제목·연도까지 포함한 칸의 중앙은 포스터보다 아래로 내려간다.
-                        // 포스터 높이는 aspect-ratio로 정해지므로 이미지 로딩을 기다릴 필요가 없다
-                        if (poster) {
-                            shelf.style.setProperty('--nav-top',
-                                    (poster.getBoundingClientRect().height / 2) + 'px');
-                        }
-
-                        track.style.transform = 'translateX(-' + (startIndex * (itemWidth + gap)) + 'px)';
-                        // 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
-                        prevBtn.hidden = startIndex === 0;
-                        nextBtn.hidden = startIndex + visibleCount >= items.length;
-                    }
-
-                    prevBtn.addEventListener('click', function () {
-                        startIndex = Math.max(0, startIndex - visibleCount);
-                        update();
+                if (topButton) {
+                    // 스크롤마다 부르므로 passive로 둔다 - 여기서 기본 동작을 막을 일이 없다
+                    window.addEventListener('scroll', updateTopButton, { passive: true });
+                    topButton.addEventListener('click', function () {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     });
-                    nextBtn.addEventListener('click', function () {
-                        startIndex = Math.min(items.length - visibleCount, startIndex + visibleCount);
-                        update();
-                    });
-                    // 창 크기가 바뀌면 칸 너비가 달라지므로 위치를 다시 계산한다
-                    window.addEventListener('resize', update);
-
-                    update();
-                });
+                    // 새로고침이 화면 중간에서 되살아나는 경우가 있어 처음에도 한 번 본다
+                    updateTopButton();
+                }
             });
         </script>
 

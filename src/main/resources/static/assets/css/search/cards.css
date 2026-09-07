@@ -20,10 +20,6 @@
 	row-gap: 0;
 }
 
-.card-row.collections {
-	grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
 .poster-grid {
 	display: grid;
 	grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -39,10 +35,6 @@
 	.card-row.people {
 		grid-template-columns: minmax(0, 1fr);
 		column-gap: 0;
-	}
-
-	.card-row.collections {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 
@@ -211,21 +203,4 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-}
-
-/* ── 컬렉션 카드 ─────────────────────────────────── */
-.ec-collection-card {
-	text-align: left;
-}
-
-.ec-collection-card .ec-card-link {
-	display: block;
-	padding: 16px;
-	border: 1px solid #E4E2E9;
-	border-radius: 8px;
-	text-decoration: none;
-}
-
-.ec-collection-card .ec-card-link:hover {
-	border-color: #6550C8;
 }

@@ -20,6 +20,8 @@ public class ContentVO extends DTO {
 	private String posterUrl;
 	private String backdropUrl;
 	private String createdDt;
+	// MEMBER_CONTENT 집계라 CONTENT 컬럼이 아니다. doRetrieveAverageRatings 경로에서만 채워진다
+	private Double averageRating;
 
 	public ContentVO() {
 		super();
@@ -127,6 +129,14 @@ public class ContentVO extends DTO {
 
 	public void setCreatedDt(String createdDt) {
 		this.createdDt = createdDt;
+	}
+
+	public Double getAverageRating() {
+		return averageRating;
+	}
+
+	public void setAverageRating(Double averageRating) {
+		this.averageRating = averageRating;
 	}
 
 	/**
