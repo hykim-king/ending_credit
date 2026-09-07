@@ -1,14 +1,11 @@
 /**
  * Modification History
- * 2026. 8. 31. jinyoung - TMDB 상대 경로의 인물 프로필 이미지 표시 지원
- * 2026. 8. 31. jinyoung - 이미지 URL·페이지네이션 공통 UI 사용
+ * 2026. 8. 31. jinyoung - TMDB 이미지 URL 및 페이지네이션 공통 UI 적용
  * 2026. 9. 01. jinyoung - U-07 인물·컬렉션 탭 전환 UI 반영
  * 2026. 9. 03. jinyoung - 인물·컬렉션 조회 카드와 고정형 페이지네이션 UI 정리
  */
 
-/** ===================================
- *  좋아요 탭 설정
- *  =================================== */
+// ==================== 좋아요 탭 설정 ====================
 const LIKE_TYPES = ["person", "collection"]; // 지원 탭
 const LIKE_PAGE_SIZES = Object.freeze({ person: 12, collection: 6 }); // 탭별 페이지 크기
 const LIKE_PAGINATION_GROUP_SIZE = 5; // 한 구간의 최대 페이지 수
@@ -17,9 +14,7 @@ const LIKE_ROLE_LABELS = Object.freeze({
     ACTOR: "배우"
 });
 
-/** ===================================
- *  화면 요소 및 탭별 상태
- *  =================================== */
+// ==================== 화면 요소 및 탭별 상태 ====================
 const likesPage = document.querySelector("#memberLikesPage"); // 좋아요 화면 루트 요소
 const currentMemberId = Number(likesPage.dataset.currentMemberId || 0); // 현재 로그인 회원 번호
 // 페이지 번호, 조회 결과, 스크롤 위치를 보관하는 탭별 상태
@@ -28,20 +23,14 @@ const likeState = {
     collection: { pageNo: 1, data: null, scrollY: 0 }
 };
 // 페이지 표시선의 이전 위치를 보관하는 탭별 상태
-const likePaginationIndicatorState = Object.fromEntries(
-    LIKE_TYPES.map((type) => [type, null])
-);
+const likePaginationIndicatorState = Object.fromEntries(LIKE_TYPES.map((type) => [type, null]));
 
-let activeLikeType = normalizeLikeType(
-    likesPage.dataset.initialType
-    || new URLSearchParams(window.location.search).get("type")
+let activeLikeType = normalizeLikeType(likesPage.dataset.initialType || new URLSearchParams(window.location.search).get("type")
 ); // 현재 탭
 
 let requestSequence = 0; // 이전 비동기 응답 무시용 요청 순번
 
-/** ===================================
- *  화면 초기화 및 이벤트 연결
- *  =================================== */
+// ==================== 화면 초기화 및 이벤트 연결 ====================
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("#likeTabs [data-type]")
         .forEach((tabLink) => {
@@ -54,8 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
     window.addEventListener("popstate", () => {
-        switchLikeType(normalizeLikeType(
-            new URLSearchParams(window.location.search).get("type")
+        switchLikeType(normalizeLikeType(new URLSearchParams(window.location.search).get("type")
         ), false);
     });
 
@@ -64,30 +52,23 @@ document.addEventListener("DOMContentLoaded", () => {
     loadLikes(activeLikeType, 1);
 });
 
-/** ===================================
- *  탭 전환
- *  =================================== */
+// ==================== 탭 전환 ====================
 
 /** 요청 탭 이름 정규화 */
 function normalizeLikeType(type) {
-
     const normalizedType = String(type || "").trim().toLowerCase();
 
-    return LIKE_TYPES.includes(normalizedType)
-        ? normalizedType
-        : "person";
+    return LIKE_TYPES.includes(normalizedType) ? normalizedType : "person";
 }
 
 /** 좋아요 탭 클릭 처리 */
 function changeLikeType(event) {
-
     event.preventDefault();
     switchLikeType(normalizeLikeType(event.currentTarget.dataset.type), true);
 }
 
 /** 활성 좋아요 탭 전환 */
 function switchLikeType(nextType, updateHistory) {
-
     if (nextType === activeLikeType) {
         return;
     }
@@ -119,7 +100,6 @@ function switchLikeType(nextType, updateHistory) {
 
 /** 활성 탭의 제목과 접근성 상태 갱신 */
 function configureLikeTypeView() {
-
     const isCollection = activeLikeType === "collection";
 
     document.querySelectorAll("#likeTabs [data-type]")
@@ -135,26 +115,16 @@ function configureLikeTypeView() {
             }
         });
 
-    document.querySelector("#likeTitleText").textContent = isCollection
-        ? "좋아요한 컬렉션"
-        : "좋아요한 인물";
+    document.querySelector("#likeTitleText").textContent = isCollection ? "좋아요한 컬렉션" : "좋아요한 인물";
     document.querySelector("#likeTotalCount").textContent = "0";
-    document.querySelector("#likeEmptyMessage").textContent = isCollection
-        ? "아직 좋아요한 컬렉션이 없습니다."
-        : "아직 좋아요한 인물이 없습니다.";
-    document.querySelector("#likeTabs").style.setProperty(
-        "--active-tab-index",
-        String(LIKE_TYPES.indexOf(activeLikeType))
-    );
+    document.querySelector("#likeEmptyMessage").textContent = isCollection ? "아직 좋아요한 컬렉션이 없습니다." : "아직 좋아요한 인물이 없습니다.";
+    document.querySelector("#likeTabs").style.setProperty("--active-tab-index", String(LIKE_TYPES.indexOf(activeLikeType)));
 }
 
-/** ===================================
- *  좋아요 API 조회
- *  =================================== */
+// ==================== 좋아요 API 조회 ====================
 
 /** 유형별 좋아요 목록 조회 */
 async function loadLikes(type, pageNo) {
-
     const requestId = ++requestSequence;
 
     likeState[type].pageNo = pageNo;
@@ -168,10 +138,7 @@ async function loadLikes(type, pageNo) {
             sort: "latest"
         };
 
-        const data = await requestGet(
-            "/api/members/likes",
-            requestParam
-        );
+        const data = await requestGet("/api/members/likes", requestParam);
 
         likeState[type].data = data;
 
@@ -185,13 +152,10 @@ async function loadLikes(type, pageNo) {
     }
 }
 
-/** ===================================
- *  좋아요 결과 및 인물 카드
- *  =================================== */
+// ==================== 좋아요 결과 및 인물 카드 ====================
 
 /** 유형별 조회 결과 렌더링 */
 function renderLikes(type, data) {
-
     const items = Array.isArray(data.items) ? data.items : [];
     const page = data.page || {};
     const totalCount = Number(page.totalCnt || 0);
@@ -213,16 +177,11 @@ function renderLikes(type, data) {
 
     appendLikePlaceholders(type, items.length, totalCount);
 
-    renderPagination(
-        type,
-        page,
-        Number(page.pageNo || likeState[type].pageNo)
-    );
+    renderPagination(type, page, Number(page.pageNo || likeState[type].pageNo));
 }
 
 /** 인물 카드 목록 렌더링 */
 function renderPersonCards(items) {
-
     const likeList = document.querySelector("#likeList");
 
     likeList.className = "member-card-grid member-person-like-grid";
@@ -237,9 +196,7 @@ function renderPersonCards(items) {
         const latestContent = document.createElement("p");
         const personName = item.nameKo || item.nameOrg || `인물 ${item.personId}`;
         const roleLabel = LIKE_ROLE_LABELS[item.role] || "";
-        const originalName = item.nameOrg && item.nameOrg !== personName
-            ? item.nameOrg
-            : "";
+        const originalName = item.nameOrg && item.nameOrg !== personName ? item.nameOrg : "";
 
         article.className = "member-like-card";
         link.className = "member-person-card";
@@ -252,9 +209,7 @@ function renderPersonCards(items) {
         personInfo.textContent = [roleLabel, originalName].filter(Boolean).join(" | ");
         latestContent.textContent = item.latestContentTitle || "";
 
-        const image = item.profileImageUrl
-            ? createPersonImage(item.profileImageUrl, personName)
-            : createPersonPlaceholder(personName);
+        const image = item.profileImageUrl ? createPersonImage(item.profileImageUrl, personName) : createPersonPlaceholder(personName);
 
         body.append(name);
 
@@ -274,13 +229,10 @@ function renderPersonCards(items) {
     likeList.classList.remove("d-none");
 }
 
-/** ===================================
- *  컬렉션 카드
- *  =================================== */
+// ==================== 컬렉션 카드 ====================
 
 /** 컬렉션 카드 목록 렌더링 */
 function renderCollectionCards(items) {
-
     const likeList = document.querySelector("#likeList");
 
     likeList.className = "collection-card-grid";
@@ -297,7 +249,6 @@ function renderCollectionCards(items) {
 
 /** 마지막 페이지의 목록 높이를 유지하는 빈 카드 추가 */
 function appendLikePlaceholders(type, itemCount, totalCount) {
-
     const pageSize = LIKE_PAGE_SIZES[type];
 
     if (totalCount <= pageSize || itemCount === 0 || itemCount >= pageSize) {
@@ -307,8 +258,7 @@ function appendLikePlaceholders(type, itemCount, totalCount) {
     const likeList = document.querySelector("#likeList");
     const templates = Array.from(likeList.children);
 
-    for (let index = itemCount;index < pageSize;index += 1) {
-
+    for (let index = itemCount; index < pageSize; index += 1) {
         const templateIndex = (index - itemCount) % templates.length;
         const placeholder = templates[templateIndex].cloneNode(true);
 
@@ -325,7 +275,6 @@ function appendLikePlaceholders(type, itemCount, totalCount) {
 
 /** 컬렉션 링크 카드 생성 */
 function createCollectionCard(collection) {
-
     const article = document.createElement("article");
     const link = document.createElement("a");
     const visual = createCollectionVisual(collection);
@@ -346,13 +295,9 @@ function createCollectionCard(collection) {
 
 /** 컬렉션 대표 이미지 영역 생성 */
 function createCollectionVisual(collection) {
-
     const visual = document.createElement("div");
     const previewPosters = [
-        collection.previewPosterUrl1,
-        collection.previewPosterUrl2,
-        collection.previewPosterUrl3,
-        collection.previewPosterUrl4,
+        collection.previewPosterUrl1, collection.previewPosterUrl2, collection.previewPosterUrl3, collection.previewPosterUrl4,
         collection.previewPosterUrl5
     ].filter(Boolean);
 
@@ -363,15 +308,12 @@ function createCollectionVisual(collection) {
         visual.append(createCollectionPosterCollage(previewPosters, visual));
     }
 
-    const isOwnedByCurrentMember = currentMemberId > 0
-        && Number(collection.memberId) === currentMemberId;
+    const isOwnedByCurrentMember = currentMemberId > 0 && Number(collection.memberId) === currentMemberId;
     const label = document.createElement("span");
     const symbol = document.createElement("span");
     const visualCount = document.createElement("span");
 
-    label.className = isOwnedByCurrentMember
-        ? "collection-list-card-owner-badge"
-        : "collection-list-card-label";
+    label.className = isOwnedByCurrentMember ? "collection-list-card-owner-badge" : "collection-list-card-label";
     label.textContent = isOwnedByCurrentMember ? "내 컬렉션" : "COLLECTION";
     symbol.className = "collection-list-card-symbol";
     symbol.setAttribute("aria-hidden", "true");
@@ -385,7 +327,6 @@ function createCollectionVisual(collection) {
 
 /** 컬렉션 제목·작성자·통계 영역 생성 */
 function createCollectionBody(collection) {
-
     const body = document.createElement("div");
     const title = document.createElement("h3");
     const titleText = document.createElement("span");
@@ -411,21 +352,12 @@ function createCollectionBody(collection) {
 
     author.className = "collection-list-card-author";
     authorName.textContent = nickname;
-    author.append(
-        createCollectionAuthorAvatar(collection.profileImgUrl, nickname),
-        authorName
-    );
+    author.append(createCollectionAuthorAvatar(collection.profileImgUrl, nickname), authorName);
 
     stats.className = "collection-list-card-stats";
-    stats.append(
-        createCollectionStat(
-            collection.likedByCurrentMember ? "heart-fill" : "heart",
-            "좋아요",
-            collection.likeCount,
+    stats.append(createCollectionStat(collection.likedByCurrentMember ? "heart-fill" : "heart", "좋아요", collection.likeCount,
             collection.likedByCurrentMember
-        ),
-        createCollectionStat("chat", "코멘트", collection.commentCount)
-    );
+        ), createCollectionStat("chat", "코멘트", collection.commentCount));
     body.append(author, stats);
 
     window.requestAnimationFrame(() => {
@@ -437,15 +369,11 @@ function createCollectionBody(collection) {
 
 /** 컬렉션 대표 포스터 콜라주 생성 */
 function createCollectionPosterCollage(posterUrls, visual) {
-
     const collage = document.createElement("div");
     const usesSevenSlotLayout = posterUrls.length === 5;
-    const posterIndexes = usesSevenSlotLayout
-        ? [0, 1, 2, 3, 3, 4, 4]
-        : posterUrls.map((_, index) => index);
+    const posterIndexes = usesSevenSlotLayout ? [0, 1, 2, 3, 3, 4, 4] : posterUrls.map((_, index) => index);
 
-    collage.className = usesSevenSlotLayout
-        ? "collection-list-poster-collage poster-count-5 is-seven-slot-layout"
+    collage.className = usesSevenSlotLayout ? "collection-list-poster-collage poster-count-5 is-seven-slot-layout"
         : `collection-list-poster-collage poster-count-${posterUrls.length} is-simple-layout`;
 
     posterIndexes.forEach((posterIndex, slotIndex) => {
@@ -474,7 +402,6 @@ function createCollectionPosterCollage(posterUrls, visual) {
 
 /** 컬렉션 작성자 프로필 요소 생성 */
 function createCollectionAuthorAvatar(profileImgUrl, nickname) {
-
     const fallback = document.createElement("span");
 
     fallback.className = "collection-list-card-avatar collection-list-card-avatar-fallback";
@@ -500,7 +427,6 @@ function createCollectionAuthorAvatar(profileImgUrl, nickname) {
 
 /** 컬렉션 통계 항목 생성 */
 function createCollectionStat(icon, label, count, active = false) {
-
     const stat = document.createElement("span");
     const text = document.createElement("span");
 
@@ -514,10 +440,7 @@ function createCollectionStat(icon, label, count, active = false) {
 
 /** 긴 컬렉션 제목의 이동 거리 계산 */
 function configureScrollableCollectionTitle(title, titleText) {
-
-    const overflowWidth = Math.ceil(
-        titleText.getBoundingClientRect().width - title.clientWidth
-    );
+    const overflowWidth = Math.ceil(titleText.getBoundingClientRect().width - title.clientWidth);
     const isOverflowing = overflowWidth > 0;
 
     title.classList.toggle("is-overflowing", isOverflowing);
@@ -531,15 +454,12 @@ function configureScrollableCollectionTitle(title, titleText) {
 
     title.title = titleText.textContent;
     title.style.setProperty("--collection-title-scroll-distance", `-${overflowWidth}px`);
-    title.style.setProperty(
-        "--collection-title-scroll-duration",
-        `${Math.min(7, Math.max(2.4, overflowWidth / 45))}s`
-    );
+    title.style.setProperty("--collection-title-scroll-duration",
+        `${Math.min(7, Math.max(2.4, overflowWidth / 45))}s`);
 }
 
 /** 컬렉션 작성자 프로필 이미지 주소 보정 */
 function resolveProfileImageUrl(profileImgUrl) {
-
     try {
         return new URL(profileImgUrl, `${window.location.origin}/`).href;
     } catch {
@@ -547,13 +467,10 @@ function resolveProfileImageUrl(profileImgUrl) {
     }
 }
 
-/** ===================================
- *  인물 프로필 이미지
- *  =================================== */
+// ==================== 인물 프로필 이미지 ====================
 
 /** 인물 프로필 이미지 생성 */
 function createPersonImage(imageUrl, personName) {
-
     const image = document.createElement("img");
 
     image.className = "member-person-image";
@@ -568,7 +485,6 @@ function createPersonImage(imageUrl, personName) {
 
 /** 인물 프로필 대체 요소 생성 */
 function createPersonPlaceholder(personName) {
-
     const placeholder = document.createElement("div");
     placeholder.className = "member-person-placeholder";
     placeholder.textContent = personName;
@@ -576,13 +492,10 @@ function createPersonPlaceholder(personName) {
     return placeholder;
 }
 
-/** ===================================
- *  페이지네이션
- *  =================================== */
+// ==================== 페이지네이션 ====================
 
 /** 좋아요 페이지네이션 렌더링 */
 function renderPagination(type, page, selectedPage) {
-
     const navigation = document.querySelector("#likePaginationNavigation");
     const pagination = document.querySelector("#likePagination");
 
@@ -629,7 +542,6 @@ function renderPagination(type, page, selectedPage) {
 
 /** 활성 페이지 이동 표시선 생성 */
 function renderPaginationIndicator(type, pagination, numberItems) {
-
     const activeIndex = numberItems.findIndex((item) => item.classList.contains("active"));
 
     if (activeIndex < 0 || numberItems.length === 0) {
@@ -644,8 +556,7 @@ function renderPaginationIndicator(type, pagination, numberItems) {
     const paginationRect = pagination.getBoundingClientRect();
     const startPage = Number(numberItems[0].querySelector(".page-link").textContent);
     const previousState = likePaginationIndicatorState[type];
-    const previousIndex = previousState?.startPage === startPage
-        ? Math.min(previousState.activeIndex, numberItems.length - 1)
+    const previousIndex = previousState?.startPage === startPage ? Math.min(previousState.activeIndex, numberItems.length - 1)
         : activeIndex;
     const previousRect = numberItems[previousIndex].getBoundingClientRect();
 
@@ -667,20 +578,16 @@ function renderPaginationIndicator(type, pagination, numberItems) {
     likePaginationIndicatorState[type] = { startPage, activeIndex };
 }
 
-/** ===================================
- *  화면 상태
- *  =================================== */
+// ==================== 화면 상태 ====================
 
 /** 좋아요 로딩 상태 표시 */
 function showLikeLoading() {
-
     hideLikeStatus();
     document.querySelector("#likeLoading").classList.remove("d-none");
 }
 
 /** 좋아요 오류 상태 표시 */
 function showLikeError(message) {
-
     hideLikeStatus();
     document.querySelector("#likeErrorMessage").textContent = message;
     document.querySelector("#likeError").classList.remove("d-none");
@@ -688,7 +595,6 @@ function showLikeError(message) {
 
 /** 좋아요 조회 상태 초기화 */
 function hideLikeStatus() {
-
     document.querySelector("#likeLoading").classList.add("d-none");
     document.querySelector("#likeError").classList.add("d-none");
     document.querySelector("#likeEmpty").classList.add("d-none");

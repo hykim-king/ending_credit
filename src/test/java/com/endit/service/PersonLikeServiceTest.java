@@ -56,6 +56,7 @@ class PersonLikeServiceTest {
 	private int memberId;
 	private int personId;
 
+	/** 테스트별 회원과 대상 데이터 준비 */
 	@BeforeEach
 	void setUp() {
 		// 공용 데이터에 의존하지 않도록 테스트마다 회원과 인물을 생성한다.
@@ -63,6 +64,7 @@ class PersonLikeServiceTest {
 		personId = createPersonId("DEFAULT");
 	}
 
+	/** 좋아요 목록 조회 검증 */
 	@Test
 	@DisplayName("좋아요 목록 조회")
 	void retrieveLikes() {
@@ -97,6 +99,7 @@ class PersonLikeServiceTest {
 		assertEquals(String.valueOf(memberId), param.getSearchWord());
 	}
 
+	/** 빈 목록 조회 검증 */
 	@Test
 	@DisplayName("빈 목록 조회")
 	void retrieveEmpty() {
@@ -111,6 +114,7 @@ class PersonLikeServiceTest {
 		assertEquals(0, param.getTotalCnt());
 	}
 
+	/** 페이징 보정 검증 */
 	@Test
 	@DisplayName("페이징 보정")
 	void normalizePaging() {
@@ -126,6 +130,7 @@ class PersonLikeServiceTest {
 		assertEquals(100, param.getPageSize());
 	}
 
+	/** 좋아요 등록 검증 */
 	@Test
 	@DisplayName("좋아요 등록")
 	void addLike() {
@@ -139,6 +144,7 @@ class PersonLikeServiceTest {
 		assertTrue(personLikeService.isLiked(memberId, personId));
 	}
 
+	/** 중복 등록 검증 */
 	@Test
 	@DisplayName("중복 등록")
 	void addLikeAgain() {
@@ -155,6 +161,7 @@ class PersonLikeServiceTest {
 		assertEquals(1, personLikeService.countLikes(personId));
 	}
 
+	/** 좋아요 여부 조회 검증 */
 	@Test
 	@DisplayName("좋아요 여부 조회")
 	void checkLiked() {
@@ -168,6 +175,7 @@ class PersonLikeServiceTest {
 		assertTrue(personLikeService.isLiked(memberId, personId));
 	}
 
+	/** 좋아요 수 조회 검증 */
 	@Test
 	@DisplayName("좋아요 수 조회")
 	void countLikes() {
@@ -180,6 +188,7 @@ class PersonLikeServiceTest {
 		assertEquals(2, personLikeService.countLikes(personId));
 	}
 
+	/** 좋아요 해제 검증 */
 	@Test
 	@DisplayName("좋아요 해제")
 	void deleteLike() {
@@ -194,6 +203,7 @@ class PersonLikeServiceTest {
 		assertEquals(0, personLikeService.countLikes(personId));
 	}
 
+	/** 반복 해제 검증 */
 	@Test
 	@DisplayName("반복 해제")
 	void deleteLikeAgain() {
@@ -208,47 +218,43 @@ class PersonLikeServiceTest {
 		assertFalse(personLikeService.isLiked(memberId, personId));
 	}
 
+	/** 정렬 조건 검증 */
 	@Test
 	@DisplayName("정렬 조건 검증")
 	void validateSort() {
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.retrieveLikes(memberId, new DTO(), "popular"));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(memberId, new DTO(), "popular"));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.retrieveLikes(memberId, new DTO(), null));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(memberId, new DTO(), null));
 	}
 
+	/** 조회 조건 검증 */
 	@Test
 	@DisplayName("조회 조건 검증")
 	void validateParam() {
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.retrieveLikes(memberId, null, "latest"));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(memberId, null, "latest"));
 	}
 
+	/** 번호 검증 */
 	@Test
 	@DisplayName("번호 검증")
 	void validateIds() {
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.retrieveLikes(0, new DTO(), "latest"));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(0, new DTO(), "latest"));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.countLikes(0));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.countLikes(0));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.isLiked(0, personId));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.isLiked(0, personId));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.isLiked(memberId, 0));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.isLiked(memberId, 0));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.addLike(memberId, -1));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.addLike(memberId, -1));
 
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.deleteLike(-1, personId));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.deleteLike(-1, personId));
 	}
 
 	/**
 	 * PERSON_LIKE 외래 키를 만족하는 고유 테스트 회원 생성
+	 *
+	 * @return 등록된 테스트 회원 번호
 	 */
 	private int createMemberId() {
 		String token = createToken();
@@ -265,18 +271,17 @@ class PersonLikeServiceTest {
 
 	/**
 	 * PERSON_LIKE 외래 키와 목록 JOIN을 만족하는 고유 테스트 인물 생성
+	 *
+	 * @param prefix 테스트 데이터 식별용 접두사
+	 * @return 등록된 테스트 인물 번호
 	 */
 	private int createPersonId(String prefix) {
 		String token = createToken();
 
-		PersonVO person = new PersonVO(
-				0,
-				"PERSON_LIKE_" + prefix + "_" + token.substring(0, 20),
-				"인물좋아요" + token.substring(0, 6),
+		PersonVO person = new PersonVO(0, "PERSON_LIKE_" + prefix + "_" + token.substring(0, 20), "인물좋아요" + token.substring(0, 6),
 				"Person Like " + token.substring(0, 6),
 				"https://example.com/person.jpg",
-				null,
-				null);
+				null, null);
 
 		// PERSON 생성 자체는 대상이 아니므로 PERSON 시퀀스 상태와 분리한다.
 		return insertPerson(jdbcTemplate, person).getPersonId();
@@ -284,6 +289,8 @@ class PersonLikeServiceTest {
 
 	/**
 	 * 회원과 인물의 고유 제약조건 충돌 방지용 문자열 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
 	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");

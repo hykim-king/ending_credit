@@ -31,10 +31,8 @@ import com.endit.support.SecurityTestContext;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    상세 인증 회원·조회 전용 및 공개 여부·작품 선택 영역 검증 추가
- * 2026. 8. 31. jinyoung    D-04 작품 추가 모달 렌더링 검증 추가
- * 2026. 8. 31. jinyoung    D-01 링크 복사·코멘트·삭제 모달 렌더링 검증 추가
- * 2026. 9. 01. jinyoung    v3.0 공개 정책과 담당 본문 렌더링 검증
- * 2026. 9. 01. jinyoung    컬렉션 검색 결과 본문 렌더링 검증 추가
+ * 2026. 8. 31. jinyoung    작품 추가·삭제 모달과 링크·코멘트 렌더링 검증
+ * 2026. 9. 01. jinyoung    v3.0 공개 정책 및 검색 결과 본문 렌더링 검증
  * 2026. 9. 02. jinyoung    컬렉션 수정 화면 개선 마크업 검증 추가
  * 2026. 9. 05. jinyoung    삭제된 개발 인증 설정을 SecurityContext 기반 테스트로 변경
  * ------------------------------------------------------------
@@ -52,6 +50,7 @@ class CollectionViewControllerTest {
 	@Autowired
 	private MockMvc mockMvc;
 
+	/** 화면 테스트용 로그인 회원 정보 설정 */
 	@BeforeEach
 	void setUpAuthentication() {
 		// 상세 View는 DB를 조회하지 않으므로 principal 구성에 필요한 최소 회원 정보만 준비한다.
@@ -64,12 +63,17 @@ class CollectionViewControllerTest {
 		SecurityTestContext.login(member);
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		SecurityTestContext.clear();
 	}
 
-	/** 컬렉션 목록 View 경로와 실제 HTML 렌더링 검증 */
+	/**
+	 * 컬렉션 목록 View 경로와 실제 HTML 렌더링 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 목록 화면 반환")
 	void list() throws Exception {
@@ -77,14 +81,17 @@ class CollectionViewControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("collection/list"))
 				.andExpect(content().contentTypeCompatibleWith("text/html"))
-				.andExpect(content().string(containsString(
-						"id=\"collectionListPage\"")))
+				.andExpect(content().string(containsString("id=\"collectionListPage\"")))
 				.andExpect(content().string(containsString("id=\"searchForm\"")))
 				.andExpect(content().string(containsString("id=\"collectionLoading\"")))
 				.andExpect(content().string(containsString("id=\"collectionListEmpty\"")));
 	}
 
-	/** 컬렉션 등록 View 경로와 모델 및 실제 HTML 렌더링 검증 */
+	/**
+	 * 컬렉션 등록 View 경로와 모델 및 실제 HTML 렌더링 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 등록 화면 반환")
 	void createForm() throws Exception {
@@ -94,27 +101,23 @@ class CollectionViewControllerTest {
 				.andExpect(model().attribute("formMode", "create"))
 				.andExpect(model().attribute("collectionId", 0))
 				.andExpect(content().contentTypeCompatibleWith("text/html"))
-				.andExpect(content().string(containsString(
-						"id=\"isPublic\"")))
-				.andExpect(content().string(containsString(
-						"id=\"submitButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"toggleContentEditButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"modalAddContentButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"emptyCollectionConfirmModal\"")))
-				.andExpect(content().string(containsString(
-						"id=\"confirmEmptyCollectionButton\"")))
-				.andExpect(content().string(containsString(
-						"이대로 컬렉션만 등록할까요?")))
-				.andExpect(content().string(containsString(
-						"id=\"contentSearchModal\"")))
+				.andExpect(content().string(containsString("id=\"isPublic\"")))
+				.andExpect(content().string(containsString("id=\"submitButton\"")))
+				.andExpect(content().string(containsString("id=\"toggleContentEditButton\"")))
+				.andExpect(content().string(containsString("id=\"modalAddContentButton\"")))
+				.andExpect(content().string(containsString("id=\"emptyCollectionConfirmModal\"")))
+				.andExpect(content().string(containsString("id=\"confirmEmptyCollectionButton\"")))
+				.andExpect(content().string(containsString("이대로 컬렉션만 등록할까요?")))
+				.andExpect(content().string(containsString("id=\"contentSearchModal\"")))
 				.andExpect(content().string(containsString("id=\"contentSearchInput\"")))
 				.andExpect(content().string(containsString("id=\"selectedContentList\"")));
 	}
 
-	/** 컬렉션 상세 View 경로와 모델 및 실제 HTML 렌더링 검증 */
+	/**
+	 * 컬렉션 상세 View 경로와 모델 및 실제 HTML 렌더링 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 상세 화면 반환")
 	void detail() throws Exception {
@@ -126,13 +129,15 @@ class CollectionViewControllerTest {
 				.andExpect(content().contentTypeCompatibleWith("text/html"))
 				.andExpect(content().string(containsString("id=\"copyLinkButton\"")))
 				.andExpect(content().string(containsString("id=\"commentsLink\"")))
-				.andExpect(content().string(containsString(
-						"id=\"deleteCollectionModal\"")))
-				.andExpect(content().string(not(
-						containsString("detailContentSearchInput"))));
+				.andExpect(content().string(containsString("id=\"deleteCollectionModal\"")))
+				.andExpect(content().string(not(containsString("detailContentSearchInput"))));
 	}
 
-	/** 컬렉션 수정 View 경로와 모델 및 실제 HTML 렌더링 검증 */
+	/**
+	 * 컬렉션 수정 View 경로와 모델 및 실제 HTML 렌더링 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 수정 화면 반환")
 	void updateForm() throws Exception {
@@ -142,26 +147,16 @@ class CollectionViewControllerTest {
 				.andExpect(model().attribute("formMode", "update"))
 				.andExpect(model().attribute("collectionId", 1))
 				.andExpect(content().contentTypeCompatibleWith("text/html"))
-				.andExpect(content().string(containsString(
-						"id=\"submitButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"isPublic\"")))
-				.andExpect(content().string(containsString(
-						"form=\"collectionForm\"")))
-				.andExpect(content().string(containsString(
-						"id=\"toggleContentEditButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"modalAddContentButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"clearContentSearchButton\"")))
-				.andExpect(content().string(containsString(
-						"id=\"collectionSaveNoticeToast\"")))
-				.andExpect(content().string(containsString(
-						"placeholder=\"컬렉션에 대한 설명을 입력해 주세요.\"")))
-				.andExpect(content().string(not(containsString(
-						"id=\"cancelLink\""))))
-				.andExpect(content().string(not(containsString(
-						"id=\"emptyCollectionConfirmModal\""))))
+				.andExpect(content().string(containsString("id=\"submitButton\"")))
+				.andExpect(content().string(containsString("id=\"isPublic\"")))
+				.andExpect(content().string(containsString("form=\"collectionForm\"")))
+				.andExpect(content().string(containsString("id=\"toggleContentEditButton\"")))
+				.andExpect(content().string(containsString("id=\"modalAddContentButton\"")))
+				.andExpect(content().string(containsString("id=\"clearContentSearchButton\"")))
+				.andExpect(content().string(containsString("id=\"collectionSaveNoticeToast\"")))
+				.andExpect(content().string(containsString("placeholder=\"컬렉션에 대한 설명을 입력해 주세요.\"")))
+				.andExpect(content().string(not(containsString("id=\"cancelLink\""))))
+				.andExpect(content().string(not(containsString("id=\"emptyCollectionConfirmModal\""))))
 				.andExpect(content().string(not(containsString("ADD MOVIES"))));
 	}
 }

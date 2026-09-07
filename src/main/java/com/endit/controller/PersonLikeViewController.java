@@ -25,8 +25,7 @@ import com.endit.service.MemberService;
  * 2026. 8. 28. jinyoung    컬렉션 좋아요 유형 지원
  * 2026. 9. 01. jinyoung    U-07 목록 조회자 식별용 인증 회원 전달
  * 2026. 9. 03. jinyoung    좋아요 화면 회원 정보 및 조회 유형 처리 정리
- * 2026. 9. 05. jinyoung    로그인 회원 본인 전용 좋아요 경로로 변경
- * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
+ * 2026. 9. 05. jinyoung    본인 전용 좋아요 경로 및 LoginMemberHelper 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -37,28 +36,28 @@ import com.endit.service.MemberService;
 @RequestMapping("/members/likes")
 public class PersonLikeViewController {
 
-	private static final String TYPE_PERSON = "person";			// 
-	private static final String TYPE_COLLECTION = "collection";	//
-
+	private static final String TYPE_PERSON = "person"; 		// 인물 좋아요 유형
+	private static final String TYPE_COLLECTION = "collection"; // 컬렉션 좋아요 유형
 	private final MemberService memberService;
 
+	/**
+	 * 화면 처리에 필요한 의존성 주입
+	 *
+	 * @param memberService 회원 Service
+	 */
 	public PersonLikeViewController(MemberService memberService) {
-
 		this.memberService = memberService;
 	}
 
 	/**
-	 * 로그인 회원 본인의 좋아요 화면 반환
+	 * 로그인 회원 본인의 좋아요 화면 반환 실제 목록 데이터는 JavaScript가 유형별 REST API로 조회
 	 *
-	 * 실제 목록 데이터는 JavaScript가 유형별 REST API로 조회한다.
-	 *
-	 * @param type     최초 표시할 좋아요 유형
-	 * @param model    View에 전달할 데이터
+	 * @param type  최초 표시할 좋아요 유형
+	 * @param model View에 전달할 데이터
 	 * @return 회원 좋아요 View 이름
 	 */
 	@GetMapping
-	public String likes(@RequestParam(defaultValue = TYPE_PERSON) String type,
-			Model model) {
+	public String likes(@RequestParam(defaultValue = TYPE_PERSON) String type, Model model) {
 
 		long currentMemberId = LoginMemberHelper.getMemberId();
 		int memberId = Math.toIntExact(currentMemberId);
@@ -74,8 +73,10 @@ public class PersonLikeViewController {
 		model.addAttribute("member", member);
 		model.addAttribute("currentMemberId", currentMemberId);
 
-		return "user/likes";
+		return "member/likes";
 	}
+
+	// 내부 조회 조건·응답 구성
 
 	/**
 	 * 지원하는 좋아요 유형을 보정하고 그 외의 값은 인물 유형으로 처리
@@ -89,8 +90,6 @@ public class PersonLikeViewController {
 			return TYPE_PERSON;
 		}
 
-		return TYPE_COLLECTION.equalsIgnoreCase(type.trim())
-				? TYPE_COLLECTION
-				: TYPE_PERSON;
+		return TYPE_COLLECTION.equalsIgnoreCase(type.trim()) ? TYPE_COLLECTION : TYPE_PERSON;
 	}
 }

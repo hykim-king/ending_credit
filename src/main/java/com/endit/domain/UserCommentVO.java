@@ -9,8 +9,7 @@
  * ----------  --------  ---------------------------
  * 2026. 8. 12.  홍선기   최초 생성
  * 2026. 8. 19.  홍선기   조회 전용 join 필드 추가(작성자 닉네임·좋아요 수·별점) — 8/18 공지 보완점2
- * 2026. 9. 05.  이진영   회원 기록 댓글의 대상 정보·로그인 회원 좋아요 여부 추가
- * 2026. 9. 05.  이진영   컬렉션 상세 댓글 작성자 프로필 이미지 추가
+ * 2026. 9. 05.  이진영   댓글 대상·작성자 프로필·로그인 회원 좋아요 정보 추가
  * </pre>
  *
  * @author 홍선기
@@ -47,12 +46,32 @@ public class UserCommentVO extends DTO {
 	private String collectionAuthorNickname; // 컬렉션 작성자 닉네임(영화 코멘트면 null)
 	private boolean likedByMember; // 조회 중인 로그인 회원의 좋아요 여부
 
+	/** 코멘트 정보 생성 */
 	public UserCommentVO() {
 		super();
 	}
 
-	public UserCommentVO(long commentId, long memberId, Long contentId, Long collectionId, String commentDetail,
-			String spoiler, String createdDt, String updatedDt) {
+	/**
+	 * 코멘트 정보 생성
+	 *
+	 * @param commentId 코멘트 번호
+	 * @param memberId 회원 번호
+	 * @param contentId 콘텐츠 번호
+	 * @param collectionId 컬렉션 번호
+	 * @param commentDetail 코멘트 내용
+	 * @param spoiler 스포일러 여부 (Y/N)
+	 * @param createdDt 등록 일시
+	 * @param updatedDt 수정 일시
+	 */
+	public UserCommentVO(
+			long commentId,
+			long memberId,
+			Long contentId,
+			Long collectionId,
+			String commentDetail,
+			String spoiler,
+			String createdDt,
+			String updatedDt) {
 		super();
 		this.commentId = commentId;
 		this.memberId = memberId;
@@ -64,156 +83,340 @@ public class UserCommentVO extends DTO {
 		this.updatedDt = updatedDt;
 	}
 
+	/**
+	 * 코멘트 번호 조회
+	 *
+	 * @return 코멘트 번호
+	 */
 	public long getCommentId() {
 		return commentId;
 	}
 
+	/**
+	 * 코멘트 번호 설정
+	 *
+	 * @param commentId 코멘트 번호
+	 */
 	public void setCommentId(long commentId) {
 		this.commentId = commentId;
 	}
 
+	/**
+	 * 회원 번호 조회
+	 *
+	 * @return 회원 번호
+	 */
 	public long getMemberId() {
 		return memberId;
 	}
 
+	/**
+	 * 회원 번호 설정
+	 *
+	 * @param memberId 회원 번호
+	 */
 	public void setMemberId(long memberId) {
 		this.memberId = memberId;
 	}
 
+	/**
+	 * 콘텐츠 번호 조회
+	 *
+	 * @return 콘텐츠 번호, 해당하지 않으면 null
+	 */
 	public Long getContentId() {
 		return contentId;
 	}
 
+	/**
+	 * 콘텐츠 번호 설정
+	 *
+	 * @param contentId 콘텐츠 번호
+	 */
 	public void setContentId(Long contentId) {
 		this.contentId = contentId;
 	}
 
+	/**
+	 * 컬렉션 번호 조회
+	 *
+	 * @return 컬렉션 번호, 해당하지 않으면 null
+	 */
 	public Long getCollectionId() {
 		return collectionId;
 	}
 
+	/**
+	 * 컬렉션 번호 설정
+	 *
+	 * @param collectionId 컬렉션 번호
+	 */
 	public void setCollectionId(Long collectionId) {
 		this.collectionId = collectionId;
 	}
 
+	/**
+	 * 코멘트 내용 조회
+	 *
+	 * @return 코멘트 내용
+	 */
 	public String getCommentDetail() {
 		return commentDetail;
 	}
 
+	/**
+	 * 코멘트 내용 설정
+	 *
+	 * @param commentDetail 코멘트 내용
+	 */
 	public void setCommentDetail(String commentDetail) {
 		this.commentDetail = commentDetail;
 	}
 
+	/**
+	 * 스포일러 여부 (Y/N) 조회
+	 *
+	 * @return 스포일러 여부 (Y/N)
+	 */
 	public String getSpoiler() {
 		return spoiler;
 	}
 
+	/**
+	 * 스포일러 여부 (Y/N) 설정
+	 *
+	 * @param spoiler 스포일러 여부 (Y/N)
+	 */
 	public void setSpoiler(String spoiler) {
 		this.spoiler = spoiler;
 	}
 
+	/**
+	 * 등록 일시 조회
+	 *
+	 * @return 등록 일시
+	 */
 	public String getCreatedDt() {
 		return createdDt;
 	}
 
+	/**
+	 * 등록 일시 설정
+	 *
+	 * @param createdDt 등록 일시
+	 */
 	public void setCreatedDt(String createdDt) {
 		this.createdDt = createdDt;
 	}
 
+	/**
+	 * 수정 일시 조회
+	 *
+	 * @return 수정 일시
+	 */
 	public String getUpdatedDt() {
 		return updatedDt;
 	}
 
+	/**
+	 * 수정 일시 설정
+	 *
+	 * @param updatedDt 수정 일시
+	 */
 	public void setUpdatedDt(String updatedDt) {
 		this.updatedDt = updatedDt;
 	}
 
+	/**
+	 * 작성자 닉네임 조회
+	 *
+	 * @return 작성자 닉네임
+	 */
 	public String getNickname() {
 		return nickname;
 	}
 
+	/**
+	 * 작성자 닉네임 설정
+	 *
+	 * @param nickname 작성자 닉네임
+	 */
 	public void setNickname(String nickname) {
 		this.nickname = nickname;
 	}
 
+	/**
+	 * 작성자 프로필 이미지 URL 조회
+	 *
+	 * @return 작성자 프로필 이미지 URL
+	 */
 	public String getProfileImgUrl() {
 		return profileImgUrl;
 	}
 
+	/**
+	 * 작성자 프로필 이미지 URL 설정
+	 *
+	 * @param profileImgUrl 작성자 프로필 이미지 URL
+	 */
 	public void setProfileImgUrl(String profileImgUrl) {
 		this.profileImgUrl = profileImgUrl;
 	}
 
+	/**
+	 * 좋아요 수 조회
+	 *
+	 * @return 좋아요 수
+	 */
 	public int getLikeCnt() {
 		return likeCnt;
 	}
 
+	/**
+	 * 좋아요 수 설정
+	 *
+	 * @param likeCnt 좋아요 수
+	 */
 	public void setLikeCnt(int likeCnt) {
 		this.likeCnt = likeCnt;
 	}
 
+	/**
+	 * 별점 조회
+	 *
+	 * @return 별점, 해당하지 않으면 null
+	 */
 	public Integer getRatingScore() {
 		return ratingScore;
 	}
 
+	/**
+	 * 별점 설정
+	 *
+	 * @param ratingScore 별점
+	 */
 	public void setRatingScore(Integer ratingScore) {
 		this.ratingScore = ratingScore;
 	}
 
+	/**
+	 * 신고 승인에 따른 가림 사유 조회
+	 *
+	 * @return 신고 승인에 따른 가림 사유
+	 */
 	public String getBlindReason() {
 		return blindReason;
 	}
 
+	/**
+	 * 신고 승인에 따른 가림 사유 설정
+	 *
+	 * @param blindReason 신고 승인에 따른 가림 사유
+	 */
 	public void setBlindReason(String blindReason) {
 		this.blindReason = blindReason;
 	}
 
+	/**
+	 * 대상 유형 (MOVIE/COLLECTION) 조회
+	 *
+	 * @return 대상 유형 (MOVIE/COLLECTION)
+	 */
 	public String getTargetType() {
 		return targetType;
 	}
 
+	/**
+	 * 대상 유형 (MOVIE/COLLECTION) 설정
+	 *
+	 * @param targetType 대상 유형 (MOVIE/COLLECTION)
+	 */
 	public void setTargetType(String targetType) {
 		this.targetType = targetType;
 	}
 
+	/**
+	 * 영화 또는 컬렉션 제목 조회
+	 *
+	 * @return 영화 또는 컬렉션 제목
+	 */
 	public String getTargetTitle() {
 		return targetTitle;
 	}
 
+	/**
+	 * 영화 또는 컬렉션 제목 설정
+	 *
+	 * @param targetTitle 영화 또는 컬렉션 제목
+	 */
 	public void setTargetTitle(String targetTitle) {
 		this.targetTitle = targetTitle;
 	}
 
+	/**
+	 * 영화 개봉 연도 조회
+	 *
+	 * @return 영화 개봉 연도, 해당하지 않으면 null
+	 */
 	public String getReleaseYear() {
 		return releaseYear;
 	}
 
+	/**
+	 * 영화 개봉 연도 설정
+	 *
+	 * @param releaseYear 영화 개봉 연도
+	 */
 	public void setReleaseYear(String releaseYear) {
 		this.releaseYear = releaseYear;
 	}
 
+	/**
+	 * 컬렉션 작성자 닉네임 조회
+	 *
+	 * @return 컬렉션 작성자 닉네임
+	 */
 	public String getCollectionAuthorNickname() {
 		return collectionAuthorNickname;
 	}
 
+	/**
+	 * 컬렉션 작성자 닉네임 설정
+	 *
+	 * @param collectionAuthorNickname 컬렉션 작성자 닉네임
+	 */
 	public void setCollectionAuthorNickname(String collectionAuthorNickname) {
 		this.collectionAuthorNickname = collectionAuthorNickname;
 	}
 
+	/**
+	 * 로그인 회원의 좋아요 여부 조회
+	 *
+	 * @return 로그인 회원의 좋아요 여부
+	 */
 	public boolean isLikedByMember() {
 		return likedByMember;
 	}
 
+	/**
+	 * 로그인 회원의 좋아요 여부 설정
+	 *
+	 * @param likedByMember 로그인 회원의 좋아요 여부
+	 */
 	public void setLikedByMember(boolean likedByMember) {
 		this.likedByMember = likedByMember;
 	}
 
+	/**
+	 * function toString() { [native code] } 조회
+	 *
+	 * @return function toString() { [native code] }
+	 */
 	@Override
 	public String toString() {
 		return "UserCommentVO [commentId=" + commentId + ", memberId=" + memberId + ", contentId=" + contentId
 				+ ", collectionId=" + collectionId + ", commentDetail=" + commentDetail + ", spoiler=" + spoiler
-				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", nickname=" + nickname
-				+ ", profileImgUrl=" + profileImgUrl
+				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + ", nickname=" + nickname + ", profileImgUrl=" + profileImgUrl
 				+ ", likeCnt=" + likeCnt + ", ratingScore=" + ratingScore + ", blindReason=" + blindReason
 				+ ", targetType=" + targetType + ", targetTitle=" + targetTitle + ", releaseYear=" + releaseYear
 				+ ", collectionAuthorNickname=" + collectionAuthorNickname + ", likedByMember=" + likedByMember

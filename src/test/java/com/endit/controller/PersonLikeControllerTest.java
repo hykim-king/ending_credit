@@ -70,6 +70,7 @@ class PersonLikeControllerTest {
 	private int memberId;
 	private int personId;
 
+	/** 테스트 데이터와 로그인 인증 설정 */
 	@BeforeEach
 	void setUp() {
 		MemberVO member = createMember();
@@ -78,11 +79,17 @@ class PersonLikeControllerTest {
 		personId = createPersonId();
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		SecurityTestContext.clear();
 	}
 
+	/**
+	 * 회원 인물 좋아요 목록 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("회원 인물 좋아요 목록 반환")
 	void retrieveLikes() throws Exception {
@@ -95,8 +102,7 @@ class PersonLikeControllerTest {
 					.param("size", "12")
 					.param("sort", "latest"))
 				.andExpect(status().isOk())
-				.andExpect(content()
-						.contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.items", hasSize(1)))
 				.andExpect(jsonPath("$.items[0].memberId").value(memberId))
 				.andExpect(jsonPath("$.items[0].personId").value(personId))
@@ -108,6 +114,11 @@ class PersonLikeControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
+	/**
+	 * 좋아요가 없으면 빈 목록 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요가 없으면 빈 목록 반환")
 	void retrieveEmpty() throws Exception {
@@ -122,6 +133,11 @@ class PersonLikeControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(0));
 	}
 
+	/**
+	 * 인물 좋아요 등록 결과 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("인물 좋아요 등록 결과 반환")
 	void addLike() throws Exception {
@@ -137,6 +153,11 @@ class PersonLikeControllerTest {
 		assertNotNull(saved.getCreatedDt());
 	}
 
+	/**
+	 * 좋아요 중복 등록 허용 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요 중복 등록 허용")
 	void addLikeAgain() throws Exception {
@@ -152,14 +173,16 @@ class PersonLikeControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.memberId").value(memberId))
 				.andExpect(jsonPath("$.personId").value(personId))
-				.andExpect(jsonPath("$.createdDt")
-						.value(first.getCreatedDt()));
+				.andExpect(jsonPath("$.createdDt").value(first.getCreatedDt()));
 
-		assertEquals(
-				first.getCreatedDt(),
-				selectPersonLike().getCreatedDt());
+		assertEquals(first.getCreatedDt(), selectPersonLike().getCreatedDt());
 	}
 
+	/**
+	 * 인물 좋아요 해제 후 204 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("인물 좋아요 해제 후 204 반환")
 	void deleteLike() throws Exception {
@@ -173,6 +196,11 @@ class PersonLikeControllerTest {
 		assertNull(selectPersonLike());
 	}
 
+	/**
+	 * 좋아요 반복 해제 허용 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요 반복 해제 허용")
 	void deleteLikeAgain() throws Exception {
@@ -189,6 +217,11 @@ class PersonLikeControllerTest {
 		assertNull(selectPersonLike());
 	}
 
+	/**
+	 * 잘못된 인물 번호는 400으로 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("잘못된 인물 번호는 400으로 변환")
 	void invalidPerson() throws Exception {
@@ -196,10 +229,14 @@ class PersonLikeControllerTest {
 		mockMvc.perform(post("/api/people/0/likes"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"))
-				.andExpect(jsonPath("$.message")
-						.value("올바른 인물 번호가 필요합니다."));
+				.andExpect(jsonPath("$.message").value("올바른 인물 번호가 필요합니다."));
 	}
 
+	/**
+	 * Controller 직접 호출에서 로그인 정보가 없으면 409 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("Controller 직접 호출에서 로그인 정보가 없으면 409 반환")
 	void missingMember() throws Exception {
@@ -211,38 +248,56 @@ class PersonLikeControllerTest {
 				.andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
 	}
 
+	/**
+	 * 존재하지 않는 인물은 400으로 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("존재하지 않는 인물은 400으로 변환")
 	void missingPerson() throws Exception {
 		// 존재하지 않는 인물 등록으로 발생한 외래 키 예외를 400으로 변환한다.
-		mockMvc.perform(post("/api/people/{personId}/likes",
-					MISSING_PERSON_ID))
+		mockMvc.perform(post("/api/people/{personId}/likes", MISSING_PERSON_ID))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 현재 테스트 회원과 인물의 복합 PK 좋아요 조회 */
+	/**
+	 * 현재 테스트 회원과 인물의 복합 PK 좋아요 조회
+	 *
+	 * @return 인물 좋아요 정보
+	 */
 	private PersonLikeVO selectPersonLike() {
-		return personLikeMapper.doSelectOne(
-				new PersonLikeVO(memberId, personId, null));
+		return personLikeMapper.doSelectOne(new PersonLikeVO(memberId, personId, null));
 	}
 
-	/** 목록 및 해제 테스트에 사용할 인물 좋아요 생성 */
+	/**
+	 * 목록 및 해제 테스트에 사용할 인물 좋아요 생성
+	 *
+	 * @return 인물 좋아요 정보
+	 */
 	private PersonLikeVO savePersonLike() {
-		PersonLikeVO personLike =
-				new PersonLikeVO(memberId, personId, null);
+		PersonLikeVO personLike = new PersonLikeVO(memberId, personId, null);
 
 		assertEquals(1, personLikeMapper.doSave(personLike));
 
 		return personLike;
 	}
 
-	/** PERSON_LIKE 외래 키를 만족하는 테스트 회원 생성 */
+	/**
+	 * PERSON_LIKE 외래 키를 만족하는 테스트 회원 생성
+	 *
+	 * @return 등록된 테스트 회원 번호
+	 */
 	private int createMemberId() {
 		return createMember().getMemberId().intValue();
 	}
 
-	/** 좋아요 소유자 또는 비교 대상 테스트 회원 생성 */
+	/**
+	 * 좋아요 소유자 또는 비교 대상 테스트 회원 생성
+	 *
+	 * @return 회원 정보
+	 */
 	private MemberVO createMember() {
 		String token = createToken();
 
@@ -256,25 +311,28 @@ class PersonLikeControllerTest {
 		return insertMember(jdbcTemplate, member);
 	}
 
-	/** PERSON_LIKE 외래 키와 목록 JOIN을 만족하는 테스트 인물 생성 */
+	/**
+	 * PERSON_LIKE 외래 키와 목록 JOIN을 만족하는 테스트 인물 생성
+	 *
+	 * @return 등록된 테스트 인물 번호
+	 */
 	private int createPersonId() {
 		String token = createToken();
 
 		// EXTERNAL_ID 컬럼 최대 길이를 넘지 않도록 짧은 접두사를 사용한다.
-		PersonVO person = new PersonVO(
-				0,
-				"PL_API_" + token,
-				"인물좋아요API" + token.substring(0, 6),
-				"Person Like API " + token.substring(0, 6),
+		PersonVO person = new PersonVO(0, "PL_API_" + token, "인물좋아요API" + token.substring(0, 6), "Person Like API " + token.substring(0, 6),
 				"https://example.com/person.jpg",
-				null,
-				null);
+				null, null);
 
 		// PERSON는 좋아요 테스트의 부모 데이터이므로 PERSON 시퀀스에 의존하지 않는다.
 		return insertPerson(jdbcTemplate, person).getPersonId();
 	}
 
-	/** 회원과 인물의 고유 제약조건 충돌 방지용 문자열 생성 */
+	/**
+	 * 회원과 인물의 고유 제약조건 충돌 방지용 문자열 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
+	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");
 	}

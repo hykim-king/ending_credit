@@ -67,6 +67,7 @@
                 const response = await fetch(PEOPLE_API_PATH + personId + "/likes", {
                     method: liked ? "POST" : "DELETE",
                     credentials: "same-origin",
+                    // 좋아요 회원은 서버 인증에서 조회, CSRF 헤더만 전달
                     headers: csrfHeaders()
                 });
 

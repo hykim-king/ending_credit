@@ -76,6 +76,7 @@ class MemberContentControllerTest {
 	private int memberId;
 	private int contentId;
 
+	/** 테스트 데이터와 로그인 인증 설정 */
 	@BeforeEach
 	void setUp() {
 		MemberVO member = createMember();
@@ -84,12 +85,18 @@ class MemberContentControllerTest {
 		contentId = createContentId();
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		// SecurityContext는 ThreadLocal이므로 테스트마다 명시적으로 비운다.
 		SecurityTestContext.clear();
 	}
 
+	/**
+	 * 회원 평가 목록 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("회원 평가 목록 반환")
 	void retrieveRatings() throws Exception {
@@ -101,8 +108,7 @@ class MemberContentControllerTest {
 					.param("size", "12")
 					.param("sort", "latest"))
 				.andExpect(status().isOk())
-				.andExpect(content()
-						.contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.items", hasSize(1)))
 				.andExpect(jsonPath("$.items[0].contentId").value(contentId))
 				.andExpect(jsonPath("$.items[0].ratingScore").value(4))
@@ -112,6 +118,11 @@ class MemberContentControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
+	/**
+	 * 회원 보고싶어요 목록 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("회원 보고싶어요 목록 반환")
 	void retrieveWatchlist() throws Exception {
@@ -130,6 +141,11 @@ class MemberContentControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
+	/**
+	 * 별점 등록 결과 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("별점 등록 결과 반환")
 	void saveRating() throws Exception {
@@ -151,6 +167,11 @@ class MemberContentControllerTest {
 		assertEquals(Integer.valueOf(4), saved.getRatingScore());
 	}
 
+	/**
+	 * 별점 변경 결과 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("별점 변경 결과 반환")
 	void updateRating() throws Exception {
@@ -165,11 +186,14 @@ class MemberContentControllerTest {
 				.andExpect(jsonPath("$.ratingScore").value(5))
 				.andExpect(jsonPath("$.watchlist").value("N"));
 
-		assertEquals(
-				Integer.valueOf(5),
-				selectMemberContent().getRatingScore());
+		assertEquals(Integer.valueOf(5), selectMemberContent().getRatingScore());
 	}
 
+	/**
+	 * 별점 해제 후 204 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("별점 해제 후 204 반환")
 	void deleteRating() throws Exception {
@@ -183,6 +207,11 @@ class MemberContentControllerTest {
 		assertNull(selectMemberContent());
 	}
 
+	/**
+	 * 보고싶어요 등록 결과 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("보고싶어요 등록 결과 반환")
 	void addWatchlist() throws Exception {
@@ -199,6 +228,11 @@ class MemberContentControllerTest {
 		assertEquals("Y", saved.getWatchlist());
 	}
 
+	/**
+	 * 보고싶어요 해제 후 204 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("보고싶어요 해제 후 204 반환")
 	void deleteWatchlist() throws Exception {
@@ -212,6 +246,11 @@ class MemberContentControllerTest {
 		assertNull(selectMemberContent());
 	}
 
+	/**
+	 * 잘못된 별점은 400으로 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("잘못된 별점은 400으로 변환")
 	void invalidRating() throws Exception {
@@ -223,10 +262,14 @@ class MemberContentControllerTest {
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"))
-				.andExpect(jsonPath("$.message")
-						.value("별점은 1점부터 5점까지 입력해야 합니다."));
+				.andExpect(jsonPath("$.message").value("별점은 1점부터 5점까지 입력해야 합니다."));
 	}
 
+	/**
+	 * Controller 직접 호출에서 로그인 정보가 없으면 409 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("Controller 직접 호출에서 로그인 정보가 없으면 409 반환")
 	void missingMember() throws Exception {
@@ -239,21 +282,29 @@ class MemberContentControllerTest {
 				.andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
 	}
 
+	/**
+	 * 존재하지 않는 콘텐츠는 400으로 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("존재하지 않는 콘텐츠는 400으로 변환")
 	void missingContent() throws Exception {
 		RatingRequest request = createRatingRequest(3);
 
 		// 존재하지 않는 콘텐츠 등록으로 발생한 외래 키 예외를 400으로 변환한다.
-		mockMvc.perform(put("/api/movies/{contentId}/rating",
-					MISSING_CONTENT_ID)
+		mockMvc.perform(put("/api/movies/{contentId}/rating", MISSING_CONTENT_ID)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 현재 테스트 회원과 콘텐츠의 복합 PK 기록 조회 */
+	/**
+	 * 현재 테스트 회원과 콘텐츠의 복합 PK 기록 조회
+	 *
+	 * @return 회원 콘텐츠 기록
+	 */
 	private MemberContentVO selectMemberContent() {
 		MemberContentVO key = new MemberContentVO();
 		key.setMemberId(memberId);
@@ -262,26 +313,27 @@ class MemberContentControllerTest {
 		return memberContentMapper.doSelectOne(key);
 	}
 
-	/** 목록 및 해제 테스트에 사용할 회원 콘텐츠 기록 생성 */
-	private MemberContentVO saveMemberContent(
-			Integer ratingScore,
-			String watchlist) {
-
-		MemberContentVO memberContent = new MemberContentVO(
-				memberId,
-				contentId,
-				ratingScore,
-				watchlist,
-				null,
-				null,
-				null);
+	/**
+	 * 목록 및 해제 테스트에 사용할 회원 콘텐츠 기록 생성
+	 *
+	 * @param ratingScore 별점
+	 * @param watchlist 보고싶어요 여부 (Y/N)
+	 * @return 회원 콘텐츠 기록
+	 */
+	private MemberContentVO saveMemberContent(Integer ratingScore, String watchlist) {
+		MemberContentVO memberContent = new MemberContentVO(memberId, contentId, ratingScore, watchlist, null, null, null);
 
 		assertEquals(1, memberContentMapper.doSave(memberContent));
 
 		return memberContent;
 	}
 
-	/** 별점 JSON 요청 객체 생성 */
+	/**
+	 * 별점 JSON 요청 객체 생성
+	 *
+	 * @param ratingScore 별점
+	 * @return 별점 요청 객체
+	 */
 	private RatingRequest createRatingRequest(int ratingScore) {
 		RatingRequest request = new RatingRequest();
 		request.setRatingScore(ratingScore);
@@ -289,7 +341,11 @@ class MemberContentControllerTest {
 		return request;
 	}
 
-	/** MEMBER_CONTENT 외래 키를 만족하는 테스트 회원 생성 */
+	/**
+	 * MEMBER_CONTENT 외래 키를 만족하는 테스트 회원 생성
+	 *
+	 * @return 회원 정보
+	 */
 	private MemberVO createMember() {
 		String token = createToken();
 
@@ -303,20 +359,17 @@ class MemberContentControllerTest {
 		return insertMember(jdbcTemplate, member);
 	}
 
-	/** MEMBER_CONTENT 외래 키를 만족하는 테스트 콘텐츠 생성 */
+	/**
+	 * MEMBER_CONTENT 외래 키를 만족하는 테스트 콘텐츠 생성
+	 *
+	 * @return 등록된 테스트 콘텐츠 번호
+	 */
 	private int createContentId() {
 		String token = createToken();
 
 		// EXTERNAL_ID 컬럼 최대 길이를 넘지 않도록 짧은 접두사를 사용한다.
-		ContentVO content = new ContentVO(
-				0,
-				"MC_API_" + token,
-				"회원 콘텐츠 API 테스트 영화",
-				"Member Content API Test",
-				"회원 콘텐츠 Controller 통합 테스트 영화",
-				"2026-08-27",
-				120,
-				"Korea",
+		ContentVO content = new ContentVO(0, "MC_API_" + token, "회원 콘텐츠 API 테스트 영화", "Member Content API Test",
+				"회원 콘텐츠 Controller 통합 테스트 영화", "2026-08-27", 120, "Korea",
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
@@ -325,7 +378,11 @@ class MemberContentControllerTest {
 		return insertContent(jdbcTemplate, content).getContentId();
 	}
 
-	/** DB 고유 제약조건 충돌 방지용 문자열 생성 */
+	/**
+	 * DB 고유 제약조건 충돌 방지용 문자열 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
+	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");
 	}

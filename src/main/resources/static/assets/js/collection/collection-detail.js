@@ -5,7 +5,10 @@
  * 2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
  * 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
  * 2026. 9. 05. jinyoung - 컬렉션 댓글 작성·대표 댓글·전체 댓글 모달 적용
+ * 2026. 9. 07. jinyoung - 댓글 상대 작성일·좋아요·수정·삭제·신고 적용
  */
+// ==================== 설정과 화면 상태 ====================
+
 const ITEMS_PER_PAGE = 12;
 const COMMENTS_PER_PAGE = 10;
 const COMMENT_MAX_LENGTH = 1000;
@@ -26,6 +29,9 @@ let isPublicCollection = false;
 let copyFeedbackTimer = null;
 let currentCommentsPage = 0;
 let isCommentSubmitting = false;
+let currentReportCommentId = 0;
+
+// ==================== 화면 초기화 ====================
 
 document.addEventListener("DOMContentLoaded", initializeDetail);
 
@@ -37,15 +43,10 @@ async function initializeDetail() {
     document.querySelector("#likeButton").addEventListener("click", toggleLike);
     document.querySelector("#copyLinkButton").addEventListener("click", copyCollectionLink);
     document.querySelector("#commentsLink").addEventListener("click", scrollToComments);
-    document.querySelector("#gridViewButton").addEventListener(
-        "click",
-        () => setMovieView("grid")
-    );
-    document.querySelector("#listViewButton").addEventListener(
-        "click",
-        () => setMovieView("list")
-    );
+    document.querySelector("#gridViewButton").addEventListener("click", () => setMovieView("grid"));
+    document.querySelector("#listViewButton").addEventListener("click", () => setMovieView("list"));
     document.querySelector("#loadMoreButton").addEventListener("click", loadMoreItems);
+    document.querySelector("#submitCommentReportButton").addEventListener("click", submitCommentReport);
     initializeCommentComposer();
 
     // 소유자 여부를 먼저 확정한 뒤 상세 화면의 버튼 노출을 결정한다.
@@ -57,7 +58,7 @@ async function initializeDetail() {
     await loadCommentPreview();
 }
 
-// 상세 정보와 사용자 동작
+// ==================== 상세 정보·링크 공유·좋아요 ====================
 
 /** 방문 기록이 있으면 실제 이전 페이지로, 없으면 컬렉션 목록으로 이동한다. */
 function navigateBack(event) {
@@ -86,19 +87,14 @@ async function loadCollection() {
         descriptionElement.classList.toggle("d-none", description.trim().length === 0);
         renderCollectionAuthor(collection);
         renderUpdatedDate(collection.updatedDt || collection.createdDt);
-        document.querySelector("#itemResultCount").textContent =
-            String(collection.itemCount || 0);
+        document.querySelector("#itemResultCount").textContent = String(collection.itemCount || 0);
         document.querySelector("#likeCount").textContent = collection.likeCount || 0;
         document.querySelector("#commentCount").textContent = collection.commentCount || 0;
-        document.querySelector("#commentSectionCount").textContent =
-            collection.commentCount || 0;
+        document.querySelector("#commentSectionCount").textContent = collection.commentCount || 0;
 
         isPublicCollection = collection.isPublic === "Y";
         isOwner = currentMemberId > 0 && currentMemberId === Number(collection.memberId);
-        document.querySelector("#privateBadge").classList.toggle(
-            "d-none",
-            isPublicCollection
-        );
+        document.querySelector("#privateBadge").classList.toggle("d-none", isPublicCollection);
         applyActionVisibility();
 
         if (currentMemberId > 0 && !isOwner) {
@@ -120,9 +116,7 @@ function applyActionVisibility() {
 
     document.querySelector("#ownerActions").classList.toggle("d-none", !isOwner);
     likeButton.disabled = currentMemberId <= 0;
-    likeButton.title = currentMemberId <= 0
-        ? "로그인 후 좋아요를 누를 수 있습니다."
-        : (isOwner ? "자신의 컬렉션에는 좋아요를 누를 수 없습니다." : "");
+    likeButton.title = currentMemberId <= 0 ? "로그인 후 좋아요를 누를 수 있습니다." : (isOwner ? "자신의 컬렉션에는 좋아요를 누를 수 없습니다." : "");
 }
 
 /** 공개 컬렉션의 현재 상세 URL을 클립보드에 복사한다. */
@@ -214,9 +208,7 @@ async function toggleLike() {
     likeButton.disabled = true;
     hideDetailError(errorMessage);
     isLiked = !previousLiked;
-    likeCount.textContent = String(
-        Math.max(0, previousCount + (isLiked ? 1 : -1))
-    );
+    likeCount.textContent = String(Math.max(0, previousCount + (isLiked ? 1 : -1)));
     renderLikeButton();
 
     try {
@@ -235,7 +227,7 @@ async function toggleLike() {
     }
 }
 
-// 작품 목록과 보기 방식
+// ==================== 작품 목록과 보기 방식 ====================
 
 /** 지정한 페이지의 컬렉션 작품을 조회해 기존 목록 뒤에 이어 붙인다. */
 async function loadItems(pageNo) {
@@ -270,8 +262,7 @@ async function loadItems(pageNo) {
         renderItems(items, pageNo > 1);
         currentItemPage = pageNo;
         totalItemCount = Number(data.page?.totalCnt || 0);
-        document.querySelector("#itemResultCount").textContent =
-            String(totalItemCount);
+        document.querySelector("#itemResultCount").textContent = String(totalItemCount);
         updateLoadMoreButton();
     } catch (error) {
         if (pageNo === 1) {
@@ -287,9 +278,7 @@ async function loadItems(pageNo) {
 function renderDetailCover(items) {
     const cover = document.querySelector("#collectionDetailCover");
     const fallback = document.querySelector("#collectionDetailCoverFallback");
-    const posterItems = items
-        .filter((item) => item.posterUrl)
-        .slice(0, 5);
+    const posterItems = items.filter((item) => item.posterUrl).slice(0, 5);
 
     cover.querySelector(".collection-detail-poster-collage")?.remove();
     fallback.classList.toggle("d-none", posterItems.length > 0);
@@ -431,7 +420,7 @@ function scrollToComments() {
     window.setTimeout(() => comments.focus({ preventScroll: true }), 450);
 }
 
-// 컬렉션 댓글
+// ==================== 댓글 작성·목록·모달 ====================
 
 /** 로그인 상태에 맞게 댓글 작성 영역과 이벤트를 초기화한다. */
 function initializeCommentComposer() {
@@ -449,10 +438,7 @@ function initializeCommentComposer() {
     input.addEventListener("input", enforceCommentLength);
     document.querySelector("#submitCommentButton").addEventListener("click", submitComment);
     document.querySelector("#allCommentsButton").addEventListener("click", openAllCommentsModal);
-    document.querySelector("#loadMoreCommentsButton").addEventListener(
-        "click",
-        () => loadAllComments(currentCommentsPage + 1)
-    );
+    document.querySelector("#loadMoreCommentsButton").addEventListener("click", () => loadAllComments(currentCommentsPage + 1));
 }
 
 /** 입력 결과가 최대 글자 수를 넘는 키 입력을 막고 토스트를 표시한다. */
@@ -497,9 +483,7 @@ function enforceCommentLength(event) {
 /** 로그인 회원의 댓글을 등록하고 대표 댓글과 집계를 갱신한다. */
 async function submitComment() {
     if (currentMemberId <= 0) {
-        bootstrap.Modal.getOrCreateInstance(
-            document.querySelector("#commentLoginModal")
-        ).show();
+        showCommentLoginModal();
         return;
     }
 
@@ -574,9 +558,7 @@ async function openAllCommentsModal() {
     document.querySelector("#allCommentsEmpty").classList.add("d-none");
     document.querySelector("#loadMoreCommentsButton").classList.add("d-none");
 
-    bootstrap.Modal.getOrCreateInstance(
-        document.querySelector("#allCommentsModal")
-    ).show();
+    bootstrap.Modal.getOrCreateInstance(document.querySelector("#allCommentsModal")).show();
     await loadAllComments(1);
 }
 
@@ -604,10 +586,7 @@ async function loadAllComments(pageNo) {
 
         currentCommentsPage = pageNo;
         updateCommentCounts(totalCount);
-        document.querySelector("#allCommentsEmpty").classList.toggle(
-            "d-none",
-            totalCount > 0
-        );
+        document.querySelector("#allCommentsEmpty").classList.toggle("d-none", totalCount > 0);
         loadMoreButton.classList.toggle("d-none", data.hasNext !== true);
     } catch (error) {
         showCommentToast(error.message);
@@ -617,37 +596,345 @@ async function loadAllComments(pageNo) {
     }
 }
 
-/** 댓글 한 건을 프로필·좋아요 수·스포일러 상태와 함께 만든다. */
+/** 댓글 한 건을 작성일·본문·좋아요·작성자별 작업과 함께 만든다. */
 function renderCommentCard(card, comment) {
-    const header = document.createElement("div");
-    const author = document.createElement("div");
+    const layout = document.createElement("div");
     const avatar = createCommentAvatar(comment.profileImgUrl, comment.nickname);
+    const main = document.createElement("div");
+    const meta = document.createElement("div");
     const nickname = document.createElement("strong");
-    const likes = document.createElement("span");
+    const createdDate = document.createElement("time");
+    const detailWrap = document.createElement("div");
     const detail = document.createElement("div");
+    const side = document.createElement("div");
+    const likeButton = createCommentLikeButton(comment);
+    const actions = createCommentActions(card, comment);
 
-    header.className = "collection-comment-card-header";
-    author.className = "collection-comment-author";
+    card.dataset.commentId = String(comment.commentId);
+    layout.className = "collection-comment-layout";
+    main.className = "collection-comment-main";
+    meta.className = "collection-comment-meta";
     nickname.textContent = comment.nickname || `회원 ${comment.memberId}`;
-    likes.className = "collection-comment-likes";
-    likes.innerHTML = '<i class="bi bi-heart" aria-hidden="true"></i>';
-    likes.append(document.createTextNode(` 좋아요 ${Number(comment.likeCnt || 0)}`));
-    author.append(avatar, nickname);
-    header.append(author, likes);
+    createdDate.className = "collection-comment-date";
+    createdDate.textContent = formatCommentRelativeDate(comment.createdDt);
+    createdDate.dateTime = toCommentDate(comment.createdDt)?.toISOString() || "";
+    meta.append(nickname, createdDate);
 
     detail.className = "collection-comment-detail";
-    renderCommentDetail(detail, comment);
-    card.replaceChildren(header, detail);
+    detailWrap.className = "collection-comment-detail-wrap";
+    detailWrap.append(detail);
+    renderCommentDetail(detail, comment, () => applyCommentOverflow(detailWrap, detail));
+    main.append(meta, detailWrap);
+    applyCommentOverflow(detailWrap, detail);
+    side.className = "collection-comment-side";
+    side.append(actions, likeButton);
+    layout.append(avatar, main, side);
+    card.replaceChildren(layout);
+}
+
+/** 댓글 좋아요 버튼을 만들고 현재 회원의 좋아요 상태를 반영한다. */
+function createCommentLikeButton(comment) {
+    const button = document.createElement("button");
+    const icon = document.createElement("i");
+    const label = document.createElement("span");
+    const count = document.createElement("span");
+    const liked = comment.likedByMember === true;
+
+    button.type = "button";
+    button.className = `collection-comment-like${liked ? " is-liked" : ""}`;
+    button.setAttribute("aria-pressed", String(liked));
+    button.setAttribute("aria-label", liked ? "댓글 좋아요 취소" : "댓글 좋아요");
+    icon.className = liked ? "bi bi-heart-fill" : "bi bi-heart";
+    icon.setAttribute("aria-hidden", "true");
+    label.textContent = "좋아요";
+    count.className = "collection-comment-like-count";
+    count.textContent = String(Number(comment.likeCnt || 0));
+    button.append(icon, label, count);
+    button.addEventListener("click", () => toggleCommentLike(comment.commentId, button));
+
+    return button;
+}
+
+/** 본인 댓글에는 수정·삭제, 다른 회원 댓글에는 신고 버튼을 만든다. */
+function createCommentActions(card, comment) {
+    const actions = document.createElement("div");
+    const isMine = currentMemberId > 0 && currentMemberId === Number(comment.memberId);
+    actions.className = "collection-comment-actions";
+
+    if (isMine) {
+        actions.append(
+            createCommentActionButton("bi-pencil", "수정", () => renderCommentEditor(card, comment), false, true),
+            createCommentActionButton("bi-trash3", "삭제", () => deleteComment(comment.commentId), true, true)
+        );
+    } else {
+        actions.append(createCommentActionButton("bi-flag", "신고하기", () => openCommentReportModal(comment.commentId)));
+    }
+
+    return actions;
+}
+
+/** 댓글 작업 버튼의 공통 마크업을 만든다. */
+function createCommentActionButton(iconClass, label, clickHandler, danger = false, iconOnly = false) {
+    const button = document.createElement("button");
+    const icon = document.createElement("i");
+
+    button.type = "button";
+    button.className = `collection-comment-action${danger ? " is-danger" : ""}${iconOnly ? " is-icon-only" : ""}`;
+    icon.className = `bi ${iconClass}`;
+    icon.setAttribute("aria-hidden", "true");
+    button.append(icon);
+    if (iconOnly) {
+        button.setAttribute("aria-label", label);
+        button.title = label;
+    } else {
+        button.append(document.createTextNode(label));
+    }
+    button.addEventListener("click", clickHandler);
+
+    return button;
+}
+
+/** 댓글 카드를 내용과 스포일러 여부를 바꾸는 인라인 편집 상태로 전환한다. */
+function renderCommentEditor(card, comment) {
+    const editor = document.createElement("div");
+    const textarea = document.createElement("textarea");
+    const controls = document.createElement("div");
+    const spoilerLabel = document.createElement("label");
+    const spoiler = document.createElement("input");
+    const buttons = document.createElement("div");
+    const cancelButton = createCommentActionButton("bi-x-lg", "취소", () => renderCommentCard(card, comment));
+    const saveButton = createCommentActionButton("bi-check-lg", "저장", () => updateComment(card, comment, textarea, spoiler));
+
+    editor.className = "collection-comment-editor";
+    textarea.maxLength = COMMENT_MAX_LENGTH;
+    textarea.rows = 4;
+    textarea.value = comment.commentDetail || "";
+    textarea.setAttribute("aria-label", "댓글 내용 수정");
+    controls.className = "collection-comment-editor-controls";
+    spoilerLabel.className = "collection-comment-editor-spoiler";
+    spoiler.type = "checkbox";
+    spoiler.checked = comment.spoiler === "Y";
+    spoilerLabel.append(spoiler, document.createTextNode("스포일러 포함"));
+    buttons.className = "collection-comment-editor-buttons";
+    saveButton.classList.add("is-primary");
+    buttons.append(cancelButton, saveButton);
+    controls.append(spoilerLabel, buttons);
+    editor.append(textarea, controls);
+    card.replaceChildren(editor);
+    textarea.focus();
+}
+
+/** 수정된 댓글을 저장하고 현재 화면의 댓글 목록을 다시 불러온다. */
+async function updateComment(card, comment, textarea, spoiler) {
+    const commentDetail = textarea.value.trim();
+    if (!commentDetail) {
+        showCommentToast("댓글 내용을 입력해 주세요.");
+        textarea.focus();
+        return;
+    }
+
+    try {
+        await requestJson(`/api/collections/${collectionId}/comments/${comment.commentId}`, "PUT", {
+            commentDetail,
+            spoiler: spoiler.checked ? "Y" : "N"
+        });
+        await refreshCommentLists();
+        showCommentToast("댓글을 수정했어요.");
+    } catch (error) {
+        renderCommentCard(card, comment);
+        showCommentToast(error.message);
+    }
+}
+
+/** 댓글 삭제 확인 후 서버와 현재 댓글 목록을 갱신한다. */
+async function deleteComment(commentId) {
+    if (!window.confirm("댓글을 삭제할까요?")) {
+        return;
+    }
+
+    try {
+        await requestDelete(`/api/collections/${collectionId}/comments/${commentId}`);
+        await refreshCommentLists();
+        showCommentToast("댓글을 삭제했어요.");
+    } catch (error) {
+        showCommentToast(error.message);
+    }
+}
+
+/** 댓글 좋아요를 토글하고 같은 댓글을 표시한 모든 카드의 상태를 맞춘다. */
+async function toggleCommentLike(commentId, button) {
+    if (currentMemberId <= 0) {
+        showCommentLoginModal();
+        return;
+    }
+
+    button.disabled = true;
+    try {
+        const result = await requestPost(`/api/collections/${collectionId}/comments/${commentId}/likes`, {});
+        syncCommentLikeButtons(commentId, result.liked === true, Number(result.likeCount || 0));
+    } catch (error) {
+        showCommentToast(error.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+/** 대표 댓글과 전체 댓글에 중복 표시된 좋아요 버튼을 함께 갱신한다. */
+function syncCommentLikeButtons(commentId, liked, likeCount) {
+    document.querySelectorAll(`.collection-comment-card[data-comment-id="${commentId}"] .collection-comment-like`).forEach((button) => {
+        button.classList.toggle("is-liked", liked);
+        button.setAttribute("aria-pressed", String(liked));
+        button.setAttribute("aria-label", liked ? "댓글 좋아요 취소" : "댓글 좋아요");
+        button.querySelector("i").className = liked ? "bi bi-heart-fill" : "bi bi-heart";
+        button.querySelector(".collection-comment-like-count").textContent = String(likeCount);
+    });
+}
+
+/** 다른 회원의 댓글 신고 모달을 연다. */
+function openCommentReportModal(commentId) {
+    if (currentMemberId <= 0) {
+        showCommentLoginModal();
+        return;
+    }
+
+    currentReportCommentId = Number(commentId);
+    document.querySelector("#collectionCommentReportReason").value = "SPOILER";
+    document.querySelector("#collectionCommentReportDetail").value = "";
+    const reportModal = bootstrap.Modal.getOrCreateInstance(document.querySelector("#collectionCommentReportModal"));
+    const allCommentsElement = document.querySelector("#allCommentsModal");
+
+    if (allCommentsElement.classList.contains("show")) {
+        allCommentsElement.addEventListener("hidden.bs.modal", () => reportModal.show(), { once: true });
+        bootstrap.Modal.getOrCreateInstance(allCommentsElement).hide();
+        return;
+    }
+
+    reportModal.show();
+}
+
+/** 다른 댓글 모달이 열려 있으면 닫은 뒤 로그인 안내를 표시한다. */
+function showCommentLoginModal() {
+    const loginModal = bootstrap.Modal.getOrCreateInstance(document.querySelector("#commentLoginModal"));
+    const allCommentsElement = document.querySelector("#allCommentsModal");
+
+    if (allCommentsElement.classList.contains("show")) {
+        allCommentsElement.addEventListener("hidden.bs.modal", () => loginModal.show(), { once: true });
+        bootstrap.Modal.getOrCreateInstance(allCommentsElement).hide();
+        return;
+    }
+
+    loginModal.show();
+}
+
+/** 선택한 사유로 다른 회원의 댓글 신고를 접수한다. */
+async function submitCommentReport() {
+    const reason = document.querySelector("#collectionCommentReportReason").value;
+    const detail = document.querySelector("#collectionCommentReportDetail").value.trim();
+    const submitButton = document.querySelector("#submitCommentReportButton");
+
+    if (reason === "OTHER" && !detail) {
+        showCommentToast("기타 신고 사유를 입력해 주세요.");
+        document.querySelector("#collectionCommentReportDetail").focus();
+        return;
+    }
+
+    submitButton.disabled = true;
+    try {
+        await requestPost(`/api/collections/${collectionId}/comments/${currentReportCommentId}/reports`, { reason, detail });
+        bootstrap.Modal.getOrCreateInstance(document.querySelector("#collectionCommentReportModal")).hide();
+        showCommentToast("댓글 신고를 접수했어요.");
+    } catch (error) {
+        showCommentToast(error.message);
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
+/** 대표 댓글과 열려 있는 전체 댓글 목록을 서버 상태로 갱신한다. */
+async function refreshCommentLists() {
+    await loadCommentPreview();
+
+    if (document.querySelector("#allCommentsModal").classList.contains("show")) {
+        currentCommentsPage = 0;
+        document.querySelector("#allCommentsList").replaceChildren();
+        await loadAllComments(1);
+    }
+}
+
+/** 서버 댓글 작성일을 브라우저에서 해석 가능한 Date로 변환한다. */
+function toCommentDate(dateValue) {
+    if (!dateValue) {
+        return null;
+    }
+
+    const date = new Date(String(dateValue).trim().replaceAll("/", "-").replace(" ", "T"));
+    return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** 댓글 작성일을 분·시간·일·달·년 단위 상대 시간으로 표시한다. */
+function formatCommentRelativeDate(dateValue) {
+    const createdDate = toCommentDate(dateValue);
+    if (!createdDate) {
+        return "";
+    }
+
+    const elapsedMilliseconds = Math.max(0, Date.now() - createdDate.getTime());
+    const elapsedMinutes = Math.max(1, Math.floor(elapsedMilliseconds / (60 * 1000)));
+    if (elapsedMinutes < 60) {
+        return `${elapsedMinutes}분 전`;
+    }
+
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) {
+        return `${elapsedHours}시간 전`;
+    }
+
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    if (elapsedDays < 30) {
+        return `${elapsedDays}일 전`;
+    }
+
+    const elapsedMonths = Math.floor(elapsedDays / 30);
+    if (elapsedMonths < 12) {
+        return `${elapsedMonths}달 전`;
+    }
+
+    return `${Math.max(1, Math.floor(elapsedDays / 365))}년 전`;
+}
+
+/** 댓글 본문이 3줄을 넘을 때 더보기와 접기 버튼을 표시한다. */
+function applyCommentOverflow(detailWrap, detail) {
+    detailWrap.querySelector(".collection-comment-more")?.remove();
+    detail.classList.remove("is-collapsed");
+    detail.classList.remove("is-expanded");
+
+    window.requestAnimationFrame(() => {
+        const lineHeight = Number.parseFloat(window.getComputedStyle(detail).lineHeight);
+        const threeLineHeight = lineHeight * 3;
+
+        if (!Number.isFinite(lineHeight) || detail.scrollHeight <= threeLineHeight + 1) {
+            return;
+        }
+
+        detail.classList.add("is-collapsed");
+        const moreButton = document.createElement("button");
+        moreButton.type = "button";
+        moreButton.className = "collection-comment-more";
+        moreButton.textContent = "더보기";
+        moreButton.addEventListener("click", () => {
+            const expanded = detail.classList.toggle("is-expanded");
+            detail.classList.toggle("is-collapsed", !expanded);
+            moreButton.textContent = expanded ? "접기" : "더보기";
+        });
+        detailWrap.append(moreButton);
+    });
 }
 
 /** 신고 승인 및 스포일러 상태에 맞춰 댓글 본문을 표시한다. */
-function renderCommentDetail(detail, comment) {
+function renderCommentDetail(detail, comment, afterReveal) {
     if (comment.blindReason) {
         detail.classList.add("is-blinded");
-        detail.textContent = comment.blindReason === "SPOILER"
-            ? "스포일러 댓글입니다."
-            : (comment.blindReason === "INAPPROPRIATE"
-                ? "부적절한 댓글입니다."
+        detail.textContent = comment.blindReason === "SPOILER" ? "스포일러 댓글입니다." : (comment.blindReason === "INAPPROPRIATE" ? "부적절한 댓글입니다."
                 : "신고 승인된 댓글입니다.");
         return;
     }
@@ -666,6 +953,7 @@ function renderCommentDetail(detail, comment) {
     revealButton.addEventListener("click", () => {
         detail.classList.remove("is-spoiler");
         detail.textContent = comment.commentDetail || "";
+        afterReveal();
     });
     detail.classList.add("is-spoiler");
     detail.append(warning, revealButton);
@@ -709,6 +997,8 @@ function showCommentToast(message) {
     toast.querySelector(".toast-body").textContent = message;
     bootstrap.Toast.getOrCreateInstance(toast).show();
 }
+
+// ==================== 작성자와 수정 일시 표시 ====================
 
 /** 작성자 이름과 프로필 이미지를 표시한다. */
 function renderCollectionAuthor(collection) {
@@ -755,17 +1045,9 @@ function formatRelativeUpdate(dateValue) {
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const updatedDay = new Date(
-        updatedDate.getFullYear(),
-        updatedDate.getMonth(),
-        updatedDate.getDate()
-    );
-    const elapsedDays = Math.max(
-        0,
-        Math.floor(
-            (today.getTime() - updatedDay.getTime()) / MILLISECONDS_PER_DAY
-        )
-    );
+    const updatedDay = new Date(updatedDate.getFullYear(), updatedDate.getMonth(), updatedDate.getDate());
+    const elapsedDays = Math.max(0, Math.floor((today.getTime() - updatedDay.getTime()) / MILLISECONDS_PER_DAY
+        ));
 
     if (elapsedDays === 0) {
         return "오늘 업데이트";
@@ -777,8 +1059,7 @@ function formatRelativeUpdate(dateValue) {
         return `${Math.floor(elapsedDays / 7)}주 전 업데이트`;
     }
 
-    let elapsedMonths = (now.getFullYear() - updatedDate.getFullYear()) * 12
-        + now.getMonth() - updatedDate.getMonth();
+    let elapsedMonths = (now.getFullYear() - updatedDate.getFullYear()) * 12 + now.getMonth() - updatedDate.getMonth();
     if (now.getDate() < updatedDate.getDate()) {
         elapsedMonths -= 1;
     }
@@ -789,8 +1070,7 @@ function formatRelativeUpdate(dateValue) {
     }
 
     let elapsedYears = now.getFullYear() - updatedDate.getFullYear();
-    if (now.getMonth() < updatedDate.getMonth()
-            || (now.getMonth() === updatedDate.getMonth()
+    if (now.getMonth() < updatedDate.getMonth() || (now.getMonth() === updatedDate.getMonth()
                 && now.getDate() < updatedDate.getDate())) {
         elapsedYears -= 1;
     }
@@ -798,7 +1078,7 @@ function formatRelativeUpdate(dateValue) {
     return `${Math.max(1, elapsedYears)}년 전 업데이트`;
 }
 
-// 삭제와 공통 표시 도우미
+// ==================== 삭제 요청과 표시 도우미 ====================
 
 /** 포스터가 없는 작품에 사용할 기본 영역을 만든다. */
 function createDetailPosterPlaceholder() {
@@ -824,9 +1104,7 @@ async function deleteCollection() {
 
     try {
         await requestDelete(`/api/collections/${collectionId}`);
-        window.location.href = currentMemberId > 0
-            ? "/members/records?tab=collections"
-            : "/collections";
+        window.location.href = currentMemberId > 0 ? "/members/records?tab=collections" : "/collections";
     } catch (error) {
         showDetailError(errorMessage, error.message);
         deleteButton.disabled = false;
@@ -843,6 +1121,19 @@ function requestDelete(url) {
             "Accept": "application/json",
             ...getCsrfHeaders()
         }
+    });
+}
+
+/** JSON 본문을 사용하는 수정 요청을 보낸다. */
+function requestJson(url, method, data) {
+    return requestFetch(url, {
+        method,
+        headers: {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            ...getCsrfHeaders()
+        },
+        body: JSON.stringify(data)
     });
 }
 

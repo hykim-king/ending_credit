@@ -299,9 +299,7 @@
     text-overflow: clip;
 }
 
-.collection-list-card-link:hover
-        .collection-list-card-title.is-overflowing
-        .collection-list-card-title-text {
+.collection-list-card-link:hover .collection-list-card-title.is-overflowing .collection-list-card-title-text {
     transform: translateX(var(--collection-title-scroll-distance));
 }
 

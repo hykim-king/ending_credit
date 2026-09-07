@@ -68,6 +68,7 @@ class CollectionLikeControllerTest {
 
 	private int authenticatedMemberId;
 
+	/** 테스트 회원 등록 및 로그인 인증 설정 */
 	@BeforeEach
 	void setUpAuthentication() {
 		MemberVO member = createMember();
@@ -75,27 +76,33 @@ class CollectionLikeControllerTest {
 		SecurityTestContext.login(member);
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		SecurityTestContext.clear();
 	}
 
-	/** 인증 회원의 컬렉션 좋아요 등록 API 검증 */
+	/**
+	 * 인증 회원의 컬렉션 좋아요 등록 API 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 좋아요 등록 API")
 	void like() throws Exception {
 		CollectionVO collection = createCollection(createMemberId(), "Y");
 
-		mockMvc.perform(post("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(post("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.memberId")
-						.value(authenticatedMemberId))
-				.andExpect(jsonPath("$.collectionId")
-						.value(collection.getCollectionId()));
+				.andExpect(jsonPath("$.memberId").value(authenticatedMemberId))
+				.andExpect(jsonPath("$.collectionId").value(collection.getCollectionId()));
 	}
 
-	/** 이미 좋아요한 컬렉션의 멱등 등록 검증 */
+	/**
+	 * 이미 좋아요한 컬렉션의 멱등 등록 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("이미 좋아요한 컬렉션 재등록은 멱등 응답")
 	void likeIdempotent() throws Exception {
@@ -103,16 +110,17 @@ class CollectionLikeControllerTest {
 		CollectionLikeVO existing = likeKey(collection.getCollectionId());
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(existing));
 
-		mockMvc.perform(post("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(post("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isCreated())
-				.andExpect(jsonPath("$.memberId")
-						.value(authenticatedMemberId))
-				.andExpect(jsonPath("$.collectionId")
-						.value(collection.getCollectionId()));
+				.andExpect(jsonPath("$.memberId").value(authenticatedMemberId))
+				.andExpect(jsonPath("$.collectionId").value(collection.getCollectionId()));
 	}
 
-	/** 인증 회원의 컬렉션 좋아요 취소 API 검증 */
+	/**
+	 * 인증 회원의 컬렉션 좋아요 취소 API 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 좋아요 취소 API")
 	void unlike() throws Exception {
@@ -120,63 +128,70 @@ class CollectionLikeControllerTest {
 		CollectionLikeVO existing = likeKey(collection.getCollectionId());
 		assertEquals(1, collectionLikeMapper.insertCollectionLike(existing));
 
-		mockMvc.perform(delete("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(delete("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isNoContent());
 
 		assertNull(collectionLikeMapper.selectCollectionLike(existing));
 	}
 
-	/** 좋아요가 없어도 취소 요청을 멱등 처리하는지 검증 */
+	/**
+	 * 좋아요가 없어도 취소 요청을 멱등 처리하는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요가 없어도 취소 요청은 204")
 	void unlikeIdempotent() throws Exception {
 		CollectionVO collection = createCollection(createMemberId(), "Y");
 
-		mockMvc.perform(delete("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(delete("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isNoContent());
 	}
 
-	/** 현재 인증 회원이 좋아요한 컬렉션의 상태 조회 검증 */
+	/**
+	 * 현재 인증 회원이 좋아요한 컬렉션의 상태 조회 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요한 컬렉션 상태는 true")
 	void likeStatusTrue() throws Exception {
 		CollectionVO collection = createCollection(createMemberId(), "Y");
-		assertEquals(1, collectionLikeMapper.insertCollectionLike(
-				likeKey(collection.getCollectionId())));
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(likeKey(collection.getCollectionId())));
 
-		mockMvc.perform(get("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(get("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.liked").value(true));
 	}
 
-	/** 현재 인증 회원이 좋아요하지 않은 컬렉션의 상태 조회 검증 */
+	/**
+	 * 현재 인증 회원이 좋아요하지 않은 컬렉션의 상태 조회 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요하지 않은 컬렉션 상태는 false")
 	void likeStatusFalse() throws Exception {
 		CollectionVO collection = createCollection(createMemberId(), "Y");
 
-		mockMvc.perform(get("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(get("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.liked").value(false));
 	}
 
-	/** 특정 회원의 공개 좋아요 컬렉션 목록 조회 검증 */
+	/**
+	 * 특정 회원의 공개 좋아요 컬렉션 목록 조회 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("회원별 좋아요 컬렉션 목록 조회 API")
 	void retrieveByMember() throws Exception {
 		int targetMemberId = createMemberId();
 		CollectionVO first = createCollection(createMemberId(), "Y");
 		CollectionVO second = createCollection(createMemberId(), "Y");
-		assertEquals(1, collectionLikeMapper.insertCollectionLike(
-				new CollectionLikeVO(
-						targetMemberId, first.getCollectionId(), null)));
-		assertEquals(1, collectionLikeMapper.insertCollectionLike(
-				new CollectionLikeVO(
-						targetMemberId, second.getCollectionId(), null)));
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(new CollectionLikeVO(targetMemberId, first.getCollectionId(), null)));
+		assertEquals(1, collectionLikeMapper.insertCollectionLike(new CollectionLikeVO(targetMemberId, second.getCollectionId(), null)));
 
 		mockMvc.perform(get("/api/users/{memberId}/likes", targetMemberId)
 					.param("type", "collection")
@@ -187,7 +202,11 @@ class CollectionLikeControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(2));
 	}
 
-	/** 좋아요 컬렉션이 없는 회원의 빈 목록 검증 */
+	/**
+	 * 좋아요 컬렉션이 없는 회원의 빈 목록 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("좋아요한 컬렉션이 없으면 빈 목록 응답")
 	void retrieveByMemberEmpty() throws Exception {
@@ -199,7 +218,11 @@ class CollectionLikeControllerTest {
 				.andExpect(jsonPath("$.items.length()").value(0));
 	}
 
-	/** 컬렉션 이외의 좋아요 타입 거부 검증 */
+	/**
+	 * 컬렉션 이외의 좋아요 타입 거부 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("type=collection이 아니면 400 응답")
 	void retrieveByMemberInvalidType() throws Exception {
@@ -208,37 +231,50 @@ class CollectionLikeControllerTest {
 				.andExpect(status().isBadRequest());
 	}
 
-	/** 인증 회원 본인 컬렉션 좋아요 금지 검증 */
+	/**
+	 * 인증 회원 본인 컬렉션 좋아요 금지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("본인 컬렉션 좋아요는 403")
 	void likeOwnCollection() throws Exception {
-		CollectionVO collection = createCollection(
-				authenticatedMemberId, "Y");
+		CollectionVO collection = createCollection(authenticatedMemberId, "Y");
 
-		mockMvc.perform(post("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(post("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.id").value("403"));
 	}
 
-	/** 비공개 컬렉션 비소유자의 좋아요 요청 은닉 검증 */
+	/**
+	 * 비공개 컬렉션 비소유자의 좋아요 요청 은닉 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("비공개 컬렉션 비소유자 좋아요는 404")
 	void likePrivateCollection() throws Exception {
 		CollectionVO collection = createCollection(createMemberId(), "N");
 
-		mockMvc.perform(post("/api/collections/{collectionId}/likes",
-					collection.getCollectionId()))
+		mockMvc.perform(post("/api/collections/{collectionId}/likes", collection.getCollectionId()))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.id").value("404"));
 	}
 
-	/** 테스트 회원 등록 */
+	/**
+	 * 테스트 회원 등록
+	 *
+	 * @return 등록된 테스트 회원 번호
+	 */
 	private int createMemberId() {
 		return createMember().getMemberId().intValue();
 	}
 
-	/** 테스트 회원을 운영 회원 시퀀스와 독립된 PK로 등록 */
+	/**
+	 * 테스트 회원을 운영 회원 시퀀스와 독립된 PK로 등록
+	 *
+	 * @return 회원 정보
+	 */
 	private MemberVO createMember() {
 		String token = UUID.randomUUID().toString().replace("-", "");
 		MemberVO member = new MemberVO();
@@ -250,23 +286,27 @@ class CollectionLikeControllerTest {
 		return insertMember(jdbcTemplate, member);
 	}
 
-	/** 지정한 회원 소유 테스트 컬렉션 등록 */
+	/**
+	 * 지정한 회원 소유 테스트 컬렉션 등록
+	 *
+	 * @param memberId 회원 번호
+	 * @param isPublic 공개 여부 (Y/N)
+	 * @return 컬렉션 정보
+	 */
 	private CollectionVO createCollection(int memberId, String isPublic) {
-		CollectionVO collection = new CollectionVO(
-				0,
-				memberId,
-				"좋아요 API 컬렉션 " + UUID.randomUUID(),
-				"컬렉션 좋아요 Controller 테스트",
-				isPublic,
-				null,
-				null);
+		CollectionVO collection = new CollectionVO(0, memberId, "좋아요 API 컬렉션 " + UUID.randomUUID(), "컬렉션 좋아요 Controller 테스트", isPublic,
+				null, null);
 		assertEquals(1, collectionMapper.doSave(collection));
 		return collection;
 	}
 
-	/** 인증 회원의 좋아요 복합키 생성 */
+	/**
+	 * 인증 회원의 좋아요 복합키 생성
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @return 현재 회원과 컬렉션의 좋아요 복합키
+	 */
 	private CollectionLikeVO likeKey(int collectionId) {
-		return new CollectionLikeVO(
-				authenticatedMemberId, collectionId, null);
+		return new CollectionLikeVO(authenticatedMemberId, collectionId, null);
 	}
 }

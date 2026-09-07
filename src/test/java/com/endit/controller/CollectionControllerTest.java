@@ -54,10 +54,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * ------------------------------------------------------------
  * 2026. 8. 21. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    PATCH·공개 여부·전체 공개 목록·U-05·소유권 정책 검증 추가
- * 2026. 8. 31. jinyoung    존재하지 않는 contentId의 HTTP 400 변환 검증 추가
- * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
- * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 응답 검증
- * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
+ * 2026. 8. 31. jinyoung    존재하지 않는 작품의 400 응답 검증 및 요청 픽스처 공통화
+ * 2026. 9. 02. jinyoung    본인 비공개 포함·빈 컬렉션 제외 응답 검증
  * 2026. 9. 05. jinyoung    SecurityContext 인증 및 시퀀스 독립 부모 픽스처 적용
  * ------------------------------------------------------------
  * </pre>
@@ -90,6 +88,7 @@ class CollectionControllerTest {
 
 	private int authenticatedMemberId;
 
+	/** 테스트 회원 등록 및 로그인 인증 설정 */
 	@BeforeEach
 	void setUpAuthentication() {
 		// 삭제된 개발 인증 설정값 대신 실제 LoginMemberHelper가 읽는 인증 객체를 만든다.
@@ -98,18 +97,22 @@ class CollectionControllerTest {
 		SecurityTestContext.login(member);
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		// 같은 실행 스레드를 재사용하는 다음 테스트에 인증 회원이 남지 않게 한다.
 		SecurityTestContext.clear();
 	}
 
-	/** 실제 DB 목록과 페이징 정보의 HTTP 응답 검증 */
+	/**
+	 * 실제 DB 목록과 페이징 정보의 HTTP 응답 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 목록과 페이징 정보 반환")
 	void retrieve() throws Exception {
-		CollectionVO collection = createCollectionForMemberWithItem(
-				authenticatedMemberId, "HTTP 목록 컬렉션", "Y");
+		CollectionVO collection = createCollectionForMemberWithItem(authenticatedMemberId, "HTTP 목록 컬렉션", "Y");
 
 		mockMvc.perform(get("/api/collections")
 					.param("pageNo", "1")
@@ -117,46 +120,47 @@ class CollectionControllerTest {
 					.param("searchDiv", "10")
 					.param("searchWord", collection.getTitle()))
 				.andExpect(status().isOk())
-				.andExpect(content()
-						.contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+				.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 				.andExpect(jsonPath("$.items", hasSize(1)))
-				.andExpect(jsonPath("$.items[0].collectionId")
-						.value(collection.getCollectionId()))
-				.andExpect(jsonPath("$.items[0].title")
-						.value(collection.getTitle()))
+				.andExpect(jsonPath("$.items[0].collectionId").value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.items[0].title").value(collection.getTitle()))
 				.andExpect(jsonPath("$.page.pageNo").value(1))
 				.andExpect(jsonPath("$.page.pageSize").value(10))
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
-	/** 전체 목록에서 로그인한 작성자 본인의 비공개 컬렉션을 반환하는지 검증 */
+	/**
+	 * 전체 목록에서 로그인한 작성자 본인의 비공개 컬렉션을 반환하는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("전체 목록은 작성자 본인의 비공개 컬렉션 포함")
 	void retrieveIncludesOwnPrivateCollection() throws Exception {
 		String title = "HTTP 전체 비공개 포함-" + UUID.randomUUID();
-		CollectionVO privateCollection = createCollectionForMemberWithItem(
-				authenticatedMemberId, title, "N");
+		CollectionVO privateCollection = createCollectionForMemberWithItem(authenticatedMemberId, title, "N");
 
 		mockMvc.perform(get("/api/collections")
 					.param("searchDiv", "10")
 					.param("searchWord", title))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items", hasSize(1)))
-				.andExpect(jsonPath("$.items[0].collectionId")
-						.value(privateCollection.getCollectionId()))
+				.andExpect(jsonPath("$.items[0].collectionId").value(privateCollection.getCollectionId()))
 				.andExpect(jsonPath("$.items[0].isPublic").value("N"))
 				.andExpect(jsonPath("$.page.totalCnt").value(1))
-				.andExpect(jsonPath("$.currentMemberId")
-						.value(authenticatedMemberId));
+				.andExpect(jsonPath("$.currentMemberId").value(authenticatedMemberId));
 	}
 
-	/** 작품이 없는 컬렉션은 전체 목록 응답에서 제외되는지 검증 */
+	/**
+	 * 작품이 없는 컬렉션은 전체 목록 응답에서 제외되는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("전체 목록은 작품이 없는 컬렉션 제외")
 	void retrieveExcludesEmptyCollection() throws Exception {
 		String title = "HTTP 빈 컬렉션 제외-" + UUID.randomUUID();
-		createCollectionForMember(
-				authenticatedMemberId, title, "Y");
+		createCollectionForMember(authenticatedMemberId, title, "Y");
 
 		mockMvc.perform(get("/api/collections")
 					.param("searchDiv", "10")
@@ -166,7 +170,11 @@ class CollectionControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(0));
 	}
 
-	/** 작성자 본인의 U-05 API에 공개와 비공개 컬렉션이 모두 노출되는지 검증 */
+	/**
+	 * 작성자 본인의 U-05 API에 공개와 비공개 컬렉션이 모두 노출되는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("본인 U-05는 공개와 비공개 컬렉션 모두 반환")
 	void retrieveByMemberAsOwner() throws Exception {
@@ -183,14 +191,17 @@ class CollectionControllerTest {
 				.andExpect(jsonPath("$.page.totalCnt").value(2));
 	}
 
-	/** 다른 회원의 U-05 API에는 공개 컬렉션만 노출되는지 검증 */
+	/**
+	 * 다른 회원의 U-05 API에는 공개 컬렉션만 노출되는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("타인 U-05는 공개 컬렉션만 반환")
 	void retrieveByMemberAsNonOwner() throws Exception {
 		int ownerId = createMemberId();
 		String title = "HTTP 타인 U05-" + UUID.randomUUID();
-		CollectionVO publicCollection = createCollectionForMember(
-				ownerId, title, "Y");
+		CollectionVO publicCollection = createCollectionForMember(ownerId, title, "Y");
 		createCollectionForMember(ownerId, title, "N");
 
 		mockMvc.perform(get("/api/users/{memberId}/collections", ownerId)
@@ -198,53 +209,57 @@ class CollectionControllerTest {
 					.param("searchWord", title))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items", hasSize(1)))
-				.andExpect(jsonPath("$.items[0].collectionId")
-						.value(publicCollection.getCollectionId()))
+				.andExpect(jsonPath("$.items[0].collectionId").value(publicCollection.getCollectionId()))
 				.andExpect(jsonPath("$.items[0].isPublic").value("Y"))
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
-	/** 실제 DB 컬렉션 단건의 HTTP 응답 검증 */
+	/**
+	 * 실제 DB 컬렉션 단건의 HTTP 응답 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 단건 반환")
 	void getCollection() throws Exception {
 		CollectionVO collection = createSavedCollection("HTTP 단건 컬렉션");
 
-		mockMvc.perform(get("/api/collections/{collectionId}",
-					collection.getCollectionId()))
+		mockMvc.perform(get("/api/collections/{collectionId}", collection.getCollectionId()))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.collectionId")
-						.value(collection.getCollectionId()))
-				.andExpect(jsonPath("$.memberId")
-						.value(collection.getMemberId()))
-				.andExpect(jsonPath("$.title")
-						.value(collection.getTitle()));
+				.andExpect(jsonPath("$.collectionId").value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.memberId").value(collection.getMemberId()))
+				.andExpect(jsonPath("$.title").value(collection.getTitle()));
 	}
 
-	/** JSON 요청부터 실제 DB 등록까지 성공 상태와 접근 URI 검증 */
+	/**
+	 * JSON 요청부터 실제 DB 등록까지 성공 상태와 접근 URI 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 등록 후 201과 Location 반환")
 	void create() throws Exception {
-		CollectionCreateRequest request = createRequest(
-				"HTTP 등록 컬렉션", "컬렉션 설명", List.of());
+		CollectionCreateRequest request = createRequest("HTTP 등록 컬렉션", "컬렉션 설명", List.of());
 
 		mockMvc.perform(post("/api/collections")
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isCreated())
-				.andExpect(header().string("Location",
-						matchesPattern("/api/collections/[1-9][0-9]*")))
+				.andExpect(header().string("Location", matchesPattern("/api/collections/[1-9][0-9]*")))
 				.andExpect(jsonPath("$.collectionId").isNumber())
 				.andExpect(jsonPath("$.title").value("HTTP 등록 컬렉션"))
 				.andExpect(jsonPath("$.isPublic").value("Y"));
 	}
 
-	/** JSON 공개 여부 N이 실제 비공개 컬렉션 등록에 반영되는지 검증 */
+	/**
+	 * JSON 공개 여부 N이 실제 비공개 컬렉션 등록에 반영되는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("비공개 컬렉션 등록")
 	void createPrivateCollection() throws Exception {
-		CollectionCreateRequest request = createRequest(
-				"HTTP 비공개 등록 컬렉션", "컬렉션 설명", "N", List.of());
+		CollectionCreateRequest request = createRequest("HTTP 비공개 등록 컬렉션", "컬렉션 설명", "N", List.of());
 
 		mockMvc.perform(post("/api/collections")
 					.contentType(MediaType.APPLICATION_JSON)
@@ -253,14 +268,15 @@ class CollectionControllerTest {
 				.andExpect(jsonPath("$.isPublic").value("N"));
 	}
 
-	/** 존재하지 않는 작품 번호의 FK 오류가 HTTP 400으로 변환되는지 검증 */
+	/**
+	 * 존재하지 않는 작품 번호의 FK 오류가 HTTP 400으로 변환되는지 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("존재하지 않는 contentId는 400으로 변환")
 	void createWithMissingContentId() throws Exception {
-		CollectionCreateRequest request = createRequest(
-				"HTTP 잘못된 작품 컬렉션",
-				"컬렉션 설명",
-				List.of(Integer.MAX_VALUE));
+		CollectionCreateRequest request = createRequest("HTTP 잘못된 작품 컬렉션", "컬렉션 설명", List.of(Integer.MAX_VALUE));
 
 		mockMvc.perform(post("/api/collections")
 					.contentType(MediaType.APPLICATION_JSON)
@@ -269,139 +285,156 @@ class CollectionControllerTest {
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 실제 DB 컬렉션 수정 결과의 HTTP 응답 검증 */
+	/**
+	 * 실제 DB 컬렉션 수정 결과의 HTTP 응답 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 수정 결과 반환")
 	void update() throws Exception {
 		CollectionVO saved = createSavedCollection("HTTP 수정 전 컬렉션");
-		CollectionUpdateRequest request = updateRequest(
-				"HTTP 수정 후 컬렉션", "수정 후 설명", "N", List.of());
+		CollectionUpdateRequest request = updateRequest("HTTP 수정 후 컬렉션", "수정 후 설명", "N", List.of());
 
-		mockMvc.perform(patch("/api/collections/{collectionId}",
-					saved.getCollectionId())
+		mockMvc.perform(patch("/api/collections/{collectionId}", saved.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.collectionId")
-						.value(saved.getCollectionId()))
-				.andExpect(jsonPath("$.memberId")
-						.value(saved.getMemberId()))
-				.andExpect(jsonPath("$.title")
-						.value("HTTP 수정 후 컬렉션"))
+				.andExpect(jsonPath("$.collectionId").value(saved.getCollectionId()))
+				.andExpect(jsonPath("$.memberId").value(saved.getMemberId()))
+				.andExpect(jsonPath("$.title").value("HTTP 수정 후 컬렉션"))
 				.andExpect(jsonPath("$.isPublic").value("N"));
 	}
 
-	/** 공개 컬렉션이라도 비소유자는 수정할 수 없음을 검증 */
+	/**
+	 * 공개 컬렉션이라도 비소유자는 수정할 수 없음을 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("다른 회원의 공개 컬렉션 수정은 403")
 	void updateByNonOwner() throws Exception {
-		CollectionVO saved = createCollectionForMember(
-				createMemberId(), "HTTP 비소유자 수정 컬렉션", "Y");
-		CollectionUpdateRequest request = updateRequest(
-				"수정할 수 없는 제목", "수정할 수 없는 설명", List.of());
+		CollectionVO saved = createCollectionForMember(createMemberId(), "HTTP 비소유자 수정 컬렉션", "Y");
+		CollectionUpdateRequest request = updateRequest("수정할 수 없는 제목", "수정할 수 없는 설명", List.of());
 
-		mockMvc.perform(patch("/api/collections/{collectionId}",
-					saved.getCollectionId())
+		mockMvc.perform(patch("/api/collections/{collectionId}", saved.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.id").value("403"));
 	}
 
-	/** 비공개 컬렉션은 비소유자에게 존재 여부도 노출하지 않음을 검증 */
+	/**
+	 * 비공개 컬렉션은 비소유자에게 존재 여부도 노출하지 않음을 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("다른 회원의 비공개 컬렉션 조회는 404")
 	void getPrivateCollectionByNonOwner() throws Exception {
-		CollectionVO saved = createCollectionForMember(
-				createMemberId(), "HTTP 비공개 컬렉션", "N");
+		CollectionVO saved = createCollectionForMember(createMemberId(), "HTTP 비공개 컬렉션", "N");
 
-		mockMvc.perform(get("/api/collections/{collectionId}",
-					saved.getCollectionId()))
+		mockMvc.perform(get("/api/collections/{collectionId}", saved.getCollectionId()))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.id").value("404"));
 	}
 
-	/** HTTP 삭제 요청의 실제 DB 반영 검증 */
+	/**
+	 * HTTP 삭제 요청의 실제 DB 반영 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 삭제 후 204 반환")
 	void deleteCollection() throws Exception {
 		CollectionVO saved = createSavedCollection("HTTP 삭제 컬렉션");
 
-		mockMvc.perform(delete("/api/collections/{collectionId}",
-					saved.getCollectionId()))
+		mockMvc.perform(delete("/api/collections/{collectionId}", saved.getCollectionId()))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
 		assertNull(collectionMapper.doSelectOne(saved));
 	}
 
-	/** 실제 Service 입력 검증 예외의 HTTP 400 변환 검증 */
+	/**
+	 * 실제 Service 입력 검증 예외의 HTTP 400 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("잘못된 요청은 400으로 변환")
 	void badRequest() throws Exception {
 		mockMvc.perform(get("/api/collections/0"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"))
-				.andExpect(jsonPath("$.message")
-						.value("올바른 컬렉션 번호가 필요합니다."));
+				.andExpect(jsonPath("$.message").value("올바른 컬렉션 번호가 필요합니다."));
 	}
 
-	/** 실제 DB 미조회 결과의 HTTP 404 변환 검증 */
+	/**
+	 * 실제 DB 미조회 결과의 HTTP 404 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("존재하지 않는 컬렉션은 404로 변환")
 	void notFound() throws Exception {
-		mockMvc.perform(get("/api/collections/{collectionId}",
-					MISSING_COLLECTION_ID))
+		mockMvc.perform(get("/api/collections/{collectionId}", MISSING_COLLECTION_ID))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.id").value("404"));
 	}
 
-	/** 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록 */
+	/**
+	 * 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록
+	 *
+	 * @param title 컬렉션 제목
+	 * @return 컬렉션 정보
+	 */
 	private CollectionVO createSavedCollection(String title) {
-		return createCollectionForMember(
-				authenticatedMemberId, title, "Y");
+		return createCollectionForMember(authenticatedMemberId, title, "Y");
 	}
 
-	/** 지정한 회원 소유 컬렉션을 실제 DB에 등록 */
-	private CollectionVO createCollectionForMember(
-			int memberId,
-			String title,
-			String isPublic) {
-
+	/**
+	 * 지정한 회원 소유 컬렉션을 실제 DB에 등록
+	 *
+	 * @param memberId 회원 번호
+	 * @param title 컬렉션 제목
+	 * @param isPublic 공개 여부 (Y/N)
+	 * @return 컬렉션 정보
+	 */
+	private CollectionVO createCollectionForMember(int memberId, String title, String isPublic) {
 		CollectionVO collection = createCollection(memberId, title, isPublic);
 		assertEquals(1, collectionMapper.doSave(collection));
 
 		return collection;
 	}
 
-	/** 지정한 회원 소유 컬렉션에 테스트 작품 한 건을 포함해 등록 */
-	private CollectionVO createCollectionForMemberWithItem(
-			int memberId,
-			String title,
-			String isPublic) {
-
-		CollectionVO collection = createCollectionForMember(
-				memberId, title, isPublic);
+	/**
+	 * 지정한 회원 소유 컬렉션에 테스트 작품 한 건을 포함해 등록
+	 *
+	 * @param memberId 회원 번호
+	 * @param title 컬렉션 제목
+	 * @param isPublic 공개 여부 (Y/N)
+	 * @return 컬렉션 정보
+	 */
+	private CollectionVO createCollectionForMemberWithItem(int memberId, String title, String isPublic) {
+		CollectionVO collection = createCollectionForMember(memberId, title, isPublic);
 		ContentVO content = createContent(title);
-		CollectionItemVO item = new CollectionItemVO(
-				collection.getCollectionId(), content.getContentId(), null);
+		CollectionItemVO item = new CollectionItemVO(collection.getCollectionId(), content.getContentId(), null);
 		assertEquals(1, collectionItemMapper.doSave(item));
 
 		return collection;
 	}
 
-	/** 컬렉션 목록 테스트에 사용할 작품 등록 */
+	/**
+	 * 컬렉션 목록 테스트에 사용할 작품 등록
+	 *
+	 * @param titleSuffix 테스트 작품 제목의 접미사
+	 * @return 콘텐츠 정보
+	 */
 	private ContentVO createContent(String titleSuffix) {
 		String token = UUID.randomUUID().toString().replace("-", "");
-		ContentVO content = new ContentVO(
-				0,
-				"COLLECTION_HTTP_" + token,
-				"컬렉션 HTTP 작품 " + titleSuffix,
-				"Collection HTTP Content " + titleSuffix,
-				"컬렉션 HTTP 목록 테스트",
-				"2026-09-02",
-				120,
-				"KR",
+		ContentVO content = new ContentVO(0, "COLLECTION_HTTP_" + token, "컬렉션 HTTP 작품 " + titleSuffix,
+				"Collection HTTP Content " + titleSuffix, "컬렉션 HTTP 목록 테스트", "2026-09-02", 120, "KR",
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
@@ -409,12 +442,20 @@ class CollectionControllerTest {
 		return insertContent(jdbcTemplate, content);
 	}
 
-	/** 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록 */
+	/**
+	 * 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록
+	 *
+	 * @return 등록된 테스트 회원 번호
+	 */
 	private int createMemberId() {
 		return createMember().getMemberId().intValue();
 	}
 
-	/** 인증 회원 또는 접근 정책 비교용 테스트 회원을 등록 */
+	/**
+	 * 인증 회원 또는 접근 정책 비교용 테스트 회원을 등록
+	 *
+	 * @return 회원 정보
+	 */
 	private MemberVO createMember() {
 		String token = UUID.randomUUID().toString().replace("-", "");
 		MemberVO member = new MemberVO();
@@ -426,20 +467,16 @@ class CollectionControllerTest {
 		return insertMember(jdbcTemplate, member);
 	}
 
-	/** 테스트에 사용할 컬렉션 정보 생성 */
-	private CollectionVO createCollection(
-			int memberId,
-			String title,
-			String isPublic) {
-
-		return new CollectionVO(
-				0,
-				memberId,
-				title,
-				"컬렉션 설명",
-				isPublic,
-				null,
-				null);
+	/**
+	 * 테스트에 사용할 컬렉션 정보 생성
+	 *
+	 * @param memberId 회원 번호
+	 * @param title 컬렉션 제목
+	 * @param isPublic 공개 여부 (Y/N)
+	 * @return 컬렉션 정보
+	 */
+	private CollectionVO createCollection(int memberId, String title, String isPublic) {
+		return new CollectionVO(0, memberId, title, "컬렉션 설명", isPublic, null, null);
 	}
 
 }

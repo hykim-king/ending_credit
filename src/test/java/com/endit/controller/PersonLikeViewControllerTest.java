@@ -57,6 +57,7 @@ class PersonLikeViewControllerTest {
 
 	private int memberId;
 
+	/** 테스트 회원 등록 및 로그인 인증 설정 */
 	@BeforeEach
 	void setUpAuthentication() {
 		String token = UUID.randomUUID().toString().replace("-", "");
@@ -72,32 +73,37 @@ class PersonLikeViewControllerTest {
 		SecurityTestContext.login(member);
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		SecurityTestContext.clear();
 	}
 
+	/**
+	 * 기본 인물 좋아요 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("기본 인물 좋아요 화면 반환")
 	void personLikes() throws Exception {
 		// URL에 회원 번호가 없어도 로그인 회원 번호가 Thymeleaf 모델에 전달되어야 한다.
 		mockMvc.perform(get("/members/likes"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/likes"))
+				.andExpect(view().name("member/likes"))
 				.andExpect(model().attribute("memberId", memberId))
 				.andExpect(model().attribute("type", "person"))
-				.andExpect(model().attribute(
-						"currentMemberId",
-						Long.valueOf(memberId)))
-				.andExpect(content()
-						.contentTypeCompatibleWith("text/html"))
-				.andExpect(content().string(
-						containsString("data-current-member-id=\""
-								+ memberId + "\"")))
-				.andExpect(content().string(
-						containsString("data-initial-type=\"person\"")));
+				.andExpect(model().attribute("currentMemberId", Long.valueOf(memberId)))
+				.andExpect(content().contentTypeCompatibleWith("text/html"))
+				.andExpect(content().string(containsString("data-current-member-id=\"" + memberId + "\"")))
+				.andExpect(content().string(containsString("data-initial-type=\"person\"")));
 	}
 
+	/**
+	 * 인물 유형 좋아요 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("인물 유형 좋아요 화면 반환")
 	void personType() throws Exception {
@@ -105,38 +111,42 @@ class PersonLikeViewControllerTest {
 		mockMvc.perform(get("/members/likes")
 					.param("type", "person"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/likes"))
+				.andExpect(view().name("member/likes"))
 				.andExpect(model().attribute("memberId", memberId))
 				.andExpect(model().attribute("type", "person"))
-				.andExpect(content().string(
-						containsString(
-								"data-initial-type=\"person\"")));
+				.andExpect(content().string(containsString("data-initial-type=\"person\"")));
 	}
 
+	/**
+	 * 컬렉션 유형 좋아요 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 유형 좋아요 화면 반환")
 	void collectionType() throws Exception {
 		mockMvc.perform(get("/members/likes")
 					.param("type", "collection"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/likes"))
+				.andExpect(view().name("member/likes"))
 				.andExpect(model().attribute("memberId", memberId))
 				.andExpect(model().attribute("type", "collection"))
-				.andExpect(content().string(
-						containsString(
-								"data-initial-type=\"collection\"")));
+				.andExpect(content().string(containsString("data-initial-type=\"collection\"")));
 	}
 
+	/**
+	 * 지원하지 않는 유형은 인물로 보정 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("지원하지 않는 유형은 인물로 보정")
 	void invalidType() throws Exception {
 		mockMvc.perform(get("/members/likes")
 					.param("type", "unknown"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/likes"))
+				.andExpect(view().name("member/likes"))
 				.andExpect(model().attribute("type", "person"))
-				.andExpect(content().string(
-						containsString(
-								"data-initial-type=\"person\"")));
+				.andExpect(content().string(containsString("data-initial-type=\"person\"")));
 	}
 }

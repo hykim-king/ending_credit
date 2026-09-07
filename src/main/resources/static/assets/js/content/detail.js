@@ -8,6 +8,7 @@
     const RATING_API_PATH = "/api/movies/";
     const WATCHLIST_API_PATH = "/api/watchlist/";
     const COLLECTION_API_PATH = "/api/collections/";
+    // 로그인 회원의 컬렉션 목록: 회원 번호는 서버 인증 정보에서 조회
     const MEMBER_COLLECTION_API_PATH = "/api/members/collections";
 
     // MOD-05가 API-007에서 한 번에 받는 크레딧 수. 본문 미리보기와 같은 4열 x 3행이다
@@ -161,6 +162,7 @@
         }
 
         async function send(url, method, body) {
+            // 평가·보고싶어요 요청은 X-Member-Id 대신 서버 인증 사용, CSRF 헤더 유지
             const headers = csrfHeaders();
 
             if (body) {
@@ -258,7 +260,7 @@
         const status = document.getElementById("collectionStatus");
         const list = document.getElementById("collectionList");
 
-        // 컬렉션 API는 서버측 CurrentMemberProvider로 회원을 판단하므로 헤더가 필요 없다
+        // 컬렉션 API는 LoginMemberHelper로 회원을 판단하므로 회원 번호 헤더는 불필요
         function itemUrl(collectionId) {
             return COLLECTION_API_PATH + collectionId + "/items";
         }

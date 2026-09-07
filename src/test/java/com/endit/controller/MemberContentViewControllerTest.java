@@ -56,6 +56,7 @@ class MemberContentViewControllerTest {
 
 	private int memberId;
 
+	/** 테스트 회원 등록 및 로그인 인증 설정 */
 	@BeforeEach
 	void setUpAuthentication() {
 		String token = UUID.randomUUID().toString().replace("-", "");
@@ -71,26 +72,35 @@ class MemberContentViewControllerTest {
 		SecurityTestContext.login(member);
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		SecurityTestContext.clear();
 	}
 
+	/**
+	 * 기본 평가 기록 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("기본 평가 기록 화면 반환")
 	void ratings() throws Exception {
 		// URL에 회원 번호가 없어도 로그인 회원 번호가 Thymeleaf 모델에 전달되어야 한다.
 		mockMvc.perform(get("/members/records"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/records"))
+				.andExpect(view().name("member/records"))
 				.andExpect(model().attribute("memberId", memberId))
 				.andExpect(model().attribute("tab", "ratings"))
-				.andExpect(content()
-						.contentTypeCompatibleWith("text/html"))
-				.andExpect(content().string(
-						containsString("data-initial-tab=\"ratings\"")));
+				.andExpect(content().contentTypeCompatibleWith("text/html"))
+				.andExpect(content().string(containsString("data-initial-tab=\"ratings\"")));
 	}
 
+	/**
+	 * 보고싶어요 기록 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("보고싶어요 기록 화면 반환")
 	void watchlist() throws Exception {
@@ -98,38 +108,49 @@ class MemberContentViewControllerTest {
 		mockMvc.perform(get("/members/records")
 					.param("tab", "watchlist"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/records"))
+				.andExpect(view().name("member/records"))
 				.andExpect(model().attribute("memberId", memberId))
 				.andExpect(model().attribute("tab", "watchlist"))
-				.andExpect(content().string(
-						containsString(
-								"data-initial-tab=\"watchlist\"")));
+				.andExpect(content().string(containsString("data-initial-tab=\"watchlist\"")));
 	}
 
+	/**
+	 * 코멘트 기록 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("코멘트 기록 화면 반환")
 	void comments() throws Exception {
 		mockMvc.perform(get("/members/records")
 					.param("tab", "comments"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/records"))
+				.andExpect(view().name("member/records"))
 				.andExpect(model().attribute("tab", "comments"))
-				.andExpect(content().string(
-						containsString("data-initial-tab=\"comments\"")));
+				.andExpect(content().string(containsString("data-initial-tab=\"comments\"")));
 	}
 
+	/**
+	 * 컬렉션 기록 화면 반환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 기록 화면 반환")
 	void collections() throws Exception {
 		mockMvc.perform(get("/members/records")
 					.param("tab", "collections"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/records"))
+				.andExpect(view().name("member/records"))
 				.andExpect(model().attribute("tab", "collections"))
-				.andExpect(content().string(
-						containsString("data-initial-tab=\"collections\"")));
+				.andExpect(content().string(containsString("data-initial-tab=\"collections\"")));
 	}
 
+	/**
+	 * 지원하지 않는 탭은 평가로 보정 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("지원하지 않는 탭은 평가로 보정")
 	void invalidTab() throws Exception {
@@ -137,10 +158,8 @@ class MemberContentViewControllerTest {
 		mockMvc.perform(get("/members/records")
 					.param("tab", "unknown"))
 				.andExpect(status().isOk())
-				.andExpect(view().name("user/records"))
+				.andExpect(view().name("member/records"))
 				.andExpect(model().attribute("tab", "ratings"))
-				.andExpect(content().string(
-						containsString(
-								"data-initial-tab=\"ratings\"")));
+				.andExpect(content().string(containsString("data-initial-tab=\"ratings\"")));
 	}
 }

@@ -162,7 +162,12 @@ public class PersonViewController {
 		}
 	}
 
-	// P-01 화면에서 로그인 여부를 판별할 때 사용할 현재 회원 번호
+	/**
+	 * 팀 공용 인증 정보에서 화면에 사용할 로그인 회원 번호 조회
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 null
+	 * @throws ArithmeticException 회원 번호가 int 범위를 벗어난 경우
+	 */
 	private Integer toCurrentMemberId() {
 		LoginMember loginMember = LoginMemberHelper.getLoginMember();
 

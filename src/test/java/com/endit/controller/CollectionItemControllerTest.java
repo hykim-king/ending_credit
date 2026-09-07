@@ -85,6 +85,7 @@ class CollectionItemControllerTest {
 
 	private int authenticatedMemberId;
 
+	/** 테스트 회원 등록 및 로그인 인증 설정 */
 	@BeforeEach
 	void setUpAuthentication() {
 		MemberVO member = new MemberVO();
@@ -100,67 +101,64 @@ class CollectionItemControllerTest {
 		SecurityTestContext.login(member);
 	}
 
+	/** 테스트 종료 후 인증 정보 제거 */
 	@AfterEach
 	void clearAuthentication() {
 		SecurityTestContext.clear();
 	}
 
-	/** 실제 DB 컬렉션 작품 목록과 페이징 정보의 HTTP 응답 검증 */
+	/**
+	 * 실제 DB 컬렉션 작품 목록과 페이징 정보의 HTTP 응답 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 작품 목록과 페이징 정보 반환")
 	void retrieve() throws Exception {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		CollectionItemVO item = createItem(
-				collection.getCollectionId(), content.getContentId());
+		CollectionItemVO item = createItem(collection.getCollectionId(), content.getContentId());
 		assertEquals(1, collectionItemMapper.doSave(item));
-		assertEquals(1, memberContentMapper.doSave(new MemberContentVO(
-				authenticatedMemberId,
-				content.getContentId(),
-				4,
-				"N",
-				null,
-				null,
+		assertEquals(1, memberContentMapper.doSave(new MemberContentVO(authenticatedMemberId, content.getContentId(), 4, "N", null, null,
 				null)));
 
-		mockMvc.perform(get("/api/collections/{collectionId}/items",
-					collection.getCollectionId())
+		mockMvc.perform(get("/api/collections/{collectionId}/items", collection.getCollectionId())
 					.param("pageNo", "1")
 					.param("pageSize", "12"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.items", hasSize(1)))
-				.andExpect(jsonPath("$.items[0].collectionId")
-						.value(collection.getCollectionId()))
-				.andExpect(jsonPath("$.items[0].contentId")
-						.value(content.getContentId()))
-				.andExpect(jsonPath("$.items[0].titleKo")
-						.value(content.getTitleKo()))
+				.andExpect(jsonPath("$.items[0].collectionId").value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.items[0].contentId").value(content.getContentId()))
+				.andExpect(jsonPath("$.items[0].titleKo").value(content.getTitleKo()))
 				.andExpect(jsonPath("$.items[0].averageRating").value(4.0))
 				.andExpect(jsonPath("$.page.totalCnt").value(1));
 	}
 
-	/** 실제 DB 컬렉션 작품 단건의 HTTP 응답 검증 */
+	/**
+	 * 실제 DB 컬렉션 작품 단건의 HTTP 응답 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 작품 단건 반환")
 	void getItem() throws Exception {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		CollectionItemVO item = createItem(
-				collection.getCollectionId(), content.getContentId());
+		CollectionItemVO item = createItem(collection.getCollectionId(), content.getContentId());
 		assertEquals(1, collectionItemMapper.doSave(item));
 
-		mockMvc.perform(get(
-					"/api/collections/{collectionId}/items/{contentId}",
-					collection.getCollectionId(), content.getContentId()))
+		mockMvc.perform(get("/api/collections/{collectionId}/items/{contentId}", collection.getCollectionId(), content.getContentId()))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.collectionId")
-						.value(collection.getCollectionId()))
-				.andExpect(jsonPath("$.contentId")
-						.value(content.getContentId()))
+				.andExpect(jsonPath("$.collectionId").value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.contentId").value(content.getContentId()))
 				.andExpect(jsonPath("$.addedDt").isNotEmpty());
 	}
 
-	/** JSON 요청부터 실제 DB 추가까지 성공 상태와 접근 URI 검증 */
+	/**
+	 * JSON 요청부터 실제 DB 추가까지 성공 상태와 접근 URI 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 작품 추가 후 201과 Location 반환")
 	void create() throws Exception {
@@ -168,42 +166,42 @@ class CollectionItemControllerTest {
 		ContentVO content = createContent();
 		CollectionItemVO request = createItem(0, content.getContentId());
 
-		mockMvc.perform(post("/api/collections/{collectionId}/items",
-					collection.getCollectionId())
+		mockMvc.perform(post("/api/collections/{collectionId}/items", collection.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isCreated())
-				.andExpect(header().string(
-						"Location",
-						"/api/collections/" + collection.getCollectionId()
+				.andExpect(header().string("Location", "/api/collections/" + collection.getCollectionId()
 								+ "/items/" + content.getContentId()))
-				.andExpect(jsonPath("$.collectionId")
-						.value(collection.getCollectionId()))
-				.andExpect(jsonPath("$.contentId")
-						.value(content.getContentId()))
+				.andExpect(jsonPath("$.collectionId").value(collection.getCollectionId()))
+				.andExpect(jsonPath("$.contentId").value(content.getContentId()))
 				.andExpect(jsonPath("$.addedDt").isNotEmpty());
 	}
 
-	/** HTTP 삭제 요청의 실제 DB 반영 검증 */
+	/**
+	 * HTTP 삭제 요청의 실제 DB 반영 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("컬렉션 작품 삭제 후 204 반환")
 	void deleteItem() throws Exception {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		CollectionItemVO item = createItem(
-				collection.getCollectionId(), content.getContentId());
+		CollectionItemVO item = createItem(collection.getCollectionId(), content.getContentId());
 		assertEquals(1, collectionItemMapper.doSave(item));
 
-		mockMvc.perform(delete(
-					"/api/collections/{collectionId}/items/{contentId}",
-					collection.getCollectionId(), content.getContentId()))
+		mockMvc.perform(delete("/api/collections/{collectionId}/items/{contentId}", collection.getCollectionId(), content.getContentId()))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
 		assertNull(collectionItemMapper.doSelectOne(item));
 	}
 
-	/** 실제 Service 입력 검증 예외의 HTTP 400 변환 검증 */
+	/**
+	 * 실제 Service 입력 검증 예외의 HTTP 400 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("잘못된 요청은 400으로 변환")
 	void badRequest() throws Exception {
@@ -212,79 +210,81 @@ class CollectionItemControllerTest {
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 실제 DB 미조회 결과의 HTTP 404 변환 검증 */
+	/**
+	 * 실제 DB 미조회 결과의 HTTP 404 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("존재하지 않는 컬렉션 작품은 404로 변환")
 	void notFound() throws Exception {
 		CollectionVO collection = createCollection();
 
-		mockMvc.perform(get(
-					"/api/collections/{collectionId}/items/{contentId}",
-					collection.getCollectionId(), MISSING_CONTENT_ID))
+		mockMvc.perform(get("/api/collections/{collectionId}/items/{contentId}", collection.getCollectionId(), MISSING_CONTENT_ID))
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.id").value("404"));
 	}
 
-	/** 실제 DB 중복 데이터에 대한 HTTP 409 변환 검증 */
+	/**
+	 * 실제 DB 중복 데이터에 대한 HTTP 409 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("중복 작품 추가는 409로 변환")
 	void conflict() throws Exception {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		CollectionItemVO item = createItem(
-				collection.getCollectionId(), content.getContentId());
+		CollectionItemVO item = createItem(collection.getCollectionId(), content.getContentId());
 		assertEquals(1, collectionItemMapper.doSave(item));
 
-		mockMvc.perform(post("/api/collections/{collectionId}/items",
-					collection.getCollectionId())
+		mockMvc.perform(post("/api/collections/{collectionId}/items", collection.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(item)))
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.id").value("409"));
 	}
 
-	/** 실제 외래 키 위반에 대한 HTTP 400 변환 검증 */
+	/**
+	 * 실제 외래 키 위반에 대한 HTTP 400 변환 검증
+	 *
+	 * @throws Exception HTTP 요청 또는 응답 검증 실패
+	 */
 	@Test
 	@DisplayName("존재하지 않는 참조 번호는 400으로 변환")
 	void dataIntegrityViolation() throws Exception {
 		CollectionVO collection = createCollection();
 		CollectionItemVO request = createItem(0, MISSING_CONTENT_ID);
 
-		mockMvc.perform(post("/api/collections/{collectionId}/items",
-					collection.getCollectionId())
+		mockMvc.perform(post("/api/collections/{collectionId}/items", collection.getCollectionId())
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"));
 	}
 
-	/** 개발 인증 회원 소유 컬렉션을 현재 트랜잭션에 등록 */
+	/**
+	 * 개발 인증 회원 소유 컬렉션을 현재 트랜잭션에 등록
+	 *
+	 * @return 컬렉션 정보
+	 */
 	private CollectionVO createCollection() {
-		CollectionVO collection = new CollectionVO(
-				0,
-				authenticatedMemberId,
-				"작품 API 통합 테스트 컬렉션",
-				"컬렉션 작품 Controller 통합 테스트",
-				"Y",
-				null,
+		CollectionVO collection = new CollectionVO(0, authenticatedMemberId, "작품 API 통합 테스트 컬렉션", "컬렉션 작품 Controller 통합 테스트", "Y", null,
 				null);
 		assertEquals(1, collectionMapper.doSave(collection));
 
 		return collection;
 	}
 
-	/** 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록 */
+	/**
+	 * 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록
+	 *
+	 * @return 콘텐츠 정보
+	 */
 	private ContentVO createContent() {
 		String token = createToken();
-		ContentVO content = new ContentVO(
-				0,
-				"API_INTEGRATION_" + token,
-				"API 통합 테스트 콘텐츠",
-				"API Integration Test Content",
-				"컬렉션 작품 Controller 통합 테스트 콘텐츠",
-				"2026-08-26",
-				120,
-				"Korea",
+		ContentVO content = new ContentVO(0, "API_INTEGRATION_" + token, "API 통합 테스트 콘텐츠", "API Integration Test Content",
+				"컬렉션 작품 Controller 통합 테스트 콘텐츠", "2026-08-26", 120, "Korea",
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
@@ -292,12 +292,22 @@ class CollectionItemControllerTest {
 		return insertContent(jdbcTemplate, content);
 	}
 
-	/** 컬렉션 작품 데이터 생성 */
+	/**
+	 * 컬렉션 작품 데이터 생성
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @param contentId 콘텐츠 번호
+	 * @return 컬렉션 작품 정보
+	 */
 	private CollectionItemVO createItem(int collectionId, int contentId) {
 		return new CollectionItemVO(collectionId, contentId, null);
 	}
 
-	/** DB 고유 제약조건 충돌을 피할 테스트 식별자 생성 */
+	/**
+	 * DB 고유 제약조건 충돌을 피할 테스트 식별자 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
+	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");
 	}

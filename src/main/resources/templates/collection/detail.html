@@ -6,33 +6,43 @@ Modification History
 2026. 9. 01. jinyoung - 포스터 콜라주·보기 전환·더보기 UI 적용
 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
 2026. 9. 05. jinyoung - 컬렉션 댓글 작성·대표 댓글·전체 댓글 모달 적용
-2026. 9. 07. jinyoung - 컬렉션 CSS 파일명 정리 및 댓글 전용 스타일 분리
+2026. 9. 07. jinyoung - 댓글 신고 모달 추가
 -->
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
 <head>
     <title>컬렉션 상세</title>
+
     <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
     <link rel="stylesheet" th:href="@{/assets/css/collection/detail.css}">
     <link rel="stylesheet" th:href="@{/assets/css/collection/comment.css}">
+
     <script th:src="@{/assets/js/collection/collection-detail.js}" defer></script>
 </head>
+
 <body>
+<!-- ===================================
+     컬렉션 상세 화면
+     =================================== -->
 <div layout:fragment="content"
      id="collectionDetailPage"
      class="collection-page collection-detail-page"
      th:attr="data-collection-id=${collectionId},data-current-member-id=${currentMemberId}">
-    <!-- 이전 화면과 오류 안내 -->
+
+    <!-- ===================================
+         이전 화면 이동과 조회 상태
+         =================================== -->
     <a id="collectionBackLink" class="collection-back-link" th:href="@{/collections}">
         <i class="bi bi-chevron-left" aria-hidden="true"></i>
         이전으로
     </a>
 
+    <!-- 상세 정보 조회·작업 오류 안내 -->
     <div id="errorMessage" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
 
-    <!-- 컬렉션 정보 -->
+    <!-- ===================================
+         컬렉션 표지와 기본 정보
+         =================================== -->
     <div class="collection-detail-block">
         <section class="collection-detail-hero" aria-labelledby="collectionTitle">
             <!-- 표지와 작성자 작업 -->
@@ -41,18 +51,21 @@ Modification History
                     <i class="bi bi-collection-play"></i>
                 </div>
 
+                <!-- 작성자 프로필과 닉네임 -->
                 <div class="collection-cover-author">
-                    <span id="collectionAuthorAvatar" class="collection-cover-avatar collection-cover-avatar-fallback"
-                          aria-hidden="true">
+                    <span id="collectionAuthorAvatar" class="collection-cover-avatar collection-cover-avatar-fallback" aria-hidden="true">
                         <i class="bi bi-person-fill"></i>
                     </span>
                     <strong id="collectionAuthor">작성자</strong>
                 </div>
 
+                <!-- 비공개 컬렉션 표시 -->
                 <span id="privateBadge" class="collection-private-badge d-none">
                     <i class="bi bi-lock-fill" aria-hidden="true"></i>
                     비공개
                 </span>
+
+                <!-- 작성자에게 표시하는 수정·삭제 작업 -->
                 <div id="ownerActions" class="collection-owner-actions d-none">
                     <a id="editLink" class="collection-owner-action" href="#">
                         <i class="bi bi-pencil" aria-hidden="true"></i>
@@ -66,6 +79,7 @@ Modification History
                 </div>
             </div>
 
+            <!-- 제목·설명·작성일 -->
             <div class="collection-detail-heading">
                 <h1 id="collectionTitle" class="collection-detail-title">컬렉션</h1>
                 <p id="collectionDescription" class="collection-detail-description">컬렉션 정보를 불러오고 있습니다.</p>
@@ -93,26 +107,26 @@ Modification History
             </div>
         </section>
 
-        <!-- 담긴 작품 -->
+        <!-- ===================================
+             담긴 작품과 보기 방식
+             =================================== -->
         <section class="collection-movies-section" aria-labelledby="collectionMoviesHeading">
             <header class="collection-movies-heading">
                 <h2 id="collectionMoviesHeading" class="collection-section-title mb-0">담긴 작품 <span id="itemResultCount">0</span></h2>
+
+                <!-- 포스터형·리스트형 보기 전환 -->
                 <div class="collection-view-toggle" aria-label="작품 보기 방식">
-                    <button id="gridViewButton" class="collection-view-button is-active" type="button"
-                            aria-label="포스터형으로 보기"
-                            aria-pressed="true">
+                    <button id="gridViewButton" class="collection-view-button is-active" type="button" aria-label="포스터형으로 보기" aria-pressed="true">
                         <i class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></i>
                     </button>
-                    <button id="listViewButton" class="collection-view-button" type="button"
-                            aria-label="리스트형으로 보기"
-                            aria-pressed="false">
+                    <button id="listViewButton" class="collection-view-button" type="button" aria-label="리스트형으로 보기" aria-pressed="false">
                         <i class="bi bi-list-ul" aria-hidden="true"></i>
                     </button>
                 </div>
             </header>
 
-            <div id="itemLoading" class="collection-movie-grid" role="status" aria-live="polite"
-                 aria-label="컬렉션 작품을 불러오는 중입니다">
+            <!-- 담긴 작품 조회 중 카드 자리 표시자 -->
+            <div id="itemLoading" class="collection-movie-grid" role="status" aria-live="polite" aria-label="컬렉션 작품을 불러오는 중입니다">
                 <div class="collection-movie-skeleton"></div>
                 <div class="collection-movie-skeleton"></div>
                 <div class="collection-movie-skeleton"></div>
@@ -120,14 +134,17 @@ Modification History
                 <div class="collection-movie-skeleton"></div>
             </div>
 
+            <!-- JavaScript에서 조회한 작품 카드를 표시하는 영역 -->
             <div id="itemList" class="collection-movie-grid is-grid-view d-none" aria-live="polite"></div>
 
+            <!-- 담긴 작품이 없는 상태 -->
             <div id="itemEmpty" class="collection-empty-state d-none">
                 <i class="bi bi-film collection-empty-icon" aria-hidden="true"></i>
                 <strong>아직 담긴 작품이 없습니다.</strong>
                 <span>작성자가 작품을 추가하면 이곳에 표시됩니다.</span>
             </div>
 
+            <!-- 남은 작품 더보기 -->
             <div class="collection-load-more-wrap">
                 <button id="loadMoreButton" class="collection-load-more-button d-none" type="button">
                     <span id="loadMoreLabel">더보기</span>
@@ -136,10 +153,12 @@ Modification History
             </div>
         </section>
 
-        <!-- 댓글 작성 및 대표 댓글 -->
-        <section id="collectionComments" class="collection-comments-section"
-                 aria-labelledby="collectionCommentsHeading"
-                 tabindex="-1">
+        <!-- ===================================
+             댓글 작성과 대표 댓글
+             =================================== -->
+        <section id="collectionComments" class="collection-comments-section" aria-labelledby="collectionCommentsHeading" tabindex="-1">
+
+            <!-- 댓글 건수와 전체 댓글 모달 열기 -->
             <div class="collection-comments-heading-row">
                 <h2 id="collectionCommentsHeading" class="collection-section-title">
                     댓글 <span id="commentSectionCount">0</span>
@@ -148,11 +167,12 @@ Modification History
                     모든 댓글 <i class="bi bi-chevron-right" aria-hidden="true"></i>
                 </button>
             </div>
+
+            <!-- 댓글 내용·스포일러 여부 입력과 등록 -->
             <div class="collection-comment-composer">
                 <div class="collection-comment-input-wrap">
                     <label class="visually-hidden" for="collectionCommentInput">컬렉션 댓글</label>
-                    <textarea id="collectionCommentInput" rows="1" maxlength="1000"
-                              placeholder="컬렉션에 댓글을 남겨보세요."></textarea>
+                    <textarea id="collectionCommentInput" rows="1" maxlength="1000" placeholder="컬렉션에 댓글을 남겨보세요."></textarea>
                     <label class="collection-comment-spoiler" for="collectionCommentSpoiler">
                         <input id="collectionCommentSpoiler" type="checkbox">
                         <span>스포일러 포함</span>
@@ -161,11 +181,13 @@ Modification History
                 <button id="submitCommentButton" type="button">등록</button>
             </div>
 
+            <!-- 등록된 댓글이 없는 상태 -->
             <div id="collectionCommentEmpty" class="collection-comment-empty d-none">
                 <i class="bi bi-chat-square-text" aria-hidden="true"></i>
                 <p>아직 등록된 댓글이 없어요. 첫 번째 댓글을 남겨보세요 :)</p>
             </div>
 
+            <!-- 대표 댓글 카드 -->
             <article id="collectionCommentPreview" class="collection-comment-card d-none"></article>
         </section>
     </div>
@@ -181,9 +203,10 @@ Modification History
         </div>
     </div>
 
-    <!-- 전체 댓글 모달 -->
-    <div class="modal fade" id="allCommentsModal" tabindex="-1" aria-labelledby="allCommentsModalTitle"
-         aria-hidden="true">
+    <!-- ===================================
+         전체 댓글 모달
+         =================================== -->
+    <div class="modal fade" id="allCommentsModal" tabindex="-1" aria-labelledby="allCommentsModalTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable collection-comments-modal-dialog">
             <div class="modal-content collection-comments-modal">
                 <div class="collection-comments-modal-header">
@@ -191,34 +214,69 @@ Modification History
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
                 </div>
                 <div class="modal-body">
+
+                    <!-- 전체 댓글 목록 -->
                     <div id="allCommentsList" class="collection-comments-modal-list"></div>
+
+                    <!-- 전체 댓글 목록의 빈 상태 -->
                     <div id="allCommentsEmpty" class="collection-comment-empty d-none">
                         <i class="bi bi-chat-square-text" aria-hidden="true"></i>
                         <p>아직 등록된 댓글이 없어요.</p>
                     </div>
-                    <button id="loadMoreCommentsButton" class="collection-comments-load-more d-none"
-                            type="button">댓글 더보기</button>
+
+                    <!-- 다음 댓글 목록 불러오기 -->
+                    <button id="loadMoreCommentsButton" class="collection-comments-load-more d-none" type="button">댓글 더보기</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 비회원 로그인 안내 모달 -->
-    <div class="modal fade" id="commentLoginModal" tabindex="-1" aria-label="로그인 안내"
-         aria-hidden="true">
+    <!-- ===================================
+         댓글 신고 모달
+         =================================== -->
+    <div class="modal fade" id="collectionCommentReportModal" tabindex="-1" aria-labelledby="collectionCommentReportTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered collection-comment-report-dialog">
+            <div class="modal-content collection-comments-modal">
+                <div class="collection-comments-modal-header">
+                    <h2 id="collectionCommentReportTitle">댓글 신고하기</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                </div>
+                <div class="modal-body collection-comment-report-body">
+                    <label for="collectionCommentReportReason">신고 사유</label>
+                    <select id="collectionCommentReportReason" class="form-select">
+                        <option value="SPOILER">스포일러</option>
+                        <option value="INAPPROPRIATE">부적절한 내용</option>
+                        <option value="SPAM">스팸</option>
+                        <option value="OTHER">기타</option>
+                    </select>
+
+                    <label for="collectionCommentReportDetail">상세 내용 <span>(기타 사유는 필수)</span></label>
+                    <textarea id="collectionCommentReportDetail" class="form-control" rows="4" maxlength="1000" placeholder="신고 사유를 구체적으로 적어 주세요."></textarea>
+
+                    <div class="collection-comment-report-actions">
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel" data-bs-dismiss="modal">취소</button>
+                        <button id="submitCommentReportButton" type="button" class="btn btn-primary collection-delete-button">신고하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================
+         비회원 로그인 안내 모달
+         =================================== -->
+    <div class="modal fade" id="commentLoginModal" tabindex="-1" aria-label="로그인 안내" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content collection-delete-modal">
-                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
-                        aria-label="닫기"></button>
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal" aria-label="닫기"></button>
                 <div class="modal-body">
                     <div class="collection-login-icon" aria-hidden="true">
                         <i class="bi bi-person-lock"></i>
                     </div>
                     <p class="collection-delete-question">로그인이 필요해요</p>
-                    <p class="collection-delete-description">로그인 후 컬렉션에 댓글을 남길 수 있어요.</p>
+                    <p class="collection-delete-description">로그인 후 댓글 기능을 이용할 수 있어요.</p>
                     <div class="collection-delete-actions">
-                        <button type="button" class="btn collection-delete-button collection-delete-cancel"
-                                data-bs-dismiss="modal">취소</button>
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel" data-bs-dismiss="modal">취소</button>
                         <a class="btn btn-primary collection-delete-button" th:href="@{/login}">로그인</a>
                     </div>
                 </div>
@@ -226,13 +284,13 @@ Modification History
         </div>
     </div>
 
-    <!-- 삭제 확인 모달 -->
-    <div class="modal fade" id="deleteCollectionModal" tabindex="-1" aria-label="컬렉션 삭제 확인"
-         aria-hidden="true">
+    <!-- ===================================
+         컬렉션 삭제 확인 모달
+         =================================== -->
+    <div class="modal fade" id="deleteCollectionModal" tabindex="-1" aria-label="컬렉션 삭제 확인" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content collection-delete-modal">
-                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
-                        aria-label="닫기"></button>
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal" aria-label="닫기"></button>
                 <div class="modal-body">
                     <div class="collection-delete-icon" aria-hidden="true">
                         <i class="bi bi-trash3"></i>
@@ -240,16 +298,15 @@ Modification History
                     <p class="collection-delete-question">해당 컬렉션을 삭제할까요?</p>
                     <p class="collection-delete-description">컬렉션에 기록된 좋아요와 댓글 기록이 모두 삭제되며 되돌릴 수 없습니다.</p>
                     <div class="collection-delete-actions">
-                        <button type="button" class="btn collection-delete-button collection-delete-cancel"
-                                data-bs-dismiss="modal">취소</button>
-                        <button id="confirmDeleteButton" type="button"
-                                class="btn btn-danger collection-delete-button">삭제</button>
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel" data-bs-dismiss="modal">취소</button>
+                        <button id="confirmDeleteButton" type="button" class="btn btn-danger collection-delete-button">삭제</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- 모달·공통 요청·컬렉션 좋아요 스크립트 -->
     <script th:src="@{/assets/js/bootstrap.js}"></script>
     <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
     <script th:src="@{/assets/js/collection/collection-like.js}"></script>

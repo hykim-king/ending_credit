@@ -44,8 +44,7 @@ import com.endit.service.CollectionService;
  * 2026. 8. 29. jinyoung    인증 회원 기반 DTO·PATCH·전체 공개 목록·U-05 접근 권한 처리 추가
  * 2026. 9. 02. jinyoung    전체 목록 응답에 현재 회원 식별 정보 추가
  * 2026. 9. 03. jinyoung    회원별 컬렉션 정렬 조건 지원
- * 2026. 9. 05. jinyoung    로그인 회원 본인 컬렉션 조회 API 추가
- * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
+ * 2026. 9. 05. jinyoung    본인 컬렉션 API 추가 및 LoginMemberHelper 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -64,7 +63,6 @@ public class CollectionController {
 	 * @param collectionService 컬렉션 Service
 	 */
 	public CollectionController(CollectionService collectionService) {
-
 		this.collectionService = collectionService;
 	}
 
@@ -107,7 +105,8 @@ public class CollectionController {
 	 * @return 대상 회원의 접근 가능한 컬렉션 목록과 페이징 정보
 	 */
 	@GetMapping("/users/{memberId}/collections")
-	public ResponseEntity<Map<String, Object>> retrieveByMember(@PathVariable int memberId,
+	public ResponseEntity<Map<String, Object>> retrieveByMember(
+			@PathVariable int memberId,
 			@RequestParam(defaultValue = "1") int pageNo,
 			@RequestParam(defaultValue = "10") int pageSize,
 			@RequestParam(defaultValue = "") String searchDiv,
@@ -117,13 +116,22 @@ public class CollectionController {
 		DTO param = createSearchParam(pageNo, pageSize, searchDiv, searchWord);
 		param.getSearchMap().put("sort", sort);
 
-		List<CollectionVO> items = collectionService
-				.retrieveByMember(memberId, param, findCurrentMemberId());
+		List<CollectionVO> items =
+				collectionService.retrieveByMember(memberId, param, findCurrentMemberId());
 
 		return ResponseEntity.ok(createPageResponse(items, param));
 	}
 
-	/** 로그인 회원의 공개·비공개 컬렉션 목록 조회 */
+	/**
+	 * 로그인 회원의 공개·비공개 컬렉션 목록 조회
+	 *
+	 * @param pageNo     페이지 번호
+	 * @param pageSize   페이지당 건수
+	 * @param searchDiv  검색 구분
+	 * @param searchWord 검색어
+	 * @param sort       정렬 조건
+	 * @return 조회 목록과 페이징 정보
+	 */
 	@GetMapping("/members/collections")
 	public ResponseEntity<Map<String, Object>> retrieveMine(
 			@RequestParam(defaultValue = "1") int pageNo,
@@ -133,11 +141,11 @@ public class CollectionController {
 			@RequestParam(defaultValue = "latest") String sort) {
 
 		long memberId = LoginMemberHelper.getMemberId();
+
 		DTO param = createSearchParam(pageNo, pageSize, searchDiv, searchWord);
 		param.getSearchMap().put("sort", sort);
 
-		List<CollectionVO> items = collectionService.retrieveByMember(
-				memberId, param, OptionalLong.of(memberId));
+		List<CollectionVO> items = collectionService.retrieveByMember(memberId, param, OptionalLong.of(memberId));
 
 		return ResponseEntity.ok(createPageResponse(items, param));
 	}
@@ -151,8 +159,7 @@ public class CollectionController {
 	@GetMapping("/collections/{collectionId}")
 	public ResponseEntity<CollectionVO> get(@PathVariable int collectionId) {
 
-		return ResponseEntity.ok(collectionService.get(
-				collectionId, findCurrentMemberId()));
+		return ResponseEntity.ok(collectionService.get(collectionId, findCurrentMemberId()));
 	}
 
 	/**
@@ -162,8 +169,7 @@ public class CollectionController {
 	 * @return 등록된 컬렉션 정보와 접근 URI
 	 */
 	@PostMapping("/collections")
-	public ResponseEntity<CollectionVO> create(
-			@RequestBody CollectionCreateRequest request) {
+	public ResponseEntity<CollectionVO> create(@RequestBody CollectionCreateRequest request) {
 
 		long memberId = LoginMemberHelper.getMemberId();
 		CollectionVO created = collectionService.create(memberId, request);
@@ -177,12 +183,11 @@ public class CollectionController {
 	 * 컬렉션 제목과 설명 수정
 	 *
 	 * @param collectionId 컬렉션 번호
-	 * @param request      수정할 컬렉션 정보
+	 * @param request 수정할 컬렉션 정보
 	 * @return 수정된 컬렉션 정보
 	 */
 	@PatchMapping("/collections/{collectionId}")
-	public ResponseEntity<CollectionVO> update(@PathVariable int collectionId,
-			@RequestBody CollectionUpdateRequest request) {
+	public ResponseEntity<CollectionVO> update(@PathVariable int collectionId, @RequestBody CollectionUpdateRequest request) {
 
 		long memberId = LoginMemberHelper.getMemberId();
 
@@ -204,15 +209,6 @@ public class CollectionController {
 		return ResponseEntity.noContent().build();
 	}
 
-	/** 비회원 조회를 지원하기 위한 현재 로그인 회원 번호 */
-	private static OptionalLong findCurrentMemberId() {
-		LoginMember loginMember = LoginMemberHelper.getLoginMember();
-
-		return loginMember == null
-				? OptionalLong.empty()
-				: OptionalLong.of(loginMember.getMemberId());
-	}
-
 	/**
 	 * 잘못된 요청값 예외를 HTTP 400 응답으로 변환
 	 *
@@ -222,16 +218,20 @@ public class CollectionController {
 	@ExceptionHandler(IllegalArgumentException.class)
 	public ResponseEntity<MessageVO> handleBadRequest(IllegalArgumentException exception) {
 
-		MessageVO message =
-				new MessageVO("400", exception.getMessage(), "컬렉션 요청값을 확인해 주세요.");
+		MessageVO message = new MessageVO(
+				"400", exception.getMessage(), "컬렉션 요청값을 확인해 주세요.");
 
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
 	}
 
-	/** 인증 회원이 소유하지 않은 컬렉션 변경을 HTTP 403으로 변환 */
+	/**
+	 * 인증 회원이 소유하지 않은 컬렉션 변경을 HTTP 403으로 변환
+	 *
+	 * @param exception 접근 권한 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
 	@ExceptionHandler(ForbiddenOperationException.class)
-	public ResponseEntity<MessageVO> handleForbidden(
-			ForbiddenOperationException exception) {
+	public ResponseEntity<MessageVO> handleForbidden(ForbiddenOperationException exception) {
 
 		MessageVO message = new MessageVO(
 				"403", exception.getMessage(), "요청한 컬렉션을 변경할 권한이 없습니다.");
@@ -239,10 +239,14 @@ public class CollectionController {
 		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
 	}
 
-	/** 존재하지 않는 회원·콘텐츠 참조 등 무결성 오류를 HTTP 400으로 변환 */
+	/**
+	 * 존재하지 않는 회원·콘텐츠 참조 등 무결성 오류를 HTTP 400으로 변환
+	 *
+	 * @param exception 데이터 무결성 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
 	@ExceptionHandler(DataIntegrityViolationException.class)
-	public ResponseEntity<MessageVO> handleDataIntegrityViolation(
-			DataIntegrityViolationException exception) {
+	public ResponseEntity<MessageVO> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
 
 		MessageVO message = new MessageVO(
 				"400", "존재하는 회원과 작품 번호를 입력해 주세요.", "컬렉션 데이터의 참조 관계를 확인해 주세요.");
@@ -257,8 +261,7 @@ public class CollectionController {
 	 * @return 오류 메시지
 	 */
 	@ExceptionHandler(NoSuchElementException.class)
-	public ResponseEntity<MessageVO> handleNotFound(
-			NoSuchElementException exception) {
+	public ResponseEntity<MessageVO> handleNotFound(NoSuchElementException exception) {
 
 		MessageVO message = new MessageVO(
 				"404", exception.getMessage(), "요청한 컬렉션을 찾을 수 없습니다.");
@@ -266,9 +269,30 @@ public class CollectionController {
 		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
 	}
 
-	/** 검색 및 페이징 요청값을 Service 입력 객체로 변환한다. */
-	private static DTO createSearchParam(
-			int pageNo, int pageSize, String searchDiv, String searchWord) {
+	// 내부 조회 조건·응답 구성
+
+	/**
+	 * 비회원 조회를 지원하기 위한 현재 로그인 회원 번호
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 빈 OptionalLong
+	 */
+	private static OptionalLong findCurrentMemberId() {
+
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		return loginMember == null ? OptionalLong.empty() : OptionalLong.of(loginMember.getMemberId());
+	}
+
+	/**
+	 * 검색 및 페이징 요청값을 Service 입력 객체로 변환
+	 *
+	 * @param pageNo     페이지 번호
+	 * @param pageSize   페이지당 건수
+	 * @param searchDiv  검색 구분
+	 * @param searchWord 검색어
+	 * @return 검색·페이징 조건
+	 */
+	private static DTO createSearchParam(int pageNo, int pageSize, String searchDiv, String searchWord) {
 
 		DTO param = new DTO();
 		param.setPageNo(pageNo);
@@ -279,9 +303,14 @@ public class CollectionController {
 		return param;
 	}
 
-	/** 목록과 페이징 정보를 일정한 키 순서로 응답한다. */
-	private static Map<String, Object> createPageResponse(
-			List<CollectionVO> items, DTO page) {
+	/**
+	 * 목록과 페이징 정보를 일정한 키 순서로 응답
+	 *
+	 * @param items 조회된 목록
+	 * @param page  페이징 정보
+	 * @return 목록과 페이징 정보
+	 */
+	private static Map<String, Object> createPageResponse(List<CollectionVO> items, DTO page) {
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("items", items);
@@ -289,5 +318,4 @@ public class CollectionController {
 
 		return response;
 	}
-
 }

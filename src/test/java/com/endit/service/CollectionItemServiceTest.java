@@ -38,8 +38,7 @@ import com.endit.mapper.MemberContentMapper;
  * ------------------------------------------------------------
  * Date         Author      Description
  * ------------------------------------------------------------
- * 2026. 8. 26. jinyoung    최초 생성
- * 2026. 8. 26. jinyoung    실제 Spring Bean과 DB 기반 통합 테스트로 변경
+ * 2026. 8. 26. jinyoung    Spring Bean·DB 기반 컬렉션 작품 통합 테스트 생성
  * 2026. 8. 29. jinyoung    인증 회원 및 컬렉션 작품 소유권 검증 추가
  * 2026. 8. 31. jinyoung    컬렉션 작품 평균 별점 조회 검증 추가
  * 2026. 9. 05. jinyoung    대상 외 부모 데이터를 운영 시퀀스와 분리
@@ -74,15 +73,12 @@ class CollectionItemServiceTest {
 	void retrieve() {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(
-				collection.getMemberId(), collection.getCollectionId(),
-				createItem(content.getContentId()));
+		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 		saveRating(collection.getMemberId(), content.getContentId(), 3);
 		saveRating(createMemberId(), content.getContentId(), 5);
 		DTO param = new DTO();
 
-		List<CollectionItemVO> result = collectionItemService.retrieve(
-				collection.getCollectionId(), param, viewer(collection));
+		List<CollectionItemVO> result = collectionItemService.retrieve(collection.getCollectionId(), param, viewer(collection));
 
 		assertEquals(1, result.size());
 		assertEquals(collection.getCollectionId(), result.get(0).getCollectionId());
@@ -103,8 +99,7 @@ class CollectionItemServiceTest {
 		CollectionVO collection = createCollection();
 		DTO param = new DTO();
 
-		List<CollectionItemVO> result = collectionItemService.retrieve(
-				collection.getCollectionId(), param, viewer(collection));
+		List<CollectionItemVO> result = collectionItemService.retrieve(collection.getCollectionId(), param, viewer(collection));
 
 		assertTrue(result.isEmpty());
 		assertEquals(0, param.getTotalCnt());
@@ -116,13 +111,9 @@ class CollectionItemServiceTest {
 	void get() {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(
-				collection.getMemberId(), collection.getCollectionId(),
-				createItem(content.getContentId()));
+		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		CollectionItemVO result = collectionItemService.get(
-				collection.getCollectionId(), content.getContentId(),
-				viewer(collection));
+		CollectionItemVO result = collectionItemService.get(collection.getCollectionId(), content.getContentId(), viewer(collection));
 
 		assertEquals(collection.getCollectionId(), result.getCollectionId());
 		assertEquals(content.getContentId(), result.getContentId());
@@ -135,10 +126,7 @@ class CollectionItemServiceTest {
 	void getNotFound() {
 		CollectionVO collection = createCollection();
 
-		assertThrows(
-				NoSuchElementException.class,
-				() -> collectionItemService.get(
-						collection.getCollectionId(), MISSING_CONTENT_ID,
+		assertThrows(NoSuchElementException.class, () -> collectionItemService.get(collection.getCollectionId(), MISSING_CONTENT_ID,
 						viewer(collection)));
 	}
 
@@ -149,8 +137,7 @@ class CollectionItemServiceTest {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
 
-		CollectionItemVO result = collectionItemService.create(
-				collection.getMemberId(), collection.getCollectionId(),
+		CollectionItemVO result = collectionItemService.create(collection.getMemberId(), collection.getCollectionId(),
 				createItem(content.getContentId()));
 
 		assertEquals(collection.getCollectionId(), result.getCollectionId());
@@ -164,14 +151,9 @@ class CollectionItemServiceTest {
 	void createDuplicate() {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(
-				collection.getMemberId(), collection.getCollectionId(),
-				createItem(content.getContentId()));
+		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		assertThrows(
-				IllegalStateException.class,
-				() -> collectionItemService.create(
-						collection.getMemberId(), collection.getCollectionId(),
+		assertThrows(IllegalStateException.class, () -> collectionItemService.create(collection.getMemberId(), collection.getCollectionId(),
 						createItem(content.getContentId())));
 	}
 
@@ -183,11 +165,7 @@ class CollectionItemServiceTest {
 		ContentVO content = createContent();
 		int otherMemberId = createMemberId();
 
-		assertThrows(
-				ForbiddenOperationException.class,
-				() -> collectionItemService.create(
-						otherMemberId,
-						collection.getCollectionId(),
+		assertThrows(ForbiddenOperationException.class, () -> collectionItemService.create(otherMemberId, collection.getCollectionId(),
 						createItem(content.getContentId())));
 	}
 
@@ -197,18 +175,11 @@ class CollectionItemServiceTest {
 	void delete() {
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(
-				collection.getMemberId(), collection.getCollectionId(),
-				createItem(content.getContentId()));
+		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		collectionItemService.delete(
-				collection.getMemberId(), collection.getCollectionId(),
-				content.getContentId());
+		collectionItemService.delete(collection.getMemberId(), collection.getCollectionId(), content.getContentId());
 
-		assertThrows(
-				NoSuchElementException.class,
-				() -> collectionItemService.get(
-						collection.getCollectionId(), content.getContentId(),
+		assertThrows(NoSuchElementException.class, () -> collectionItemService.get(collection.getCollectionId(), content.getContentId(),
 						viewer(collection)));
 	}
 
@@ -216,30 +187,28 @@ class CollectionItemServiceTest {
 	@Test
 	@DisplayName("잘못된 컬렉션 번호이면 예외 발생")
 	void invalidCollectionId() {
-		assertThrows(
-				IllegalArgumentException.class,
-				() -> collectionItemService.retrieve(
-						0, new DTO(), OptionalLong.empty()));
+		assertThrows(IllegalArgumentException.class, () -> collectionItemService.retrieve(0, new DTO(), OptionalLong.empty()));
 	}
 
-	/** 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록 */
+	/**
+	 * 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록
+	 *
+	 * @return 컬렉션 정보
+	 */
 	private CollectionVO createCollection() {
 		int memberId = createMemberId();
 
-		CollectionVO collection = new CollectionVO(
-				0,
-				memberId,
-				"작품 통합 테스트 컬렉션",
-				"컬렉션 작품 Service 통합 테스트",
-				"Y",
-				null,
-				null);
+		CollectionVO collection = new CollectionVO(0, memberId, "작품 통합 테스트 컬렉션", "컬렉션 작품 Service 통합 테스트", "Y", null, null);
 		assertEquals(1, collectionMapper.doSave(collection));
 
 		return collection;
 	}
 
-	/** 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록 */
+	/**
+	 * 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록
+	 *
+	 * @return 등록된 테스트 회원 번호
+	 */
 	private int createMemberId() {
 		String token = createToken();
 		MemberVO member = new MemberVO();
@@ -251,18 +220,15 @@ class CollectionItemServiceTest {
 		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
-	/** 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록 */
+	/**
+	 * 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록
+	 *
+	 * @return 콘텐츠 정보
+	 */
 	private ContentVO createContent() {
 		String token = createToken();
-		ContentVO content = new ContentVO(
-				0,
-				"INTEGRATION_" + token,
-				"통합 테스트 콘텐츠",
-				"Integration Test Content",
-				"컬렉션 작품 Service 통합 테스트 콘텐츠",
-				"2026-08-26",
-				120,
-				"Korea",
+		ContentVO content = new ContentVO(0, "INTEGRATION_" + token, "통합 테스트 콘텐츠", "Integration Test Content", "컬렉션 작품 Service 통합 테스트 콘텐츠",
+				"2026-08-26", 120, "Korea",
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
@@ -270,30 +236,43 @@ class CollectionItemServiceTest {
 		return insertContent(jdbcTemplate, content);
 	}
 
-	/** 컬렉션 작품 등록 요청 생성 */
+	/**
+	 * 컬렉션 작품 등록 요청 생성
+	 *
+	 * @param contentId 콘텐츠 번호
+	 * @return 컬렉션 작품 정보
+	 */
 	private CollectionItemVO createItem(int contentId) {
 		return new CollectionItemVO(0, contentId, null);
 	}
 
-	/** 콘텐츠 평균 별점 검증에 사용할 회원 평가 등록 */
+	/**
+	 * 콘텐츠 평균 별점 검증에 사용할 회원 평가 등록
+	 *
+	 * @param memberId 회원 번호
+	 * @param contentId 콘텐츠 번호
+	 * @param ratingScore 별점
+	 */
 	private void saveRating(int memberId, int contentId, int ratingScore) {
-		MemberContentVO rating = new MemberContentVO(
-				memberId,
-				contentId,
-				ratingScore,
-				"N",
-				null,
-				null,
-				null);
+		MemberContentVO rating = new MemberContentVO(memberId, contentId, ratingScore, "N", null, null, null);
 		assertEquals(1, memberContentMapper.doSave(rating));
 	}
 
-	/** 테스트 컬렉션 소유자를 현재 조회 회원으로 사용 */
+	/**
+	 * 테스트 컬렉션 소유자를 현재 조회 회원으로 사용
+	 *
+	 * @param collection 컬렉션 정보
+	 * @return 컬렉션 소유자의 회원 번호
+	 */
 	private OptionalLong viewer(CollectionVO collection) {
 		return OptionalLong.of(collection.getMemberId());
 	}
 
-	/** DB 고유 제약조건 충돌을 피할 테스트 식별자 생성 */
+	/**
+	 * DB 고유 제약조건 충돌을 피할 테스트 식별자 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
+	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");
 	}

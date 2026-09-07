@@ -66,6 +66,7 @@
              TO_CHAR(uc.created_dt,'YYYY/MM/DD HH24:MI:SS') created_dt,
              TO_CHAR(uc.updated_dt,'YYYY/MM/DD HH24:MI:SS') updated_dt,
              m.nickname,
+             <!-- 코멘트 작성자 프로필 이미지 -->
              m.profile_img_url,
              NVL(lc.like_cnt, 0) like_cnt,
              mc.rating_score,
@@ -102,8 +103,8 @@
         WHERE comment_id = #{commentId}
     </delete>
 
-    <!-- 목록조회 — rownum 3중 페이징 + join + 정렬 4종(C-04: 최신/좋아요/평점높은/평점낮은)
-         정렬 키는 dto.searchMap의 "sort" (latest|likes|rating_desc|rating_asc, 그 외/없음=latest)
+    <!-- 목록조회 — rownum 3중 페이징 + join + 정렬 5종(최신/오래된/좋아요/평점높은/평점낮은)
+         정렬 키는 dto.searchMap의 "sort" (latest|oldest|likes|rating_desc|rating_asc, 그 외/없음=latest)
          별점 정렬은 NULLS LAST — 별점 없는 코멘트가 맨 위로 오지 않게 -->
     <select id="doRetrieve"
         parameterType="com.endit.cmn.DTO" resultType="UserCommentVO">
@@ -123,6 +124,7 @@
                      tt1.like_cnt,
                      tt1.rating_score,
                      tt1.blind_reason,
+                     <!-- 회원 기록 카드의 대상 정보와 조회 회원의 좋아요 상태 -->
                      tt1.target_type,
                      tt1.target_title,
                      tt1.release_year,
@@ -133,12 +135,14 @@
                         FROM (
                               SELECT uc.*,
                                      m.nickname,
+                                     <!-- 목록 카드의 작성자 프로필 이미지 -->
                                      m.profile_img_url,
                                      NVL(lc.like_cnt, 0) like_cnt,
                                      mc.rating_score,
                                      (SELECT MAX(rc.reason) FROM report_comment rc
                                        WHERE rc.comment_id = uc.comment_id
                                          AND rc.status = 'ACCEPTED') AS blind_reason,
+                                     <!-- 영화·컬렉션 구분, 대상 제목과 부가 정보 -->
                                      CASE
                                          WHEN uc.content_id IS NOT NULL THEN 'MOVIE'
                                          ELSE 'COLLECTION'
@@ -150,6 +154,7 @@
                                      END target_title,
                                      TO_CHAR(c.release_year, 'YYYY') release_year,
                                      col_owner.nickname collection_author_nickname,
+                                     <!-- 조회 회원의 좋아요 여부: 등록 1, 미등록 또는 조회 회원 없음 0 -->
                                      <choose>
                                          <when test="searchMap.viewerMemberId != null">
                                              CASE WHEN EXISTS (
@@ -170,6 +175,7 @@
                                 LEFT JOIN member_content mc
                                        ON mc.member_id = uc.member_id
                                       AND mc.content_id = uc.content_id
+                                <!-- 카드 표시용 영화·컬렉션·컬렉션 작성자 정보 -->
                                 LEFT JOIN content c
                                        ON c.content_id = uc.content_id
                                 LEFT JOIN collection col
@@ -182,6 +188,7 @@
                                    <when test=" searchMap.sort == 'likes' ">
                                        like_cnt DESC, uc.created_dt DESC, uc.comment_id DESC
                                    </when>
+                                   <!-- 오래된순: 작성 시각이 같으면 코멘트 번호 오름차순 -->
                                    <when test=" searchMap.sort == 'oldest' ">
                                        uc.created_dt ASC, uc.comment_id ASC
                                    </when>

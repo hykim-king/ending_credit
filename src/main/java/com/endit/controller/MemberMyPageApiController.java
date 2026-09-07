@@ -80,8 +80,7 @@ public class MemberMyPageApiController {
 	private static final int LIKE_PREVIEW_SIZE = 3;
 
 	/** 회원 기록 댓글 탭에서 허용하는 정렬값 */
-	private static final List<String> COMMENT_SORTS =
-			List.of("latest", "oldest", "likes");
+	private static final List<String> COMMENT_SORTS = List.of("latest", "oldest", "likes");
 
 	private final MemberService memberService;
 	private final PersonLikeService personLikeService;
@@ -95,6 +94,7 @@ public class MemberMyPageApiController {
 	 * MemberService를 주입받아 Controller 생성
 	 *
 	 * @param memberService 회원 Service
+	 * @param commentLikeService 코멘트 좋아요 Service
 	 */
 	public MemberMyPageApiController(
 			MemberService memberService,
@@ -427,7 +427,16 @@ public class MemberMyPageApiController {
 
 	// ===================== 내 댓글 기록 =====================
 
-	/** 로그인 회원이 작성한 영화·컬렉션 댓글 목록 조회 */
+	/**
+	 * 로그인 회원이 작성한 영화·컬렉션 코멘트 목록 조회
+	 *
+	 * @param pageNo   페이지 번호, 1 이상
+	 * @param pageSize 페이지당 건수, 1~50
+	 * @param sort     정렬 조건 (latest, oldest, likes)
+	 * @return 코멘트 목록(items)과 페이징 정보(page)
+	 * @throws IllegalStateException    비로그인 상태
+	 * @throws IllegalArgumentException 페이지 또는 정렬 조건 오류
+	 */
 	@GetMapping("/comments")
 	public ResponseEntity<Map<String, Object>> getMyComments(
 			@RequestParam(name = "page", defaultValue = "1") int pageNo,
@@ -440,9 +449,11 @@ public class MemberMyPageApiController {
 		DTO param = new DTO();
 		param.setPageNo(pageNo);
 		param.setPageSize(pageSize);
+		// 작성자 조건을 로그인 회원으로 고정
 		param.setSearchDiv("10");
 		param.setSearchWord(String.valueOf(memberId));
 		param.getSearchMap().put("sort", sort);
+		// 카드의 좋아요 초기 상태를 조회할 회원
 		param.getSearchMap().put("viewerMemberId", String.valueOf(memberId));
 
 		List<UserCommentVO> items = userCommentService.doRetrieve(param);
@@ -455,7 +466,17 @@ public class MemberMyPageApiController {
 		return ResponseEntity.ok(response);
 	}
 
-	/** 로그인 회원이 작성한 댓글의 내용과 스포일러 여부 수정 */
+	/**
+	 * 본인 코멘트의 내용과 스포일러 여부 수정
+	 *
+	 * @param commentId 수정할 코멘트 번호
+	 * @param request   코멘트 내용과 스포일러 여부
+	 * @return 본문 없는 HTTP 204 응답
+	 * @throws IllegalStateException       비로그인 상태 또는 수정 실패
+	 * @throws NoSuchElementException      코멘트 미존재
+	 * @throws ForbiddenOperationException 다른 회원의 코멘트
+	 * @throws IllegalArgumentException    내용 누락 또는 1,000자 초과
+	 */
 	@PatchMapping("/comments/{commentId}")
 	public ResponseEntity<Void> updateMyComment(
 			@PathVariable long commentId,
@@ -472,6 +493,7 @@ public class MemberMyPageApiController {
 			throw new IllegalArgumentException("코멘트는 1,000자 이내로 입력해 주세요.");
 		}
 
+		// 요청의 작성자·대상 번호는 제외하고 수정 허용 필드만 전달
 		UserCommentVO target = new UserCommentVO();
 		target.setCommentId(commentId);
 		target.setMemberId(memberId);
@@ -487,7 +509,15 @@ public class MemberMyPageApiController {
 		return ResponseEntity.noContent().build();
 	}
 
-	/** 로그인 회원이 작성한 댓글 삭제 */
+	/**
+	 * 본인 코멘트 삭제
+	 *
+	 * @param commentId 삭제할 코멘트 번호
+	 * @return 본문 없는 HTTP 204 응답
+	 * @throws IllegalStateException       비로그인 상태 또는 삭제 실패
+	 * @throws NoSuchElementException      코멘트 미존재
+	 * @throws ForbiddenOperationException 다른 회원의 코멘트
+	 */
 	@DeleteMapping("/comments/{commentId}")
 	public ResponseEntity<Void> deleteMyComment(@PathVariable long commentId) {
 
@@ -505,7 +535,14 @@ public class MemberMyPageApiController {
 		return ResponseEntity.noContent().build();
 	}
 
-	/** 로그인 회원의 댓글 좋아요 상태 토글 */
+	/**
+	 * 로그인 회원의 코멘트 좋아요 등록·취소
+	 *
+	 * @param commentId 좋아요를 변경할 코멘트 번호
+	 * @return 좋아요 여부(liked)와 전체 개수(likeCount)
+	 * @throws IllegalStateException  비로그인 상태
+	 * @throws NoSuchElementException 코멘트 미존재
+	 */
 	@PostMapping("/comments/{commentId}/likes")
 	public ResponseEntity<Map<String, Object>> toggleCommentLike(
 			@PathVariable long commentId) {
@@ -522,6 +559,7 @@ public class MemberMyPageApiController {
 		like.setMemberId(memberId);
 		like.setCommentId(commentId);
 
+		// 토글 결과와 갱신된 전체 개수를 카드에 반환
 		int state = commentLikeService.upToggleLike(like);
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("liked", state == CommentLikeService.LIKE_ON);
@@ -530,7 +568,14 @@ public class MemberMyPageApiController {
 		return ResponseEntity.ok(response);
 	}
 
-	/** 회원 기록 댓글의 페이징 및 정렬 요청값 확인 */
+	/**
+	 * 코멘트 목록의 페이징·정렬 조건 검사
+	 *
+	 * @param pageNo   페이지 번호, 1 이상
+	 * @param pageSize 페이지당 건수, 1~50
+	 * @param sort     정렬 조건 (latest, oldest, likes)
+	 * @throws IllegalArgumentException 지원 범위를 벗어난 요청값
+	 */
 	private static void validateCommentPaging(int pageNo, int pageSize, String sort) {
 		if (pageNo < 1) {
 			throw new IllegalArgumentException("페이지 번호는 1 이상이어야 합니다.");
@@ -543,7 +588,15 @@ public class MemberMyPageApiController {
 		}
 	}
 
-	/** 댓글이 존재하고 로그인 회원이 작성자인지 확인 */
+	/**
+	 * 코멘트 존재 여부와 로그인 회원의 작성 권한 확인
+	 *
+	 * @param commentId 조회할 코멘트 번호
+	 * @param memberId  로그인 회원 번호
+	 * @return 로그인 회원이 작성한 코멘트
+	 * @throws NoSuchElementException      코멘트 미존재
+	 * @throws ForbiddenOperationException 다른 회원의 코멘트
+	 */
 	private UserCommentVO requireOwnedComment(long commentId, long memberId) {
 		UserCommentVO key = new UserCommentVO();
 		key.setCommentId(commentId);
@@ -563,7 +616,7 @@ public class MemberMyPageApiController {
 	/**
 	 * 프로필 화면에 표시할 회원별 활동 건수를 조회한다.
 	 *
-	 * @param targetMemberId 조회 대상 회원 ID
+	 * @param targetMemberId  조회 대상 회원 ID
 	 * @param currentMemberId 현재 로그인 회원 ID
 	 * @return 평가, 코멘트, 컬렉션, 보고싶어요 집계 정보
 	 */
@@ -650,7 +703,12 @@ public class MemberMyPageApiController {
 					.body(message);
 	}
 
-	/** 본인이 작성하지 않은 댓글 변경 요청을 HTTP 403으로 변환 */
+	/**
+	 * 다른 회원의 코멘트 변경 요청을 HTTP 403 응답으로 변환
+	 *
+	 * @param exception 코멘트 변경 권한 예외
+	 * @return HTTP 403 상태와 오류 안내
+	 */
 	@ExceptionHandler(ForbiddenOperationException.class)
 	public ResponseEntity<MessageVO> handleForbidden(
 			ForbiddenOperationException exception) {

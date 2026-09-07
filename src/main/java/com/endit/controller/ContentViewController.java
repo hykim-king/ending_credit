@@ -349,7 +349,12 @@ public class ContentViewController {
 		model.addAttribute("reportReasons", reasons);
 	}
 
-	// C-01 로그인 필요 동작과 아직 통합 전인 코멘트·신고 요청에 사용할 현재 회원 번호
+	/**
+	 * 팀 공용 인증 정보에서 화면에 사용할 로그인 회원 번호 조회
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 null
+	 * @throws ArithmeticException 회원 번호가 int 범위를 벗어난 경우
+	 */
 	private Integer toCurrentMemberId() {
 		LoginMember loginMember = LoginMemberHelper.getLoginMember();
 

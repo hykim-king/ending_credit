@@ -13,15 +13,14 @@ import com.endit.cmn.LoginMember;
 import com.endit.security.LoginMemberHelper;
 
 /**
- * Class Name  : MemberMyPageController
- * Description : 마이페이지 및 회원 프로필 화면의 경로를 처리하는 Controller
+ * Class Name : MemberMyPageController Description : 마이페이지 및 회원 프로필 화면의 경로를 처리하는
+ * Controller
  *
- *   - 화면(뷰 이름)만 반환한다. 실제 데이터는 화면의 JavaScript가
- *     MemberMyPageApiController(/api/members/**)를 호출해 가져온다.
- *     (팀 관례: CollectionViewController와 동일한 방식)
- *   - 그래서 Model에는 조회 키(memberId)와 화면 분기용 플래그만 담는다.
- *   - "내" 화면(/members/me/**)은 URL로 회원 번호를 받지 않는다.
- *     로그인한 사람이 누구인지는 LoginMemberHelper가 세션에서 꺼내 준다.
+ * - 화면(뷰 이름)만 반환한다. 실제 데이터는 화면의 JavaScript가
+ * MemberMyPageApiController(/api/members/**)를 호출해 가져온다. (팀 관례:
+ * CollectionViewController와 동일한 방식) - 그래서 Model에는 조회 키(memberId)와 화면 분기용 플래그만
+ * 담는다. - "내" 화면(/members/me/**)은 URL로 회원 번호를 받지 않는다. 로그인한 사람이 누구인지는
+ * LoginMemberHelper가 세션에서 꺼내 준다.
  */
 @Controller
 @RequestMapping("/members")
@@ -37,9 +36,8 @@ public class MemberMyPageController {
 	/**
 	 * 내 마이페이지 화면.
 	 *
-	 * 비로그인이면 로그인 화면으로 보낸다.
-	 * (LoginMemberHelper.getMemberId()는 비로그인 시 예외를 던지므로,
-	 *  화면 컨트롤러에서는 예외 대신 isLogin()으로 먼저 확인한다)
+	 * 비로그인이면 로그인 화면으로 보낸다. (LoginMemberHelper.getMemberId()는 비로그인 시 예외를 던지므로, 화면
+	 * 컨트롤러에서는 예외 대신 isLogin()으로 먼저 확인한다)
 	 *
 	 * @param model 화면에서 쓸 조회 키를 담을 모델
 	 * @return member/mypage
@@ -105,10 +103,14 @@ public class MemberMyPageController {
 		return "member/settings";
 	}
 
-	/** 기존 내 회원 기록 주소를 본인 전용 기록 경로로 연결한다. */
+	/**
+	 * 기존 내 기록 주소를 로그인 회원 전용 기록 화면으로 연결
+	 *
+	 * @param tab 요청한 기록 탭
+	 * @return 기록 화면 경로, 비로그인이면 로그인 화면 경로
+	 */
 	@GetMapping("/me/records")
-	public String myRecords(
-			@RequestParam(defaultValue = "ratings") String tab) {
+	public String myRecords(@RequestParam(defaultValue = "ratings") String tab) {
 
 		LoginMember me = LoginMemberHelper.getLoginMember();
 		if (me == null) {
@@ -118,10 +120,14 @@ public class MemberMyPageController {
 		return "redirect:/members/records?tab=" + normalizeRecordTab(tab);
 	}
 
-	/** 기존 내 좋아요 주소를 본인 전용 좋아요 경로로 연결한다. */
+	/**
+	 * 기존 내 좋아요 주소를 로그인 회원 전용 좋아요 화면으로 연결
+	 *
+	 * @param type 요청한 좋아요 유형
+	 * @return 좋아요 화면 경로, 비로그인이면 로그인 화면 경로
+	 */
 	@GetMapping("/me/likes")
-	public String myLikes(
-			@RequestParam(defaultValue = "person") String type) {
+	public String myLikes(@RequestParam(defaultValue = "person") String type) {
 
 		LoginMember me = LoginMemberHelper.getLoginMember();
 		if (me == null) {
@@ -136,31 +142,26 @@ public class MemberMyPageController {
 	/**
 	 * 다른 유저의 공개 프로필 화면.
 	 *
-	 * 회원 정보를 여기서 조회하지 않는다. 화면 JS가
-	 * GET /api/members/{memberId} 로 '공개 필드만' 받아 가므로
-	 * 이메일 등 민감 정보가 이 경로로 새어 나가지 않는다.
+	 * 회원 정보를 여기서 조회하지 않는다. 화면 JS가 GET /api/members/{memberId} 로 '공개 필드만' 받아 가므로 이메일
+	 * 등 민감 정보가 이 경로로 새어 나가지 않는다.
 	 *
 	 * 경로에 [0-9]+ 숫자 제약을 두어 /members/me 와 매핑이 겹치지 않게 한다.
 	 *
-	 * 로그인 본인이 자기 번호로 들어오면 /members/me 로 리다이렉트해
-	 * '내 프로필'을 항상 /me 경로로 통일한다.
-	 * 따라서 이 화면에는 항상 '다른 유저'만 표시된다.
+	 * 로그인 본인이 자기 번호로 들어오면 /members/me 로 리다이렉트해 '내 프로필'을 항상 /me 경로로 통일한다. 따라서 이 화면에는
+	 * 항상 '다른 유저'만 표시된다.
 	 *
 	 * @param memberId 조회할 회원 번호
 	 * @param model    화면에서 쓸 조회 키를 담을 모델
 	 * @return member/profile
 	 */
 	@GetMapping("/{memberId:[0-9]+}")
-	public String profile(
-			@PathVariable long memberId,
-			Model model) {
+	public String profile(@PathVariable long memberId, Model model) {
 
 		log.debug("profile(memberId={})", memberId);
 
 		LoginMember me = LoginMemberHelper.getLoginMember();
 
-		if (me != null && me.getMemberId() != null && me.getMemberId() == memberId)
-		{
+		if (me != null && me.getMemberId() != null && me.getMemberId() == memberId) {
 			return "redirect:/members/me";
 		}
 
@@ -170,8 +171,7 @@ public class MemberMyPageController {
 	}
 
 	private String normalizeRecordTab(String tab) {
-		if ("comments".equalsIgnoreCase(tab)
-				|| "collections".equalsIgnoreCase(tab)
+		if ("comments".equalsIgnoreCase(tab) || "collections".equalsIgnoreCase(tab)
 				|| "watchlist".equalsIgnoreCase(tab)) {
 			return tab.toLowerCase();
 		}
@@ -179,6 +179,12 @@ public class MemberMyPageController {
 		return "ratings";
 	}
 
+	/**
+	 * 지원하지 않는 좋아요 유형을 기본 인물 유형으로 보정
+	 *
+	 * @param type 요청한 좋아요 유형
+	 * @return collection 또는 기본값 person
+	 */
 	private String normalizeLikeType(String type) {
 		return "collection".equalsIgnoreCase(type) ? "collection" : "person";
 	}
