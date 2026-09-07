@@ -129,8 +129,8 @@ public class AdminContentApiController {
 		ContentVO content = param.getContent();
 
 		// 화면이 TMDB 전체 URL을 붙여 넣어도 DB에는 경로만 남긴다
-		content.setPosterUrl(toImagePath(content.getPosterUrl(), "포스터"));
-		content.setBackdropUrl(toImagePath(content.getBackdropUrl(), "배경 이미지"));
+		content.setPosterUrl(toImagePath(content.getPosterUrl()));
+		content.setBackdropUrl(toImagePath(content.getBackdropUrl()));
 
 		// 제목·외부 ID 필수값과 중복 검사는 create가 맡는다
 		ContentVO saved = contentService.create(content);
@@ -146,28 +146,18 @@ public class AdminContentApiController {
 	}
 
 	/*
-	 * TMDB 이미지만 받는다.
+	 * 이미지 값은 형태를 따지지 않고 받는다.
 	 *
-	 * toStoredPath는 TMDB URL이 아니면 값을 그대로 돌려주고, 조회할 때 toFullImageUrl이
-	 * 무조건 TMDB 주소를 앞에 붙인다. 그래서 다른 호스트의 URL을 그냥 저장하면
-	 * "https://image.tmdb.org/t/p/w500https://..." 같은 주소가 조용히 만들어져
-	 * 관리자 상세와 사용자 상세 양쪽에서 깨진 이미지로만 드러난다.
-	 * 저장 시점에 막는 것이 유일하게 값싼 자리다.
+	 * TMDB 완성 URL·TMDB 경로·다른 사이트의 이미지 주소가 전부 통하며, 어떤 형태로 저장할지는
+	 * ContentImageService.toStoredPath가 정한다. 여기서 하는 일은 빈 칸을 null로 눕히는 것뿐이다 -
+	 * 빈 문자열을 그대로 넣으면 상세 화면에 빈 이미지가 남는다.
 	 */
-	private String toImagePath(String url, String fieldName) {
+	private String toImagePath(String url) {
 		if (!StringUtils.hasText(url)) {
 			return null;
 		}
 
-		String storedPath = contentImageService.toStoredPath(url.trim());
-
-		// TMDB URL이면 경로만 남아 '/'로 시작한다. 경로를 그대로 넣은 경우도 여기에 걸린다
-		if (!storedPath.startsWith("/")) {
-			throw new IllegalArgumentException(
-					fieldName + "은(는) TMDB 이미지 주소이거나 /로 시작하는 경로여야 합니다.");
-		}
-
-		return storedPath;
+		return contentImageService.toStoredPath(url);
 	}
 
 	// 정의서 2축 밖의 검색 구분은 받지 않는다. 서비스가 허용하는 나머지 축은 이 화면의 것이 아니다
@@ -214,7 +204,7 @@ public class AdminContentApiController {
 			}
 
 			ContentImageVO image = new ContentImageVO();
-			image.setImageUrl(toImagePath(imageUrl, "갤러리 이미지"));
+			image.setImageUrl(toImagePath(imageUrl));
 
 			contentImageService.create(contentId, image);
 		}

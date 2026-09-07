@@ -129,8 +129,8 @@
         UPDATE MEMBER
         SET
             NICKNAME        = #{nickname},
-            INTRODUCTION    = #{introduction},
-            PROFILE_IMG_URL = #{profileImgUrl},
+            INTRODUCTION    = #{introduction, jdbcType=VARCHAR},
+            PROFILE_IMG_URL = #{profileImgUrl, jdbcType=VARCHAR},
             UPDATED_DT      = SYSDATE
         WHERE MEMBER_ID = #{memberId}
     </update>

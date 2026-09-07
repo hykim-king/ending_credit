@@ -1,20 +1,30 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>인물 관리 | END IT ADMIN</title>
 
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="/assets/css/admin/people.css">
 </head>
 <body data-page="admin-person-list">
 
-<div class="admin-layout">
-    <aside th:replace="~{fragments/admin_side :: admin_side('people')}">side</aside>
+<div layout:fragment="content">
 
-    <main class="admin-content">
-        <h1 class="admin-page-title">인물 관리 목록</h1>
+    <div class="d-flex gap-3">
+
+        <aside th:replace="~{fragments/admin_side :: admin_side('people')}">
+            side
+        </aside>
+
+        <div class="flex-grow-1"
+             style="min-width: 0;">
+       <h4 class="fw-bold mb-3">
+    인물 관리 목록
+</h4>
 
         <!--
             상태 필터가 없다 - POL-037: PERSON에는 공개 상태·임시저장 컬럼이 없다.
@@ -60,9 +70,13 @@
         </div>
 
         <nav id="adminPagination" class="admin-pagination" aria-label="관리자 인물 페이지"></nav>
-    </main>
+        </div>
+
+    </div>
+
+    <script src="/assets/js/admin/people.js"></script>
+
 </div>
 
-<script src="/assets/js/admin/people.js"></script>
 </body>
 </html>

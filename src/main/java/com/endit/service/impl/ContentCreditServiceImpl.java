@@ -35,6 +35,9 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 	private static final String ROLE_WRITER = "WRITER";
 	private static final String ROLE_PRODUCER = "PRODUCER";
 
+	// getTopPerson이 IN 절에 펼칠 수 있는 최대 개수. Oracle 상한 1000보다 낮게 잡아 여유를 둔다
+	private static final int MAX_TOP_PERSON_POOL = 500;
+
 	// 페이징 없이 "전체 조회"를 흉내낼 때 쓰는 페이지 크기 - 콘텐츠 하나가 가질 수 있는 크레딧 수보다 넉넉하게 잡음
 	private static final int RETRIEVE_ALL_PAGE_SIZE = 100;
 	private static final int FIRST_PAGE_NO = 1;
@@ -149,6 +152,29 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		return item;
 	}
 
+	// 화제의 감독·배우 선별 - 모수는 호출부가 정한다
+	@Override
+	public ContentCreditVO getTopPerson(String role, List<Integer> contentIds) {
+		validateRoleCode(role);
+
+		// IN ()은 문법 오류라 빈 목록은 매퍼까지 보내지 않는다. 순위가 아직 안 채워진 기동 직후가 이 경우다
+		if (contentIds == null || contentIds.isEmpty()) {
+			return null;
+		}
+
+		// 매퍼가 이 목록을 통째로 IN 절에 펼치는데 Oracle 상한이 표현식 1000개다(초과하면 ORA-01795).
+		// 호출부의 순위 크기가 커져도 여기서 터지지 않도록 앞쪽만 자른다 - 앞쪽이 곧 상위 인기작이라 선별 결과도 그쪽이 지배한다
+		List<Integer> pool = contentIds.size() > MAX_TOP_PERSON_POOL
+				? contentIds.subList(0, MAX_TOP_PERSON_POOL)
+				: contentIds;
+
+		ContentCreditVO top = contentCreditMapper.doSelectTopPersonByRole(role, pool);
+		log.debug("getTopPerson role={} pool={} picked={}",
+				role, pool.size(), top == null ? null : top.getNameKo());
+
+		return top;
+	}
+
 	// 콘텐츠에 크레딧(배우 또는 감독) 등록
 	@Override
 	@Transactional
@@ -163,7 +189,7 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 
 		// POL-033 - 읽기 필터에만 걸려 있던 역할 검사를 쓰기 경로에도 건다.
 		// AD-06 크레딧 정정이 임의 역할을 넣을 수 있는 유일한 경로다
-		validateWriteRole(param.getRole());
+		validateRoleCode(param.getRole());
 
 		int result = contentCreditMapper.doSave(param);
 
@@ -205,7 +231,7 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		// 넘어온 값으로 그대로 덮는다. 호출부가 전체 필드를 채워 보내야 한다
 
 		// 기존 역할을 메운 뒤에 검사한다. 역할을 안 보내는 수정이 정상이기 때문이다
-		validateWriteRole(param.getRole());
+		validateRoleCode(param.getRole());
 
 		int result = contentCreditMapper.doUpdate(param);
 
@@ -259,9 +285,8 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		}
 	}
 
-	// 모르는 역할이 오면 조건이 아무것도 걸리지 않아 예외처리
-	// 저장되는 역할이 POL-033의 4종 안인지 확인한다. role은 NOT NULL이라 빈 값도 막는다
-	private void validateWriteRole(String role) {
+	// 역할 값이 POL-033 4종 안인지 확인한다 - 쓰기 3종과 getTopPerson이 함께 쓴다
+	private void validateRoleCode(String role) {
 		if (!StringUtils.hasText(role)) {
 			throw new IllegalArgumentException("크레딧 역할이 필요합니다.");
 		}

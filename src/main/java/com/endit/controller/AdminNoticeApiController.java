@@ -23,8 +23,6 @@ import com.endit.domain.PageResponse;
 import com.endit.security.LoginMemberHelper;
 import com.endit.service.NoticeService;
 
-import jakarta.servlet.http.HttpSession;
-
 @RestController
 @RequestMapping("/api/admin/notices")
 public class AdminNoticeApiController {
@@ -39,16 +37,13 @@ public class AdminNoticeApiController {
     @GetMapping
     public PageResponse<NoticeVO> getAdminNoticeList(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) String status,
             @RequestParam(required = false) String important,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            HttpSession session
+            @RequestParam(defaultValue = "10") int size
     ) {
 
         NoticeSearchVO search = new NoticeSearchVO();
         search.setSearchWord(query);
-        search.setStatus(status);
         search.setImportant(important);
         search.setPageNo(page);
         search.setPageSize(size);
@@ -59,8 +54,7 @@ public class AdminNoticeApiController {
     /** 관리자 공지 단건 조회 */
     @GetMapping("/{noticeId}")
     public NoticeVO getAdminNotice(
-            @PathVariable Long noticeId,
-            HttpSession session
+            @PathVariable Long noticeId
     ) {
         return noticeService.getAdminNotice(noticeId);
     }
@@ -68,8 +62,7 @@ public class AdminNoticeApiController {
     /** AD-13 신규 등록 */
     @PostMapping
     public ResponseEntity<Map<String, Long>> createNotice(
-            @RequestBody NoticeVO notice,
-            HttpSession session
+            @RequestBody NoticeVO notice
     ) {
         Long adminId = LoginMemberHelper.getMemberId();
         Long noticeId = noticeService.createNotice(notice, adminId);
@@ -83,8 +76,7 @@ public class AdminNoticeApiController {
     @PatchMapping("/{noticeId}")
     public ResponseEntity<Void> updateNotice(
             @PathVariable Long noticeId,
-            @RequestBody NoticeVO notice,
-            HttpSession session
+            @RequestBody NoticeVO notice
     ) {
         Long adminId = LoginMemberHelper.getMemberId();
         noticeService.updateNotice(noticeId, notice, adminId);
@@ -94,8 +86,7 @@ public class AdminNoticeApiController {
     /** AD-13 삭제 */
     @DeleteMapping("/{noticeId}")
     public ResponseEntity<Void> deleteNotice(
-            @PathVariable Long noticeId,
-            HttpSession session
+            @PathVariable Long noticeId
     ) {
         Long adminId = LoginMemberHelper.getMemberId();
         noticeService.deleteNotice(noticeId, adminId);

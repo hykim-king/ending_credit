@@ -153,14 +153,15 @@ public interface ContentImageService {
 	 *
 	 * <pre>
 	 * Method Name : toStoredPath
-	 * Description : 완성 URL을 DB에 저장할 원본 경로로 되돌린다. 위 변환들의 역변환
-	 *               화면에서 받은 URL을 그대로 저장하면 완성 URL이 DB에 박히므로 쓰기 경로가 저장 직전에 부른다.
+	 * Description : 화면·외부에서 받은 이미지 값을 DB에 저장할 형태로 맞춘다. 위 변환들의 역변환
+	 *               TMDB 완성 URL이면 크기 구간을 벗겨 경로만, 다른 사이트의 http(s) 주소면 통째로,
+	 *               경로만 받았으면 앞의 '/'를 채워 돌려준다. 빈 값은 그대로 돌려준다.
 	 *               크기를 알려 주는 게 아니라 벗겨내는 쪽이라 "크기 지식을 가두는" 원칙에 걸리지 않는다.
 	 *
 	 * </pre>
 	 *
 	 * @param url
-	 * @return String(TMDB 원본 경로)
+	 * @return String(TMDB 원본 경로 또는 외부 완성 URL)
 	 */
 	String toStoredPath(String url);
 

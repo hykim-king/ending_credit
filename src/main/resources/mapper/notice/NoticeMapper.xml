@@ -45,13 +45,14 @@
         WHERE NOTICE_ID = #{noticeId}
     </select>
 
-<!-- 일반 사용자 공지 목록: 공개 화면에 필요한 컬럼만 조회 -->
+<!-- 일반 사용자 공지 목록 -->
 <select id="selectPublicNoticeList"
         parameterType="NoticeSearchVO"
         resultType="NoticeVO">
 
     SELECT
         NOTICE_ID,
+        DISPLAY_NO,
         TITLE,
         IMPORTANT,
         VIEW_COUNT,
@@ -63,14 +64,44 @@
             IMPORTANT,
             VIEW_COUNT,
             CREATED_DT,
+
+            /*
+             * 일반 공지(N)만 번호를 증가시킨다.
+             * 중요 공지(Y)는 화면 번호를 갖지 않는다.
+             */
+            CASE
+                WHEN IMPORTANT = 'N' THEN
+                    SUM(
+                        CASE
+                            WHEN IMPORTANT = 'N' THEN 1
+                            ELSE 0
+                        END
+                    ) OVER (
+                        ORDER BY CREATED_DT DESC, NOTICE_ID DESC
+                    )
+                ELSE NULL
+            END AS DISPLAY_NO,
+
+            /*
+             * 실제 화면 정렬용 번호
+             * 중요 공지는 위쪽,
+             * 그 안에서는 최신순
+             */
             ROW_NUMBER() OVER (
-                ORDER BY IMPORTANT DESC, NOTICE_ID DESC
+                ORDER BY
+                    IMPORTANT DESC,
+                    CREATED_DT DESC,
+                    NOTICE_ID DESC
             ) AS RN
+
         FROM NOTICE
+
         WHERE STATUS = 'PUBLISHED'
     )
+
     WHERE RN BETWEEN (#{offset} + 1)
                  AND (#{offset} + #{pageSize})
+
     ORDER BY RN
 
 </select>
@@ -114,6 +145,7 @@
 
     SELECT
         NOTICE_ID,
+        DISPLAY_NO,
         TITLE,
         IMPORTANT,
         STATUS,
@@ -136,7 +168,10 @@
             N.UPDATED_ID,
             N.UPDATED_DT,
             ROW_NUMBER() OVER (
-                ORDER BY N.IMPORTANT DESC, N.NOTICE_ID DESC
+                ORDER BY N.CREATED_DT DESC, N.NOTICE_ID DESC
+            ) AS DISPLAY_NO,
+            ROW_NUMBER() OVER (
+                ORDER BY N.CREATED_DT DESC, N.NOTICE_ID DESC
             ) AS RN
         FROM NOTICE N
         LEFT JOIN MEMBER M
@@ -145,10 +180,6 @@
         <where>
             <if test="searchWord != null and searchWord != ''">
                 N.TITLE LIKE '%' || #{searchWord} || '%'
-            </if>
-
-            <if test="status != null and status != ''">
-                AND N.STATUS = #{status}
             </if>
 
             <if test="important != null and important != ''">
@@ -173,10 +204,6 @@
     <where>
         <if test="searchWord != null and searchWord != ''">
             TITLE LIKE '%' || #{searchWord} || '%'
-        </if>
-
-        <if test="status != null and status != ''">
-            AND STATUS = #{status}
         </if>
 
         <if test="important != null and important != ''">

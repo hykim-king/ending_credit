@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       layout:decorate="~{layout/layout}">
 <head>
     <meta charset="UTF-8">
@@ -12,7 +13,12 @@
 <body layout:fragment="content" data-page="notice-list">
 
 <main class="notice-container">
-    <h1 class="page-title">공지사항</h1>
+    <div class="notice-page-heading">
+        <h1 class="page-title">공지사항</h1>
+        <a sec:authorize="hasRole('ADMIN')"
+           th:href="@{/admin/notices}"
+           class="outline-button notice-admin-link">공지 관리</a>
+    </div>
 
     <section id="importantArea" class="important-area"></section>
 

@@ -4,6 +4,9 @@ import com.endit.cmn.DTO;
 
 public class ContentCreditVO extends DTO {
 
+	// 개봉연도 표시 자릿수. releaseYear는 DATE를 'YYYY-MM-DD'로 뽑은 값이다
+	private static final int YEAR_LENGTH = 4;
+
 	private int creditId;
 	private int contentId;
 	private int personId;
@@ -127,6 +130,23 @@ public class ContentCreditVO extends DTO {
 
 	public void setReleaseYear(String releaseYear) {
 		this.releaseYear = releaseYear;
+	}
+
+	/**
+	 * <pre>
+	 * Method Name : getReleaseYearLabel
+	 * Description : 화면에 찍을 개봉연도. 매퍼가 'YYYY-MM-DD'로 뽑으므로 앞 4자만 자른다(POL-031).
+	 *               값이 없거나 4자에 못 미치면 null - 뷰가 그대로 th:if로 쓴다.
+	 * </pre>
+	 * @return String (연도 4자리 또는 null)
+	 */
+	public String getReleaseYearLabel() {
+
+		if (releaseYear == null || releaseYear.length() < YEAR_LENGTH) {
+			return null;
+		}
+
+		return releaseYear.substring(0, YEAR_LENGTH);
 	}
 
 	@Override

@@ -159,10 +159,40 @@
               </p>
             </div>
 
-            <!-- ===== 패널: 나머지 (다음 단계에 채움) ===== -->
+            <!-- ===== 패널: 프로필 수정 (T-02) =====
+                 이미지 업로드는 조장 컨펌으로 보류. 저장 시 profileImgUrl은 건드리지 않는다. -->
             <div class="settings-panel d-none" data-panel="profile">
-              <p class="text-muted mb-0">프로필 수정 — 준비 중</p>
+			  <!-- 현재 이미지 (읽기 전용, 업로드는 추후) -->
+			  <div class="d-flex align-items-center gap-3 mb-4">
+			    <img id="pf-img" alt="프로필 이미지"
+			         src="/images/default-avatar.png"
+			         style="width:56px; height:56px; border-radius:50%; object-fit:cover; background:#E4E2E9;">
+			    <span class="text-muted small">이미지 변경은 추후 제공됩니다</span>
+			  </div>
+			
+			  <!-- 저장 결과/오류 메시지 -->
+			  <div id="pf-msg" class="small mb-2"></div>
+			
+			  <div class="mb-3">
+			    <label class="form-label">닉네임 <span class="text-danger">*</span></label>
+			    <div class="input-group">
+			      <input type="text" id="pf-nickname" class="form-control" placeholder="2~15자">
+			      <button type="button" id="pf-checkNickname" class="btn btn-outline-secondary">중복 확인</button>
+			    </div>
+			    <div id="pf-nicknameResult" class="small mt-1"></div>
+			  </div>
+			
+			  <div class="mb-3">
+			    <label class="form-label">소개</label>
+			    <textarea id="pf-introduction" class="form-control" rows="3"
+			              maxlength="300" placeholder="자기소개를 입력하세요"></textarea>
+			    <div class="text-muted small mt-1 text-end"><span id="pf-introCount">0</span>/300</div>
+			  </div>
+			
+			  <button type="button" id="pf-submit" class="btn btn-primary w-100">저장</button>              
             </div>
+            
+            
             <div class="settings-panel d-none" data-panel="support">
               <p class="text-muted mb-0">문의하기 / FAQ — 준비 중</p>
             </div>
@@ -270,6 +300,7 @@
             const modalEl = document.getElementById('settingsModal');
             const titleEl = document.getElementById('settingsTitle');
             const backBtn = document.getElementById('settingsBackBtn');
+          
 
             const titles = {
                 menu: '설정', account: '계정 정보', profile: '프로필 수정',
@@ -286,6 +317,7 @@
                 backBtn.classList.toggle('d-none', name === 'menu');
 
                 if (name === 'account') loadAccount();
+                if (name === 'profile') loadProfileForm();
             }
 
             // 메뉴 항목 클릭 → 해당 패널로
@@ -299,6 +331,128 @@
 
             // 비밀번호 변경
             document.getElementById('pw-submit').addEventListener('click', changePassword);
+            
+            // 프로필 수정: 중복확인 / 저장 / 글자수 표시
+            document.getElementById('pf-checkNickname').addEventListener('click', checkNicknameForProfile);
+            document.getElementById('pf-submit').addEventListener('click', saveProfile);
+            document.getElementById('pf-introduction').addEventListener('input', (e) => {
+                document.getElementById('pf-introCount').textContent = e.target.value.length;
+            });
+        }
+        // 프로필 수정 패널 진입 시 현재 값 채우기
+        let originalNickname = ''; // 중복확인에서 "내 현재 닉네임"은 통과시키기 위해 저장
+        let currentProfileImgUrl = null; // 저장 시 그대로 되돌려 보내 null 덮어쓰기 방지 (이미지 수정 보류 중)
+ 
+        async function loadProfileForm() {
+            const msg = document.getElementById('pf-msg');
+            msg.textContent = '';
+            document.getElementById('pf-nicknameResult').textContent = '';
+ 
+            try {
+                const res = await fetch('/api/members/me/account');
+                if (!res.ok) return;
+                const d = await res.json();
+ 
+                originalNickname = d.nickname ?? '';
+                currentProfileImgUrl = d.profileImgUrl ?? null;
+                document.getElementById('pf-nickname').value = originalNickname;
+                document.getElementById('pf-introduction').value = d.introduction ?? '';
+                document.getElementById('pf-introCount').textContent = (d.introduction ?? '').length;
+                if (d.profileImgUrl) {
+                    document.getElementById('pf-img').src = d.profileImgUrl;
+                }
+            } catch (e) {
+                console.error('프로필 조회 실패', e);
+            }
+        }
+        // 닉네임 중복 확인 (현재 내 닉네임과 같으면 중복확인 없이 통과)
+        async function checkNicknameForProfile() {
+            const result = document.getElementById('pf-nicknameResult');
+            const nickname = document.getElementById('pf-nickname').value.trim();
+ 
+            if (nickname === '') {
+                result.textContent = '닉네임을 입력하세요';
+                result.className = 'small mt-1 text-danger';
+                return;
+            }
+            if (nickname.length < 2 || nickname.length > 15) {
+                result.textContent = '닉네임은 2~15자여야 합니다';
+                result.className = 'small mt-1 text-danger';
+                return;
+            }
+            // 기존 내 닉네임 그대로면 중복확인 불필요
+            if (nickname === originalNickname) {
+                result.textContent = '현재 사용 중인 닉네임입니다';
+                result.className = 'small mt-1 text-muted';
+                return;
+            }
+ 
+            try {
+                const data = await requestGet('/api/members/nickname-check', { nickname: nickname });
+                if (data.used) {
+                    result.textContent = '중복된 닉네임입니다';
+                    result.className = 'small mt-1 text-danger';
+                } else {
+                    result.textContent = '사용 가능한 닉네임입니다';
+                    result.className = 'small mt-1 text-success';
+                }
+            } catch (e) {
+                result.textContent = e.message;
+                result.className = 'small mt-1 text-danger';
+            }
+        }
+        
+        // 프로필 저장 (닉네임 + 소개). 이미지는 보류라 profileImgUrl은 보내지 않는다.
+        async function saveProfile() {
+            const msg = document.getElementById('pf-msg');
+            const nickname = document.getElementById('pf-nickname').value.trim();
+            const introduction = document.getElementById('pf-introduction').value;
+ 
+            msg.textContent = '';
+            msg.className = 'small mb-2';
+ 
+            if (nickname === '') {
+                showPfMsg('닉네임을 입력하세요', true);
+                return;
+            }
+            if (nickname.length < 2 || nickname.length > 15) {
+                showPfMsg('닉네임은 2~15자여야 합니다', true);
+                return;
+            }
+            if (introduction.length > 300) {
+                showPfMsg('소개는 300자 이하여야 합니다', true);
+                return;
+            }
+ 
+            try {
+                const res = await fetch('/api/members/me/profile', {
+                    method: 'PATCH',
+                    headers: withCsrf({ 'Content-Type': 'application/json' }),
+                    // profileImgUrl은 수정 UI가 없어도 "그대로" 같이 보내서
+                    // 서버가 null로 덮어쓰지 않게 방지 (이미지 수정은 보류 중)
+                    body: JSON.stringify({ nickname, introduction, profileImgUrl: currentProfileImgUrl })
+                });
+ 
+                if (res.ok) {
+                    showPfMsg('저장되었습니다.', false);
+                    originalNickname = nickname;
+                    // 상단 프로필 헤더도 즉시 갱신
+                    document.getElementById('nickname').textContent = nickname;
+                    document.getElementById('introduction').textContent = introduction;
+                } else {
+                    let text = '저장에 실패했습니다.';
+                    try { const err = await res.json(); if (err && err.message) text = err.message; } catch (_) {}
+                    showPfMsg(text, true);
+                }
+            } catch (e) {
+                showPfMsg('저장 중 오류가 발생했습니다.', true);
+            }
+        }
+ 
+        function showPfMsg(text, isError) {
+            const msg = document.getElementById('pf-msg');
+            msg.textContent = text;
+            msg.className = 'small mb-2 ' + (isError ? 'text-danger' : 'text-success');
         }
 
         // 계정 정보 로드 (로그인 방식 / 이메일 / 비번영역 표시 여부)

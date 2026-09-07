@@ -255,6 +255,19 @@
         });
         syncSaveButton();
 
+        // ── 외부 ID 안내 모달 ──
+        // <dialog>이라 Esc와 닫기 버튼(form method="dialog")은 브라우저가 처리한다
+        const helpDialog = $("#externalIdHelpDialog");
+
+        $("#externalIdHelp").addEventListener("click", () => helpDialog.showModal());
+
+        // 바깥(백드롭)을 눌러도 닫는다 - 클릭 대상이 dialog 자신이면 내용 밖이다
+        helpDialog.addEventListener("click", (event) => {
+            if (event.target === helpDialog) {
+                helpDialog.close();
+            }
+        });
+
         // ── 외부 ID 중복 확인 (ACT-AD-004) ──
         $("#checkButton").addEventListener("click", async () => {
             const value = externalId.value.trim();
@@ -292,7 +305,7 @@
             const input = document.createElement("input");
             input.type = "text";
             input.maxLength = 500;
-            input.placeholder = "TMDB 경로 또는 전체 URL";
+            input.placeholder = "이미지 주소 또는 TMDB 경로";
 
             const removeButton = document.createElement("button");
             removeButton.type = "button";

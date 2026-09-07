@@ -24,13 +24,15 @@
 			SELECT tt1.rnum no,
 			       tt1.content_id,
 			       tt1.genre_id,
-			       tt1.genre_name
+			       tt1.genre_name,
+			       tt1.external_genre_id
 			  FROM (
 					SELECT ROWNUM rnum, t1.*
 					  FROM (
 							SELECT cg.content_id,
 							       cg.genre_id,
-							       g.name AS genre_name
+							       g.name AS genre_name,
+							       g.external_genre_id
 							  FROM content_genre cg
 							  JOIN genre g ON cg.genre_id = g.genre_id
 							 <include refid="contentGenreWhere"/>
@@ -50,7 +52,8 @@
 	<select id="doSelectOne" parameterType="ContentGenreVO" resultType="ContentGenreVO">
 		SELECT cg.content_id,
 		       cg.genre_id,
-		       g.name AS genre_name
+		       g.name AS genre_name,
+		       g.external_genre_id
 		  FROM content_genre cg
 		  JOIN genre g ON cg.genre_id = g.genre_id
 		 WHERE cg.content_id = #{contentId}

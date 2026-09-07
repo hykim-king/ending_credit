@@ -19,9 +19,6 @@ import com.endit.service.NoticeService;
 @Transactional(readOnly = true)
 public class NoticeServiceImpl implements NoticeService {
 
-    private static final Set<String> ALLOWED_STATUS =
-            Set.of("DRAFT", "PUBLISHED", "HIDDEN");
-
     private static final Set<String> ALLOWED_IMPORTANT =
             Set.of("Y", "N");
 
@@ -226,29 +223,6 @@ public class NoticeServiceImpl implements NoticeService {
         }
 
         if (StringUtils.hasText(
-                search.getStatus()
-        )) {
-
-            String status =
-                    search.getStatus()
-                            .trim()
-                            .toUpperCase();
-
-            if (!ALLOWED_STATUS.contains(status)) {
-
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "상태는 DRAFT, PUBLISHED, HIDDEN만 가능합니다."
-                );
-            }
-
-            search.setStatus(status);
-
-        } else {
-            search.setStatus(null);
-        }
-
-        if (StringUtils.hasText(
                 search.getImportant()
         )) {
 
@@ -273,7 +247,6 @@ public class NoticeServiceImpl implements NoticeService {
             search.setImportant(null);
         }
     }
-
     private void normalizeAndValidateNotice(
             NoticeVO notice
     ) {

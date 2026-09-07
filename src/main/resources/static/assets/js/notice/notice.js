@@ -311,7 +311,7 @@
                     row.tabIndex = 0;
 
                     row.innerHTML = `
-                        <span>${notice.noticeId}</span>
+                        <span>${notice.displayNo ?? "-"}</span>
                         <span class="notice-title-cell"></span>
                         <span>${formatDate(notice.createdDt)}</span>
                         <span class="notice-view">${notice.viewCount ?? 0}</span>
@@ -387,6 +387,41 @@
                 }
             );
 
+        $("#publicDeleteButton")
+            ?.addEventListener(
+                "click",
+                async () => {
+                    const confirmed =
+                        window.confirm(
+                            "이 공지사항을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다."
+                        );
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    const deleteButton =
+                        $("#publicDeleteButton");
+
+                    deleteButton.disabled = true;
+                    deleteButton.textContent = "삭제 중...";
+
+                    try {
+                        await api(
+                            `/api/admin/notices/${noticeId}`,
+                            { method: "DELETE" }
+                        );
+
+                        location.href = "/notices";
+
+                    } catch (error) {
+                        window.alert(error.message);
+                        deleteButton.disabled = false;
+                        deleteButton.textContent = "공지 삭제";
+                    }
+                }
+            );
+
         try {
             const notice =
                 await api(
@@ -438,9 +473,6 @@
         const queryInput =
             $("#adminQuery");
 
-        const statusSelect =
-            $("#adminStatus");
-
         const importantSelect =
             $("#adminImportant");
 
@@ -451,9 +483,6 @@
 
         queryInput.value =
             initial.get("query") || "";
-
-        statusSelect.value =
-            initial.get("status") || "";
 
         importantSelect.value =
             initial.get("important") || "";
@@ -467,9 +496,6 @@
 
             const query =
                 params.get("query") || "";
-
-            const status =
-                params.get("status") || "";
 
             const important =
                 params.get("important") || "";
@@ -502,13 +528,6 @@
                 apiParams.set(
                     "query",
                     query
-                );
-            }
-
-            if (status) {
-                apiParams.set(
-                    "status",
-                    status
                 );
             }
 
@@ -555,10 +574,9 @@
                         tr.tabIndex = 0;
 
                         tr.innerHTML = `
-                            <td>${notice.noticeId}</td>
+                            <td>${notice.displayNo ?? "-"}</td>
                             <td class="notice-admin-title"></td>
                             <td>${notice.important}</td>
-                            <td>${notice.status}</td>
                             <td>${notice.viewCount ?? 0}</td>
                             <td class="notice-admin-writer"></td>
                             <td>${formatDate(notice.createdDt)}</td>
@@ -640,9 +658,6 @@
                 query:
                     queryInput.value.trim(),
 
-                status:
-                    statusSelect.value,
-
                 important:
                     importantSelect.value,
 
@@ -671,10 +686,6 @@
             }
         );
 
-        statusSelect.addEventListener(
-            "change",
-            search
-        );
 
         importantSelect.addEventListener(
             "change",

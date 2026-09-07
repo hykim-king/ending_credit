@@ -5,9 +5,13 @@ layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>홈</title>
+<title th:text="#{home.title}">홈</title>
 <style>
     /* 캐러셀 - detail.html 갤러리와 같은 골격(clip + track + translateX) */
+    /* 선반 사이 간격. 부트스트랩 mb-5(3rem)에서 3분의 1쯤 줄였다 */
+    .shelf-section {
+        margin-bottom: 2rem;
+    }
     .shelf-viewport {
         position: relative;
         /* 칸 수는 선반마다 다르다. 컨트롤러 값을 th:style로 덮어쓰며 여기 값은 폴백이다.
@@ -29,17 +33,16 @@ layout:decorate="~{layout/layout}">
     }
     .shelf-nav {
         position: absolute;
-        top: 50%;
+        /* 포스터 세로 중앙. JS가 포스터 실측 높이로 채우며, 못 채우면 칸 전체 기준으로 떨어진다 */
+        top: var(--nav-top, 50%);
         transform: translateY(-50%);
-        /* 접근성 원칙: 44px 터치 영역 */
+        /* 접근성 원칙의 44px 터치 영역은 유지하고, 보이는 원만 ::before로 작게 그린다 */
         width: 44px;
         height: 44px;
         border-radius: 50%;
         border: none;
-        background: rgba(255, 255, 255, .92);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
-        /* 버튼은 44px을 유지하고 아이콘만 작게 */
-        font-size: 15px;
+        background: none;
+        font-size: 13px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -48,12 +51,25 @@ layout:decorate="~{layout/layout}">
         cursor: pointer;
         z-index: 2;
     }
+    .shelf-nav::before {
+        content: "";
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, .92);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+    }
+    /* ::before가 위치를 잡으면 아이콘보다 나중에 칠해지므로, 아이콘도 올려서 원 위에 얹는다 */
+    .shelf-nav > i {
+        position: relative;
+    }
     /* 본문 폭(1200px)밖으로 나가면 잘리므로 안쪽에 겹쳐 둔다 */
     .shelf-prev {
-        left: 4px;
+        left: 0;
     }
     .shelf-next {
-        right: 4px;
+        right: 0;
     }
     /* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다.
        한 화면에 다 들어갈 때와, 넘어갈 쪽이 없을 때 둘 다 감춘다 */
@@ -131,16 +147,16 @@ layout:decorate="~{layout/layout}">
     <div layout:fragment="content">
 
         <p th:if="${#lists.isEmpty(shelves)}" class="text-muted">
-            아직 보여드릴 작품이 없습니다.
+            <span th:text="#{home.empty}">아직 보여드릴 작품이 없습니다.</span>
         </p>
 
         <!-- 선반은 여기서 한 벌만 그린다. 줄을 늘리려면 컨트롤러에서 addShelf를 한 번 더 부르면 된다 -->
-        <section class="mb-5" th:each="shelf : ${shelves}">
+        <section class="shelf-section" th:each="shelf : ${shelves}">
 
             <h5 class="mb-3" th:text="${shelf.title}">선반 제목</h5>
 
             <div class="shelf-viewport" th:style="|--per-view:${shelf.perView}|">
-                <button type="button" class="shelf-nav shelf-prev" aria-label="이전">
+                <button type="button" class="shelf-nav shelf-prev" th:aria-label="#{home.carousel.prev}" aria-label="이전">
                     <i class="bi bi-chevron-left"></i>
                 </button>
 
@@ -152,25 +168,25 @@ layout:decorate="~{layout/layout}">
                                 <div class="poster-wrap">
                                     <img th:if="${!#strings.isEmpty(movie.posterUrl)}"
                                          th:src="${movie.posterUrl}"
-                                         th:alt="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}"
+                                         th:alt="${@localeText.get(movie.titleKo, movie.titleOrg)}"
                                          loading="lazy"
                                          onerror="this.onerror = null; this.classList.add('poster-error');">
-                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty">이미지 없음</div>
+                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty" th:text="#{home.card.noImage}">이미지 없음</div>
 
                                     <!-- no는 인기 순 경로에서만 순위 숫자다(ContentServiceImpl.retrievePopular) -->
                                     <span th:if="${shelf.ranked}" class="rank-badge" th:text="${movie.no}">1</span>
                                 </div>
 
                                 <p class="card-title"
-                                   th:text="${movie.titleKo != null ? movie.titleKo : movie.titleOrg}">제목</p>
+                                   th:text="${@localeText.get(movie.titleKo, movie.titleOrg)}">제목</p>
 
-                                <!-- 연도는 매퍼가 YYYY-MM-DD로 내려주므로 앞 4자리만. 한쪽이 없으면 구분점도 지운다 -->
+                                <!-- 국가는 박스오피스 선반만 쓴다 -->
                                 <p class="card-meta"
-                                   th:with="year=${movie.releaseYear != null and #strings.length(movie.releaseYear) ge 4
-                                                   ? #strings.substring(movie.releaseYear, 0, 4) : ''}">
+                                   th:with="year=${movie.releaseYearLabel != null ? movie.releaseYearLabel : ''},
+                                            country=${shelf.countryShown ? movie.country : ''}">
                                     <span th:if="${!#strings.isEmpty(year)}" th:text="${year}">2024</span>
-                                    <span th:if="${!#strings.isEmpty(year) and !#strings.isEmpty(movie.country)}"> · </span>
-                                    <span th:if="${!#strings.isEmpty(movie.country)}" th:text="${movie.country}">국가</span>
+                                    <span th:if="${!#strings.isEmpty(year) and !#strings.isEmpty(country)}"> · </span>
+                                    <span th:if="${!#strings.isEmpty(country)}" th:text="${country}">국가</span>
                                 </p>
 
                             </a>
@@ -178,7 +194,7 @@ layout:decorate="~{layout/layout}">
                     </div>
                 </div>
 
-                <button type="button" class="shelf-nav shelf-next" aria-label="다음">
+                <button type="button" class="shelf-nav shelf-next" th:aria-label="#{home.carousel.next}" aria-label="다음">
                     <i class="bi bi-chevron-right"></i>
                 </button>
             </div>
@@ -218,9 +234,18 @@ layout:decorate="~{layout/layout}">
                     }
 
                     var startIndex = 0;
+                    var poster = shelf.querySelector('.poster-wrap');
 
                     function update() {
                         var itemWidth = items[0].getBoundingClientRect().width;
+
+                        // 화살표는 포스터 세로 중앙에 둔다 - 제목·연도까지 포함한 칸의 중앙은 포스터보다 아래로 내려간다.
+                        // 포스터 높이는 aspect-ratio로 정해지므로 이미지 로딩을 기다릴 필요가 없다
+                        if (poster) {
+                            shelf.style.setProperty('--nav-top',
+                                    (poster.getBoundingClientRect().height / 2) + 'px');
+                        }
+
                         track.style.transform = 'translateX(-' + (startIndex * (itemWidth + gap)) + 'px)';
                         // 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
                         prevBtn.hidden = startIndex === 0;

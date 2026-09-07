@@ -1,6 +1,7 @@
 package com.endit.controller;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,8 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,11 +36,9 @@ public class PersonViewController {
 	private static final int FIRST_PAGE_NO = 1;
 
 	// POL-033 역할 4종 표기 - person/detail.js가 같은 표를 들고 있다
-	private static final Map<String, String> ROLE_LABELS = Map.of(
-			"DIRECTOR", "감독",
-			"ACTOR", "배우",
-			"WRITER", "각본",
-			"PRODUCER", "제작");
+	// 라벨은 messages*.properties의 role.* 에 있다. ContentViewController와 같은 표라 문구가 갈리면 안 된다(F-01)
+	private static final List<String> ROLE_CODES = List.of("DIRECTOR", "ACTOR", "WRITER", "PRODUCER");
+	private static final String MSG_PREFIX_ROLE = "role.";
 
 	private static final String PERSON_DETAIL_VIEW = "person/detail";
 
@@ -45,16 +46,31 @@ public class PersonViewController {
 	private final ContentCreditService contentCreditService;
 	private final PersonLikeService personLikeService;
 	private final CurrentMemberProvider currentMemberProvider;
+	private final MessageSource messageSource;
 
 	public PersonViewController(
 			PersonService personService,
 			ContentCreditService contentCreditService,
 			PersonLikeService personLikeService,
-			CurrentMemberProvider currentMemberProvider) {
+			CurrentMemberProvider currentMemberProvider,
+			MessageSource messageSource) {
 		this.personService = personService;
 		this.contentCreditService = contentCreditService;
 		this.personLikeService = personLikeService;
 		this.currentMemberProvider = currentMemberProvider;
+		this.messageSource = messageSource;
+	}
+
+	// 화면이 코드→라벨로 찾아 쓰므로 맵으로 넘긴다. ContentViewController와 같은 표라 순서까지 맞춘다
+	private Map<String, String> toRoleLabels() {
+		Map<String, String> labels = new LinkedHashMap<>();
+
+		for (String code : ROLE_CODES) {
+			labels.put(code, messageSource.getMessage(MSG_PREFIX_ROLE + code, null,
+					MSG_PREFIX_ROLE + code, LocaleContextHolder.getLocale()));
+		}
+
+		return Collections.unmodifiableMap(labels);
 	}
 
 	// P-01 인물 상세 화면
@@ -71,7 +87,7 @@ public class PersonViewController {
 
 		model.addAttribute("notFound", false);
 		model.addAttribute("person", person);
-		model.addAttribute("roleLabels", ROLE_LABELS);
+		model.addAttribute("roleLabels", toRoleLabels());
 		model.addAttribute("pageSize", FILMOGRAPHY_PAGE_SIZE);
 
 		addFilmography(personId, model);
@@ -106,9 +122,11 @@ public class PersonViewController {
 	// P-01 히어로 역할 요약("감독, 배우") - 첫 페이지 크레딧에서만 모으므로 그 밖의 역할은 빠진다
 	private String toRoleSummary(List<ContentCreditVO> filmography) {
 		Set<String> labels = new LinkedHashSet<>();
+		// 라벨은 로케일마다 다르므로 한 번 만들어 돌려 쓴다
+		Map<String, String> roleLabels = toRoleLabels();
 
 		for (ContentCreditVO credit : filmography) {
-			String label = ROLE_LABELS.get(credit.getRole());
+			String label = roleLabels.get(credit.getRole());
 
 			// POL-033 밖의 값이 들어와 있으면 라벨을 만들지 않는다
 			if (label != null) {

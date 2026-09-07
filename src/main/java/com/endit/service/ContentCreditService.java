@@ -88,6 +88,25 @@ public interface ContentCreditService {
 	/**
 	 *
 	 * <pre>
+	 * Method Name : getTopPerson
+	 * Description : contentIds 안에서 해당 역할 크레딧이 가장 많은 인물 1명 - "화제의 감독·배우" 선별용.
+	 *               모수를 호출부가 넘기는 이유는 화제성의 기준이 화면마다 다르기 때문이다.
+	 *               H-01 홈은 박스오피스 순위 목록(ContentService.retrieveRank)을 그대로 넘긴다.
+	 *               동수는 상위작 참여자 → person_id 순으로 깨므로 같은 데이터면 결과가 늘 같다.
+	 *               contentIds가 비었으면 조회하지 않고 null - 순위가 아직 안 채워진 기동 직후가 그렇다.
+	 *               role이 POL-033 네 역할 밖이면 IllegalArgumentException.
+	 *
+	 * </pre>
+	 *
+	 * @param role
+	 * @param contentIds
+	 * @return ContentCreditVO (personId·nameKo만 채워진다. 해당 역할이 없으면 null)
+	 */
+	ContentCreditVO getTopPerson(String role, List<Integer> contentIds);
+
+	/**
+	 *
+	 * <pre>
 	 * Method Name : create
 	 * Description : 콘텐츠에 크레딧(배우 또는 감독) 등록
 	 *               역할이 비었거나 네 역할 밖이면 IllegalArgumentException.
