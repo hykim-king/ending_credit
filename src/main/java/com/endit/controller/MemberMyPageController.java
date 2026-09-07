@@ -154,7 +154,7 @@ public class MemberMyPageController {
 
 		model.addAttribute("memberId", memberId);
 
-		return "member/profile";
+		return "member/userProfile";
 	}
 
 	/** 공개 프로필의 회원 기록 경로를 기존 기록 화면으로 연결한다. */
