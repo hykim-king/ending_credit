@@ -1,5 +1,7 @@
 package com.endit.service;
 
+import static com.endit.support.DatabaseTestFixtures.insertMember;
+import static com.endit.support.DatabaseTestFixtures.insertPerson;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -15,14 +17,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonLikeVO;
 import com.endit.domain.PersonVO;
-import com.endit.mapper.MemberMapper;
-import com.endit.mapper.PersonMapper;
 
 /**
  * <pre>
@@ -34,6 +35,7 @@ import com.endit.mapper.PersonMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 05. jinyoung    회원·인물 부모 픽스처를 운영 시퀀스와 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -49,10 +51,7 @@ class PersonLikeServiceTest {
 	private PersonLikeService personLikeService;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
-	private PersonMapper personMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	private int memberId;
 	private int personId;
@@ -261,10 +260,7 @@ class PersonLikeServiceTest {
 		member.setIntroduction("인물 좋아요 Service 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
 	/**
@@ -282,10 +278,8 @@ class PersonLikeServiceTest {
 				null,
 				null);
 
-		assertEquals(1, personMapper.doSave(person));
-		assertTrue(person.getPersonId() > 0);
-
-		return person.getPersonId();
+		// PERSON 생성 자체는 대상이 아니므로 PERSON 시퀀스 상태와 분리한다.
+		return insertPerson(jdbcTemplate, person).getPersonId();
 	}
 
 	/**

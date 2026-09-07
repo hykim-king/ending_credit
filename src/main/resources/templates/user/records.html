@@ -6,6 +6,7 @@ Modification History
 2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
 2026. 9. 05. jinyoung - 본인 코멘트 카드와 수정 모달 추가
 2026. 9. 05. jinyoung - 기존 컬렉션 화면과 동일한 코멘트 삭제 확인 모달 추가
+2026. 9. 07. jinyoung - 회원·컬렉션 CSS 경로 정리
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -14,9 +15,9 @@ Modification History
 <head>
     <title th:text="${member.nickname + '님의 기록'}">회원 기록 | ENDIT</title>
 
-    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/list.css}">
     <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
-    <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/member/member-activity.css}">
 
     <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
     <script th:src="@{/assets/js/user/member-records.js}" defer></script>

@@ -37,8 +37,8 @@ import com.endit.service.MemberService;
 @RequestMapping("/members/likes")
 public class PersonLikeViewController {
 
-	private static final String TYPE_PERSON = "person";
-	private static final String TYPE_COLLECTION = "collection";
+	private static final String TYPE_PERSON = "person";			// 
+	private static final String TYPE_COLLECTION = "collection";	//
 
 	private final MemberService memberService;
 

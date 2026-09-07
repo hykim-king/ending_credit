@@ -1,5 +1,7 @@
 package com.endit.controller;
 
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -14,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,9 +32,8 @@ import com.endit.domain.ContentVO;
 import com.endit.domain.MemberContentVO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.RatingRequest;
-import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberContentMapper;
-import com.endit.mapper.MemberMapper;
+import com.endit.support.SecurityTestContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -43,6 +46,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 05. jinyoung    로그인 principal 및 시퀀스 독립 부모 픽스처 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -55,7 +59,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @DisplayName("MemberContentController 통합 테스트")
 class MemberContentControllerTest {
 
-	private static final String MEMBER_HEADER = "X-Member-Id";
 	private static final int MISSING_CONTENT_ID = Integer.MAX_VALUE;
 
 	@Autowired
@@ -68,18 +71,23 @@ class MemberContentControllerTest {
 	private MemberContentMapper memberContentMapper;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
-	private ContentMapper contentMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	private int memberId;
 	private int contentId;
 
 	@BeforeEach
 	void setUp() {
-		memberId = createMemberId();
+		MemberVO member = createMember();
+		memberId = member.getMemberId().intValue();
+		SecurityTestContext.login(member);
 		contentId = createContentId();
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		// SecurityContext는 ThreadLocal이므로 테스트마다 명시적으로 비운다.
+		SecurityTestContext.clear();
 	}
 
 	@Test
@@ -87,8 +95,8 @@ class MemberContentControllerTest {
 	void retrieveRatings() throws Exception {
 		saveMemberContent(4, "N");
 
-		// 평가 기록이 있는 콘텐츠와 페이징 정보를 공개 프로필 API에서 반환한다.
-		mockMvc.perform(get("/api/users/{memberId}/ratings", memberId)
+		// URL에 회원 번호가 없는 본인 전용 API가 로그인 회원의 기록만 반환해야 한다.
+		mockMvc.perform(get("/api/members/ratings")
 					.param("page", "1")
 					.param("size", "12")
 					.param("sort", "latest"))
@@ -110,7 +118,7 @@ class MemberContentControllerTest {
 		saveMemberContent(null, "Y");
 
 		// 보고싶어요 상태가 Y인 콘텐츠와 페이징 정보를 반환한다.
-		mockMvc.perform(get("/api/users/{memberId}/watchlist", memberId)
+		mockMvc.perform(get("/api/members/watchlist")
 					.param("page", "1")
 					.param("size", "12")
 					.param("sort", "latest"))
@@ -127,9 +135,8 @@ class MemberContentControllerTest {
 	void saveRating() throws Exception {
 		RatingRequest request = createRatingRequest(4);
 
-		// 임시 회원 헤더와 별점을 전달하면 신규 활동 기록을 생성한다.
+		// 요청이 전달한 회원 번호가 아니라 SecurityContext의 로그인 회원으로 저장한다.
 		mockMvc.perform(put("/api/movies/{contentId}/rating", contentId)
-					.header(MEMBER_HEADER, memberId)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isOk())
@@ -152,7 +159,6 @@ class MemberContentControllerTest {
 
 		// 동일 회원과 콘텐츠의 기존 별점을 새로운 점수로 변경한다.
 		mockMvc.perform(put("/api/movies/{contentId}/rating", contentId)
-					.header(MEMBER_HEADER, memberId)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isOk())
@@ -170,8 +176,7 @@ class MemberContentControllerTest {
 		saveMemberContent(4, "N");
 
 		// 별점만 존재하는 기록을 해제하면 빈 MEMBER_CONTENT 행도 삭제된다.
-		mockMvc.perform(delete("/api/movies/{contentId}/rating", contentId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(delete("/api/movies/{contentId}/rating", contentId))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
@@ -181,9 +186,8 @@ class MemberContentControllerTest {
 	@Test
 	@DisplayName("보고싶어요 등록 결과 반환")
 	void addWatchlist() throws Exception {
-		// 본문 없이 임시 회원 헤더와 콘텐츠 번호만으로 보고싶어요를 등록한다.
-		mockMvc.perform(post("/api/watchlist/{contentId}", contentId)
-					.header(MEMBER_HEADER, memberId))
+		// 본문 없이 로그인 회원과 콘텐츠 번호만으로 보고싶어요를 등록한다.
+		mockMvc.perform(post("/api/watchlist/{contentId}", contentId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.memberId").value(memberId))
 				.andExpect(jsonPath("$.contentId").value(contentId))
@@ -201,8 +205,7 @@ class MemberContentControllerTest {
 		saveMemberContent(null, "Y");
 
 		// 보고싶어요만 존재하는 기록을 해제하면 빈 MEMBER_CONTENT 행도 삭제된다.
-		mockMvc.perform(delete("/api/watchlist/{contentId}", contentId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(delete("/api/watchlist/{contentId}", contentId))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
@@ -216,7 +219,6 @@ class MemberContentControllerTest {
 
 		// Service의 별점 범위 예외가 회원 콘텐츠용 오류 응답으로 변환되어야 한다.
 		mockMvc.perform(put("/api/movies/{contentId}/rating", contentId)
-					.header(MEMBER_HEADER, memberId)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest())
@@ -226,11 +228,15 @@ class MemberContentControllerTest {
 	}
 
 	@Test
-	@DisplayName("회원 헤더가 없으면 400 반환")
+	@DisplayName("Controller 직접 호출에서 로그인 정보가 없으면 409 반환")
 	void missingMember() throws Exception {
-		// 임시 로그인 단계에서도 등록 요청에는 회원 식별 헤더가 반드시 필요하다.
+		// 보안 필터를 끈 Controller 테스트에서는 LoginMemberHelper 예외를 직접 검증한다.
+		// 실제 애플리케이션 요청은 SecurityConfig가 이보다 먼저 비로그인 접근을 차단한다.
+		SecurityTestContext.clear();
 		mockMvc.perform(post("/api/watchlist/{contentId}", contentId))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.id").value("409"))
+				.andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
 	}
 
 	@Test
@@ -241,7 +247,6 @@ class MemberContentControllerTest {
 		// 존재하지 않는 콘텐츠 등록으로 발생한 외래 키 예외를 400으로 변환한다.
 		mockMvc.perform(put("/api/movies/{contentId}/rating",
 					MISSING_CONTENT_ID)
-					.header(MEMBER_HEADER, memberId)
 					.contentType(MediaType.APPLICATION_JSON)
 					.content(objectMapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest())
@@ -285,7 +290,7 @@ class MemberContentControllerTest {
 	}
 
 	/** MEMBER_CONTENT 외래 키를 만족하는 테스트 회원 생성 */
-	private int createMemberId() {
+	private MemberVO createMember() {
 		String token = createToken();
 
 		MemberVO member = new MemberVO();
@@ -295,10 +300,7 @@ class MemberContentControllerTest {
 		member.setIntroduction("회원 콘텐츠 Controller 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member);
 	}
 
 	/** MEMBER_CONTENT 외래 키를 만족하는 테스트 콘텐츠 생성 */
@@ -319,9 +321,8 @@ class MemberContentControllerTest {
 				"https://example.com/backdrop.jpg",
 				null);
 
-		assertEquals(1, contentMapper.doSave(content));
-
-		return content.getContentId();
+		// CONTENT는 회원 활동 테스트의 부모 데이터이므로 CONTENT 시퀀스를 사용하지 않는다.
+		return insertContent(jdbcTemplate, content).getContentId();
 	}
 
 	/** DB 고유 제약조건 충돌 방지용 문자열 생성 */

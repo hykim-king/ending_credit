@@ -2,6 +2,8 @@ package com.endit.controller;
 
 import static com.endit.support.CollectionRequestFixtures.createRequest;
 import static com.endit.support.CollectionRequestFixtures.updateRequest;
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,13 +20,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,8 +40,7 @@ import com.endit.domain.ContentVO;
 import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionItemMapper;
 import com.endit.mapper.CollectionMapper;
-import com.endit.mapper.ContentMapper;
-import com.endit.mapper.MemberMapper;
+import com.endit.support.SecurityTestContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -55,6 +58,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 2026. 8. 31. jinyoung    요청 DTO 생성 코드를 공통 테스트 픽스처로 분리
  * 2026. 9. 02. jinyoung    현재 회원 소유 비공개 컬렉션 목록 응답 검증
  * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
+ * 2026. 9. 05. jinyoung    SecurityContext 인증 및 시퀀스 독립 부모 픽스처 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -82,20 +86,30 @@ class CollectionControllerTest {
 	private CollectionItemMapper collectionItemMapper;
 
 	@Autowired
-	private ContentMapper contentMapper;
+	private JdbcTemplate jdbcTemplate;
 
-	@Autowired
-	private MemberMapper memberMapper;
+	private int authenticatedMemberId;
 
-	@Value("${endit.dev-auth.member-id}")
-	private long authenticatedMemberId;
+	@BeforeEach
+	void setUpAuthentication() {
+		// 삭제된 개발 인증 설정값 대신 실제 LoginMemberHelper가 읽는 인증 객체를 만든다.
+		MemberVO member = createMember();
+		authenticatedMemberId = member.getMemberId().intValue();
+		SecurityTestContext.login(member);
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		// 같은 실행 스레드를 재사용하는 다음 테스트에 인증 회원이 남지 않게 한다.
+		SecurityTestContext.clear();
+	}
 
 	/** 실제 DB 목록과 페이징 정보의 HTTP 응답 검증 */
 	@Test
 	@DisplayName("컬렉션 목록과 페이징 정보 반환")
 	void retrieve() throws Exception {
 		CollectionVO collection = createCollectionForMemberWithItem(
-				Math.toIntExact(authenticatedMemberId), "HTTP 목록 컬렉션", "Y");
+				authenticatedMemberId, "HTTP 목록 컬렉션", "Y");
 
 		mockMvc.perform(get("/api/collections")
 					.param("pageNo", "1")
@@ -121,7 +135,7 @@ class CollectionControllerTest {
 	void retrieveIncludesOwnPrivateCollection() throws Exception {
 		String title = "HTTP 전체 비공개 포함-" + UUID.randomUUID();
 		CollectionVO privateCollection = createCollectionForMemberWithItem(
-				Math.toIntExact(authenticatedMemberId), title, "N");
+				authenticatedMemberId, title, "N");
 
 		mockMvc.perform(get("/api/collections")
 					.param("searchDiv", "10")
@@ -142,7 +156,7 @@ class CollectionControllerTest {
 	void retrieveExcludesEmptyCollection() throws Exception {
 		String title = "HTTP 빈 컬렉션 제외-" + UUID.randomUUID();
 		createCollectionForMember(
-				Math.toIntExact(authenticatedMemberId), title, "Y");
+				authenticatedMemberId, title, "Y");
 
 		mockMvc.perform(get("/api/collections")
 					.param("searchDiv", "10")
@@ -156,7 +170,7 @@ class CollectionControllerTest {
 	@Test
 	@DisplayName("본인 U-05는 공개와 비공개 컬렉션 모두 반환")
 	void retrieveByMemberAsOwner() throws Exception {
-		int ownerId = Math.toIntExact(authenticatedMemberId);
+		int ownerId = authenticatedMemberId;
 		String title = "HTTP 본인 U05-" + UUID.randomUUID();
 		createCollectionForMember(ownerId, title, "Y");
 		createCollectionForMember(ownerId, title, "N");
@@ -345,7 +359,7 @@ class CollectionControllerTest {
 	/** 외래 키를 만족하는 회원과 컬렉션을 현재 트랜잭션에 등록 */
 	private CollectionVO createSavedCollection(String title) {
 		return createCollectionForMember(
-				Math.toIntExact(authenticatedMemberId), title, "Y");
+				authenticatedMemberId, title, "Y");
 	}
 
 	/** 지정한 회원 소유 컬렉션을 실제 DB에 등록 */
@@ -391,12 +405,17 @@ class CollectionControllerTest {
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
-		assertEquals(1, contentMapper.doSave(content));
-		return content;
+		// CONTENT는 컬렉션 테스트의 부모 픽스처이므로 CONTENT 시퀀스와 분리해 등록한다.
+		return insertContent(jdbcTemplate, content);
 	}
 
 	/** 외래 키를 만족하는 테스트 회원을 현재 트랜잭션에 등록 */
 	private int createMemberId() {
+		return createMember().getMemberId().intValue();
+	}
+
+	/** 인증 회원 또는 접근 정책 비교용 테스트 회원을 등록 */
+	private MemberVO createMember() {
 		String token = UUID.randomUUID().toString().replace("-", "");
 		MemberVO member = new MemberVO();
 		member.setEmail("collection-api-" + token + "@test.local");
@@ -404,9 +423,7 @@ class CollectionControllerTest {
 		member.setNickname("컬렉션API" + token.substring(0, 8));
 		member.setIntroduction("컬렉션 API 통합 테스트 회원");
 		member.setRole("USER");
-		assertEquals(1, memberMapper.insertMember(member));
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member);
 	}
 
 	/** 테스트에 사용할 컬렉션 정보 생성 */

@@ -6,6 +6,7 @@ Modification History
 2026. 9. 01. jinyoung - 등록·수정 화면과 공개 정책 UI 적용
 2026. 9. 02. jinyoung - 작품 추가·제거 흐름 개선
 2026. 9. 05. jinyoung - 수정 화면 상단에 컬렉션 삭제 버튼·확인 모달 추가
+2026. 9. 07. jinyoung - 컬렉션 CSS 파일명 정리
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -14,7 +15,7 @@ Modification History
 <head>
     <title th:text="${formMode == 'update' ? '컬렉션 수정' : '새 컬렉션'}">새 컬렉션</title>
     <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
-    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-form.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/form.css}">
     <script th:src="@{/assets/js/collection/collection-form.js}" defer></script>
 </head>
 <body>

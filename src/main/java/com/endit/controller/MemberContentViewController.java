@@ -115,6 +115,7 @@ public class MemberContentViewController {
 	 * @return 지원하는 탭 이름 또는 기본값 {@code ratings}
 	 */
 	private String normalizeTab(String tab) {
+
 		if (tab != null) {
 			String normalizedTab = tab.trim().toLowerCase(Locale.ROOT);
 

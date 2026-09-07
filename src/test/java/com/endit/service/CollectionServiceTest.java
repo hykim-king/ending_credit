@@ -2,6 +2,8 @@ package com.endit.service;
 
 import static com.endit.support.CollectionRequestFixtures.createRequest;
 import static com.endit.support.CollectionRequestFixtures.updateRequest;
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -18,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.auth.ForbiddenOperationException;
@@ -32,8 +35,6 @@ import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionItemMapper;
 import com.endit.mapper.CollectionLikeMapper;
 import com.endit.mapper.CollectionMapper;
-import com.endit.mapper.ContentMapper;
-import com.endit.mapper.MemberMapper;
 
 /**
  * <pre>
@@ -53,6 +54,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 9. 02. jinyoung    현재 회원의 목록 좋아요 여부 검증
  * 2026. 9. 02. jinyoung    전체 목록의 빈 컬렉션 제외 정책 검증
  * 2026. 9. 03. jinyoung    회원별 컬렉션 및 공개 범위 건수 조회 검증 추가
+ * 2026. 9. 05. jinyoung    대상 외 부모 데이터를 운영 시퀀스와 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -70,9 +72,6 @@ class CollectionServiceTest {
 	private CollectionService collectionService;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
 	private CollectionMapper collectionMapper;
 
 	@Autowired
@@ -82,7 +81,7 @@ class CollectionServiceTest {
 	private CollectionLikeMapper collectionLikeMapper;
 
 	@Autowired
-	private ContentMapper contentMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	/** 실제 DB 목록 조회와 기본 페이징값 및 전체 건수 설정 검증 */
 	@Test
@@ -550,10 +549,7 @@ class CollectionServiceTest {
 		member.setIntroduction("컬렉션 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
 	/** 작품 스냅샷 테스트에 사용할 콘텐츠 등록 */
@@ -562,9 +558,8 @@ class CollectionServiceTest {
 		ContentVO content = new ContentVO(0, "COLLECTION_" + token, "컬렉션 작품 " + titleSuffix,
 				"Collection Content " + titleSuffix, "컬렉션 작품 스냅샷 테스트", "2026-08-31", 120, "KR",
 				"https://example.com/poster.jpg", "https://example.com/backdrop.jpg", null);
-		assertEquals(1, contentMapper.doSave(content));
-
-		return content;
+		// CONTENT 생성 자체는 테스트 대상이 아니므로 CONTENT 시퀀스 상태에 의존하지 않는다.
+		return insertContent(jdbcTemplate, content);
 	}
 
 	/** 컬렉션 작품 복합 키 생성 */

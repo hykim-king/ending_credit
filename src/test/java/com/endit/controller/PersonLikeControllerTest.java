@@ -1,5 +1,7 @@
 package com.endit.controller;
 
+import static com.endit.support.DatabaseTestFixtures.insertMember;
+import static com.endit.support.DatabaseTestFixtures.insertPerson;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -13,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,15 +23,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonLikeVO;
 import com.endit.domain.PersonVO;
-import com.endit.mapper.MemberMapper;
 import com.endit.mapper.PersonLikeMapper;
-import com.endit.mapper.PersonMapper;
+import com.endit.support.SecurityTestContext;
 
 /**
  * <pre>
@@ -40,6 +43,7 @@ import com.endit.mapper.PersonMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 05. jinyoung    로그인 principal 및 시퀀스 독립 부모 픽스처 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -52,7 +56,6 @@ import com.endit.mapper.PersonMapper;
 @DisplayName("PersonLikeController 통합 테스트")
 class PersonLikeControllerTest {
 
-	private static final String MEMBER_HEADER = "X-Member-Id";
 	private static final int MISSING_PERSON_ID = Integer.MAX_VALUE;
 
 	@Autowired
@@ -62,18 +65,22 @@ class PersonLikeControllerTest {
 	private PersonLikeMapper personLikeMapper;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
-	private PersonMapper personMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	private int memberId;
 	private int personId;
 
 	@BeforeEach
 	void setUp() {
-		memberId = createMemberId();
+		MemberVO member = createMember();
+		memberId = member.getMemberId().intValue();
+		SecurityTestContext.login(member);
 		personId = createPersonId();
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		SecurityTestContext.clear();
 	}
 
 	@Test
@@ -81,8 +88,8 @@ class PersonLikeControllerTest {
 	void retrieveLikes() throws Exception {
 		savePersonLike();
 
-		// type=person인 공개 프로필 요청에 인물 정보와 페이징 정보를 반환한다.
-		mockMvc.perform(get("/api/users/{memberId}/likes", memberId)
+		// URL에 회원 번호가 없는 본인 전용 API가 로그인 회원의 좋아요만 반환해야 한다.
+		mockMvc.perform(get("/api/members/likes")
 					.param("type", "person")
 					.param("page", "1")
 					.param("size", "12")
@@ -105,7 +112,7 @@ class PersonLikeControllerTest {
 	@DisplayName("좋아요가 없으면 빈 목록 반환")
 	void retrieveEmpty() throws Exception {
 		// 좋아요가 없는 회원도 null이 아닌 빈 items와 전체 건수 0을 반환한다.
-		mockMvc.perform(get("/api/users/{memberId}/likes", memberId)
+		mockMvc.perform(get("/api/members/likes")
 					.param("type", "person")
 					.param("page", "1")
 					.param("size", "12")
@@ -118,9 +125,8 @@ class PersonLikeControllerTest {
 	@Test
 	@DisplayName("인물 좋아요 등록 결과 반환")
 	void addLike() throws Exception {
-		// 임시 회원 헤더와 인물 번호를 전달하면 좋아요를 등록한다.
-		mockMvc.perform(post("/api/people/{personId}/likes", personId)
-					.header(MEMBER_HEADER, memberId))
+		// 요청 헤더가 아니라 SecurityContext에 로그인한 회원으로 좋아요를 등록한다.
+		mockMvc.perform(post("/api/people/{personId}/likes", personId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.memberId").value(memberId))
 				.andExpect(jsonPath("$.personId").value(personId))
@@ -135,16 +141,14 @@ class PersonLikeControllerTest {
 	@DisplayName("좋아요 중복 등록 허용")
 	void addLikeAgain() throws Exception {
 		// 최초 요청으로 좋아요를 등록하고 DB에서 생성된 등록 일시를 확인한다.
-		mockMvc.perform(post("/api/people/{personId}/likes", personId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(post("/api/people/{personId}/likes", personId))
 				.andExpect(status().isOk());
 
 		PersonLikeVO first = selectPersonLike();
 		assertNotNull(first);
 
 		// 같은 요청을 반복하면 중복 INSERT 없이 기존 좋아요 정보를 반환한다.
-		mockMvc.perform(post("/api/people/{personId}/likes", personId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(post("/api/people/{personId}/likes", personId))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.memberId").value(memberId))
 				.andExpect(jsonPath("$.personId").value(personId))
@@ -162,8 +166,7 @@ class PersonLikeControllerTest {
 		savePersonLike();
 
 		// 등록된 인물 좋아요를 해제하면 복합 PK 행이 삭제된다.
-		mockMvc.perform(delete("/api/people/{personId}/likes", personId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(delete("/api/people/{personId}/likes", personId))
 				.andExpect(status().isNoContent())
 				.andExpect(content().string(""));
 
@@ -176,13 +179,11 @@ class PersonLikeControllerTest {
 		savePersonLike();
 
 		// 최초 요청으로 좋아요를 해제한다.
-		mockMvc.perform(delete("/api/people/{personId}/likes", personId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(delete("/api/people/{personId}/likes", personId))
 				.andExpect(status().isNoContent());
 
 		// 이미 해제된 요청을 반복해도 동일한 최종 상태이므로 204를 반환한다.
-		mockMvc.perform(delete("/api/people/{personId}/likes", personId)
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(delete("/api/people/{personId}/likes", personId))
 				.andExpect(status().isNoContent());
 
 		assertNull(selectPersonLike());
@@ -192,8 +193,7 @@ class PersonLikeControllerTest {
 	@DisplayName("잘못된 인물 번호는 400으로 변환")
 	void invalidPerson() throws Exception {
 		// Service의 인물 번호 검증 예외를 인물 좋아요용 오류 응답으로 변환한다.
-		mockMvc.perform(post("/api/people/0/likes")
-					.header(MEMBER_HEADER, memberId))
+		mockMvc.perform(post("/api/people/0/likes"))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"))
 				.andExpect(jsonPath("$.message")
@@ -201,11 +201,14 @@ class PersonLikeControllerTest {
 	}
 
 	@Test
-	@DisplayName("회원 헤더가 없으면 400 반환")
+	@DisplayName("Controller 직접 호출에서 로그인 정보가 없으면 409 반환")
 	void missingMember() throws Exception {
-		// 임시 로그인 단계에서도 좋아요 등록에는 회원 식별 헤더가 필요하다.
+		// 필터를 제외한 이 테스트에서는 LoginMemberHelper가 발생시키는 예외 응답을 확인한다.
+		SecurityTestContext.clear();
 		mockMvc.perform(post("/api/people/{personId}/likes", personId))
-				.andExpect(status().isBadRequest());
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.id").value("409"))
+				.andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
 	}
 
 	@Test
@@ -213,8 +216,7 @@ class PersonLikeControllerTest {
 	void missingPerson() throws Exception {
 		// 존재하지 않는 인물 등록으로 발생한 외래 키 예외를 400으로 변환한다.
 		mockMvc.perform(post("/api/people/{personId}/likes",
-					MISSING_PERSON_ID)
-					.header(MEMBER_HEADER, memberId))
+					MISSING_PERSON_ID))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.id").value("400"));
 	}
@@ -237,6 +239,11 @@ class PersonLikeControllerTest {
 
 	/** PERSON_LIKE 외래 키를 만족하는 테스트 회원 생성 */
 	private int createMemberId() {
+		return createMember().getMemberId().intValue();
+	}
+
+	/** 좋아요 소유자 또는 비교 대상 테스트 회원 생성 */
+	private MemberVO createMember() {
 		String token = createToken();
 
 		MemberVO member = new MemberVO();
@@ -246,10 +253,7 @@ class PersonLikeControllerTest {
 		member.setIntroduction("인물 좋아요 Controller 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member);
 	}
 
 	/** PERSON_LIKE 외래 키와 목록 JOIN을 만족하는 테스트 인물 생성 */
@@ -266,9 +270,8 @@ class PersonLikeControllerTest {
 				null,
 				null);
 
-		assertEquals(1, personMapper.doSave(person));
-
-		return person.getPersonId();
+		// PERSON는 좋아요 테스트의 부모 데이터이므로 PERSON 시퀀스에 의존하지 않는다.
+		return insertPerson(jdbcTemplate, person).getPersonId();
 	}
 
 	/** 회원과 인물의 고유 제약조건 충돌 방지용 문자열 생성 */

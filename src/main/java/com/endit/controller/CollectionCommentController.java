@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.endit.cmn.DTO;
 import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
-import com.endit.domain.CollectionCommentCreateRequest;
 import com.endit.domain.UserCommentVO;
 import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionService;
@@ -38,6 +37,7 @@ import com.endit.service.UserCommentService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 9. 05. jinyoung    최초 생성
+ * 2026. 9. 07. jinyoung    댓글 등록 요청 타입을 Controller 내부 record로 정리
  * ------------------------------------------------------------
  * </pre>
  */
@@ -45,11 +45,17 @@ import com.endit.service.UserCommentService;
 @RequestMapping("/api/collections/{collectionId}/comments")
 public class CollectionCommentController {
 
-	private static final String SEARCH_COLLECTION = "30";
-	private static final String SORT_LIKES = "likes";
-	private static final int DEFAULT_PAGE_SIZE = 10;
-	private static final int MAX_PAGE_SIZE = 50;
-	private static final int MAX_COMMENT_LENGTH = 1000;
+	private static final String SEARCH_COLLECTION = "30";	//
+	private static final String SORT_LIKES = "likes";		//
+	private static final int DEFAULT_PAGE_SIZE = 10;		//
+	private static final int MAX_PAGE_SIZE = 50;			//
+	private static final int MAX_COMMENT_LENGTH = 1000;		//
+
+	/** 컬렉션 댓글 등록 요청 본문 */
+	public record CommentCreateRequest(
+			String commentDetail,
+			String spoiler) {
+	}
 
 	private final CollectionService collectionService;
 	private final UserCommentService userCommentService;
@@ -92,7 +98,7 @@ public class CollectionCommentController {
 	@PostMapping
 	public ResponseEntity<UserCommentVO> create(
 			@PathVariable int collectionId,
-			@RequestBody CollectionCommentCreateRequest request) {
+			@RequestBody CommentCreateRequest request) {
 
 		long memberId = LoginMemberHelper.getMemberId();
 		collectionService.get(collectionId, OptionalLong.of(memberId));
@@ -147,13 +153,13 @@ public class CollectionCommentController {
 	}
 
 	/** 댓글 본문 필수값과 최대 길이를 검증한다. */
-	private static String normalizeCommentDetail(CollectionCommentCreateRequest request) {
-		if (request == null || request.getCommentDetail() == null
-				|| request.getCommentDetail().isBlank()) {
+	private static String normalizeCommentDetail(CommentCreateRequest request) {
+		if (request == null || request.commentDetail() == null
+				|| request.commentDetail().isBlank()) {
 			throw new IllegalArgumentException("댓글 내용을 입력해 주세요.");
 		}
 
-		String normalized = request.getCommentDetail().trim();
+		String normalized = request.commentDetail().trim();
 		if (normalized.length() > MAX_COMMENT_LENGTH) {
 			throw new IllegalArgumentException(
 					"댓글은 최대 " + MAX_COMMENT_LENGTH + "자까지 작성 가능해요.");
@@ -163,8 +169,8 @@ public class CollectionCommentController {
 	}
 
 	/** 스포일러 여부를 Y 또는 N으로 정규화한다. */
-	private static String normalizeSpoiler(CollectionCommentCreateRequest request) {
-		return request != null && UserCommentVO.SPOILER_YES.equalsIgnoreCase(request.getSpoiler())
+	private static String normalizeSpoiler(CommentCreateRequest request) {
+		return request != null && UserCommentVO.SPOILER_YES.equalsIgnoreCase(request.spoiler())
 				? UserCommentVO.SPOILER_YES
 				: UserCommentVO.SPOILER_NO;
 	}

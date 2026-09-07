@@ -40,6 +40,7 @@ public class CollectionViewController {
 	/** 컬렉션 등록 화면 */
 	@GetMapping("/new")
 	public String createForm(Model model) {
+		
 		// 등록과 수정이 같은 form.html을 사용하므로 JavaScript가 구분할 mode를 전달한다.
 		model.addAttribute("formMode", "create");
 		model.addAttribute("collectionId", 0);

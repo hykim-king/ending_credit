@@ -1,5 +1,7 @@
 package com.endit.service;
 
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -14,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.auth.ForbiddenOperationException;
@@ -24,9 +27,7 @@ import com.endit.domain.ContentVO;
 import com.endit.domain.MemberContentVO;
 import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionMapper;
-import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberContentMapper;
-import com.endit.mapper.MemberMapper;
 
 /**
  * <pre>
@@ -41,6 +42,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 8. 26. jinyoung    실제 Spring Bean과 DB 기반 통합 테스트로 변경
  * 2026. 8. 29. jinyoung    인증 회원 및 컬렉션 작품 소유권 검증 추가
  * 2026. 8. 31. jinyoung    컬렉션 작품 평균 별점 조회 검증 추가
+ * 2026. 9. 05. jinyoung    대상 외 부모 데이터를 운영 시퀀스와 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -61,13 +63,10 @@ class CollectionItemServiceTest {
 	private CollectionMapper collectionMapper;
 
 	@Autowired
-	private ContentMapper contentMapper;
-
-	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
 	private MemberContentMapper memberContentMapper;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	/** 실제 DB 목록 조회와 컬렉션 조건 및 기본 페이징값 검증 */
 	@Test
@@ -249,8 +248,7 @@ class CollectionItemServiceTest {
 		member.setNickname("작품서비스" + token.substring(0, 8));
 		member.setIntroduction("컬렉션 작품 통합 테스트 회원");
 		member.setRole("USER");
-		assertEquals(1, memberMapper.insertMember(member));
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
 	/** 외래 키를 만족하는 콘텐츠를 현재 트랜잭션에 등록 */
@@ -268,9 +266,8 @@ class CollectionItemServiceTest {
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
-		assertEquals(1, contentMapper.doSave(content));
-
-		return content;
+		// 컬렉션 작품 Service만 검증하도록 CONTENT 시퀀스와 부모 준비를 분리한다.
+		return insertContent(jdbcTemplate, content);
 	}
 
 	/** 컬렉션 작품 등록 요청 생성 */

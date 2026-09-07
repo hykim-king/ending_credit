@@ -1,5 +1,6 @@
 package com.endit.controller;
 
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -10,12 +11,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,7 +27,7 @@ import com.endit.domain.CollectionVO;
 import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionLikeMapper;
 import com.endit.mapper.CollectionMapper;
-import com.endit.mapper.MemberMapper;
+import com.endit.support.SecurityTestContext;
 
 /**
  * <pre>
@@ -38,6 +41,7 @@ import com.endit.mapper.MemberMapper;
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 API 규격 변경 반영
  * 2026. 8. 29. jinyoung    인증·공개 범위·본인 제한 및 상태 조회 검증 추가
+ * 2026. 9. 05. jinyoung    SecurityContext 인증 및 시퀀스 독립 회원 픽스처 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -60,10 +64,21 @@ class CollectionLikeControllerTest {
 	private CollectionMapper collectionMapper;
 
 	@Autowired
-	private MemberMapper memberMapper;
+	private JdbcTemplate jdbcTemplate;
 
-	@Value("${endit.dev-auth.member-id}")
-	private long authenticatedMemberId;
+	private int authenticatedMemberId;
+
+	@BeforeEach
+	void setUpAuthentication() {
+		MemberVO member = createMember();
+		authenticatedMemberId = member.getMemberId().intValue();
+		SecurityTestContext.login(member);
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		SecurityTestContext.clear();
+	}
 
 	/** 인증 회원의 컬렉션 좋아요 등록 API 검증 */
 	@Test
@@ -75,7 +90,7 @@ class CollectionLikeControllerTest {
 					collection.getCollectionId()))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.memberId")
-						.value(Math.toIntExact(authenticatedMemberId)))
+						.value(authenticatedMemberId))
 				.andExpect(jsonPath("$.collectionId")
 						.value(collection.getCollectionId()));
 	}
@@ -92,7 +107,7 @@ class CollectionLikeControllerTest {
 					collection.getCollectionId()))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.memberId")
-						.value(Math.toIntExact(authenticatedMemberId)))
+						.value(authenticatedMemberId))
 				.andExpect(jsonPath("$.collectionId")
 						.value(collection.getCollectionId()));
 	}
@@ -198,7 +213,7 @@ class CollectionLikeControllerTest {
 	@DisplayName("본인 컬렉션 좋아요는 403")
 	void likeOwnCollection() throws Exception {
 		CollectionVO collection = createCollection(
-				Math.toIntExact(authenticatedMemberId), "Y");
+				authenticatedMemberId, "Y");
 
 		mockMvc.perform(post("/api/collections/{collectionId}/likes",
 					collection.getCollectionId()))
@@ -220,6 +235,11 @@ class CollectionLikeControllerTest {
 
 	/** 테스트 회원 등록 */
 	private int createMemberId() {
+		return createMember().getMemberId().intValue();
+	}
+
+	/** 테스트 회원을 운영 회원 시퀀스와 독립된 PK로 등록 */
+	private MemberVO createMember() {
 		String token = UUID.randomUUID().toString().replace("-", "");
 		MemberVO member = new MemberVO();
 		member.setEmail("collection-like-api-" + token + "@test.local");
@@ -227,8 +247,7 @@ class CollectionLikeControllerTest {
 		member.setNickname("좋아요API" + token.substring(0, 8));
 		member.setIntroduction("컬렉션 좋아요 API 테스트 회원");
 		member.setRole("USER");
-		assertEquals(1, memberMapper.insertMember(member));
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member);
 	}
 
 	/** 지정한 회원 소유 테스트 컬렉션 등록 */
@@ -248,6 +267,6 @@ class CollectionLikeControllerTest {
 	/** 인증 회원의 좋아요 복합키 생성 */
 	private CollectionLikeVO likeKey(int collectionId) {
 		return new CollectionLikeVO(
-				Math.toIntExact(authenticatedMemberId), collectionId, null);
+				authenticatedMemberId, collectionId, null);
 	}
 }

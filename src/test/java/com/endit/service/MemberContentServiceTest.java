@@ -1,5 +1,7 @@
 package com.endit.service;
 
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -15,15 +17,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.MemberContentVO;
 import com.endit.domain.MemberVO;
-import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberContentMapper;
-import com.endit.mapper.MemberMapper;
 
 /**
  * <pre>
@@ -36,6 +37,7 @@ import com.endit.mapper.MemberMapper;
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 9. 03. jinyoung    회원별 평가·보고싶어요 건수 조회 검증 추가
+ * 2026. 9. 05. jinyoung    회원·콘텐츠 부모 픽스처를 운영 시퀀스와 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -54,10 +56,7 @@ class MemberContentServiceTest {
 	private MemberContentMapper memberContentMapper;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
-	private ContentMapper contentMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	private int memberId;
 	private int contentId;
@@ -385,10 +384,7 @@ class MemberContentServiceTest {
 		member.setIntroduction("회원 콘텐츠 Service 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
 	/**
@@ -401,9 +397,8 @@ class MemberContentServiceTest {
 				"Member Content Integration Test", "회원 콘텐츠 Service 통합 테스트 영화", "2026-08-27", 120, "Korea",
 				"https://example.com/poster.jpg", "https://example.com/backdrop.jpg", null);
 
-		assertEquals(1, contentMapper.doSave(content));
-
-		return content.getContentId();
+		// 회원 콘텐츠 로직만 검증하도록 CONTENT 시퀀스를 거치지 않는 부모 행을 사용한다.
+		return insertContent(jdbcTemplate, content).getContentId();
 	}
 
 	/**

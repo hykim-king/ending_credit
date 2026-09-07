@@ -1,5 +1,7 @@
 package com.endit.controller;
 
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -13,13 +15,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,10 +31,11 @@ import com.endit.domain.CollectionItemVO;
 import com.endit.domain.CollectionVO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.MemberContentVO;
+import com.endit.domain.MemberVO;
 import com.endit.mapper.CollectionItemMapper;
 import com.endit.mapper.CollectionMapper;
-import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberContentMapper;
+import com.endit.support.SecurityTestContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -45,6 +50,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    개발 인증 회원 소유 컬렉션 기준 테스트로 변경
  * 2026. 8. 31. jinyoung    작품 평균 별점 응답 검증 추가
+ * 2026. 9. 05. jinyoung    SecurityContext 인증 및 시퀀스 독립 부모 픽스처 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -72,13 +78,32 @@ class CollectionItemControllerTest {
 	private CollectionMapper collectionMapper;
 
 	@Autowired
-	private ContentMapper contentMapper;
-
-	@Autowired
 	private MemberContentMapper memberContentMapper;
 
-	@Value("${endit.dev-auth.member-id}")
-	private long authenticatedMemberId;
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
+
+	private int authenticatedMemberId;
+
+	@BeforeEach
+	void setUpAuthentication() {
+		MemberVO member = new MemberVO();
+		String token = createToken();
+		member.setEmail("collection-item-api-" + token + "@test.local");
+		member.setPassword("encoded-password");
+		member.setNickname("컬렉션작품API" + token.substring(0, 6));
+		member.setIntroduction("컬렉션 작품 Controller 통합 테스트 회원");
+		member.setRole("USER");
+
+		insertMember(jdbcTemplate, member);
+		authenticatedMemberId = member.getMemberId().intValue();
+		SecurityTestContext.login(member);
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		SecurityTestContext.clear();
+	}
 
 	/** 실제 DB 컬렉션 작품 목록과 페이징 정보의 HTTP 응답 검증 */
 	@Test
@@ -90,7 +115,7 @@ class CollectionItemControllerTest {
 				collection.getCollectionId(), content.getContentId());
 		assertEquals(1, collectionItemMapper.doSave(item));
 		assertEquals(1, memberContentMapper.doSave(new MemberContentVO(
-				Math.toIntExact(authenticatedMemberId),
+				authenticatedMemberId,
 				content.getContentId(),
 				4,
 				"N",
@@ -237,7 +262,7 @@ class CollectionItemControllerTest {
 	private CollectionVO createCollection() {
 		CollectionVO collection = new CollectionVO(
 				0,
-				Math.toIntExact(authenticatedMemberId),
+				authenticatedMemberId,
 				"작품 API 통합 테스트 컬렉션",
 				"컬렉션 작품 Controller 통합 테스트",
 				"Y",
@@ -263,9 +288,8 @@ class CollectionItemControllerTest {
 				"https://example.com/poster.jpg",
 				"https://example.com/backdrop.jpg",
 				null);
-		assertEquals(1, contentMapper.doSave(content));
-
-		return content;
+		// CONTENT 등록은 대상 기능이 아니므로 운영 시퀀스 상태와 무관한 부모 픽스처를 쓴다.
+		return insertContent(jdbcTemplate, content);
 	}
 
 	/** 컬렉션 작품 데이터 생성 */

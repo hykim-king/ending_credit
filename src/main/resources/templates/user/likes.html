@@ -4,6 +4,7 @@ Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-07 본문 UI와 본인 취소 동작 반영
 2026. 9. 03. jinyoung - 화면 제목·2열 탭·조회 카드·고정형 페이지네이션 UI 반영
+2026. 9. 07. jinyoung - 회원·컬렉션 CSS 경로 정리
 -->
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
@@ -12,8 +13,8 @@ Modification History
 <head>
     <title th:text="${member.nickname + '님의 좋아요'}">회원 좋아요 | ENDIT</title>
 
-    <link rel="stylesheet" th:href="@{/assets/css/collection/collection-list.css}">
-    <link rel="stylesheet" th:href="@{/assets/css/member-activity.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/member/member-activity.css}">
 
     <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
     <script th:src="@{/assets/js/user/member-likes.js}" defer></script>

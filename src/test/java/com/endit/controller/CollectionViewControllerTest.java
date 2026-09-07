@@ -8,13 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
+
+import com.endit.domain.MemberVO;
+import com.endit.support.SecurityTestContext;
 
 /**
  * <pre>
@@ -32,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * 2026. 9. 01. jinyoung    v3.0 공개 정책과 담당 본문 렌더링 검증
  * 2026. 9. 01. jinyoung    컬렉션 검색 결과 본문 렌더링 검증 추가
  * 2026. 9. 02. jinyoung    컬렉션 수정 화면 개선 마크업 검증 추가
+ * 2026. 9. 05. jinyoung    삭제된 개발 인증 설정을 SecurityContext 기반 테스트로 변경
  * ------------------------------------------------------------
  * </pre>
  *
@@ -42,12 +47,27 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc(addFilters = false)
 @DisplayName("CollectionViewController 통합 테스트")
 class CollectionViewControllerTest {
+	private static final long AUTHENTICATED_MEMBER_ID = 1_900_000_000L;
 
 	@Autowired
 	private MockMvc mockMvc;
 
-	@Value("${endit.dev-auth.member-id}")
-	private long authenticatedMemberId;
+	@BeforeEach
+	void setUpAuthentication() {
+		// 상세 View는 DB를 조회하지 않으므로 principal 구성에 필요한 최소 회원 정보만 준비한다.
+		MemberVO member = new MemberVO();
+		member.setMemberId(AUTHENTICATED_MEMBER_ID);
+		member.setEmail("collection-view@test.local");
+		member.setPassword("encoded-password");
+		member.setNickname("컬렉션화면테스트");
+		member.setRole("USER");
+		SecurityTestContext.login(member);
+	}
+
+	@AfterEach
+	void clearAuthentication() {
+		SecurityTestContext.clear();
+	}
 
 	/** 컬렉션 목록 View 경로와 실제 HTML 렌더링 검증 */
 	@Test
@@ -102,7 +122,7 @@ class CollectionViewControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("collection/detail"))
 				.andExpect(model().attribute("collectionId", 1))
-				.andExpect(model().attribute("currentMemberId", authenticatedMemberId))
+				.andExpect(model().attribute("currentMemberId", AUTHENTICATED_MEMBER_ID))
 				.andExpect(content().contentTypeCompatibleWith("text/html"))
 				.andExpect(content().string(containsString("id=\"copyLinkButton\"")))
 				.andExpect(content().string(containsString("id=\"commentsLink\"")))
