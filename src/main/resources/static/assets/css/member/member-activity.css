@@ -1,8 +1,9 @@
-/** U-03~U-07 회원 기록·좋아요 화면 공통 스타일. */
+/**
+ * U-03~U-07 회원 기록·좋아요 화면 공통 스타일.
+ * 2026. 9. 05. jinyoung - 회원 기록 코멘트 카드·수정 모달 스타일 추가
+ */
 
-/** ===================================
- *  회원 기록·좋아요 공통 레이아웃
- *  =================================== */
+/* ==================== 회원 기록·좋아요 공통 레이아웃 ==================== */
 .member-activity-page {
     width: min(100%, 1080px);
     margin: 0 auto;
@@ -58,9 +59,7 @@
     color: var(--endit-primary);
 }
 
-/** ===================================
- *  기록·좋아요 탭과 활성 표시선
- *  =================================== */
+/* ==================== 기록·좋아요 탭과 활성 표시선 ==================== */
 .member-tabs-wrap {
     margin-bottom: 28px;
     border-bottom: 1px solid var(--endit-border);
@@ -124,9 +123,7 @@
     min-height: 420px;
 }
 
-/** ===================================
- *  탭 제목·건수와 정렬 메뉴
- *  =================================== */
+/* ==================== 탭 제목·건수와 정렬 메뉴 ==================== */
 .member-content-heading {
     display: flex;
     align-items: center;
@@ -242,9 +239,7 @@
     font-size: 1rem;
 }
 
-/** ===================================
- *  작품 카드·별점·로딩 카드
- *  =================================== */
+/* ==================== 작품 카드·별점·로딩 카드 ==================== */
 .member-card-grid,
 .member-skeleton-grid {
     display: grid;
@@ -363,9 +358,202 @@
     transform: translateY(-2px);
 }
 
-/** ===================================
- *  기록·좋아요 페이지네이션
- *  =================================== */
+/* ==================== 회원 기록 코멘트 카드 ==================== */
+.member-comment-list {
+    display: grid;
+    gap: 10px;
+}
+
+.member-comment-card {
+    padding: 12px 16px 8px;
+    background: #fff;
+    border: 1px solid #e5e0e9;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(45, 36, 57, .04);
+}
+
+.member-comment-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0edf2;
+}
+
+.member-comment-target {
+    display: inline-flex;
+    align-items: baseline;
+    min-width: 0;
+    overflow: hidden;
+    color: #332d39;
+    font-size: .93rem;
+    font-weight: 400;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.member-comment-target-title {
+    color: #332d39;
+    font-weight: 800;
+}
+
+.member-comment-target-info {
+    margin-left: .7em;
+    color: #817987;
+    font-weight: 400;
+}
+
+.member-comment-target:hover,
+.member-comment-target:focus-visible {
+    color: var(--endit-primary);
+}
+
+.member-comment-target:hover .member-comment-target-title,
+.member-comment-target:focus-visible .member-comment-target-title,
+.member-comment-target:hover .member-comment-target-info,
+.member-comment-target:focus-visible .member-comment-target-info {
+    color: var(--endit-primary);
+}
+
+.member-comment-rating {
+    flex: 0 0 auto;
+    margin-left: 0;
+    font-size: 1rem;
+}
+
+.member-comment-body {
+    min-height: 0;
+    padding: 9px 0 4px;
+}
+
+.member-comment-detail {
+    margin: 0;
+    overflow: hidden;
+    color: #48414f;
+    font-size: .96rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.member-comment-detail.is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.member-comment-detail.is-expanded {
+    display: block;
+    overflow: visible;
+    -webkit-line-clamp: initial;
+}
+
+.member-comment-more,
+.member-comment-spoiler-button {
+    padding: 0;
+    color: var(--endit-primary);
+    background: transparent;
+    border: 0;
+    font-size: .84rem;
+    font-weight: 800;
+}
+
+.member-comment-more {
+    margin-top: 5px;
+}
+
+.member-comment-spoiler {
+    margin: 0;
+    color: #625b69;
+    font-size: .94rem;
+    font-weight: 700;
+}
+
+.member-comment-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 2px;
+}
+
+.member-comment-like,
+.member-comment-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    color: #7a7281;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.member-comment-like {
+    gap: 7px;
+    padding: 0 8px;
+}
+
+.member-comment-like i {
+    font-size: 1.05rem;
+}
+
+.member-comment-like[aria-pressed="true"] {
+    color: var(--endit-primary);
+}
+
+.member-comment-like:hover,
+.member-comment-action:hover,
+.member-comment-like:focus-visible,
+.member-comment-action:focus-visible {
+    color: var(--endit-primary);
+    background: #f3f0ff;
+    outline: none;
+}
+
+.member-comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.member-comment-action {
+    padding: 0 10px;
+}
+
+.member-comment-action.is-delete:hover,
+.member-comment-action.is-delete:focus-visible {
+    color: #c43e4d;
+    background: #fff0f2;
+}
+
+.member-comment-edit-modal {
+    border: 0;
+    border-radius: 16px;
+}
+
+.member-comment-edit-modal textarea {
+    resize: vertical;
+}
+
+.member-comment-delete-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    margin: 0 auto 12px;
+    color: #b33434;
+    background: #fff1f1;
+    border-radius: 50%;
+    font-size: 1.2rem;
+}
+
+/* ==================== 기록·좋아요 페이지네이션 ==================== */
 .member-record-pagination {
     margin-top: 34px;
 }
@@ -472,9 +660,7 @@
     font-weight: 700;
 }
 
-/** ===================================
- *  회원 활동 화면 컬렉션 카드
- *  =================================== */
+/* ==================== 회원 활동 화면 컬렉션 카드 ==================== */
 .member-activity-content .collection-card-grid {
     gap: 58px 18px;
 }
@@ -497,8 +683,7 @@
     border: 0;
 }
 
-.member-activity-content .collection-list-card:hover
-        .collection-list-card-visual {
+.member-activity-content .collection-list-card:hover .collection-list-card-visual {
     box-shadow: 0 10px 24px rgba(66, 58, 75, .12);
 }
 
@@ -511,14 +696,11 @@
     color: #777180;
     background: #f6f5f8;
     border: 1px solid #e4e0e7;
-    transition: background-color .28s ease, box-shadow .18s ease,
-        transform .18s ease;
+    transition: background-color .28s ease, box-shadow .18s ease, transform .18s ease;
 }
 
-.member-activity-content .collection-list-card:hover
-        .collection-list-card-visual.is-empty,
-.member-activity-content .collection-list-card-link:focus-visible
-        .collection-list-card-visual.is-empty {
+.member-activity-content .collection-list-card:hover .collection-list-card-visual.is-empty,
+.member-activity-content .collection-list-card-link:focus-visible .collection-list-card-visual.is-empty {
     background: #f0edff;
 }
 
@@ -554,8 +736,7 @@
     transition: opacity .16s ease;
 }
 
-.member-activity-content .collection-list-card-empty-icon
-        .empty-icon-hopeful {
+.member-activity-content .collection-list-card-empty-icon .empty-icon-hopeful {
     color: var(--endit-primary);
     opacity: 0;
 }
@@ -567,8 +748,7 @@
     color: #aaa4b1;
     opacity: 1;
     transform: translateY(0);
-    transition: opacity .16s ease,
-        transform .22s cubic-bezier(.22, .8, .3, 1);
+    transition: opacity .16s ease, transform .22s cubic-bezier(.22, .8, .3, 1);
 }
 
 .member-activity-content .collection-list-card-empty-message {
@@ -593,36 +773,27 @@
     font-size: .88rem;
     opacity: 0;
     transform: translateY(100%);
-    transition: opacity .16s ease, color .16s ease,
-        transform .22s cubic-bezier(.22, .8, .3, 1);
+    transition: opacity .16s ease, color .16s ease, transform .22s cubic-bezier(.22, .8, .3, 1);
 }
 
-.member-activity-content .collection-list-card:hover
-        .collection-list-card-empty-icon .empty-icon-sad,
-.member-activity-content .collection-list-card-link:focus-visible
-        .collection-list-card-empty-icon .empty-icon-sad {
+.member-activity-content .collection-list-card:hover .collection-list-card-empty-icon .empty-icon-sad,
+.member-activity-content .collection-list-card-link:focus-visible .collection-list-card-empty-icon .empty-icon-sad {
     opacity: 0;
 }
 
-.member-activity-content .collection-list-card:hover
-        .collection-list-card-empty-icon .empty-icon-hopeful,
-.member-activity-content .collection-list-card-link:focus-visible
-        .collection-list-card-empty-icon .empty-icon-hopeful {
+.member-activity-content .collection-list-card:hover .collection-list-card-empty-icon .empty-icon-hopeful,
+.member-activity-content .collection-list-card-link:focus-visible .collection-list-card-empty-icon .empty-icon-hopeful {
     opacity: 1;
 }
 
-.member-activity-content .collection-list-card:hover
-        .collection-list-card-empty-title,
-.member-activity-content .collection-list-card-link:focus-visible
-        .collection-list-card-empty-title {
+.member-activity-content .collection-list-card:hover .collection-list-card-empty-title,
+.member-activity-content .collection-list-card-link:focus-visible .collection-list-card-empty-title {
     opacity: 0;
     transform: translateY(-100%);
 }
 
-.member-activity-content .collection-list-card:hover
-        .collection-list-card-empty-hint,
-.member-activity-content .collection-list-card-link:focus-visible
-        .collection-list-card-empty-hint {
+.member-activity-content .collection-list-card:hover .collection-list-card-empty-hint,
+.member-activity-content .collection-list-card-link:focus-visible .collection-list-card-empty-hint {
     color: var(--endit-primary);
     opacity: 1;
     transform: translateY(0);
@@ -645,9 +816,7 @@
     letter-spacing: 0;
 }
 
-/** ===================================
- *  좋아요 화면 인물 카드와 빈 자리
- *  =================================== */
+/* ==================== 좋아요 화면 인물 카드와 빈 자리 ==================== */
 .member-like-card {
     min-width: 0;
 }
@@ -698,9 +867,7 @@
     aspect-ratio: 1 / 1;
 }
 
-/** ===================================
- *  공통 로딩·오류·빈 결과 상태
- *  =================================== */
+/* ==================== 공통 로딩·오류·빈 결과 상태 ==================== */
 .member-state {
     display: flex;
     flex-direction: column;
@@ -747,9 +914,7 @@
     to { opacity: 1; }
 }
 
-/** ===================================
- *  모바일 반응형 스타일
- *  =================================== */
+/* ==================== 모바일 반응형 스타일 ==================== */
 @media (max-width: 767.98px) {
     .member-activity-page {
         padding: 12px 0 40px;
@@ -807,11 +972,28 @@
     .member-state {
         min-height: 240px;
     }
+
+    .member-comment-card {
+        padding: 11px 13px 7px;
+    }
+
+    .member-comment-header {
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .member-comment-target {
+        font-size: .84rem;
+        white-space: normal;
+    }
+
+    .member-comment-body {
+        min-height: 0;
+        padding: 8px 0 3px;
+    }
 }
 
-/** ===================================
- *  태블릿 반응형 스타일
- *  =================================== */
+/* ==================== 태블릿 반응형 스타일 ==================== */
 @media (min-width: 768px) and (max-width: 991.98px) {
     .member-card-grid,
     .member-skeleton-grid {

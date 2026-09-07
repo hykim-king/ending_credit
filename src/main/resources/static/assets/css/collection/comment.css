@@ -1,0 +1,546 @@
+/* 컬렉션 댓글
+ * 2026. 9. 05. jinyoung - 댓글 작성·대표 댓글·전체 댓글 모달 스타일 추가
+ * 2026. 9. 07. jinyoung - 컬렉션 상세 스타일에서 댓글 전용 스타일 분리
+ * 2026. 9. 07. jinyoung - 댓글 작성일·하단 작업·수정·신고 스타일 추가
+ */
+
+/* ==================== 댓글 영역과 제목 ==================== */
+.collection-comments-section {
+    padding-block: 24px 28px;
+}
+
+.collection-comments-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 16px;
+}
+
+.collection-comments-section .collection-section-title {
+    margin: 0;
+}
+
+.collection-all-comments-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 0;
+    color: #777180;
+    font-size: .82rem;
+    font-weight: 700;
+    background: transparent;
+    border: 0;
+}
+
+.collection-all-comments-button:hover,
+.collection-all-comments-button:focus-visible {
+    color: var(--endit-primary);
+}
+
+/* ==================== 댓글 입력과 등록 ==================== */
+.collection-comment-input-wrap {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex: 1;
+}
+
+.collection-comment-composer textarea {
+    width: 100%;
+    padding: 12px 142px 12px 14px;
+    color: #332e39;
+}
+
+.collection-comment-composer textarea:focus {
+    background: #fff;
+    border-color: rgba(101, 80, 200, .55);
+    outline: 3px solid rgba(101, 80, 200, .1);
+}
+
+.collection-comment-composer textarea[readonly] {
+    color: #8b8493;
+    cursor: default;
+}
+
+.collection-comment-spoiler {
+    position: absolute;
+    top: 50%;
+    right: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #746e7a;
+    font-size: .74rem;
+    white-space: nowrap;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.collection-comment-spoiler input {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    accent-color: var(--endit-primary);
+}
+
+.collection-comment-spoiler:has(input:disabled) {
+    color: #aaa4b1;
+    cursor: default;
+}
+
+.collection-comment-composer > button {
+    gap: 0;
+    padding-inline: 16px;
+    color: #fff;
+    font-weight: 700;
+    background: var(--endit-primary);
+    border-color: var(--endit-primary);
+    cursor: pointer;
+}
+
+.collection-comment-composer > button:hover,
+.collection-comment-composer > button:focus-visible {
+    background: #5540bb;
+    border-color: #5540bb;
+}
+
+.collection-comment-composer > button:disabled {
+    opacity: .58;
+    cursor: wait;
+}
+
+/* ==================== 빈 상태와 댓글 카드 ==================== */
+.collection-comment-empty {
+    display: flex;
+    min-height: 88px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    color: #9a94a1;
+    font-size: .84rem;
+    text-align: center;
+}
+
+#collectionCommentEmpty {
+    margin-top: 16px;
+    padding: 16px;
+    background: #fcfbfd;
+    border: 1px dashed #d8d2df;
+    border-radius: 11px;
+}
+
+.collection-comment-empty i {
+    color: #7560d1;
+    font-size: 1.1rem;
+}
+
+.collection-comment-empty p {
+    margin: 0;
+}
+
+.collection-comment-card {
+    margin-top: 14px;
+    padding: 14px 2px 2px;
+    border-top: 1px solid #efedf1;
+}
+
+#collectionCommentPreview {
+    --comment-card-background: #fcfbfd;
+    padding: 14px 16px 12px;
+    background: #fcfbfd;
+    border: 1px dashed #d8d2df;
+    border-radius: 11px;
+}
+
+.collection-comment-layout {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: stretch;
+    column-gap: 10px;
+}
+
+.collection-comment-main {
+    min-width: 0;
+}
+
+.collection-comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1.2;
+}
+
+.collection-comment-meta strong {
+    overflow: hidden;
+    font-size: .86rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.collection-comment-date {
+    flex: 0 0 auto;
+    color: #9a94a1;
+    font-size: .76rem;
+}
+
+.collection-comment-avatar {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #6550c8;
+    font-size: .78rem;
+    font-weight: 800;
+    background: #eeeafd;
+    border-radius: 50%;
+}
+
+.collection-comment-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ==================== 본문·스포일러·신고 가림 ==================== */
+.collection-comment-detail {
+    margin-top: 5px;
+    color: #403a47;
+    font-size: .9rem;
+    line-height: 1.65;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.collection-comment-detail-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.collection-comment-detail.is-spoiler,
+.collection-comment-detail.is-blinded {
+    color: #8b8493;
+}
+
+.collection-comment-detail.is-collapsed {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.collection-comment-detail.is-expanded {
+    display: block;
+}
+
+.collection-comment-more {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 0 0 0 22px;
+    color: #817a89;
+    font-size: .76rem;
+    font-weight: 700;
+    line-height: 1.65;
+    background: linear-gradient(to right, transparent 0, var(--comment-card-background, #fff) 20px);
+    border: 0;
+}
+
+.collection-comment-more:hover,
+.collection-comment-more:focus-visible {
+    color: var(--endit-primary);
+}
+
+.collection-comment-reveal {
+    margin-left: 6px;
+    padding: 0;
+    color: var(--endit-primary);
+    font-size: inherit;
+    font-weight: 800;
+    background: transparent;
+    border: 0;
+}
+
+/* ==================== 좋아요와 댓글 작업 ==================== */
+.collection-comment-side {
+    display: flex;
+    min-width: max-content;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.collection-comment-like,
+.collection-comment-action {
+    display: inline-flex;
+    min-height: 28px;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 8px;
+    color: #777180;
+    font-size: .78rem;
+    font-weight: 700;
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+}
+
+.collection-comment-like:hover,
+.collection-comment-like:focus-visible,
+.collection-comment-action:hover,
+.collection-comment-action:focus-visible {
+    color: var(--endit-primary);
+    background: #f2effd;
+}
+
+.collection-comment-like.is-liked {
+    color: #d84f6f;
+}
+
+.collection-comment-like:disabled,
+.collection-comment-action:disabled {
+    opacity: .55;
+    cursor: wait;
+}
+
+.collection-comment-like-count {
+    min-width: 1ch;
+}
+
+.collection-comment-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 2px;
+}
+
+.collection-comment-action.is-danger:hover,
+.collection-comment-action.is-danger:focus-visible {
+    color: #c23f4f;
+    background: #fff0f2;
+}
+
+.collection-comment-action.is-icon-only {
+    width: 28px;
+    justify-content: center;
+    padding: 4px;
+    font-size: .84rem;
+}
+
+/* ==================== 댓글 인라인 수정 ==================== */
+.collection-comment-editor {
+    padding-left: 43px;
+}
+
+.collection-comment-editor textarea {
+    width: 100%;
+    min-height: 104px;
+    padding: 11px 12px;
+    color: #403a47;
+    font-size: .88rem;
+    line-height: 1.55;
+    resize: vertical;
+    border: 1px solid #ddd8e2;
+    border-radius: 9px;
+}
+
+.collection-comment-editor textarea:focus {
+    border-color: rgba(101, 80, 200, .55);
+    outline: 3px solid rgba(101, 80, 200, .1);
+}
+
+.collection-comment-editor-controls,
+.collection-comment-editor-buttons,
+.collection-comment-editor-spoiler {
+    display: flex;
+    align-items: center;
+}
+
+.collection-comment-editor-controls {
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.collection-comment-editor-spoiler {
+    gap: 6px;
+    color: #746e7a;
+    font-size: .76rem;
+}
+
+.collection-comment-editor-spoiler input {
+    accent-color: var(--endit-primary);
+}
+
+.collection-comment-editor-buttons {
+    gap: 2px;
+}
+
+.collection-comment-action.is-primary {
+    color: var(--endit-primary);
+}
+
+/* ==================== 전체 댓글 모달 ==================== */
+.collection-comments-modal-dialog {
+    width: min(620px, calc(100% - 24px));
+    max-width: 620px;
+}
+
+.collection-comments-modal {
+    overflow: hidden;
+    border: 0;
+    border-radius: 16px;
+    box-shadow: 0 18px 55px rgba(24, 19, 31, .2);
+}
+
+.collection-comments-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22px 24px 16px;
+    border-bottom: 1px solid #efedf1;
+}
+
+.collection-comments-modal-header h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+
+.collection-comments-modal-header h2 span {
+    color: var(--endit-primary);
+}
+
+.collection-comments-modal .modal-body {
+    padding: 0 24px 24px;
+}
+
+.collection-comments-modal-list .collection-comment-card {
+    margin-top: 0;
+    padding: 18px 0;
+}
+
+.collection-comments-modal-list .collection-comment-card:first-child {
+    border-top: 0;
+}
+
+.collection-comments-load-more {
+    display: block;
+    width: min(180px, 100%);
+    min-height: 40px;
+    margin: 10px auto 0;
+    color: #625c68;
+    font-size: .82rem;
+    font-weight: 700;
+    background: #f4f2f5;
+    border: 0;
+    border-radius: 9px;
+}
+
+/* ==================== 댓글 신고 ==================== */
+.collection-comment-report-dialog {
+    width: min(500px, calc(100% - 24px));
+    max-width: 500px;
+}
+
+.collection-comment-report-body {
+    display: grid;
+    gap: 9px;
+    padding: 20px 24px 24px !important;
+}
+
+.collection-comment-report-body label {
+    margin-top: 4px;
+    color: #514b58;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.collection-comment-report-body label span {
+    color: #9a94a1;
+    font-weight: 500;
+}
+
+.collection-comment-report-body textarea {
+    resize: vertical;
+}
+
+.collection-comment-report-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* ==================== 토스트와 로그인 안내 ==================== */
+.collection-comment-toast-wrap {
+    position: fixed;
+    z-index: 1090;
+    top: 88px;
+    left: 50%;
+    width: min(420px, calc(100% - 32px));
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+.collection-comment-toast {
+    width: 100%;
+    color: #fff;
+    text-align: center;
+    background: rgba(37, 33, 45, .94);
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 10px 28px rgba(20, 16, 28, .22);
+}
+
+.collection-comment-toast .toast-body {
+    padding: 12px 16px;
+    font-size: .86rem;
+}
+
+.collection-login-icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 12px;
+    color: var(--endit-primary);
+    font-size: 1.2rem;
+    background: #f1edff;
+    border-radius: 50%;
+}
+
+/* ==================== 모바일 반응형 ==================== */
+@media (max-width: 767.98px) {
+    .collection-comment-composer > button {
+        min-width: 70px;
+    }
+
+    .collection-comment-composer textarea {
+        padding-right: 132px;
+    }
+
+    .collection-comment-detail {
+        padding-left: 0;
+    }
+
+    .collection-comment-layout {
+        grid-template-columns: 32px minmax(0, 1fr) auto;
+        column-gap: 8px;
+    }
+
+    .collection-comment-avatar {
+        width: 32px;
+        height: 32px;
+        flex-basis: 32px;
+    }
+
+    .collection-comment-editor {
+        padding-left: 0;
+    }
+}

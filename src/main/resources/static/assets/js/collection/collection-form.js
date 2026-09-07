@@ -4,7 +4,10 @@
  * 2026. 8. 31. jinyoung - 작품 추가 모달과 미저장 변경 경고 적용
  * 2026. 9. 01. jinyoung - 등록·수정 화면과 공개 정책 UI 적용
  * 2026. 9. 02. jinyoung - 길이 경고와 작품 추가·제거 흐름 개선
+ * 2026. 9. 05. jinyoung - 수정 화면 컬렉션 삭제 확인·요청 추가
  */
+// ==================== 설정과 화면 상태 ====================
+
 // 등록과 수정은 필드 구성이 같으므로 하나의 form.html과 JavaScript를 재사용한다.
 const UPDATE_FORM_MODE = "update";
 const TITLE_MAX_LENGTH = 100;
@@ -31,6 +34,8 @@ let isFormInitialized = false;
 let isSubmitting = false;
 let isEmptyCollectionCreationConfirmed = false;
 
+// ==================== 화면 초기화 ====================
+
 document.addEventListener("DOMContentLoaded", () => {
     const page = document.querySelector("#collectionFormPage");
     const collectionId = Number(page.dataset.collectionId);
@@ -38,19 +43,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const contentSearchInput = document.querySelector("#contentSearchInput");
     const contentSearchModal = document.querySelector("#contentSearchModal");
     const clearContentSearchButton = document.querySelector("#clearContentSearchButton");
-    const confirmEmptyCollectionButton = document.querySelector(
-        "#confirmEmptyCollectionButton"
-    );
+    const confirmEmptyCollectionButton = document.querySelector("#confirmEmptyCollectionButton");
+    const confirmDeleteCollectionButton = document.querySelector("#confirmDeleteCollectionButton");
 
     currentFormMode = page.dataset.formMode;
     collectionForm.addEventListener("submit", submitCollection);
     window.addEventListener("beforeunload", warnUnsavedChanges);
 
     if (confirmEmptyCollectionButton) {
-        confirmEmptyCollectionButton.addEventListener(
-            "click",
-            confirmEmptyCollectionCreation
-        );
+        confirmEmptyCollectionButton.addEventListener("click", confirmEmptyCollectionCreation);
+    }
+    if (confirmDeleteCollectionButton) {
+        confirmDeleteCollectionButton.addEventListener("click", deleteCollectionFromForm);
     }
     contentSearchInput.addEventListener("keydown", handleContentSearchKeydown);
     contentSearchInput.addEventListener("input", scheduleContentSearch);
@@ -70,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// 폼 초기화와 입력 검증
+// ==================== 폼 초기화와 입력 검증 ====================
 
 /** 현재 화면이 수정 모드인지 확인한다. */
 function isUpdateForm() {
@@ -81,32 +85,13 @@ function isUpdateForm() {
 function initializeCollectionFormInteractions() {
     const isPublic = document.querySelector("#isPublic");
 
-    initializeLengthGuard(
-        document.querySelector("#title"),
-        TITLE_MAX_LENGTH,
-        document.querySelector("#titleLengthWarning")
-    );
-    initializeLengthGuard(
-        document.querySelector("#description"),
-        DESCRIPTION_MAX_LENGTH,
-        document.querySelector("#descriptionLengthWarning")
-    );
-    document.querySelector("#toggleContentEditButton").addEventListener(
-        "click",
-        beginContentEdit
-    );
-    document.querySelector("#cancelContentEditButton").addEventListener(
-        "click",
-        cancelContentEdit
-    );
-    document.querySelector("#confirmContentRemovalButton").addEventListener(
-        "click",
-        confirmContentRemoval
-    );
-    document.querySelector("#modalAddContentButton").addEventListener(
-        "click",
-        confirmPendingAdditions
-    );
+    initializeLengthGuard(document.querySelector("#title"), TITLE_MAX_LENGTH, document.querySelector("#titleLengthWarning"));
+    initializeLengthGuard(document.querySelector("#description"), DESCRIPTION_MAX_LENGTH,
+        document.querySelector("#descriptionLengthWarning"));
+    document.querySelector("#toggleContentEditButton").addEventListener("click", beginContentEdit);
+    document.querySelector("#cancelContentEditButton").addEventListener("click", cancelContentEdit);
+    document.querySelector("#confirmContentRemovalButton").addEventListener("click", confirmContentRemoval);
+    document.querySelector("#modalAddContentButton").addEventListener("click", confirmPendingAdditions);
     isPublic.addEventListener("change", updateCollectionVisibility);
     updateCollectionVisibility();
 }
@@ -116,9 +101,7 @@ function updateCollectionVisibility() {
     const isPublic = document.querySelector("#isPublic");
     const visibilityText = document.querySelector("#collectionVisibilityText");
 
-    visibilityText.textContent = isPublic.checked
-        ? "공개 컬렉션"
-        : "비공개 컬렉션";
+    visibilityText.textContent = isPublic.checked ? "공개 컬렉션" : "비공개 컬렉션";
 }
 
 /** 공개 체크 상태를 API 요청값 Y/N으로 바꾼다. */
@@ -154,16 +137,8 @@ function initializeLengthGuard(input, maxLength, warning) {
         event.preventDefault();
         const selectionStart = input.selectionStart ?? input.value.length;
         const selectionEnd = input.selectionEnd ?? selectionStart;
-        const availableLength = Math.max(
-            0,
-            maxLength - (input.value.length - (selectionEnd - selectionStart))
-        );
-        input.setRangeText(
-            pastedText.slice(0, availableLength),
-            selectionStart,
-            selectionEnd,
-            "end"
-        );
+        const availableLength = Math.max(0, maxLength - (input.value.length - (selectionEnd - selectionStart)));
+        input.setRangeText(pastedText.slice(0, availableLength), selectionStart, selectionEnd, "end");
         input.dispatchEvent(new Event("input", { bubbles: true }));
         showLengthWarning(input, warning);
     });
@@ -186,8 +161,7 @@ function getProspectiveLength(input, insertedText) {
     const selectionStart = input.selectionStart ?? input.value.length;
     const selectionEnd = input.selectionEnd ?? selectionStart;
     return input.value.length
-        - (selectionEnd - selectionStart)
-        + insertedText.length;
+        - (selectionEnd - selectionStart) + insertedText.length;
 }
 
 /** 입력 요소와 길이 경고를 강조한다. */
@@ -208,8 +182,7 @@ async function prepareUpdateForm(collectionId) {
 
     try {
         const [collection, contents] = await Promise.all([
-            requestGet(`/api/collections/${collectionId}`),
-            loadAllContents(collectionId)
+            requestGet(`/api/collections/${collectionId}`), loadAllContents(collectionId)
         ]);
 
         document.querySelector("#title").value = collection.title || "";
@@ -228,7 +201,7 @@ async function prepareUpdateForm(collectionId) {
     }
 }
 
-// 저장과 미저장 변경 감지
+// ==================== 저장·삭제와 API 요청 ====================
 
 /** 폼을 검증하고 등록 또는 수정 요청을 보낸다. */
 async function submitCollection(event) {
@@ -239,9 +212,7 @@ async function submitCollection(event) {
     }
 
     const errorMessage = document.querySelector("#errorMessage");
-    const collectionId = Number(
-        document.querySelector("#collectionFormPage").dataset.collectionId
-    );
+    const collectionId = Number(document.querySelector("#collectionFormPage").dataset.collectionId);
     const collectionForm = document.querySelector("#collectionForm");
     const submitButton = document.querySelector("#submitButton");
 
@@ -251,12 +222,9 @@ async function submitCollection(event) {
         return;
     }
 
-    if (!isUpdateForm()
-        && selectedContentIds.length === 0
+    if (!isUpdateForm() && selectedContentIds.length === 0
         && !isEmptyCollectionCreationConfirmed) {
-        bootstrap.Modal.getOrCreateInstance(
-            document.querySelector("#emptyCollectionConfirmModal")
-        ).show();
+        bootstrap.Modal.getOrCreateInstance(document.querySelector("#emptyCollectionConfirmModal")).show();
         return;
     }
     isEmptyCollectionCreationConfirmed = false;
@@ -276,8 +244,7 @@ async function submitCollection(event) {
 
     try {
         const saved = isUpdateForm()
-            ? await requestPatch(`/api/collections/${collectionId}`, data)
-            : await requestPost("/api/collections", data);
+            ? await requestPatch(`/api/collections/${collectionId}`, data) : await requestPost("/api/collections", data);
 
         window.location.href = `/collections/${saved.collectionId}`;
     } catch (error) {
@@ -297,9 +264,7 @@ function getSubmitButtonLabel() {
 /** 빈 컬렉션 등록 확인 후 폼 제출을 다시 요청한다. */
 function confirmEmptyCollectionCreation() {
     isEmptyCollectionCreationConfirmed = true;
-    bootstrap.Modal.getOrCreateInstance(
-        document.querySelector("#emptyCollectionConfirmModal")
-    ).hide();
+    bootstrap.Modal.getOrCreateInstance(document.querySelector("#emptyCollectionConfirmModal")).hide();
     document.querySelector("#collectionForm").requestSubmit();
 }
 
@@ -311,8 +276,42 @@ function requestPatch(url, data) {
             "Accept": "application/json",
             "Content-Type": "application/json",
             ...getCsrfHeaders()
-        },
-        body: JSON.stringify(data)
+        }, body: JSON.stringify(data)
+    });
+}
+
+/** 수정 화면에서 컬렉션 삭제 후 내 컬렉션 기록으로 이동한다. */
+async function deleteCollectionFromForm() {
+    const page = document.querySelector("#collectionFormPage");
+    const collectionId = Number(page.dataset.collectionId);
+    const deleteButton = document.querySelector("#confirmDeleteCollectionButton");
+    const errorMessage = document.querySelector("#errorMessage");
+
+    deleteButton.disabled = true;
+    deleteButton.textContent = "삭제 중...";
+    isSubmitting = true;
+
+    try {
+        await requestDelete(`/api/collections/${collectionId}`);
+        window.location.href = "/members/records?tab=collections";
+    } catch (error) {
+        bootstrap.Modal.getInstance(document.querySelector("#deleteCollectionFormModal")
+        )?.hide();
+        showFormError(errorMessage, error.message);
+        deleteButton.disabled = false;
+        deleteButton.textContent = "삭제";
+        isSubmitting = false;
+    }
+}
+
+/** 공통 요청 함수로 DELETE 요청을 보낸다. */
+function requestDelete(url) {
+    return requestFetch(url, {
+        method: "DELETE",
+        headers: {
+            "Accept": "application/json",
+            ...getCsrfHeaders()
+        }
     });
 }
 
@@ -331,17 +330,14 @@ async function loadAllContents(collectionId) {
         contents.push(...(data.items || []));
 
         const totalCount = Number(data.page?.totalCnt || 0);
-        totalPages = Math.max(
-            1,
-            Math.ceil(totalCount / CONTENT_SNAPSHOT_PAGE_SIZE)
-        );
+        totalPages = Math.max(1, Math.ceil(totalCount / CONTENT_SNAPSHOT_PAGE_SIZE));
         pageNo += 1;
     } while (pageNo <= totalPages);
 
     return contents;
 }
 
-// 작품 검색과 추가
+// ==================== 작품 검색과 추가 ====================
 
 /** 검색 입력에서 Enter를 누르면 즉시 첫 페이지를 조회한다. */
 function handleContentSearchKeydown(event) {
@@ -364,10 +360,7 @@ function scheduleContentSearch() {
         return;
     }
 
-    contentSearchDebounceTimer = window.setTimeout(
-        () => searchContents(1),
-        CONTENT_SEARCH_DEBOUNCE_MS
-    );
+    contentSearchDebounceTimer = window.setTimeout(() => searchContents(1), CONTENT_SEARCH_DEBOUNCE_MS);
 }
 
 /** 검색어와 결과를 지우고 검색 입력에 초점을 돌린다. */
@@ -382,10 +375,7 @@ function clearContentSearchInput() {
 /** 검색어가 있을 때만 지우기 버튼을 표시한다. */
 function updateContentSearchClearButton() {
     const clearButton = document.querySelector("#clearContentSearchButton");
-    clearButton.classList.toggle(
-        "d-none",
-        !document.querySelector("#contentSearchInput").value
-    );
+    clearButton.classList.toggle("d-none", !document.querySelector("#contentSearchInput").value);
 }
 
 /** DB에 저장된 콘텐츠를 제목으로 검색한다. 빈 검색어일 때는 조회하지 않는다. */
@@ -547,9 +537,7 @@ function confirmPendingAdditions() {
     pendingAdditionDetails.clear();
     renderSelectedContents();
     showSaveNotice();
-    bootstrap.Modal.getOrCreateInstance(
-        document.querySelector("#contentSearchModal")
-    ).hide();
+    bootstrap.Modal.getOrCreateInstance(document.querySelector("#contentSearchModal")).hide();
 }
 
 /** 검색 모달의 입력값과 임시 선택 상태를 초기화한다. */
@@ -576,15 +564,8 @@ function renderContentSearchPagination(page, currentPage) {
 
     pagination.append(createContentPageButton("이전", currentPage - 1, currentPage <= 1));
     pagination.append(createContentPageButton(
-        `${currentPage} / ${totalPages}`,
-        currentPage,
-        true
-    ));
-    pagination.append(createContentPageButton(
-        "다음",
-        currentPage + 1,
-        currentPage >= totalPages
-    ));
+        `${currentPage} / ${totalPages}`, currentPage, true));
+    pagination.append(createContentPageButton("다음", currentPage + 1, currentPage >= totalPages));
 }
 
 /** 작품 검색 페이지 버튼 한 개를 만든다. */
@@ -603,7 +584,7 @@ function createContentPageButton(label, pageNo, disabled) {
     return item;
 }
 
-// 선택 작품 편집
+// ==================== 선택 작품 편집 ====================
 
 /** 선택 작품 개수와 작품 그리드를 화면에 표시한다. */
 function renderSelectedContents() {
@@ -668,10 +649,8 @@ function createContentGridCard(contentId, content) {
         removeButton.className = "collection-grid-remove-button";
         removeButton.type = "button";
         removeButton.setAttribute("aria-pressed", String(pending));
-        removeButton.setAttribute(
-            "aria-label",
-            `${getContentTitle(content)} ${pending ? "제거 선택 해제" : "제거 선택"}`
-        );
+        removeButton.setAttribute("aria-label",
+            `${getContentTitle(content)} ${pending ? "제거 선택 해제" : "제거 선택"}`);
         removeButton.classList.toggle("is-selected", pending);
         icon.className = pending ? "bi bi-check-lg" : "bi bi-dash-lg";
         icon.setAttribute("aria-hidden", "true");
@@ -731,18 +710,14 @@ function togglePendingRemoval(contentId) {
     }
 
     const pending = pendingRemovalIds.has(contentId);
-    const card = document.querySelector(
-        `.collection-grid-content-card[data-content-id="${contentId}"]`
-    );
+    const card = document.querySelector(`.collection-grid-content-card[data-content-id="${contentId}"]`);
     const removeButton = card.querySelector(".collection-grid-remove-button");
     const icon = removeButton.querySelector("i");
     card.classList.toggle("is-pending-removal", pending);
     removeButton.classList.toggle("is-selected", pending);
     removeButton.setAttribute("aria-pressed", String(pending));
-    removeButton.setAttribute(
-        "aria-label",
-        `${card.querySelector(".collection-grid-content-title").textContent} ${pending ? "제거 선택 해제" : "제거 선택"}`
-    );
+    removeButton.setAttribute("aria-label",
+        `${card.querySelector(".collection-grid-content-title").textContent} ${pending ? "제거 선택 해제" : "제거 선택"}`);
     icon.className = pending ? "bi bi-check-lg" : "bi bi-dash-lg";
     updateContentEditControls();
 }
@@ -759,9 +734,7 @@ function confirmContentRemoval() {
         return;
     }
 
-    selectedContentIds = selectedContentIds.filter(
-        (contentId) => !pendingRemovalIds.has(contentId)
-    );
+    selectedContentIds = selectedContentIds.filter((contentId) => !pendingRemovalIds.has(contentId));
     pendingRemovalIds.forEach((contentId) => {
         selectedContentDetails.delete(contentId);
     });
@@ -786,10 +759,11 @@ function updateContentEditControls() {
     toggleButton.classList.toggle("d-none", isContentEditMode);
     toggleButton.disabled = selectedContentIds.length === 0;
     editActions.classList.toggle("d-none", !isContentEditMode);
-    document.querySelector("#pendingRemovalCount").textContent =
-        String(pendingRemovalIds.size);
+    document.querySelector("#pendingRemovalCount").textContent = String(pendingRemovalIds.size);
     confirmButton.disabled = pendingRemovalIds.size === 0;
 }
+
+// ==================== 작품 포스터와 기본 정보 ====================
 
 /** 콘텐츠 포스터가 있으면 목록 행 앞에 작은 이미지로 추가한다. */
 function appendContentPoster(row, content) {
@@ -813,8 +787,7 @@ function createPosterPlaceholder() {
     const placeholder = document.createElement("div");
     const icon = document.createElement("i");
 
-    placeholder.className =
-        "collection-selection-poster collection-selection-poster-placeholder";
+    placeholder.className = "collection-selection-poster collection-selection-poster-placeholder";
     icon.className = "bi bi-film";
     icon.setAttribute("aria-hidden", "true");
     placeholder.append(icon);
@@ -830,9 +803,7 @@ function createContentInformation(content) {
     title.className = "collection-content-title";
     title.textContent = getContentTitle(content);
     metadata.className = "collection-content-meta";
-    metadata.textContent = content.releaseYear
-        ? String(content.releaseYear).slice(0, 4)
-        : "개봉연도 정보 없음";
+    metadata.textContent = content.releaseYear ? String(content.releaseYear).slice(0, 4) : "개봉연도 정보 없음";
 
     information.append(title, metadata);
     return information;
@@ -851,7 +822,7 @@ function resolvePosterUrl(posterUrl) {
     return `${TMDB_POSTER_BASE_URL}${posterUrl}`;
 }
 
-// 안내와 폼 상태 관리
+// ==================== 안내와 미저장 변경 관리 ====================
 
 /** 작품 변경 후 최종 저장이 필요하다는 안내를 표시한다. */
 function showSaveNotice() {
@@ -894,8 +865,7 @@ function initializeFormState() {
 
 /** 최초 상태와 현재 상태를 비교해 변경 여부를 확인한다. */
 function hasUnsavedChanges() {
-    return isFormInitialized
-        && serializeFormState() !== initialFormState;
+    return isFormInitialized && serializeFormState() !== initialFormState;
 }
 
 /** 저장하지 않은 변경이 있으면 페이지 이탈 경고를 요청한다. */

@@ -6,7 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import com.endit.auth.CurrentMemberProvider;
+import com.endit.cmn.LoginMember;
+import com.endit.security.LoginMemberHelper;
 
 /**
  * <pre>
@@ -19,6 +20,7 @@ import com.endit.auth.CurrentMemberProvider;
  * ------------------------------------------------------------
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    상세 화면에 인증 회원 식별 정보 전달
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
  * ------------------------------------------------------------
  * </pre>
  *
@@ -29,21 +31,25 @@ import com.endit.auth.CurrentMemberProvider;
 @RequestMapping("/collections")
 public class CollectionViewController {
 
-	private final CurrentMemberProvider currentMemberProvider;
-
-	public CollectionViewController(CurrentMemberProvider currentMemberProvider) {
-		this.currentMemberProvider = currentMemberProvider;
-	}
-
-	/** 컬렉션 목록 화면 */
+	/**
+	 * 컬렉션 목록 화면
+	 *
+	 * @return 화면 View 이름
+	 */
 	@GetMapping
 	public String list() {
 		return "collection/list";
 	}
 
-	/** 컬렉션 등록 화면 */
+	/**
+	 * 컬렉션 등록 화면
+	 *
+	 * @param model 화면에 전달할 데이터
+	 * @return 화면 View 이름
+	 */
 	@GetMapping("/new")
 	public String createForm(Model model) {
+
 		// 등록과 수정이 같은 form.html을 사용하므로 JavaScript가 구분할 mode를 전달한다.
 		model.addAttribute("formMode", "create");
 		model.addAttribute("collectionId", 0);
@@ -51,26 +57,36 @@ public class CollectionViewController {
 		return "collection/form";
 	}
 
-	/** 컬렉션 상세 화면 */
+	/**
+	 * 컬렉션 상세 화면
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @param model        화면에 전달할 데이터
+	 * @return 화면 View 이름
+	 */
 	@GetMapping("/{collectionId}")
 	public String detail(
-			@PathVariable int collectionId,
-			Model model) {
+			@PathVariable int collectionId, Model model) {
 
 		// 상세 데이터는 REST API로 조회하고, View에는 조회 키와 화면 권한 판별값만 전달한다.
 		model.addAttribute("collectionId", collectionId);
-		model.addAttribute(
-				"currentMemberId",
-				currentMemberProvider.findCurrentMemberId().orElse(0));
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		model.addAttribute("currentMemberId", loginMember == null ? 0 : loginMember.getMemberId());
 
 		return "collection/detail";
 	}
 
-	/** 컬렉션 수정 화면 */
+	/**
+	 * 컬렉션 수정 화면
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @param model        화면에 전달할 데이터
+	 * @return 화면 View 이름
+	 */
 	@GetMapping("/{collectionId}/edit")
 	public String updateForm(
-			@PathVariable int collectionId,
-			Model model) {
+			@PathVariable int collectionId, Model model) {
 
 		// formMode와 collectionId는 body의 data-* 속성으로 렌더링되어 JS에서 사용된다.
 		model.addAttribute("formMode", "update");
