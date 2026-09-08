@@ -1,20 +1,33 @@
 spring:
-  # =========================================================
-  # Application
-  # =========================================================
   application:
     name: ending_credit
 
-  # =========================================================
-  # Profile
-  # =========================================================
+#--------------------------------------
+# messages (F-01 다국어)
+#--------------------------------------
+  messages:
+    basename: messages
+    encoding: UTF-8
+    # 끄지 않으면 messages_ko가 없는 탓에 JVM 기본 로케일이 영어인 서버에서 한국어 방문자에게 영어가 나간다
+    fallback-to-system-locale: false
+#--------------------------------------
+# Thymeleaf
+# 개발: cache: false
+#--------------------------------------
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+    encoding: UTF-8
+#--------------------------------------
+# dev/run
+#-------------------------------------- 
   profiles:
     active: app
-
-  # =========================================================
-  # Security
-  # GoogleOAuth
-  # =========================================================
+    
+#--------------------------------------
+# GoogleOAuth
+#--------------------------------------    
   security:
     oauth2:
       client:
@@ -25,54 +38,30 @@ spring:
             scope:
               - email
               - profile
-
-  # =========================================================
-  # Thymeleaf
-  # 개발 환경에서는 cache 비활성화
-  # =========================================================
-  thymeleaf:
-    prefix: classpath:/templates/
-    suffix: .html
-    cache: false
-    encoding: UTF-8
-
-
-# =========================================================
-# MyBatis
-# =========================================================
+              
+#--------------------------------------
+# Mybatis
+#-------------------------------------- 
 mybatis:
   mapper-locations: classpath:/mapper/**/*.xml
-  type-aliases-package: com.endit.domain
-
+  type-aliases-package: com.endit.domain     
   configuration:
     map-underscore-to-camel-case: true
     cache-enabled: false
-
-
-# =========================================================
-# TMDB Read Access Token
-# =========================================================
-tmdb:
-  api-key: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4NTA4NjI4YjcwZjNiMzNiMmQ3NWE3Yjc3YWE2YzkzNCIsIm5iZiI6MTc4NzgxODcyMi4zMTksInN1YiI6IjZhOGZmMmUyMTllMWJiZjgwYzNjZWEzZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.r17zMgOys95XGC0ux2AO1LI1wU8JFM0FQKK-IiYWJS4"
-  language: ko-KR
-  image-size: w500
-
-
-# =========================================================
-# Server
-# =========================================================
+    
+#--------------------------------------
+# server
+#--------------------------------------     
 server:
-  port: 8080
-
-
-# =========================================================
-# Logging
-# =========================================================
+  port: 8080 
+      
+#--------------------------------------
+# logging
+#-------------------------------------- 
 logging:
   level:
-    root: INFO
+    root: info
     com.endit: DEBUG
-
     # Transaction
     org.springframework.transaction: DEBUG
     org.springframework.transaction.interceptor: DEBUG
@@ -84,13 +73,19 @@ logging:
     org.mybatis: DEBUG
 
     # SQL
-    org.springframework.jdbc.core: DEBUG
+    org.springframework.jdbc.core: DEBUG    
 
-  # Log File
   file:
     name: logs/application.log
 
-  # Log Pattern
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# TMDB Read Access Token. 말이 어렵지 유저가 읽어올 권한이 있는지 검사하는 개념임. JWT- Json Web Token을 넣는다 - 라이브러리 요구 사항임.
+tmdb:
+  api-key: "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI4NTA4NjI4YjcwZjNiMzNiMmQ3NWE3Yjc3YWE2YzkzNCIsIm5iZiI6MTc4NzgxODcyMi4zMTksInN1YiI6IjZhOGZmMmUyMTllMWJiZjgwYzNjZWEzZSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.r17zMgOys95XGC0ux2AO1LI1wU8JFM0FQKK-IiYWJS4"
+  language: ko-KR
+  image-size: w500
+ 
+

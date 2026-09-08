@@ -1,0 +1,110 @@
+/* 검색 시작 화면의 공통 뼈대 - 통합(S-01)·영화·인물 세 화면이 같이 쓴다 */
+
+/* 가운데 정렬하지 않는다. main과 header가 같은 .endit-main 열을 쓰므로
+   폭을 두지 않아야 검색창 왼쪽 끝이 헤더의 END IT와 맞는다 */
+.search-hero {
+	padding: 28px 0 20px;
+}
+
+.search-hero.compact {
+	padding: 16px 0 12px;
+}
+
+/* 페이지 제목 - 검색어가 있으면 결과가 주인공이라 숨긴다 */
+.search-title {
+	font-size: 22px;
+	font-weight: 700;
+	margin-bottom: 12px;
+}
+
+/* ── 검색창 ──────────────────────────────────────── */
+.search-box {
+	display: flex;
+	gap: 8px;
+}
+
+.search-box input {
+	flex: 1;
+	height: 42px;
+	font-size: 15px;
+	padding: 0 14px;
+	border: 1px solid #E4E2E9;
+	border-radius: 8px;
+}
+
+.search-box input:focus {
+	outline: none;
+	border-color: #6550C8;
+}
+
+.search-box button {
+	height: 42px;
+	padding: 0 20px;
+	border: none;
+	border-radius: 8px;
+	background: #6550C8;
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+/* 상한을 넘긴 검색어 안내 - 검색창은 그대로 남는다 */
+.query-notice {
+	margin-top: 12px;
+	font-size: 14px;
+	color: #C0392B;
+}
+
+/* ── 순위(박스오피스 / 인기 인물) ────────────────── */
+/* 순위는 검색창과 같은 왼쪽 기준선에서 시작하되 폭은 절반만 쓴다 */
+.search-panel {
+	max-width: 520px;
+}
+
+.ranking-title {
+	font-size: 15px;
+	font-weight: 700;
+	margin-bottom: 4px;
+}
+
+.ranking-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.ranking-link {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 2px;
+	border-bottom: 1px solid #E4E2E9;
+	text-decoration: none;
+}
+
+.ranking-link:hover .ranking-title-text {
+	text-decoration: underline;
+}
+
+.ranking-no {
+	min-width: 16px;
+	color: #FF5A82;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.ranking-title-text {
+	color: #6550C8;
+	font-size: 14px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 인기 인물 줄의 역할 표기 - 이름 뒤에 옅게 붙는다 */
+.ranking-role {
+	color: #A0A0A8;
+	font-size: 12px;
+	white-space: nowrap;
+}

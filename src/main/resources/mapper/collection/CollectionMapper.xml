@@ -16,7 +16,7 @@ Modification History
             공통 검색 조건
          =================================== -->
 
-    <!-- 공통 검색 조건: 10(제목), 20(회원 번호) -->
+    <!-- 공통 검색 조건: 10(제목), 20(회원 번호), 30(콘텐츠 번호) -->
     <sql id="collectionSearchCondition">
         <if test="searchWord != null and searchWord != ''">
             <choose>
@@ -25,6 +25,15 @@ Modification History
                 </when>
                 <when test="searchDiv == '20'">
                     AND C.MEMBER_ID = #{searchNumber,jdbcType=NUMERIC}
+                </when>
+                <!-- 그 콘텐츠를 담고 있는 컬렉션. C-02 "이 작품이 담긴 컬렉션"이 쓴다 -->
+                <when test="searchDiv == '30'">
+                    AND EXISTS (
+                        SELECT 1
+                          FROM COLLECTION_ITEM CONTENT_CI
+                         WHERE CONTENT_CI.COLLECTION_ID = C.COLLECTION_ID
+                           AND CONTENT_CI.CONTENT_ID = #{searchNumber,jdbcType=NUMERIC}
+                    )
                 </when>
             </choose>
         </if>

@@ -167,7 +167,7 @@ public class MemberMyPageController {
 
 		model.addAttribute("memberId", memberId);
 
-		return "member/profile";
+		return "member/userProfile";
 	}
 
 	private String normalizeRecordTab(String tab) {

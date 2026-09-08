@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -230,6 +231,7 @@ public class ContentServiceImpl implements ContentService {
 		// 스킵 사유를 나눠 센다. 등급은 DB에 안 남으므로 몇 편이 왜 빠졌는지는 이 로그로만 확인된다
 		int skippedCount = 0;
 		int adultSkippedCount = 0;
+		int unratedSkippedCount = 0;
 		// TMDB 인기 목록은 한 페이지에 20건이다
 		int page = 1;
 
@@ -256,11 +258,12 @@ public class ContentServiceImpl implements ContentService {
 						continue;
 					}
 
-					// 한국 성인등급이면 저장하지 않는다. 저장 안 한 건은 limit에 세지 않으므로 다음 페이지로 보충된다
-					if (saveFromTmdb(movie.getId())) {
-						insertedCount++;
-					} else {
-						adultSkippedCount++;
+					// 성인등급이거나 등급을 못 구하면 저장하지 않는다.
+					// 저장 안 한 건은 limit에 세지 않으므로 다음 페이지로 보충된다
+					switch (saveFromTmdb(movie.getId())) {
+						case SAVED -> insertedCount++;
+						case ADULT -> adultSkippedCount++;
+						case NO_CERTIFICATION -> unratedSkippedCount++;
 					}
 				}
 
@@ -269,8 +272,9 @@ public class ContentServiceImpl implements ContentService {
 				}
 				page++;
 			}
-			log.info("TMDB 인기 영화 import: processed={}, inserted={}, 기존보유 skip={}, 성인등급 skip={}",
-					processedCount, insertedCount, skippedCount, adultSkippedCount);
+			// 적재량이 줄었을 때 "성인물이라 걸렀다"와 "등급을 못 구했다"를 구분할 유일한 신호다
+			log.info("TMDB 인기 영화 import: processed={}, inserted={}, 기존보유 skip={}, 성인등급 skip={}, 등급미상 skip={}",
+					processedCount, insertedCount, skippedCount, adultSkippedCount, unratedSkippedCount);
 			return insertedCount;
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 인기 영화 조회 실패", e);
@@ -516,8 +520,11 @@ public class ContentServiceImpl implements ContentService {
 		}
 	}
 
-	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다. 한국 성인등급이면 저장하지 않고 false
-	private boolean saveFromTmdb(int tmdbMovieId) {
+	// 저장하지 않은 사유. 호출부가 로그를 갈라 찍어야 해서 boolean으로는 부족하다
+	private enum SaveOutcome { SAVED, ADULT, NO_CERTIFICATION }
+
+	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다
+	private SaveOutcome saveFromTmdb(int tmdbMovieId) {
 		try {
 			// HTTP GET /movie/영화id + append_to_response=credits,translations,release_dates
 			// 이유는 API 호출 횟수를 줄이기 위해서. 항목을 얹는 것뿐이라 호출 수는 늘지 않는다.
@@ -527,13 +534,21 @@ public class ContentServiceImpl implements ContentService {
 					MovieAppendToResponse.CREDITS, MovieAppendToResponse.TRANSLATIONS,
 					MovieAppendToResponse.RELEASE_DATES);
 
-			// 비회원도 보는 화면이라 수집 단계에서 막는다. 등급을 담을 컬럼이 없어 표시 단계에서는 거를 수 없다
-			if (isAdultMovie(movie)) {
+			// 응답을 두 번만 훑는다. 아래 판정 두 개와 로그가 각자 꺼내면 같은 목록을 3~6번 걷게 된다
+			String koreanRating = toCertification(movie, CERTIFICATION_COUNTRY_KR);
+			String usRating = toCertification(movie, CERTIFICATION_COUNTRY_US);
+
+			// 비회원도 보는 화면이라 수집 단계에서 막는다. 등급을 담을 컬럼이 없어 표시 단계에서는 거를 수 없다.
+			// 등급이 없으면 판정할 근거가 없으므로 통과가 아니라 제외한다 - 사유별로 로그를 갈라 둔다
+			if (!hasCertification(koreanRating, usRating)) {
+				log.info("등급미상 skip: externalId={}, title={}", tmdbMovieId, movie.getTitle());
+				return SaveOutcome.NO_CERTIFICATION;
+			}
+
+			if (isAdultMovie(koreanRating, usRating)) {
 				log.info("성인등급 skip: externalId={}, title={}, KR등급={}, US등급={}",
-						tmdbMovieId, movie.getTitle(),
-						toCertification(movie, CERTIFICATION_COUNTRY_KR),
-						toCertification(movie, CERTIFICATION_COUNTRY_US));
-				return false;
+						tmdbMovieId, movie.getTitle(), koreanRating, usRating);
+				return SaveOutcome.ADULT;
 			}
 
 			ContentVO content = toContentVO(movie);
@@ -546,24 +561,29 @@ public class ContentServiceImpl implements ContentService {
 			// 장르는 credits가 아님. 상세 JSON에 이미 들어있는 genres로 CONTENT_GENRE만 연결
 			syncContentGenres(contentId, movie);
 
-			return true;
+			return SaveOutcome.SAVED;
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 영화 조회 실패: " + tmdbMovieId, e);
 		}
+	}
+
+	// 한국·미국 중 하나라도 등급이 있어야 성인물 여부를 판정할 수 있다.
+	// 둘 다 없는 작품은 판정 불가라 수집하지 않는다(2026-09-05 정책 변경 - 그전에는 통과시켰다).
+	// 다른 나라 등급은 보지 않는다 - 등급 항목이 있어도 값이 빈 경우가 있어 근거가 되지 못한다
+	private boolean hasCertification(String koreanRating, String usRating) {
+		return StringUtils.hasText(koreanRating) || StringUtils.hasText(usRating);
 	}
 
 	// 성인물 판정 - 한국 등급이 있으면 그것만 보고, 없을 때만 미국 등급으로 판단한다.
 	// 둘을 OR로 묶으면 미국 R이 한국 판단을 덮어쓴다 - "오디세이"는 KR 15인데 US R이라 함께 빠졌다.
 	// 미국 R은 관람 금지가 아니라 "17세 미만 보호자 동반"이고 폭력·욕설만으로도 붙는다.
 	// 그래도 한국 등급이 없을 때는(전체의 20%쯤) 미국이 유일한 근거라 R까지 성인으로 본다
-	private boolean isAdultMovie(MovieDb movie) {
-		String korean = toCertification(movie, CERTIFICATION_COUNTRY_KR);
-
-		if (StringUtils.hasText(korean)) {
-			return isAdultCertification(korean);
+	private boolean isAdultMovie(String koreanRating, String usRating) {
+		if (StringUtils.hasText(koreanRating)) {
+			return isAdultCertification(koreanRating);
 		}
 
-		return isAdultCertification(toCertification(movie, CERTIFICATION_COUNTRY_US));
+		return isAdultCertification(usRating);
 	}
 
 	// RELEASE_DATES 응답에서 그 나라 등급을 꺼낸다. 안 얹었거나 그 나라 개봉 정보가 없으면 null
@@ -588,7 +608,7 @@ public class ContentServiceImpl implements ContentService {
 		return null;
 	}
 
-	// 한국 성인등급인지. 등급이 없으면 통과시키는 것이 정책이다(미상까지 막으면 보유량이 절반 아래로 떨어진다)
+	// 성인등급 문자열인지. 빈 값은 여기서 판정하지 않는다 - 등급 유무는 hasCertification이 먼저 거른다
 	private boolean isAdultCertification(String certification) {
 		if (!StringUtils.hasText(certification)) {
 			return false;
@@ -1157,6 +1177,23 @@ public class ContentServiceImpl implements ContentService {
 		}
 
 		return contents;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Map<Integer, Double> retrieveAverageRatings(List<Integer> contentIds) {
+		// 빈 목록은 매퍼에서 IN ()이 되어 문법 오류가 난다
+		if (contentIds == null || contentIds.isEmpty()) {
+			return Map.of();
+		}
+
+		Map<Integer, Double> averages = new LinkedHashMap<>();
+
+		for (ContentVO row : contentMapper.doRetrieveAverageRatings(contentIds)) {
+			averages.put(row.getContentId(), row.getAverageRating());
+		}
+
+		return averages;
 	}
 
 	// 외부 ID 중복 검사 - 이미 등록된 TMDB 영화인지 확인한다

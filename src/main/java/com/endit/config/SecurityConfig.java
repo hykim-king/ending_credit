@@ -96,6 +96,7 @@ public class SecurityConfig {
 				// 컬렉션 변경과 로그인 회원의 좋아요 상태 조회
 				.requestMatchers(HttpMethod.POST, "/api/collections/**").authenticated()
 				.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
+				.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
 				.requestMatchers(HttpMethod.DELETE, "/api/collections/**").authenticated()
 				.requestMatchers(HttpMethod.GET, "/api/collections/*/likes").authenticated()
 				// 그 외 모든 요청은 개발 편의상 일단 전부 허용

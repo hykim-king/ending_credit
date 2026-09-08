@@ -58,6 +58,79 @@
 	width: 100%;
 }
 
+/* ── C-01 평가 분석 (포스터 아래 점수별 막대) ─────────── */
+.rating-chart {
+	margin-top: 16px;
+}
+/* 제목 왼쪽, 평균 오른쪽 - 막대 폭과 같은 줄을 쓰므로 양 끝으로 벌린다 */
+.rating-chart-title {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	margin: 0 0 8px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #555;
+}
+.rating-chart-average {
+	color: var(--endit-primary);
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+.rating-chart-average i {
+	font-size: .85em;
+	margin-right: 2px;
+}
+/* 참여 인원은 평균을 거드는 값이라 색·무게를 낮춘다 */
+.rating-chart-raters {
+	margin-left: 3px;
+	font-size: 11px;
+	font-weight: 400;
+	color: #777;
+}
+.rating-chart-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	/* 한 줄 높이를 고정해 막대 다섯 줄이 눈금처럼 나란히 선다 */
+	height: 20px;
+	font-size: 12px;
+	color: #777;
+	font-variant-numeric: tabular-nums;
+}
+.rating-chart-score {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	/* "5★"이 두 글자라 폭을 잡아 두지 않으면 인원 수에 따라 막대 시작점이 흔들린다 */
+	width: 26px;
+	color: var(--endit-primary);
+	font-weight: 600;
+}
+.rating-chart-score i {
+	font-size: .8em;
+}
+.rating-chart-bar {
+	flex: 1;
+	height: 8px;
+	border-radius: 4px;
+	background: #ECEAF2;
+	overflow: hidden;
+}
+.rating-chart-fill {
+	display: block;
+	height: 100%;
+	border-radius: 4px;
+	background: var(--endit-primary);
+}
+/* 세 자리(999명)까지 자리를 미리 잡는다 */
+.rating-chart-count {
+	width: 28px;
+	text-align: right;
+}
+
+
 /* ── C-01 평가·기록 (ACT-C-001~005) ───────────────── */
 .rating-box {
 	display: flex;
@@ -350,76 +423,6 @@
 	border-radius: 4px;
 }
 
-/* ── 확인 미니 모달 ────────────────────────────────── */
-/* 신고 모달 위에 겹쳐 뜨므로 picker-modal(1050)보다 높다 */
-.confirm-modal {
-	display: flex;
-	position: fixed;
-	inset: 0;
-	align-items: center;
-	justify-content: center;
-	padding: 20px;
-	background: rgba(0, 0, 0, .5);
-	z-index: 1060;
-}
-.confirm-modal[hidden] {
-	display: none;
-}
-.confirm-dialog {
-	width: 100%;
-	max-width: 360px;
-	padding: 24px;
-	border-radius: 16px;
-	background: #fff;
-	text-align: center;
-	box-shadow: 0 18px 48px rgba(0, 0, 0, .35);
-}
-.confirm-title {
-	margin: 0 0 8px;
-	font-size: 16px;
-	font-weight: 700;
-}
-.confirm-message {
-	margin: 0 0 20px;
-	font-size: 14px;
-	color: #555;
-}
-.confirm-actions {
-	display: flex;
-	gap: 8px;
-}
-.confirm-cancel,
-.confirm-ok {
-	flex: 1;
-	/* 접근성 원칙: 44px 터치 영역 */
-	min-height: 44px;
-	border-radius: 12px;
-	font-size: 14px;
-	font-weight: 600;
-	cursor: pointer;
-}
-.confirm-cancel {
-	border: 1px solid var(--endit-border);
-	background: #fff;
-	color: #555;
-}
-.confirm-cancel:hover {
-	border-color: var(--endit-primary);
-	color: var(--endit-primary);
-}
-.confirm-ok {
-	border: none;
-	background: var(--endit-primary);
-	color: #fff;
-}
-.confirm-ok:hover {
-	background: var(--endit-hover);
-}
-.confirm-cancel:focus-visible,
-.confirm-ok:focus-visible {
-	outline: 3px solid var(--endit-focus);
-	outline-offset: 2px;
-}
 .comment-like {
 	display: inline-flex;
 	align-items: center;
@@ -435,7 +438,7 @@
 .comment-like:hover {
 	color: var(--endit-primary);
 }
-/* 누른 좋아요는 아이콘이 채워지고(bi-hand-thumbs-up-fill) 숫자까지 굵어진다.
+/* 누른 좋아요는 하트가 채워지고(bi-heart-fill) 숫자까지 굵어진다.
    색만으로는 티가 안 나서 모양과 굵기를 함께 바꾼다 */
 .comment-like.is-on {
 	color: var(--endit-primary);
@@ -471,50 +474,6 @@
 	font-size: 13px;
 	color: #555;
 	cursor: pointer;
-}
-/* ── MOD-04 코멘트 신고 ────────────────────────────── */
-.report-reasons {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin: 0 0 16px;
-	padding: 0;
-	border: none;
-}
-.report-reason {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	/* 접근성 원칙: 44px 터치 영역 */
-	min-height: 44px;
-	padding: 0 16px;
-	border: 1px solid var(--endit-border);
-	border-radius: 12px;
-	font-size: 14px;
-	color: #333;
-	cursor: pointer;
-}
-/* 라디오가 켜지면 테두리도 함께 바뀐다 - 점 하나만으로 상태를 알리지 않는다 */
-.report-reason:has(input:checked) {
-	border-color: var(--endit-primary);
-	color: var(--endit-primary);
-	font-weight: 600;
-}
-.report-reason:focus-within {
-	outline: 3px solid var(--endit-focus);
-	outline-offset: 2px;
-}
-.report-detail-label {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	margin-bottom: 8px;
-	font-size: 13px;
-	color: #555;
-}
-.report-required {
-	color: #B5482E;
-	font-weight: 600;
 }
 .comment-write-foot {
 	display: flex;
@@ -563,19 +522,80 @@
 	}
 }
 
+/* ── C-02 이 작품이 담긴 컬렉션 ─────────────────────
+   골격은 갤러리 캐러셀과 같다. 카드 자체는 collection/list.css가 그린다 */
+.collection-row-viewport {
+	position: relative;
+	/* 한 화면 칸 수. 폭에 따라 아래 미디어쿼리가 바꾸고 JS가 이 값을 읽어 이동량을 정한다 */
+	--collection-per-view: 4;
+	--collection-gap: 18px;
+}
+.collection-row-clip {
+	overflow: hidden;
+	/* 카드 그림자와 -27deg로 기울어진 포스터가 잘리지 않도록 위아래를 열어 둔다 */
+	padding: 4px 0 8px;
+}
+.collection-row-track {
+	display: flex;
+	gap: var(--collection-gap);
+	transition: transform 0.3s ease;
+}
+/* 칸 사이 간격 (칸수-1)개를 뺀 나머지를 칸 수로 나눈다 - JS도 같은 변수를 읽어 이동량을 맞춘다.
+   min-width:0이 없으면 카드 안 한 줄짜리 설명이 min-content를 밀어 올려 두 장밖에 안 들어간다
+   (컬렉션 목록 격자가 minmax(0, 1fr)로 막아 둔 것과 같은 함정) */
+.collection-row-item {
+	flex: 0 0 calc((100% - (var(--collection-per-view) - 1) * var(--collection-gap)) / var(--collection-per-view));
+	min-width: 0;
+}
+.collection-row-nav {
+	position: absolute;
+	/* 포스터 세로 중앙. 카드 아래 제목·설명·좋아요까지 포함한 중앙은 너무 내려간다.
+	   포스터 높이가 clamp(148px, 14vw, 176px)라 실측이 필요해 JS가 --nav-top을 채운다 */
+	top: var(--nav-top, 50%);
+	transform: translateY(-50%);
+	/* 접근성 원칙: 44px 터치 영역 */
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: none;
+	background: rgba(255,255,255,0.9);
+	box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+	font-size: 15px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	line-height: 1;
+	cursor: pointer;
+	z-index: 2;
+}
+.collection-row-prev {
+	left: -22px;
+}
+.collection-row-next {
+	right: -22px;
+}
+/* display:flex가 hidden을 덮어쓰므로 명시적으로 막는다(갤러리와 같은 함정) */
+.collection-row-nav[hidden] {
+	display: none;
+}
+
 .gallery-viewport {
 	position: relative;
+	/* 한 화면 칸 수. 폭에 따라 아래 미디어쿼리가 바꾸고 JS가 이 값을 읽어 이동량을 정한다 */
+	--gallery-per-view: 3;
+	--gallery-gap: 12px;
 }
 .gallery-clip {
 	overflow: hidden;
 }
 .gallery-track {
 	display: flex;
-	gap: 12px;
+	gap: var(--gallery-gap);
 	transition: transform 0.3s ease;
 }
 .gallery-item {
-	flex: 0 0 calc((100% - 24px) / 3);
+	flex: 0 0 calc((100% - (var(--gallery-per-view) - 1) * var(--gallery-gap)) / var(--gallery-per-view));
 	aspect-ratio: 16 / 9;
 	border-radius: 8px;
 	overflow: hidden;
@@ -774,6 +794,59 @@
 	}
 }
 
+/* ── 좁은 화면 (C-01/C-02 전체) ─────────────────────
+   칸 수는 CSS 변수 한 곳에서만 바꾼다 - JS가 같은 변수를 읽으므로 이동량이 따라온다.
+   화살표는 카드 밖(-22px)에 걸쳐 있어 좁은 화면에서는 잘리므로 안쪽으로 들인다 */
+@media (max-width: 991.98px) {
+	.backdrop-header {
+		height: 320px;
+	}
+	.gallery-viewport {
+		--gallery-per-view: 2;
+	}
+	.collection-row-viewport {
+		--collection-per-view: 3;
+	}
+}
+@media (max-width: 767.98px) {
+	.backdrop-header {
+		height: 260px;
+	}
+	/* 포스터가 220px을 차지하면 옆의 별점·버튼이 설 자리가 없어 줄바꿈만 반복된다 */
+	.poster-box {
+		width: 150px;
+		flex: 0 0 150px;
+	}
+	.collection-row-viewport {
+		--collection-per-view: 2;
+	}
+	.gallery-prev, .collection-row-prev {
+		left: 4px;
+	}
+	.gallery-next, .collection-row-next {
+		right: 4px;
+	}
+}
+@media (max-width: 560px) {
+	.gallery-viewport {
+		--gallery-per-view: 1;
+	}
+	.collection-row-viewport {
+		--collection-per-view: 1;
+	}
+	/* 포스터와 평가 분석이 한 줄을 통째로 쓰고 별점·버튼이 그 아래로 내려간다 */
+	.poster-box {
+		width: 100%;
+		flex: 1 1 100%;
+	}
+	.poster-box img, .poster-placeholder {
+		width: 180px;
+	}
+	.rating-chart {
+		max-width: 260px;
+	}
+}
+
 /* ── 목록형 모달 (MOD-05 출연/제작 전체, MOD-13 컬렉션에 추가) ── */
 .picker-modal {
 	display: flex;
@@ -914,4 +987,40 @@
 .picker-more:hover {
 	border-color: #6550C8;
 	color: #6550C8;
+}
+
+/* 맨 위로. 홈(home/index.html)의 같은 이름 규칙을 그대로 쓴다 - 스크롤이 THRESHOLD를 넘을 때만 detail.js가 띄운다 */
+.scroll-top {
+	position: fixed;
+	right: 24px;
+	bottom: 24px;
+	/* 접근성 원칙: 44px 터치 영역 */
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: none;
+	background: var(--endit-primary);
+	color: #fff;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+	cursor: pointer;
+	/* 모달(1050)보다 아래여야 딤 위로 떠오르지 않는다 */
+	z-index: 3;
+}
+.scroll-top:hover {
+	background: var(--endit-hover);
+}
+.scroll-top:active {
+	background: var(--endit-active);
+}
+.scroll-top:focus-visible {
+	outline: 3px solid #D8D1FF;
+	outline-offset: 2px;
+}
+/* display:flex가 hidden을 덮어쓴다 */
+.scroll-top[hidden] {
+	display: none;
 }

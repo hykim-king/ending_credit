@@ -21,6 +21,7 @@ import com.endit.service.PersonLikeService;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 05. eunhu       인기 인물(좋아요 많은 순) 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -63,6 +64,13 @@ public class PersonLikeServiceImpl implements PersonLikeService {
 		}
 
 		return personLikeMapper.doRetrieve(param);
+	}
+
+	@Override
+	public List<PersonLikeVO> retrievePopular(int size) {
+		validateSize(size);
+
+		return personLikeMapper.doRetrievePopular(size);
 	}
 
 	@Override
@@ -167,6 +175,15 @@ public class PersonLikeServiceImpl implements PersonLikeService {
 	private void validateMemberId(int memberId) {
 		if (memberId <= 0) {
 			throw new IllegalArgumentException("올바른 회원 번호가 필요합니다.");
+		}
+	}
+
+	/**
+	 * 인기 인물 조회 건수가 양수인지 검증
+	 */
+	private void validateSize(int size) {
+		if (size <= 0) {
+			throw new IllegalArgumentException("조회 건수는 1 이상이어야 합니다.");
 		}
 	}
 
