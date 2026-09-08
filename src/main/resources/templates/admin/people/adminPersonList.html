@@ -9,6 +9,7 @@
     <title>인물 관리 | END IT ADMIN</title>
 
     <link rel="stylesheet" href="/assets/css/admin/people.css">
+    <link rel="stylesheet" th:href="@{/assets/css/common/scroll-top.css}">
 </head>
 <body data-page="admin-person-list">
 
@@ -73,6 +74,10 @@
         </div>
 
     </div>
+
+    <!-- 맨 위로. 목록이 길어 헤더가 멀어진다 - 홈·영화 상세와 같은 공용 한 벌이다 -->
+    <div th:replace="~{fragments/scroll_top :: button}"></div>
+    <script th:src="@{/assets/js/common/scroll-top.js}"></script>
 
     <script src="/assets/js/admin/people.js"></script>
 

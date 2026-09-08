@@ -75,6 +75,10 @@
     // 아래 기본값은 그 블록이 없을 때를 위한 것이므로 지우지 않는다.
     const MSG = Object.assign({
         loginRequired: "로그인 후 이용할 수 있습니다.",
+        loginRating: "로그인 후 별점을 남길 수 있어요.",
+        loginWatchlist: "로그인 후 보고싶어요에 담을 수 있어요.",
+        loginCollection: "로그인 후 컬렉션에 담을 수 있어요.",
+        loginComment: "로그인 후 코멘트를 남길 수 있어요.",
         requestFailed: "요청에 실패했습니다.",
         ratingSaveFailed: "별점을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
         watchlistSaveFailed: "보고싶어요를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
@@ -128,6 +132,164 @@
         if (notice) {
             notice.hidden = true;
         }
+    }
+
+    // ── 비회원 로그인 안내 (3조 컬렉션 상세와 같은 모달) ─
+    // 무엇을 하려다 막혔는지에 따라 설명 줄만 갈아 끼운다.
+    // 모달이나 bootstrap이 없으면 예전처럼 안내 문구 한 줄로 떨어진다
+    function showLoginRequired(reasonKey) {
+        const modal = document.getElementById("loginRequiredModal");
+        const description = document.getElementById("loginRequiredDescription");
+        const reason = MSG[reasonKey] || MSG.loginRequired;
+
+        if (!modal || !description || typeof bootstrap === "undefined") {
+            showNotice(reason);
+            return;
+        }
+
+        clearNotice();
+        description.textContent = reason;
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+
+    // ── 미리보기 격자의 "더보기" 노출 판정 ──────────────
+    /*
+     * 출연/제작과 코멘트는 화면이 좁아지면 CSS가 뒷줄을 감춰 줄 수를 유지한다(detail.css).
+     * 그래서 "다 보여 줬는지"를 서버가 미리 알 수 없다 - 실제로 그려진 칸을 세어 판정한다.
+     * 감춘 것이 하나라도 있거나 서버가 전체를 못 보냈으면 더보기를 띄운다.
+     */
+    function initSectionMore(gridId, buttonId) {
+        const grid = document.getElementById(gridId);
+        const button = document.getElementById(buttonId);
+
+        if (!grid || !button) {
+            return;
+        }
+
+        const total = Number(grid.dataset.totalCnt) || 0;
+
+        function update() {
+            // display:none인 칸은 사각형이 없다 - 몇 번째부터 감췄는지 CSS에 다시 적지 않아도 된다
+            const shown = Array.prototype.filter.call(
+                grid.children, (cell) => cell.getClientRects().length > 0).length;
+
+            button.hidden = shown >= total;
+        }
+
+        // 창 크기가 바뀌면 감춰지는 칸 수가 달라진다
+        window.addEventListener("resize", update);
+        update();
+    }
+
+    // ── C-01 평가 분석 그래프 (Chart.js) ───────────────
+    // 점수는 이어진 눈금이라 1→5점을 직선으로 이으면 어느 쪽으로 치우친 평가인지 형태로 읽힌다.
+    // 색은 endit.css의 --endit-primary와 같은 값이다 - 캔버스는 CSS 변수를 못 읽어 여기 한 번 더 적는다
+    const RATING_LINE_COLOR = "#6550C8";
+    // 면은 위가 진하고 아래로 옅어진다. 별점이 높은 쪽으로 색이 차오르는 것이 보인다.
+    // 봉우리가 위쪽에 걸리면 옅은 구간만 넓게 보여서, 옅은 wash보다 진하게 잡았다
+    const RATING_FILL_TOP = "rgba(101, 80, 200, .40)";
+    const RATING_FILL_BOTTOM = "rgba(101, 80, 200, .06)";
+    const RATING_GRID_COLOR = "#EFEEF3";
+    const RATING_TICK_COLOR = "#8B8493";
+    // 눈금은 0과 최댓값 언저리만 있으면 된다. 폭이 220px이라 더 넣으면 숫자가 겹친다
+    const RATING_Y_TICK_LIMIT = 3;
+
+    function initRatingChart() {
+        const canvas = document.getElementById("ratingChart");
+
+        if (!canvas) {
+            return;
+        }
+
+        const table = document.getElementById("ratingTable");
+
+        // CDN이 막히면 캔버스 대신 숨겨 둔 표를 펼친다 - 숫자는 남아야 한다
+        if (typeof Chart === "undefined") {
+            canvas.hidden = true;
+
+            if (table) {
+                table.classList.remove("visually-hidden");
+            }
+
+            return;
+        }
+
+        const counts = (canvas.dataset.counts || "").split(",").map(Number);
+
+        new Chart(canvas, {
+            type: "line",
+            data: {
+                labels: ["1★", "2★", "3★", "4★", "5★"],
+                datasets: [{
+                    label: MSG.ratingChartLabel,
+                    data: counts,
+                    fill: "origin",
+                    // 그리는 순간의 영역 높이를 받아 그라데이션을 만든다.
+                    // 캔버스 크기가 폭에 따라 달라져 미리 만들어 두면 어긋난다
+                    backgroundColor: (context) => {
+                        const area = context.chart.chartArea;
+
+                        if (!area) {
+                            return RATING_FILL_BOTTOM;
+                        }
+
+                        const gradient = context.chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+
+                        gradient.addColorStop(0, RATING_FILL_TOP);
+                        gradient.addColorStop(1, RATING_FILL_BOTTOM);
+
+                        return gradient;
+                    },
+                    borderColor: RATING_LINE_COLOR,
+                    borderWidth: 2,
+                    // 꺾은선이라야 몰린 점수에서 각이 선다 - 곡선은 봉우리를 뭉갠다
+                    tension: 0,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: RATING_LINE_COLOR,
+                    // 점이 선·면과 겹쳐도 남도록 바탕색 테를 두른다
+                    pointBorderColor: "#fff",
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    // 한 줄뿐이라 범례가 설명할 것이 없다. 제목이 이미 무엇인지 말한다
+                    legend: { display: false },
+                    tooltip: {
+                        displayColors: false,
+                        callbacks: {
+                            title: () => "",
+                            // "5점 155명" - 화면 문구와 같은 번들 키를 쓴다(F-01)
+                            label: (item) => MSG.ratingBucket
+                                .replace("{0}", item.dataIndex + 1)
+                                .replace("{1}", item.parsed.y)
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        border: { color: RATING_GRID_COLOR },
+                        ticks: { color: RATING_TICK_COLOR, font: { size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        border: { display: false },
+                        grid: { color: RATING_GRID_COLOR },
+                        // 인원이라 소수점이 없다
+                        ticks: {
+                            color: RATING_TICK_COLOR,
+                            font: { size: 11 },
+                            precision: 0,
+                            maxTicksLimit: RATING_Y_TICK_LIMIT
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // ── 평가·보고싶어요 (ACT-C-001~003) ────────────────
@@ -194,7 +356,7 @@
         stars.forEach((star) => {
             star.addEventListener("click", async () => {
                 if (!memberId) {
-                    showNotice(MSG.loginRequired);
+                    showLoginRequired("loginRating");
                     return;
                 }
 
@@ -230,7 +392,7 @@
         // ACT-C-003 보고싶어요 토글
         watchButton.addEventListener("click", async () => {
             if (!memberId) {
-                showNotice(MSG.loginRequired);
+                showLoginRequired("loginWatchlist");
                 return;
             }
 
@@ -401,7 +563,7 @@
 
         button.addEventListener("click", () => {
             if (!memberId) {
-                showNotice(MSG.loginRequired);
+                showLoginRequired("loginCollection");
                 return;
             }
 
@@ -565,7 +727,7 @@
 
         openButton.addEventListener("click", () => {
             if (!memberId) {
-                showNotice(MSG.loginRequired);
+                showLoginRequired("loginComment");
                 return;
             }
 
@@ -688,7 +850,9 @@
                 const placeholder = document.createElement("div");
 
                 placeholder.className = "cast-avatar-placeholder";
-                placeholder.textContent = MSG.profileEmpty;
+                // 서버가 그린 크레딧 줄(detail.html)과 같은 폴백 - 아이콘만 넣고 문구는 title로 남긴다
+                placeholder.title = MSG.profileEmpty;
+                placeholder.innerHTML = "<i class=\"bi bi-person-fill\" aria-hidden=\"true\"></i>";
                 cell.appendChild(placeholder);
             }
 
@@ -1045,31 +1209,10 @@
         });
     }
 
-    // 홈과 같은 값. 이 아래로는 헤더가 아직 가까워 버튼이 방해만 된다
-    const SCROLL_TOP_THRESHOLD = 150;
-
-    // 맨 위로(H-01과 같은 버튼)
-    function initScrollTop() {
-        const button = document.getElementById("scrollTopButton");
-
-        if (!button) {
-            return;
-        }
-
-        const update = () => {
-            button.hidden = window.scrollY < SCROLL_TOP_THRESHOLD;
-        };
-
-        // 스크롤마다 부르므로 passive로 둔다 - 기본 동작을 막을 일이 없다
-        window.addEventListener("scroll", update, { passive: true });
-        button.addEventListener("click", () => {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-        // 새로고침이 화면 중간에서 되살아나는 경우가 있어 처음에도 한 번 본다
-        update();
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
+        initSectionMore("castGrid", "castMoreButton");
+        initSectionMore("commentGrid", "commentMoreButton");
+        initRatingChart();
         initRecord();
         initCollection();
         initModalDismiss();
@@ -1081,6 +1224,5 @@
         initGallery();
         initCollectionRow();
         initGalleryModal();
-        initScrollTop();
     });
 })();

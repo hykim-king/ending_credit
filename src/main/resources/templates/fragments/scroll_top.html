@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>맨 위로 버튼</title>
+</head>
+<body>
+
+<!--
+  맨 위로(H-01·C-01·AD-02·AD-05 공용). 처음에는 감춰 두고
+  스크롤이 THRESHOLD를 넘은 뒤에만 assets/js/common/scroll-top.js가 띄운다.
+  쓰는 화면은 assets/css/common/scroll-top.css와 그 스크립트를 함께 실어야 한다.
+-->
+<button th:fragment="button" type="button" class="scroll-top" id="scrollTopButton" hidden
+        th:aria-label="#{common.scrollTop}" aria-label="맨 위로">
+	<i class="bi bi-arrow-up" aria-hidden="true"></i>
+</button>
+
+</body>
+</html>

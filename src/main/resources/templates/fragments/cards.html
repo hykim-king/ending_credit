@@ -20,7 +20,7 @@
 			<img th:if="${movie.posterUrl != null}" th:src="${movie.posterUrl}"
 			     th:alt="${@localeText.get(movie.titleKo, movie.titleOrg)}" loading="lazy">
 			<div th:if="${movie.posterUrl == null}" class="ec-poster-empty"
-			     th:text="#{home.card.noImage}">이미지 없음</div>
+			     th:title="#{home.card.noImage}" title="이미지 없음"><i class="bi bi-film" aria-hidden="true"></i></div>
 		</div>
 	</a>
 	<div class="ec-card-body">
@@ -51,7 +51,8 @@
    th:href="@{'/people/' + ${person.personId}}">
 	<img th:if="${person.profileImageUrl != null}" th:src="${person.profileImageUrl}"
 	     class="ec-person-avatar" th:alt="${person.nameKo}" loading="lazy">
-	<div th:if="${person.profileImageUrl == null}" class="ec-person-avatar-empty">사진 없음</div>
+	<div th:if="${person.profileImageUrl == null}" class="ec-person-avatar-empty"
+	     th:title="#{detail.profile.empty}" title="사진 없음"><i class="bi bi-person-fill" aria-hidden="true"></i></div>
 	<div class="ec-person-body">
 		<div class="ec-person-name" th:text="${person.nameKo}">이름</div>
 		<div class="ec-person-role" th:if="${role != null}" th:text="${role}">배우</div>

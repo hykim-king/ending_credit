@@ -22,7 +22,8 @@ layout:decorate="~{layout/layout}">
 		<div class="person-hero">
 			<img th:if="${person.profileImageUrl != null}" th:src="${person.profileImageUrl}"
 			     class="person-profile" th:alt="${person.nameKo}">
-			<div th:if="${person.profileImageUrl == null}" class="person-profile person-profile-empty">사진 없음</div>
+			<div th:if="${person.profileImageUrl == null}" class="person-profile person-profile-empty"
+			     th:title="#{detail.profile.empty}" title="사진 없음"><i class="bi bi-person-fill" aria-hidden="true"></i></div>
 
 			<div class="person-hero-body">
 				<!-- POL-034가 국문명/원문명 중 하나만 있어도 되게 허용하므로 없는 쪽을 대신 세운다 -->
