@@ -3,7 +3,9 @@ package com.endit.service;
 import java.util.List;
 
 import com.endit.cmn.DTO;
+import com.endit.domain.GenrePreferenceVO;
 import com.endit.domain.MemberContentVO;
+import com.endit.domain.RatingDistributionVO;
 
 /**
  * <pre>
@@ -16,6 +18,7 @@ import com.endit.domain.MemberContentVO;
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 9. 03. jinyoung    회원별 평가·보고싶어요 건수 조회 추가
+ * 2026. 9. 08. heetae      회원별 선호 장르 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -113,4 +116,20 @@ public interface MemberContentService {
 	void deleteWatchlist(
 			int memberId,
 			int contentId);
+	
+	/**
+	 * 회원 선호 장르 분석.
+	 *
+	 * @param memberId 조회할 회원 번호
+	 * @return 회원이 평가한 영화들의 장르별 집계 목록 (평가 개수 내림차순)
+	 */
+	List<GenrePreferenceVO> retrieveGenrePreference(int memberId);
+	
+	/**
+	 * 회원 별점 분포 조회
+	 *
+	 * @param memberId 조회할 회원 번호
+	 * @return 별점(1~5)별 개수 목록
+	 */
+	List<RatingDistributionVO> retrieveRatingDistribution(int memberId);
 }

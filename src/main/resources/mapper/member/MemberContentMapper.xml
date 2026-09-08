@@ -6,6 +6,7 @@
 <!--
 Modification History
 2026. 9. 03. jinyoung - 회원 기록 정렬 및 전체 회원 평균 별점 조회 설명 추가
+2026. 9. 08. heetae - 회원별 선호 장르 조회 추가
 -->
 
 <mapper namespace="com.endit.mapper.MemberContentMapper">
@@ -44,6 +45,32 @@ Modification History
             </if>
         </where>
     </sql>
+    
+    <select id="selectRatingDistribution" parameterType="com.endit.cmn.DTO"
+        resultType="RatingDistributionVO">
+	    SELECT RATING_SCORE AS ratingScore,
+	           COUNT(*)      AS scoreCnt
+	      FROM MEMBER_CONTENT
+	     WHERE MEMBER_ID = #{searchNumber, jdbcType=NUMERIC}
+	       AND RATING_SCORE IS NOT NULL
+	     GROUP BY RATING_SCORE
+	     ORDER BY RATING_SCORE ASC
+	</select>
+    
+	<!-- 회원이 평가한 영화들의 장르별 개수 집계 (선호 장르 분석) -->
+	<select id="selectGenrePreference" parameterType="com.endit.cmn.DTO"
+	        resultType="GenrePreferenceVO">
+	    SELECT g.genre_id   AS genreId,
+	           g.name       AS genreName,
+	           COUNT(*)     AS ratedCnt
+	      FROM member_content mc
+	      JOIN content_genre  cg ON cg.content_id = mc.content_id
+	      JOIN genre          g  ON g.genre_id    = cg.genre_id
+	     WHERE mc.member_id = #{searchNumber, jdbcType=NUMERIC}
+	       AND mc.rating_score IS NOT NULL
+	     GROUP BY g.genre_id, g.name
+	     ORDER BY ratedCnt DESC, g.genre_id ASC
+	</select>    
 
     <!-- ===================================
             기본 등록·단건 조회·수정·삭제
