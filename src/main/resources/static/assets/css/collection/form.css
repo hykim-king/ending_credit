@@ -1,5 +1,6 @@
 /* 컬렉션 등록·수정 */
 
+/* ==================== 편집 화면 기본 배치 ==================== */
 .collection-editor {
     width: min(100%, 820px);
     margin: 0 auto;
@@ -32,6 +33,7 @@
     margin-bottom: 26px;
 }
 
+/* ==================== 기본 입력 필드 ==================== */
 .collection-field {
     margin-bottom: 24px;
 }
@@ -52,6 +54,7 @@
     resize: vertical;
 }
 
+/* ==================== 작품 목록 기본 스타일 ==================== */
 .collection-selection-list,
 .collection-search-results {
     display: grid;
@@ -96,6 +99,7 @@
     font-size: .82rem;
 }
 
+/* ==================== 검색 모달 기본 스타일 ==================== */
 .collection-search-modal {
     overflow: hidden;
     border: 0;
@@ -142,6 +146,7 @@
     color: #777180;
 }
 
+/* ==================== 등록·수정 화면 배치 ==================== */
 .collection-editor-page {
     padding-top: 28px;
 }
@@ -167,8 +172,15 @@
     font-size: 1.55rem;
 }
 
-.collection-update-submit-button {
+/* ==================== 저장·삭제 버튼 ==================== */
+.collection-update-actions {
+    display: flex;
     align-self: flex-end;
+    align-items: center;
+    gap: 8px;
+}
+
+.collection-update-submit-button {
     min-height: 34px;
     padding: 6px 12px;
     color: var(--endit-primary);
@@ -192,6 +204,36 @@
     border-color: #e4e1e8;
 }
 
+.collection-update-delete-button {
+    min-height: 34px;
+    padding: 6px 12px;
+    color: #c43e4d;
+    background: #fff;
+    border: 1px solid #e8c7cc;
+    border-radius: 6px;
+    font-size: .9rem;
+    font-weight: 700;
+}
+
+.collection-update-delete-button:hover,
+.collection-update-delete-button:focus-visible {
+    color: #fff;
+    background: #dc3545;
+    border-color: #dc3545;
+}
+
+.collection-form-delete-icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    margin: 0 auto 12px;
+    color: #b33434;
+    background: #fff1f1;
+    border-radius: 50%;
+    font-size: 1.2rem;
+}
+
 .collection-editor-page .collection-editor-panel {
     margin: 0;
     padding: 0;
@@ -200,13 +242,11 @@
     border-radius: 0;
 }
 
-.collection-editor-page
-    #collectionForm > .collection-editor-panel:first-of-type {
+.collection-editor-page #collectionForm > .collection-editor-panel:first-of-type {
     margin-bottom: 36px;
 }
 
-.collection-editor-page
-    #collectionForm > .collection-editor-panel:nth-of-type(2) {
+.collection-editor-page #collectionForm > .collection-editor-panel:nth-of-type(2) {
     padding-top: 0;
     border-top: 0;
 }
@@ -215,6 +255,7 @@
     margin-bottom: 12px;
 }
 
+/* ==================== 공개 범위 선택 ==================== */
 .collection-visibility-row {
     display: flex;
     justify-content: flex-end;
@@ -266,17 +307,16 @@
     background: var(--endit-primary);
 }
 
-.collection-visibility-input:checked
-    ~ .collection-visibility-text {
+.collection-visibility-input:checked ~ .collection-visibility-text {
     color: var(--endit-primary);
 }
 
-.collection-visibility-input:focus-visible
-    + .collection-visibility-check {
+.collection-visibility-input:focus-visible + .collection-visibility-check {
     outline: 2px solid rgba(101, 80, 200, .3);
     outline-offset: 2px;
 }
 
+/* ==================== 입력 상태와 길이 경고 ==================== */
 .collection-update-field .collection-input {
     min-height: 42px;
     padding: 8px 0;
@@ -298,21 +338,18 @@
 }
 
 .collection-update-field .collection-input.is-length-warning,
-.collection-editor-page
-    .was-validated .collection-update-field .collection-input:invalid {
+.collection-editor-page .was-validated .collection-update-field .collection-input:invalid {
     background-image: none;
     border-bottom-color: var(--endit-primary);
 }
 
-.collection-editor-page
-    .was-validated .collection-update-field .collection-input:valid {
+.collection-editor-page .was-validated .collection-update-field .collection-input:valid {
     padding-right: 0;
     background-image: none;
     border-bottom-color: #d8d4df;
 }
 
-.collection-editor-page
-    .was-validated .collection-update-field .collection-input:valid:focus {
+.collection-editor-page .was-validated .collection-update-field .collection-input:valid:focus {
     border-bottom-color: var(--endit-primary);
 }
 
@@ -322,11 +359,11 @@
     font-size: .75rem;
 }
 
-.collection-editor-page
-    .collection-update-field .invalid-feedback {
+.collection-editor-page .collection-update-field .invalid-feedback {
     font-size: .75rem;
 }
 
+/* ==================== 작품 편집 도구 ==================== */
 .collection-editor-page .collection-update-content-heading {
     align-items: center !important;
     margin-bottom: 26px;
@@ -380,6 +417,7 @@
     text-decoration: none;
 }
 
+/* ==================== 선택 작품 그리드 ==================== */
 .collection-editor-page .collection-selection-list {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -530,6 +568,7 @@
     vertical-align: 0;
 }
 
+/* ==================== 작품 검색 모달 배치 ==================== */
 .collection-update-search-dialog {
     width: 390px;
     max-width: 390px;
@@ -596,8 +635,7 @@
     min-height: 44px;
 }
 
-.collection-update-search-dialog
-    .collection-search-box .form-control::-webkit-search-cancel-button {
+.collection-update-search-dialog .collection-search-box .form-control::-webkit-search-cancel-button {
     appearance: none;
 }
 
@@ -629,6 +667,7 @@
     vertical-align: 0;
 }
 
+/* ==================== 검색 결과와 선택 상태 ==================== */
 .collection-update-search-dialog .collection-search-results {
     gap: 0;
     margin-top: 12px;
@@ -730,6 +769,7 @@
     font-weight: 700;
 }
 
+/* ==================== 저장 안내와 빈 컬렉션 확인 ==================== */
 .collection-save-notice {
     position: fixed;
     z-index: 1090;
@@ -771,6 +811,7 @@
     background: var(--endit-hover);
 }
 
+/* ==================== 모바일 반응형 ==================== */
 @media (max-width: 767.98px) {
     .collection-page-heading {
         margin-bottom: 22px;
@@ -788,7 +829,7 @@
     }
 
     .collection-search-modal .modal-header,
-        .collection-search-modal .modal-body {
+    .collection-search-modal .modal-body {
         padding-inline: 16px;
     }
 
@@ -817,8 +858,7 @@
         font-size: 1.35rem;
     }
 
-    .collection-editor-page
-        #collectionForm > .collection-editor-panel:first-of-type {
+    .collection-editor-page #collectionForm > .collection-editor-panel:first-of-type {
         margin-bottom: 32px;
     }
 
@@ -836,6 +876,7 @@
     }
 }
 
+/* ==================== 작은 화면 여백 ==================== */
 @media (max-width: 575.98px) {
     .collection-editor-page {
         width: calc(100% + 2rem);

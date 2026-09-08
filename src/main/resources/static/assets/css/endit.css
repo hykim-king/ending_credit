@@ -80,6 +80,45 @@ body {
     border-radius: 12px;
 }
 
+/* 좁은 화면 헤더 - 검색창을 살리려면 로고·여백·버튼에서 자리를 빼야 한다.
+   검색은 헤더의 유일한 기능이라 감추는 대신 줄인다 */
+@media (max-width: 767.98px) {
+    .endit-header .endit-main {
+        gap: .75rem !important;
+        padding-inline: .75rem !important;
+    }
+    .endit-brand {
+        font-size: 1.05rem;
+        /* 로고가 줄어들어 "END\nIT"으로 접히면 헤더 높이가 무너진다 */
+        white-space: nowrap;
+    }
+    .endit-search {
+        font-size: .8125rem;
+        padding: .375rem .625rem;
+    }
+    .endit-header .btn {
+        padding: .25rem .5rem;
+        font-size: .8125rem;
+    }
+    .endit-header nav {
+        gap: .5rem !important;
+    }
+    .avatar-circle {
+        width: 34px;
+        height: 34px;
+    }
+}
+/* 로고까지 자리를 다투는 폭. 검색창이 헤더의 주인이 된다 */
+@media (max-width: 479.98px) {
+    .endit-brand {
+        font-size: .9rem;
+        letter-spacing: 0;
+    }
+    .endit-header .endit-main {
+        gap: .5rem !important;
+    }
+}
+
 .endit-nav-link {
     color: #4A4655;
     text-decoration: none;
@@ -242,4 +281,42 @@ body {
     background: #221F2B;
     color: #B4AFC0;
     font-size: .85rem;
+}
+
+/* 모달 등장 — 부트스트랩 .modal.fade와 같은 결(위에서 내려오며 옅게 켜진다).
+   직접 만든 모달들(picker/tmdb/lang)은 hidden 속성으로 여닫으므로,
+   hidden이 풀리는 순간 시작되는 animation을 쓴다 - JS는 손댈 것이 없다.
+   부트스트랩 모달(신고)은 자기 transition을 그대로 쓴다 */
+@keyframes endit-modal-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes endit-dialog-in {
+    from { opacity: 0; transform: translateY(-50px); }
+    to { opacity: 1; transform: none; }
+}
+
+.picker-modal:not([hidden]),
+.tmdb-modal:not([hidden]),
+.lang-modal:not([hidden]) {
+    animation: endit-modal-in .15s ease-out;
+}
+
+.picker-modal:not([hidden]) .picker-dialog,
+.tmdb-modal:not([hidden]) .tmdb-dialog,
+.lang-modal:not([hidden]) .tmdb-dialog {
+    animation: endit-dialog-in .3s ease-out;
+}
+
+/* 움직임을 줄여 달라고 한 사용자에게는 켜고 끄기만 남긴다 */
+@media (prefers-reduced-motion: reduce) {
+    .picker-modal:not([hidden]),
+    .tmdb-modal:not([hidden]),
+    .lang-modal:not([hidden]),
+    .picker-modal:not([hidden]) .picker-dialog,
+    .tmdb-modal:not([hidden]) .tmdb-dialog,
+    .lang-modal:not([hidden]) .tmdb-dialog {
+        animation: none;
+    }
 }

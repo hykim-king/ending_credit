@@ -8,15 +8,18 @@
     const RATING_API_PATH = "/api/movies/";
     const WATCHLIST_API_PATH = "/api/watchlist/";
     const COLLECTION_API_PATH = "/api/collections/";
-    const MEMBER_COLLECTION_API_PATH = "/api/users/";
-
-    // 로그인 병합 전까지 쓰는 임시 회원 식별 헤더(MemberContentController와 같은 약속)
-    const MEMBER_ID_HEADER = "X-Member-Id";
+    // 로그인 회원의 컬렉션 목록: 회원 번호는 서버 인증 정보에서 조회
+    const MEMBER_COLLECTION_API_PATH = "/api/members/collections";
 
     // MOD-05가 API-007에서 한 번에 받는 크레딧 수. 본문 미리보기와 같은 4열 x 3행이다
     const CAST_PAGE_SIZE = 12;
+    // 캐러셀 두 줄(갤러리·컬렉션)의 칸 수와 간격은 CSS 변수가 유일한 출처다 -
+    // 화면 폭에 따라 미디어쿼리가 바꾸므로 여기서 숫자를 다시 적으면 이동량이 어긋난다.
+    // 아래 값은 변수를 못 읽었을 때의 폴백이다
     const GALLERY_PAGE_SIZE = 3;
     const GALLERY_GAP = 12;
+    const COLLECTION_ROW_PAGE_SIZE = 4;
+    const COLLECTION_ROW_GAP = 18;
 
     // MOD-13 모달이 한 번에 훑는 내 컬렉션 수. 초과분은 D-01에서 담는다
     const COLLECTION_PAGE_SIZE = 50;
@@ -27,19 +30,22 @@
 
     // 코멘트 길이 상한. textarea의 maxlength와 같은 값이어야 세는 것과 막는 것이 어긋나지 않는다.
     // COMMENT_DETAIL은 CLOB이라 DB가 막아 주지 않고, 서버도 통과시키므로 여기가 유일한 방어선이다
-    const COMMENT_MAX_LENGTH = 3000;
+    const COMMENT_MAX_LENGTH = 1000;
 
     // MOD-04 신고. 접수는 팀원 API가 받고 우리는 폼 네 값만 보낸다
     const REPORT_SAVE_PATH = "/report/doSave";
-    // DETAIL은 NVARCHAR2(2000)이라 그 너머는 DB가 자른다
-    const REPORT_MAX_LENGTH = 2000;
+    // 신고 상세 길이 상한. textarea의 maxlength와 같은 값이어야 세는 것과 막는 것이 어긋나지 않는다
+    const REPORT_MAX_LENGTH = 1000;
+
+    // 채움 깃발로 바꿔 같은 코멘트를 또 신고하지 못하게 막는다
+    const ICON_FLAG_ON = "bi bi-flag-fill";
+
     // 이 사유만 상세가 필수다(DB CK_REPORT_OTHER_DETAIL). 나머지 코드는 화면이 알 필요가 없다
     const REPORT_REASON_OTHER = "OTHER";
 
     // 켜짐/꺼짐을 색만이 아니라 아이콘 모양으로도 구분한다
-    const ICON_THUMB_ON = "bi bi-hand-thumbs-up-fill";
-    const ICON_THUMB_OFF = "bi bi-hand-thumbs-up";
-    const ICON_FLAG_ON = "bi bi-flag-fill";
+    const ICON_HEART_ON = "bi bi-heart-fill";
+    const ICON_HEART_OFF = "bi bi-heart";
     const COMMENT_LIKE_PATH = "/commentLike/upToggleLike";
 
     // MessageVO의 성공 코드. 실패는 "0"이다
@@ -55,6 +61,9 @@
     const ROLE_DIRECTOR = "DIRECTOR";
 
     const NO_SCORE = 0;
+
+    // 서버가 data-my-watchlist에 찍는 boolean의 문자열 표기
+    const WATCHLIST_ON = "true";
 
     // 화면 언어. layout.html이 <html lang>에 찍어 두므로 서버에서 따로 넘겨받지 않는다.
     // 이 파일이 그리는 이름은 서버가 그린 미리보기와 같은 규칙이라야 한 화면에서 표기가 갈리지 않는다(F-01)
@@ -76,12 +85,12 @@
         writeFailed: "코멘트를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
         writeDuplicate: "이 영화에는 이미 코멘트를 남기셨습니다.",
         writeSaving: "저장하는 중…",
-        writeTooLong: "코멘트는 3000자까지 쓸 수 있습니다.",
-        reportReasonEmpty: "신고 사유를 골라 주세요.",
+        writeTooLong: "코멘트는 1000자까지 쓸 수 있습니다.",
+        reportReasonEmpty: "신고 사유를 선택해 주세요.",
         reportDetailRequired: "기타를 고르면 상세 내용을 적어야 합니다.",
-        reportSaving: "접수하는 중…",
+        reportTooLong: "상세 내용은 1000자까지 쓸 수 있습니다.",
+        reportDone: "신고가 접수되었습니다.",
         reportFailed: "신고를 접수하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-        reportDone: "신고 접수됨",
         collectionLoadFailed: "컬렉션 목록을 불러오지 못했습니다.",
         collectionEmpty: "아직 만든 컬렉션이 없습니다. 컬렉션 화면에서 먼저 만들어 주세요.",
         collectionOn: "담김",
@@ -137,12 +146,10 @@
         const label = document.getElementById("ratingLabel");
         const watchButton = document.getElementById("watchlistButton");
 
-        /*
-         * MEMBER_CONTENT에 "내 별점·보고싶어요 단건 조회" 계약이 없어
-         * 진입 시점의 내 기록을 알 수 없다. 0/false에서 출발해 클릭 응답으로만 채운다.
-         */
-        let score = NO_SCORE;
-        let watched = false;
+        // 다시 들어와도 내 기록이 채워져 있도록 서버가 그려 둔 값에서 출발한다.
+        // 비회원·미평가면 data-my-score 자체가 없어 Number(undefined)가 NaN이라 0으로 떨어진다
+        let score = Number(box.dataset.myScore) || NO_SCORE;
+        let watched = box.dataset.myWatchlist === WATCHLIST_ON;
 
         function paintStars(value) {
             stars.forEach((star) => {
@@ -164,7 +171,8 @@
         }
 
         async function send(url, method, body) {
-            const headers = Object.assign({ [MEMBER_ID_HEADER]: memberId }, csrfHeaders());
+            // 평가·보고싶어요 요청은 X-Member-Id 대신 서버 인증 사용, CSRF 헤더 유지
+            const headers = csrfHeaders();
 
             if (body) {
                 headers["Content-Type"] = "application/json";
@@ -261,7 +269,7 @@
         const status = document.getElementById("collectionStatus");
         const list = document.getElementById("collectionList");
 
-        // 컬렉션 API는 서버측 CurrentMemberProvider로 회원을 판단하므로 헤더가 필요 없다
+        // 컬렉션 API는 LoginMemberHelper로 회원을 판단하므로 회원 번호 헤더는 불필요
         function itemUrl(collectionId) {
             return COLLECTION_API_PATH + collectionId + "/items";
         }
@@ -365,7 +373,7 @@
 
             try {
                 const response = await fetch(
-                    MEMBER_COLLECTION_API_PATH + memberId + "/collections?pageNo=1&pageSize=" + COLLECTION_PAGE_SIZE,
+                    MEMBER_COLLECTION_API_PATH + "?pageNo=1&pageSize=" + COLLECTION_PAGE_SIZE,
                     { credentials: "same-origin" });
 
                 if (!response.ok) {
@@ -512,7 +520,7 @@
 
                     button.setAttribute("aria-pressed", String(on));
                     // 채운 따봉으로 바꿔 색 없이도 상태가 보이게 한다
-                    icon.className = on ? ICON_THUMB_ON : ICON_THUMB_OFF;
+                    icon.className = on ? ICON_HEART_ON : ICON_HEART_OFF;
                 } catch (error) {
                     showNotice(MSG.likeFailed);
                 } finally {
@@ -806,139 +814,106 @@
     }
 
     // ── 코멘트 신고 (ACT-C-012 / MOD-04) ───────────────
+    // 3조 comment_list.js의 신고 흐름을 그대로 쓴다 - 부트스트랩 모달을 열고,
+    // 사유 select와 상세만 모아 팀원 API로 보낸 뒤 서버 문구를 그대로 알린다.
+    // 요청만 우리 postForm으로 보낸다(CSRF 헤더가 붙어야 POST가 통과한다)
     function initReport() {
-        const modal = document.getElementById("reportModal");
+        const modalEl = document.getElementById("reportModal");
         const grid = document.getElementById("commentGrid");
 
         // 비회원이거나 사유 코드를 못 받으면 서버가 버튼을 아예 안 그린다
-        if (!modal || !grid) {
+        if (!modalEl || !grid) {
             return;
         }
 
-        const memberId = modal.dataset.memberId;
-        const detail = document.getElementById("reportDetail");
-        const required = document.getElementById("reportRequired");
-        const status = document.getElementById("reportStatus");
-        const count = document.getElementById("reportCount");
-        const submit = document.getElementById("reportSubmit");
-        const reasons = Array.prototype.slice.call(
-            modal.querySelectorAll("input[name='reportReason']"));
+        const modal = new bootstrap.Modal(modalEl);
+        const memberId = modalEl.dataset.memberId;
+        const commentId = document.getElementById("rpCommentId");
+        const reason = document.getElementById("rpReason");
+        const detail = document.getElementById("rpDetail");
+        const status = document.getElementById("rpStatus");
+        const count = document.getElementById("rpCount");
+        const submit = document.getElementById("btnRpSave");
 
-        // 어느 카드의 신고 버튼을 눌렀는지. 성공하면 그 버튼을 잠가야 해서 들고 있는다
-        let target = null;
+        // 접수에 성공하면 이 버튼을 잠가야 해서 어느 카드에서 열었는지 들고 있는다
+        let openedBy = null;
 
         function showStatus(message) {
             status.textContent = message;
             status.hidden = false;
         }
 
-        function pickedReason() {
-            const picked = reasons.find((radio) => radio.checked);
-
-            return picked ? picked.value : "";
-        }
-
         function renderCount() {
-            count.textContent = detail.value.length + " / " + REPORT_MAX_LENGTH;
+            const length = detail.value.length;
+
+            count.textContent = length + " / " + REPORT_MAX_LENGTH;
+            // 상한에 닿았다는 것을 숫자만이 아니라 색으로도 알린다
+            count.classList.toggle("is-full", length >= REPORT_MAX_LENGTH);
         }
 
-        // 기타를 고를 때만 상세가 필수라고 알린다
-        function renderRequired() {
-            required.hidden = pickedReason() !== REPORT_REASON_OTHER;
-        }
-
-        reasons.forEach((radio) => radio.addEventListener("change", renderRequired));
         detail.addEventListener("input", renderCount);
 
         grid.querySelectorAll(".comment-report").forEach((button) => {
             button.addEventListener("click", () => {
-                target = button;
-
-                // 이전에 고른 사유·상세가 남으면 엉뚱한 신고가 나간다
-                reasons.forEach((radio) => {
-                    radio.checked = false;
-                });
+                openedBy = button;
+                commentId.value = button.dataset.commentId;
+                // 앞서 신고한 사유와 상세가 남으면 고른 적 없는 사유로 접수된다
+                reason.selectedIndex = 0;
                 detail.value = "";
-                renderCount();
-                renderRequired();
                 status.hidden = true;
                 submit.disabled = false;
-
-                openModal(modal);
+                renderCount();
+                modal.show();
             });
         });
 
-        // 되돌릴 수 없는 동작이라 확인을 한 번 거친다. 신고 모달은 뒤에 그대로 열려 있다
-        const confirmModal = document.getElementById("reportConfirmModal");
-        const confirmOk = document.getElementById("reportConfirmOk");
-        const confirmCancel = document.getElementById("reportConfirmCancel");
+        submit.addEventListener("click", async () => {
+            const text = detail.value.trim();
 
-        function closeConfirm() {
-            confirmModal.hidden = true;
-        }
-
-        confirmCancel.addEventListener("click", closeConfirm);
-        confirmModal.addEventListener("click", (event) => {
-            if (event.target === confirmModal) {
-                closeConfirm();
-            }
-        });
-        // ESC는 확인 모달만 닫는다 - 신고 모달까지 닫히면 쓰던 내용이 날아간다
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape" && !confirmModal.hidden) {
-                event.stopPropagation();
-                closeConfirm();
-            }
-        });
-
-        submit.addEventListener("click", () => {
-            const reason = pickedReason();
-
-            if (!reason) {
+            // 빈 항목이 첫 번째라 아무것도 안 고르고 누를 수 있다
+            if (!reason.value) {
                 showStatus(MSG.reportReasonEmpty);
+                reason.focus();
                 return;
             }
 
-            // 서버와 DB도 막지만 왕복을 아낀다
-            if (reason === REPORT_REASON_OTHER && !detail.value.trim()) {
+            // 기타(OTHER)만 상세가 필수다(DB CK_REPORT_OTHER_DETAIL). 서버와 DB도 막지만 왕복을 아낀다
+            if (REPORT_REASON_OTHER === reason.value && !text) {
                 showStatus(MSG.reportDetailRequired);
                 detail.focus();
                 return;
             }
 
-            status.hidden = true;
-            confirmModal.hidden = false;
-            confirmOk.focus();
-        });
+            // maxlength는 붙여넣기까지 막지만 개발자도구로는 넘길 수 있어 보내기 전에 한 번 더 본다
+            if (text.length > REPORT_MAX_LENGTH) {
+                showStatus(MSG.reportTooLong);
+                detail.focus();
+                return;
+            }
 
-        confirmOk.addEventListener("click", async () => {
-            const reason = pickedReason();
-            const text = detail.value.trim();
-
-            closeConfirm();
             submit.disabled = true;
-            showStatus(MSG.reportSaving);
 
             try {
                 const body = await postForm(REPORT_SAVE_PATH, {
                     reportMemberId: memberId,
-                    commentId: target.dataset.commentId,
-                    reason: reason,
+                    commentId: commentId.value,
+                    reason: reason.value,
                     detail: text
                 });
 
-                if (MESSAGE_OK !== body.id) {
+                // body.message는 한국어 문장이라 상태 판정에도 표시에도 쓰지 않는다(F-01에서 깨진다)
+                if (MESSAGE_OK !== String(body.id)) {
                     throw new Error(MSG.reportFailed);
                 }
 
-                // 같은 코멘트를 또 신고하지 못하게 막는 유일한 장치다.
-                // 서버에 중복 검사가 없어 새로고침하면 되살아난다
-                target.disabled = true;
-                // 깃발을 채워 접수됐음을 모양으로 알린다. 라벨도 함께 바꾼다
-                target.querySelector("i").className = ICON_FLAG_ON;
-                target.setAttribute("aria-label", MSG.reportDone);
-                target.setAttribute("title", MSG.reportDone);
-                closeModal(modal);
+                // 서버에도 DB에도 중복 검사가 없어 잠그는 것은 여기가 유일하다
+                if (openedBy) {
+                    openedBy.disabled = true;
+                    openedBy.querySelector("i").className = ICON_FLAG_ON;
+                }
+
+                modal.hide();
+                showNotice(MSG.reportDone);
             } catch (error) {
                 showStatus(MSG.reportFailed);
                 submit.disabled = false;
@@ -946,47 +921,64 @@
         });
     }
 
+    // ── 이 작품이 담긴 컬렉션 (C-02) ───────────────────
+    // 카드는 3조 collection-list.js의 createCollectionCard가 그린다 - 목록·검색 화면과 같은 모양이라야 한다.
+    // 캐러셀 골격은 갤러리와 같지만 그쪽이 단일 인스턴스 전제라 재사용이 안 돼 따로 둔다
+    function initCollectionRow() {
+        const viewport = document.querySelector(".collection-row-viewport");
+        const track = document.querySelector(".collection-row-track");
+
+        // 담긴 컬렉션이 없으면 서버가 섹션째 안 그린다
+        if (!viewport || !track) {
+            return;
+        }
+
+        // 카드 공장이 없으면(스크립트 로드 실패) 빈 줄을 남기지 않고 섹션을 접는다
+        if (!window.enditCollectionGrid.isReady()) {
+            track.closest(".container").hidden = true;
+            return;
+        }
+
+        // 캐러셀 칸으로 감싸야 해서 fill 대신 카드만 받아 온다
+        window.enditCollectionGrid.toCollections().forEach((collection) => {
+            const item = document.createElement("div");
+
+            item.className = "collection-row-item";
+            item.append(window.enditCollectionGrid.createCard(collection));
+            track.append(item);
+        });
+
+        window.enditCarousel.create({
+            viewport: viewport,
+            track: track,
+            prevBtn: document.querySelector(".collection-row-prev"),
+            nextBtn: document.querySelector(".collection-row-next"),
+            perViewVar: "--collection-per-view",
+            gapVar: "--collection-gap",
+            perViewFallback: COLLECTION_ROW_PAGE_SIZE,
+            gapFallback: COLLECTION_ROW_GAP,
+            onUpdate: window.enditCarousel.centerNavOn(".collection-list-card-visual")
+        });
+    }
+
     // ── 갤러리 캐러셀 (C-02) ───────────────────────────
     function initGallery() {
-        const track = document.querySelector(".gallery-track");
-        const prevBtn = document.querySelector(".gallery-prev");
-        const nextBtn = document.querySelector(".gallery-next");
+        const viewport = document.querySelector(".gallery-viewport");
 
-        if (!track || !prevBtn || !nextBtn) {
+        if (!viewport) {
             return;
         }
 
-        const items = track.children;
-
-        // 한 화면에 다 들어가면 화살표를 띄우지 않는다
-        if (items.length <= GALLERY_PAGE_SIZE) {
-            prevBtn.hidden = true;
-            nextBtn.hidden = true;
-            return;
-        }
-
-        let startIndex = 0;
-
-        function update() {
-            const itemWidth = items[0].getBoundingClientRect().width;
-
-            track.style.transform = "translateX(-" + startIndex * (itemWidth + GALLERY_GAP) + "px)";
-            // 넘어갈 쪽이 없으면 흐리게 두지 않고 감춘다
-            prevBtn.hidden = startIndex === 0;
-            nextBtn.hidden = startIndex + GALLERY_PAGE_SIZE >= items.length;
-        }
-
-        prevBtn.addEventListener("click", () => {
-            startIndex = Math.max(0, startIndex - GALLERY_PAGE_SIZE);
-            update();
+        window.enditCarousel.create({
+            viewport: viewport,
+            track: viewport.querySelector(".gallery-track"),
+            prevBtn: document.querySelector(".gallery-prev"),
+            nextBtn: document.querySelector(".gallery-next"),
+            perViewVar: "--gallery-per-view",
+            gapVar: "--gallery-gap",
+            perViewFallback: GALLERY_PAGE_SIZE,
+            gapFallback: GALLERY_GAP
         });
-        nextBtn.addEventListener("click", () => {
-            startIndex = Math.min(items.length - GALLERY_PAGE_SIZE, startIndex + GALLERY_PAGE_SIZE);
-            update();
-        });
-        window.addEventListener("resize", update);
-
-        update();
     }
 
     // ── 갤러리 확대 (MOD-06) ───────────────────────────
@@ -1053,6 +1045,30 @@
         });
     }
 
+    // 홈과 같은 값. 이 아래로는 헤더가 아직 가까워 버튼이 방해만 된다
+    const SCROLL_TOP_THRESHOLD = 150;
+
+    // 맨 위로(H-01과 같은 버튼)
+    function initScrollTop() {
+        const button = document.getElementById("scrollTopButton");
+
+        if (!button) {
+            return;
+        }
+
+        const update = () => {
+            button.hidden = window.scrollY < SCROLL_TOP_THRESHOLD;
+        };
+
+        // 스크롤마다 부르므로 passive로 둔다 - 기본 동작을 막을 일이 없다
+        window.addEventListener("scroll", update, { passive: true });
+        button.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        // 새로고침이 화면 중간에서 되살아나는 경우가 있어 처음에도 한 번 본다
+        update();
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         initRecord();
         initCollection();
@@ -1063,6 +1079,8 @@
         initReport();
         initCast();
         initGallery();
+        initCollectionRow();
         initGalleryModal();
+        initScrollTop();
     });
 })();

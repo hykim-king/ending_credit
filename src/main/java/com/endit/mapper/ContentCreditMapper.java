@@ -11,7 +11,7 @@ import com.endit.domain.ContentCreditVO;
 @Mapper
 public interface ContentCreditMapper extends WorkDiv<ContentCreditVO> {
 
-	// 인물 여럿 중 해당 역할의 크레딧을 가진 person_id만 추린다.
+	// 인물 여럿 중 크레딧을 가진 person_id만 추린다. role이 null이면 역할을 가리지 않는다.
 	// 목록 화면이 인물마다 따로 조회하지 않도록 한 번에 받는다
 	List<Integer> doSelectPersonIdsByRole(
 			@Param("personIds") List<Integer> personIds,

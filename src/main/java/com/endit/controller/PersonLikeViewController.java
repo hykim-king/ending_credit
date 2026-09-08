@@ -5,18 +5,17 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.endit.auth.CurrentMemberProvider;
 import com.endit.domain.MemberVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.MemberService;
 
 /**
  * <pre>
  * Class Name  : PersonLikeViewController
- * Description : 회원이 좋아요한 인물 및 컬렉션 목록 화면의 View를 처리하는 Controller
+ * Description : 로그인 회원이 좋아요한 인물 및 컬렉션 목록 화면의 View를 처리하는 Controller
  *
  * Modification History
  * ------------------------------------------------------------
@@ -26,6 +25,7 @@ import com.endit.service.MemberService;
  * 2026. 8. 28. jinyoung    컬렉션 좋아요 유형 지원
  * 2026. 9. 01. jinyoung    U-07 목록 조회자 식별용 인증 회원 전달
  * 2026. 9. 03. jinyoung    좋아요 화면 회원 정보 및 조회 유형 처리 정리
+ * 2026. 9. 05. jinyoung    본인 전용 좋아요 경로 및 LoginMemberHelper 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -33,36 +33,34 @@ import com.endit.service.MemberService;
  * @since 2026. 8. 27.
  */
 @Controller
-@RequestMapping("/users/{memberId}/likes")
+@RequestMapping("/members/likes")
 public class PersonLikeViewController {
 
-	private static final String TYPE_PERSON = "person";
-	private static final String TYPE_COLLECTION = "collection";
-
-	private final CurrentMemberProvider currentMemberProvider;
+	private static final String TYPE_PERSON = "person"; 		// 인물 좋아요 유형
+	private static final String TYPE_COLLECTION = "collection"; // 컬렉션 좋아요 유형
 	private final MemberService memberService;
 
-	public PersonLikeViewController(
-			CurrentMemberProvider currentMemberProvider, MemberService memberService) {
-
-		this.currentMemberProvider = currentMemberProvider;
+	/**
+	 * 화면 처리에 필요한 의존성 주입
+	 *
+	 * @param memberService 회원 Service
+	 */
+	public PersonLikeViewController(MemberService memberService) {
 		this.memberService = memberService;
 	}
 
 	/**
-	 * 회원 좋아요 화면 반환
+	 * 로그인 회원 본인의 좋아요 화면 반환 실제 목록 데이터는 JavaScript가 유형별 REST API로 조회
 	 *
-	 * 실제 목록 데이터는 JavaScript가 유형별 REST API로 조회한다.
-	 *
-	 * @param memberId 조회할 회원 번호
-	 * @param type     최초 표시할 좋아요 유형
-	 * @param model    View에 전달할 데이터
+	 * @param type  최초 표시할 좋아요 유형
+	 * @param model View에 전달할 데이터
 	 * @return 회원 좋아요 View 이름
 	 */
 	@GetMapping
-	public String likes(@PathVariable int memberId,
-			@RequestParam(defaultValue = TYPE_PERSON) String type,
-			Model model) {
+	public String likes(@RequestParam(defaultValue = TYPE_PERSON) String type, Model model) {
+
+		long currentMemberId = LoginMemberHelper.getMemberId();
+		int memberId = Math.toIntExact(currentMemberId);
 
 		MemberVO member = memberService.getMember(memberId);
 
@@ -70,15 +68,15 @@ public class PersonLikeViewController {
 			throw new NoSuchElementException("회원을 찾을 수 없습니다.");
 		}
 
-		long currentMemberId = currentMemberProvider.findCurrentMemberId().orElse(0);
-
 		model.addAttribute("memberId", memberId);
 		model.addAttribute("type", normalizeType(type));
 		model.addAttribute("member", member);
 		model.addAttribute("currentMemberId", currentMemberId);
 
-		return "user/likes";
+		return "member/likes";
 	}
+
+	// 내부 조회 조건·응답 구성
 
 	/**
 	 * 지원하는 좋아요 유형을 보정하고 그 외의 값은 인물 유형으로 처리
@@ -92,8 +90,6 @@ public class PersonLikeViewController {
 			return TYPE_PERSON;
 		}
 
-		return TYPE_COLLECTION.equalsIgnoreCase(type.trim())
-				? TYPE_COLLECTION
-				: TYPE_PERSON;
+		return TYPE_COLLECTION.equalsIgnoreCase(type.trim()) ? TYPE_COLLECTION : TYPE_PERSON;
 	}
 }

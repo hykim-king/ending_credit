@@ -113,17 +113,20 @@
 	</select>
 
 	<!--
-		인물 여럿의 역할 보유 여부를 한 번에 본다.
+		인물 여럿의 크레딧 보유 여부를 한 번에 본다. role을 주면 그 역할만, 안 주면 역할을 가리지 않는다.
 		검색 결과처럼 인물이 여러 명인 화면이 인물마다 조회하면 목록 크기만큼 쿼리가 늘어난다
 	-->
 	<select id="doSelectPersonIdsByRole" resultType="java.lang.Integer">
 		SELECT DISTINCT cc.person_id
 		  FROM content_credit cc
-		 WHERE cc.role = #{role}
-		   AND cc.person_id IN
+		 WHERE cc.person_id IN
 		<foreach item="personId" collection="personIds" open="(" separator="," close=")">
 			#{personId}
 		</foreach>
+		<!-- role이 없으면 역할을 가리지 않는다 - 크레딧 보유 여부만 볼 때 쓴다 -->
+		<if test="role != null">
+		   AND cc.role = #{role}
+		</if>
 	</select>
 
 	<!-- 화제의 감독·배우 선별 - 넘겨받은 목록 중 참여 편수 많은 순, 동수는 상위작 참여자 우선.

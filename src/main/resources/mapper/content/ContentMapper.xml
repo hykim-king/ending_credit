@@ -173,6 +173,20 @@ Modification History
 		</foreach>
 	</select>
 
+	<!-- 홈 카드용 콘텐츠별 평균 별점. 평가 없는 콘텐츠는 행이 없다.
+	     집계식은 MemberContentMapper.xml의 것과 같다 - known-issues의 평균 서브쿼리 중복 항목이다 -->
+	<select id="doRetrieveAverageRatings" resultType="ContentVO">
+		SELECT content_id,
+		       ROUND(AVG(rating_score), 1) average_rating
+		  FROM member_content
+		 WHERE rating_score IS NOT NULL
+		   AND content_id IN
+		<foreach item="contentId" collection="contentIds" open="(" separator="," close=")">
+			#{contentId}
+		</foreach>
+		 GROUP BY content_id
+	</select>
+
 	<!-- TMDB id를 우리 id로 옮기기 위한 대응표. 세 칸만 뽑으므로 전체를 읽어도 가볍다.
 	     release_year를 같이 싣는 이유는 인기순 경로가 WHERE를 못 걸어
 	     "개봉작만" 판정을 목록 만들 때 해야 하기 때문이다(contentWhere의 released와 같은 기준) -->
