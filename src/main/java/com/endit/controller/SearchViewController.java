@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -15,12 +16,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.endit.auth.CurrentMemberProvider;
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.domain.CollectionVO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.PersonLikeVO;
 import com.endit.domain.PersonVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionService;
 import com.endit.service.ContentCreditService;
 import com.endit.service.ContentService;
@@ -81,21 +83,18 @@ public class SearchViewController {
 	private final CollectionService collectionService;
 	private final ContentCreditService contentCreditService;
 	private final PersonLikeService personLikeService;
-	private final CurrentMemberProvider currentMemberProvider;
 
 	public SearchViewController(
 			ContentService contentService,
 			PersonService personService,
 			CollectionService collectionService,
 			ContentCreditService contentCreditService,
-			PersonLikeService personLikeService,
-			CurrentMemberProvider currentMemberProvider) {
+			PersonLikeService personLikeService) {
 		this.contentService = contentService;
 		this.personService = personService;
 		this.collectionService = collectionService;
 		this.contentCreditService = contentCreditService;
 		this.personLikeService = personLikeService;
-		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/** 검색 시작(S-01)과 통합검색(S-02) - 같은 경로이고 검색어 유무로 갈린다 */
@@ -382,7 +381,7 @@ public class SearchViewController {
 		model.addAttribute("collectionQuery", searchWord);
 		// 카드의 "내 컬렉션" 배지 판정값
 		model.addAttribute("currentMemberId",
-				currentMemberProvider.findCurrentMemberId().orElse(NO_MEMBER_ID));
+				findCurrentMemberId().orElse(NO_MEMBER_ID));
 
 		// 인물과 같은 이유로, 와일드카드만 있던 검색어는 조회하지 않는다
 		if (searchWord.isEmpty()) {
@@ -404,7 +403,7 @@ public class SearchViewController {
 		try {
 			// 컬렉션 목록 화면과 같은 오버로드를 써야 본인 비공개분과 좋아요 여부가 같이 나온다
 			collections = collectionService.retrieve(
-					param, currentMemberProvider.findCurrentMemberId());
+					param, findCurrentMemberId());
 		} catch (RuntimeException e) {
 			log.warn("컬렉션 검색에 실패했습니다. query={}", searchWord, e);
 			collections = Collections.emptyList();
@@ -417,6 +416,17 @@ public class SearchViewController {
 		model.addAttribute("hasMoreCollections", param.getTotalCnt() > collections.size());
 
 		return failed || !collections.isEmpty();
+	}
+
+	/**
+	 * 팀 공용 인증 정보에서 컬렉션 조회에 사용할 현재 회원 번호 조회
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 빈 OptionalLong
+	 */
+	private static OptionalLong findCurrentMemberId() {
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		return loginMember == null ? OptionalLong.empty() : OptionalLong.of(loginMember.getMemberId());
 	}
 
 }

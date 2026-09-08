@@ -523,7 +523,7 @@
 }
 
 /* ── C-02 이 작품이 담긴 컬렉션 ─────────────────────
-   골격은 갤러리 캐러셀과 같다. 카드 자체는 collection-list.css가 그린다 */
+   골격은 갤러리 캐러셀과 같다. 카드 자체는 collection/list.css가 그린다 */
 .collection-row-viewport {
 	position: relative;
 	/* 한 화면 칸 수. 폭에 따라 아래 미디어쿼리가 바꾸고 JS가 이 값을 읽어 이동량을 정한다 */
