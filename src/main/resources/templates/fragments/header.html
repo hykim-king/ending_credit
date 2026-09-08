@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
 <meta charset="UTF-8">
 <title>header</title>
@@ -10,20 +11,29 @@
         <div class="endit-main d-flex align-items-center gap-4 h-100 px-3">
             <!-- 브랜드 로고는 메인화면(H-01)으로 돌아간다 -->
             <a class="endit-brand" th:href="@{/}">END IT</a>
-            <!-- Enter로 S-02 통합검색(/search?query=)으로 간다. 헤더는 폭이 좁아 별도 버튼을 두지 않는다 -->
-            <form class="d-none d-md-block flex-grow-1" th:action="@{/search}" method="get" role="search">
+            <!-- Enter로 S-02 통합검색(/search?query=)으로 간다. 헤더는 폭이 좁아 별도 버튼을 두지 않는다.
+                 좁은 화면에서도 감추지 않는다 - 검색이 헤더의 유일한 기능이라 없으면 헤더가 로고만 남는다.
+                 대신 endit.css의 미디어쿼리가 로고·여백을 줄여 자리를 만든다 -->
+            <form class="flex-grow-1" th:action="@{/search}" method="get" role="search">
                 <input type="text" name="query" class="form-control endit-search"
                        th:value="${param.query}"
                        th:placeholder="#{common.header.searchPlaceholder}" th:aria-label="#{common.header.searchLabel}">
             </form>
-
+            
             <nav class="ms-auto d-flex align-items-center gap-3">
-
+ 
                 <!-- 비로그인: 로그인 / 회원가입 버튼 -->
                 <div sec:authorize="isAnonymous()" class="d-flex align-items-center gap-2">
                     <a class="btn btn-outline-secondary" th:href="@{/login}" th:text="#{common.header.login}">로그인</a>
                     <a class="btn btn-primary" th:href="@{/signup}" th:text="#{common.header.signup}">회원가입</a>
                 </div>
+ 
+                <!-- 관리자: 관리 화면 진입. 대시보드(AD-01)가 아직 없어 영화 관리로 보낸다
+                     — 사이드바 로고와 같은 진입점이다. AD-01이 생기면 /admin 으로 바꾸면 된다 -->
+                <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/movies}"
+                   class="btn btn-outline-primary btn-sm" title="관리자 화면">
+                    <i class="bi bi-speedometer2"></i> 관리자
+                </a>
 
                 <!-- 로그인: 프로필 이미지(→ 내 프로필). 로그인/회원가입 버튼은 숨긴다 -->
                 <a sec:authorize="isAuthenticated()" th:href="@{/members/me}"

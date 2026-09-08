@@ -1,6 +1,6 @@
 /**
  * 컬렉션 목록 화면과 회원 기록에서 공유하는 컬렉션 카드 스타일.
- * 회원 기록 전용 차이는 member-activity.css에서 범위를 한정해 덮어쓴다.
+ * 회원 기록 전용 차이는 member/member-activity.css에서 범위를 한정해 덮어쓴다.
  */
 
 /* 검색 영역과 새 컬렉션 버튼 */
@@ -299,9 +299,7 @@
     text-overflow: clip;
 }
 
-.collection-list-card-link:hover
-        .collection-list-card-title.is-overflowing
-        .collection-list-card-title-text {
+.collection-list-card-link:hover .collection-list-card-title.is-overflowing .collection-list-card-title-text {
     transform: translateX(var(--collection-title-scroll-distance));
 }
 

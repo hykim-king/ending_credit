@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<!--
+Modification History
+2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
+2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-03~U-06 4탭 본문 UI 반영
+2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
+2026. 9. 05. jinyoung - 본인 코멘트 카드·수정·삭제 확인 모달 추가
+-->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title th:text="${member.nickname + '님의 기록'}">회원 기록 | ENDIT</title>
+
+    <link rel="stylesheet" th:href="@{/assets/css/collection/list.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
+    <link rel="stylesheet" th:href="@{/assets/css/member/member-activity.css}">
+
+    <script th:src="@{/assets/js/user/user-list-ui.js}" defer></script>
+    <script th:src="@{/assets/js/user/member-records.js}" defer></script>
+</head>
+
+<body>
+<!-- ===================================
+     회원 기록 화면
+     서버 조회값을 data-* 속성으로 JavaScript에 전달한다.
+     =================================== -->
+<div layout:fragment="content"
+     id="memberRecordsPage"
+     class="member-activity-page"
+     th:attr="data-initial-tab=${tab},
+              data-ratings-count=${ratingCount},
+              data-comments-count=${commentCount},
+              data-collections-count=${collectionCount},
+              data-watchlist-count=${watchlistCount}">
+
+    <!-- ===================================
+         기록 제목과 좋아요 화면 이동
+         =================================== -->
+    <header class="member-activity-heading">
+        <h1 class="member-activity-page-title">
+            <span class="member-activity-page-title-label">RECORDS</span>
+            <span class="member-activity-page-title-byline">by</span>
+            <span class="member-activity-page-title-name" th:text="${member.nickname}">회원 닉네임</span>
+        </h1>
+
+        <a class="member-heading-link" th:href="@{/members/likes(type='person')}">
+            내 좋아요 보기
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+        </a>
+    </header>
+
+    <!-- ===================================
+         작품·코멘트·컬렉션·보고싶어요 탭
+         =================================== -->
+    <nav class="member-tabs-wrap" aria-label="회원 기록 유형">
+        <div id="recordTabs" class="member-tabs" role="tablist">
+            <a id="ratingsTab" class="member-tab" role="tab" data-tab="ratings" th:href="@{/members/records(tab='ratings')}">
+                작품
+            </a>
+
+            <a id="commentsTab" class="member-tab" role="tab" data-tab="comments" th:href="@{/members/records(tab='comments')}">
+                코멘트
+            </a>
+
+            <a id="collectionsTab" class="member-tab" role="tab" data-tab="collections" th:href="@{/members/records(tab='collections')}">
+                컬렉션
+            </a>
+
+            <a id="watchlistTab" class="member-tab" role="tab" data-tab="watchlist" th:href="@{/members/records(tab='watchlist')}">
+                보고싶어요
+            </a>
+        </div>
+    </nav>
+
+    <!-- ===================================
+         선택한 기록 탭 본문
+         =================================== -->
+    <section class="member-activity-content" aria-labelledby="recordTitle">
+
+        <!-- 탭별 제목·건수와 정렬 드롭다운 -->
+        <div class="member-content-heading">
+
+            <!-- 탭 제목과 활동 건수 -->
+            <h2 id="recordTitle" class="member-content-title">
+                <span id="recordTitleText">평가한 작품들</span>
+                <span id="recordTotalCount" class="member-content-count" aria-live="polite">0</span>
+            </h2>
+
+            <!-- 탭별 정렬 메뉴 -->
+            <div id="recordSortWrap" class="member-sort-control">
+                <button id="recordSortButton" class="member-sort-button" type="button" aria-haspopup="listbox" aria-expanded="false"
+                        aria-controls="recordSortMenu">
+                    <span id="recordSortLabel">최신 순</span>
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div id="recordSortMenu" class="member-sort-menu d-none" role="listbox" aria-label="정렬 기준"></div>
+            </div>
+        </div>
+
+        <!-- 비동기 조회 상태: 로딩·오류·빈 결과 중 하나만 표시 -->
+        <div id="recordLoading" class="member-skeleton-grid" role="status" aria-live="polite" aria-label="기록을 불러오는 중입니다">
+
+            <!-- 카드 형태의 로딩 자리 표시자 -->
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+            <div class="member-card-skeleton"></div>
+        </div>
+
+        <!-- 조회 오류 상태 -->
+        <div id="recordError" class="member-state d-none" role="alert">
+            <i class="bi bi-exclamation-circle member-state-icon" aria-hidden="true"></i>
+            <strong>기록을 불러오지 못했습니다.</strong>
+            <p id="recordErrorMessage" class="mb-3"></p>
+            <button id="recordRetryButton" class="btn btn-outline-primary btn-sm" type="button">다시 시도</button>
+        </div>
+
+        <!-- 조회 결과 없음 상태 -->
+        <div id="recordEmpty" class="member-state d-none" role="status">
+            <i id="recordEmptyIcon" class="bi bi-inbox member-state-icon" aria-hidden="true"></i>
+            <strong id="recordEmptyTitle">아직 기록이 없습니다.</strong>
+            <p id="recordEmptyMessage" class="mb-0"></p>
+        </div>
+
+        <!-- JavaScript가 탭에 맞는 카드 또는 코멘트 목록 삽입 -->
+        <div id="recordList" class="d-none" aria-live="polite"></div>
+
+        <!-- 작품·보고싶어요 페이지네이션 -->
+        <nav id="recordPaginationNavigation" class="member-record-pagination d-none" aria-label="회원 기록 페이지">
+            <ul id="recordPagination" class="pagination justify-content-center mb-0"></ul>
+        </nav>
+
+        <!-- 컬렉션 탭은 페이지네이션 대신 12개 단위 더보기 사용 -->
+        <div id="collectionLoadMoreWrap" class="member-record-load-more d-none">
+            <button id="collectionLoadMoreButton" class="btn btn-outline-primary" type="button">더보기</button>
+        </div>
+    </section>
+
+    <!-- 본인 코멘트 수정 모달 -->
+    <div id="commentEditModal" class="modal fade" tabindex="-1" aria-labelledby="commentEditModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content member-comment-edit-modal">
+                <div class="modal-header">
+                    <h2 id="commentEditModalTitle" class="modal-title fs-5">코멘트 수정</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                </div>
+                <div class="modal-body">
+                    <input id="commentEditId" type="hidden">
+                    <label class="form-label fw-semibold" for="commentEditDetail">코멘트 내용</label>
+                    <textarea id="commentEditDetail" class="form-control" rows="6" maxlength="1000"></textarea>
+                    <div class="form-check mt-3">
+                        <input id="commentEditSpoiler" class="form-check-input" type="checkbox">
+                        <label class="form-check-label" for="commentEditSpoiler">스포일러가 있어요</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">취소</button>
+                    <button id="commentEditSaveButton" type="button" class="btn btn-primary">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 본인 코멘트 삭제 확인 모달 -->
+    <div id="commentDeleteModal" class="modal fade" tabindex="-1" aria-label="코멘트 삭제 확인" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content collection-delete-modal">
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                <div class="modal-body">
+                    <div class="member-comment-delete-icon" aria-hidden="true">
+                        <i class="bi bi-trash3"></i>
+                    </div>
+                    <p class="collection-delete-question">해당 코멘트를 삭제할까요?</p>
+                    <p class="collection-delete-description">코멘트와 좋아요 기록이 모두 삭제되며 되돌릴 수 없습니다.</p>
+                    <div class="collection-delete-actions">
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel" data-bs-dismiss="modal">취소</button>
+                        <button id="commentDeleteConfirmButton" type="button" class="btn btn-danger collection-delete-button">삭제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

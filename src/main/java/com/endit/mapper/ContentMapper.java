@@ -33,6 +33,22 @@ public interface ContentMapper extends WorkDiv<ContentVO> {
 	/**
 	 *
 	 * <pre>
+	 * Method Name : doRetrieveAverageRatings
+	 * Description : content_id 묶음의 회원 평가 평균을 한 번에 집계한다(MEMBER_CONTENT는 읽기만 한다).
+	 *               평가가 하나도 없는 콘텐츠는 0.0이 아니라 행 자체가 없다.
+	 *               소수점 1자리 반올림은 SQL이 한다 - 상세(C-01)와 같은 식이라 값도 같다.
+	 *               빈 목록을 넘기면 IN ()이 되어 SQL 문법 오류가 나므로 호출부가 먼저 걸러야 한다.
+	 *
+	 * </pre>
+	 *
+	 * @param contentIds
+	 * @return List<ContentVO> (contentId·averageRating만 채워진다)
+	 */
+	List<ContentVO> doRetrieveAverageRatings(@Param("contentIds") List<Integer> contentIds);
+
+	/**
+	 *
+	 * <pre>
 	 * Method Name : doSelectExternalIdMap
 	 * Description : 보유한 콘텐츠 전체의 external_id - content_id - release_year 대응을 뽑는다.
 	 *               TMDB 목록을 우리 id로 옮길 때 건건이 findContentIdByExternal을 부르면
