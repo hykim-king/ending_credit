@@ -1,6 +1,6 @@
 /**
  * 코멘트 좋아요 Controller (전부 fetch/AJAX)
- * ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 memberId는 폼 값으로 받는다.
+ * memberId는 폼 값을 믿지 않고 로그인 세션에서 꺼낸다.
  * 시큐리티 도입 후 Authentication 기반으로 교체할 것.
  */
 package com.endit.controller;
@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.endit.auth.AuthenticationRequiredException;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CommentLikeVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CommentLikeService;
 
 @Controller
@@ -52,6 +55,9 @@ public class CommentLikeController {
 		log.debug("param: {}", param);
 		log.debug("=============================");
 
+		// 폼이 보낸 memberId는 위조될 수 있어 쓰지 않는다
+		param.setMemberId(requireLoginMemberId());
+
 		int state = commentLikeService.upToggleLike(param);
 		String message = CommentLikeService.LIKE_ON == state ? "좋아요를 눌렀습니다." : "좋아요를 취소했습니다.";
 		int likeCnt = commentLikeService.getLikeCnt(param.getCommentId());
@@ -81,6 +87,27 @@ public class CommentLikeController {
 		int likeCnt = commentLikeService.getLikeCnt(commentId);
 
 		return new MessageVO("1", String.valueOf(likeCnt));
+	}
+
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : requireLoginMemberId
+	 * Description : 현재 로그인 회원 번호를 돌려준다. 비로그인이면 401로 끊는다.
+	 *
+	 * </pre>
+	 *
+	 * @return 로그인 회원 번호
+	 */
+	private long requireLoginMemberId() {
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		if (null == loginMember || null == loginMember.getMemberId()) {
+			throw new AuthenticationRequiredException("로그인이 필요한 기능입니다.");
+		}
+
+		return loginMember.getMemberId();
 	}
 
 }

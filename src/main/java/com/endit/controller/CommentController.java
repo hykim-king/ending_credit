@@ -1,19 +1,8 @@
 /**
- * <pre>
- * Class Name : CommentController
- * Description : 코멘트 Controller
- *               목록은 화면(뷰) 반환, 등록/수정/삭제는 fetch(AJAX)용 MessageVO 반환.
- *               ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 작성자(memberId)는 폼 값으로 받는다.
- *                  시큐리티 도입 후 Authentication.getName() 기반으로 교체할 것(학원 23장 방식).
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * 코멘트 Controller
+ * 목록은 화면(뷰) 반환, 등록/수정/삭제는 fetch(AJAX)용 MessageVO 반환.
+ * ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 작성자(memberId)는 폼 값으로 받는다.
+ * 시큐리티 도입 후 Authentication.getName() 기반으로 교체할 것(학원 23장 방식).
  */
 package com.endit.controller;
 
@@ -31,11 +20,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.endit.auth.AuthenticationRequiredException;
 import com.endit.cmn.CodeUtil;
 import com.endit.cmn.DTO;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CodeVO;
+import com.endit.cmn.LoginMember;
 import com.endit.domain.UserCommentVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CodeService;
 import com.endit.service.UserCommentService;
 
@@ -159,6 +151,9 @@ public class CommentController {
 		log.debug("param: {}", param);
 		log.debug("=============================");
 
+		// 폼이 보낸 memberId는 위조될 수 있어 쓰지 않는다
+		param.setMemberId(requireLoginMemberId());
+
 		int flag = userCommentService.doSave(param);
 		String message = 1 == flag ? "코멘트가 등록 되었습니다." : "코멘트 등록에 실패 했습니다.";
 
@@ -184,8 +179,11 @@ public class CommentController {
 		log.debug("param: {}", param);
 		log.debug("=============================");
 
+		// 남의 코멘트면 매퍼의 member_id 조건에 걸려 0건이 된다
+		param.setMemberId(requireLoginMemberId());
+
 		int flag = userCommentService.doUpdate(param);
-		String message = 1 == flag ? "코멘트가 수정 되었습니다." : "코멘트 수정에 실패 했습니다.";
+		String message = 1 == flag ? "코멘트가 수정 되었습니다." : "본인이 작성한 코멘트만 수정할 수 있습니다.";
 
 		return new MessageVO(flag + "", message);
 	}
@@ -194,14 +192,15 @@ public class CommentController {
 	 *
 	 * <pre>
 	 * Method Name : doDelete
-	 * Description : 코멘트 삭제 — 좋아요·신고도 FK CASCADE로 함께 삭제된다
+	 * Description : 코멘트 삭제 — 좋아요·신고도 FK CASCADE로 함께 삭제된다.
+	 *               주소창 입력만으로 실행되지 않도록 POST로만 받는다.
 	 *
 	 * </pre>
 	 *
 	 * @param commentId
 	 * @return MessageVO(id: 1성공/0실패)
 	 */
-	@GetMapping("/doDelete")
+	@PostMapping("/doDelete")
 	@ResponseBody
 	public MessageVO doDelete(@RequestParam(name = "commentId") long commentId) {
 		log.debug("=============================");
@@ -211,11 +210,34 @@ public class CommentController {
 
 		UserCommentVO param = new UserCommentVO();
 		param.setCommentId(commentId);
+		// 남의 코멘트면 매퍼의 member_id 조건에 걸려 0건이 된다
+		param.setMemberId(requireLoginMemberId());
 
 		int flag = userCommentService.doDelete(param);
-		String message = 1 == flag ? "코멘트가 삭제 되었습니다." : "코멘트 삭제에 실패 했습니다.";
+		String message = 1 == flag ? "코멘트가 삭제 되었습니다." : "본인이 작성한 코멘트만 삭제할 수 있습니다.";
 
 		return new MessageVO(flag + "", message);
+	}
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : requireLoginMemberId
+	 * Description : 현재 로그인 회원 번호를 돌려준다. 비로그인이면 401로 끊는다.
+	 *               폼이 보낸 memberId는 위조될 수 있어 쓰지 않는다.
+	 *
+	 * </pre>
+	 *
+	 * @return 로그인 회원 번호
+	 */
+	private long requireLoginMemberId() {
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		if (null == loginMember || null == loginMember.getMemberId()) {
+			throw new AuthenticationRequiredException("로그인이 필요한 기능입니다.");
+		}
+
+		return loginMember.getMemberId();
 	}
 
 }

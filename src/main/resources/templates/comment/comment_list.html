@@ -40,10 +40,6 @@ layout:decorate="~{layout/layout}">
                 <span class="filter-bar text-muted" th:text="|코멘트 ${totalCnt}개|">코멘트 0개</span>
             </div>
             <div class="d-flex align-items-end gap-2">
-                <div>
-                    <label for="memberId" class="form-label mb-0 filter-bar text-muted">회원ID (로그인 연동 전)</label>
-                    <input type="number" id="memberId" class="form-control form-control-sm" value="9" min="1">
-                </div>
                 <!--작성 버튼은 컬렉션 코멘트(D-07)에만 있다 — 영화 코멘트 작성은 영화 상세(C-01)에서 진입-->
                 <button th:if="${mode == 'collection'}" type="button" class="btn btn-primary" id="btnOpenSave">코멘트 작성</button>
             </div>
