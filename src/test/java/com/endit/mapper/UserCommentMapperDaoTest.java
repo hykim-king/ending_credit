@@ -1,24 +1,10 @@
 /**
- * <pre>
- * Class Name : UserCommentMapperDaoTest
- * Description : 코멘트 Mapper JUnit
- *               팀 테스트 규칙(2026-08-14 회의) 반영:
- *               - 공용 DB 더미 데이터(테이블당 10건)가 있는 상태를 전제로 돈다
- *               - 부모(회원·영화·컬렉션) 값은 더미의 실제 값을 하드코딩해 사용
- *               - @Transactional로 테스트 종료 시 데이터 전부 롤백(시퀀스 번호 소모만 남음 — 무해)
- *               - 전체 건수는 "실행 전 대비 증감"으로, 검색 검증은 내가 만든 행만 잡히는 조건으로 비교
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 12.  홍선기   최초 생성
- * 2026. 8. 13.  홍선기   @Transactional 적용(종료 시 롤백)
- * 2026. 8. 14.  홍선기   픽스처 제거, 공용 더미 기반으로 재작성(팀 테스트 규칙)
- * 2026. 8. 19.  홍선기   join 필드(닉네임·좋아요수·별점)·정렬 4종 검증 추가 — 8/18 공지 보완점2
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 12.
+ * 코멘트 Mapper JUnit
+ * 팀 테스트 규칙(2026-08-14 회의) 반영:
+ * - 공용 DB 더미 데이터(테이블당 10건)가 있는 상태를 전제로 돈다
+ * - 부모(회원·영화·컬렉션) 값은 더미의 실제 값을 하드코딩해 사용
+ * - @Transactional로 테스트 종료 시 데이터 전부 롤백(시퀀스 번호 소모만 남음 — 무해)
+ * - 전체 건수는 "실행 전 대비 증감"으로, 검색 검증은 내가 만든 행만 잡히는 조건으로 비교
  */
 package com.endit.mapper;
 
@@ -196,6 +182,61 @@ class UserCommentMapperDaoTest {
 
 		// 4.
 		assertEquals(baseCnt, mapper.totalCnt());
+	}
+
+	@Test
+	public void doUpdateOtherMemberComment() {
+		log.debug("---------------------------");
+		log.debug("*doUpdateOtherMemberComment()*");
+		log.debug("---------------------------");
+		// 1. 회원A가 코멘트 등록
+		// 2. 회원B 이름으로 수정 시도 → 0건이어야 한다
+		// 3. 원문이 그대로인지 확인
+
+		// 1.
+		int flag = mapper.doSave(comment01);
+		assertEquals(1, flag);
+
+		// 2.
+		UserCommentVO attacker = new UserCommentVO();
+		attacker.setCommentId(comment01.getCommentId());
+		attacker.setMemberId(MEMBER_B);
+		attacker.setCommentDetail("남이 바꿔치기한 내용");
+		attacker.setSpoiler(UserCommentVO.SPOILER_YES);
+
+		flag = mapper.doUpdate(attacker);
+		assertEquals(0, flag);
+
+		// 3.
+		UserCommentVO outVO = mapper.doSelectOne(comment01);
+		assertNotNull(outVO);
+		assertEquals(comment01.getCommentDetail(), outVO.getCommentDetail());
+		assertEquals(UserCommentVO.SPOILER_NO, outVO.getSpoiler());
+	}
+
+	@Test
+	public void doDeleteOtherMemberComment() {
+		log.debug("---------------------------");
+		log.debug("*doDeleteOtherMemberComment()*");
+		log.debug("---------------------------");
+		// 1. 회원A가 코멘트 등록
+		// 2. 회원B 이름으로 삭제 시도 → 0건이어야 한다
+		// 3. 코멘트가 그대로 남아 있는지 확인
+
+		// 1.
+		int flag = mapper.doSave(comment01);
+		assertEquals(1, flag);
+
+		// 2.
+		UserCommentVO attacker = new UserCommentVO();
+		attacker.setCommentId(comment01.getCommentId());
+		attacker.setMemberId(MEMBER_B);
+
+		flag = mapper.doDelete(attacker);
+		assertEquals(0, flag);
+
+		// 3.
+		assertNotNull(mapper.doSelectOne(comment01));
 	}
 
 	@Test

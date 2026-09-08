@@ -71,15 +71,6 @@ function doSearch(pageNo) {
     document.getElementById('searchForm').submit();
 }
 
-// 테스트용 회원ID (로그인 연동 전)
-function getMemberId() {
-    const memberInput = document.getElementById('memberId');
-    if (isEmpty(memberInput, '테스트용 회원ID를 입력하세요.')) {
-        return null;
-    }
-    return memberInput.value.trim();
-}
-
 // 작성 모달 열기 (D-07 신규 — 대상은 화면의 컬렉션으로 고정)
 function openSaveModal() {
     document.getElementById('commentModalTitle').textContent = '컬렉션 코멘트 작성';
@@ -116,12 +107,8 @@ async function doSave() {
     try {
         let result;
         if ('save' === mode) {
-            const memberId = getMemberId();
-            if (null === memberId) {
-                return;
-            }
+            // 작성자는 서버가 로그인 세션에서 정한다
             result = await requestPostForm('/comment/doSave', {
-                memberId: memberId,
                 collectionId: document.getElementById('pageCollectionId').value,
                 commentDetail: detailInput.value.trim(),
                 spoiler: spoiler
@@ -159,7 +146,7 @@ async function deleteComment(commentId, afterHide) {
         return;
     }
     try {
-        const result = await requestGet('/comment/doDelete', { commentId: commentId });
+        const result = await requestPostForm('/comment/doDelete', { commentId: commentId });
         alert(result.message);
         if ('1' === String(result.id)) {
             if (afterHide) {
@@ -174,13 +161,9 @@ async function deleteComment(commentId, afterHide) {
 
 // 좋아요 토글 — 응답 detailMessage에 토글 후 좋아요 수가 실려 온다
 async function doToggleLike(card, btn) {
-    const memberId = getMemberId();
-    if (null === memberId) {
-        return;
-    }
     try {
+        // 누른 사람은 서버가 로그인 세션에서 정한다
         const result = await requestPostForm('/commentLike/upToggleLike', {
-            memberId: memberId,
             commentId: card.dataset.commentId
         });
         btn.querySelector('.like-cnt').textContent = result.detailMessage;
@@ -208,10 +191,6 @@ function openReportModal(card) {
 }
 
 async function doReport() {
-    const memberId = getMemberId();
-    if (null === memberId) {
-        return;
-    }
     const reason = document.getElementById('rpReason').value;
     const detailInput = document.getElementById('rpDetail');
 
@@ -221,8 +200,8 @@ async function doReport() {
     }
 
     try {
+        // 신고자는 서버가 로그인 세션에서 정한다
         const result = await requestPostForm('/report/doSave', {
-            reportMemberId: memberId,
             commentId: document.getElementById('rpCommentId').value,
             reason: reason,
             detail: detailInput.value.trim()

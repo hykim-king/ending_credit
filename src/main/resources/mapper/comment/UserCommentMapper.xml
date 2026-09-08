@@ -95,12 +95,14 @@
               updated_dt     = SYSDATE
          WHERE
                 comment_id = #{commentId}
+            AND member_id  = #{memberId}
     </update>
 
     <!-- 좋아요·신고는 FK ON DELETE CASCADE로 함께 지워진다 -->
     <delete id="doDelete" parameterType="UserCommentVO">
         DELETE FROM user_comment
         WHERE comment_id = #{commentId}
+          AND member_id  = #{memberId}
     </delete>
 
     <!-- 목록조회 — rownum 3중 페이징 + join + 정렬 5종(최신/오래된/좋아요/평점높은/평점낮은)
