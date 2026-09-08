@@ -412,10 +412,14 @@ public class MemberMyPageApiController {
 		List<Map<String, Object>> items = new ArrayList<>();
 	 
 		for (CollectionLikeItemVO like : likes) {
-			Map<String, Object> item = new LinkedHashMap<>();
-			item.put("collectionId", like.getCollectionId()); // TODO: VO getter 이름 확인
-			item.put("title",        like.getTitle());        // TODO: VO getter 이름 확인
-			items.add(item);
+		    Map<String, Object> item = new LinkedHashMap<>();
+		    item.put("collectionId",      like.getCollectionId());
+		    item.put("title",             like.getTitle());
+		    item.put("previewPosterUrl1", like.getPreviewPosterUrl1());
+		    item.put("previewPosterUrl2", like.getPreviewPosterUrl2());
+		    item.put("previewPosterUrl3", like.getPreviewPosterUrl3());
+		    item.put("previewPosterUrl4", like.getPreviewPosterUrl4());
+		    items.add(item);
 		}
 	 
 		Map<String, Object> response = new LinkedHashMap<>();
@@ -639,8 +643,6 @@ public class MemberMyPageApiController {
 				? collectionService.countByMember(memberId)
 				: collectionService.countVisibleByMember(memberId, currentMemberId));
 		stats.put("watchlistCnt", memberContentService.countWatchlistByMember(memberId));
-		// 기존 응답 키는 다른 화면 호환을 위해 유지한다.
-		stats.put("likeCnt", 0);
 
 		return stats;
 	}
