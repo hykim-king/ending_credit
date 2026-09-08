@@ -5,6 +5,7 @@ layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
 <title>영화 검색 결과</title>
+<link rel="stylesheet" th:href="@{/assets/css/search/search.css}">
 <link rel="stylesheet" th:href="@{/assets/css/search/cards.css}">
 <script th:src="@{/assets/js/search/search.js}" defer></script>
 <style>
@@ -101,9 +102,28 @@ layout:decorate="~{layout/layout}">
 </style>
 </head>
 <body data-page="search-movies"
-      th:attr="data-query=${query}, data-sort=${sort}, data-page-no=${pageNo}, data-page-size=${pageSize}">
+      th:attr="data-query=${query}, data-sort=${sort}, data-page-no=${pageNo}, data-page-size=${pageSize},
+               data-has-query=${!#strings.isEmpty(query)}">
 <div layout:fragment="content">
-<div>
+
+<!-- ── 검색어 없음: 영화 전용 검색 시작 화면 ─────────────────── -->
+<!-- S-02 머릿말 "영화"가 들어오는 자리다. 검색창과 순위만 두고 결과는 그리지 않는다 -->
+<div th:if="${#strings.isEmpty(query)}">
+
+	<!-- 통합검색과 달리 영화 결과로 곧장 간다 -->
+	<div th:replace="~{fragments/search_box :: hero(
+	         '영화 검색', @{/search/movies}, '영화 제목을 검색해 보세요', '영화 검색어', false)}"></div>
+
+	<!-- 순위는 search.js가 /api/search/rankings로 읽어 채운다. 0건이거나 실패하면 섹션을 숨긴다 -->
+	<section class="search-panel" id="rankingSection" hidden>
+		<h5 class="ranking-title">박스오피스</h5>
+		<ol class="ranking-list" id="rankingList"></ol>
+	</section>
+
+</div>
+
+<!-- ── 검색어 있음: 영화 결과 ────────────────────────────────── -->
+<div th:if="${!#strings.isEmpty(query)}">
 
 	<!-- 검색어·결과 수와 정렬을 한 줄에 둔다. 재검색은 헤더 검색창이 맡는다 -->
 	<div class="result-head">

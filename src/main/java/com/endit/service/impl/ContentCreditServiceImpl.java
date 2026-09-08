@@ -100,6 +100,23 @@ public class ContentCreditServiceImpl implements ContentCreditService {
 		return new HashSet<>(directorIds);
 	}
 
+	@Override
+	public Set<Integer> retrieveCreditedIds(List<Integer> personIds) {
+		// IN ()은 문법 오류라 빈 목록은 매퍼까지 보내지 않는다
+		if (personIds == null || personIds.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		// role을 주지 않으면 역할을 가리지 않는다
+		List<Integer> creditedIds = contentCreditMapper.doSelectPersonIdsByRole(personIds, null);
+
+		if (creditedIds == null || creditedIds.isEmpty()) {
+			return Collections.emptySet();
+		}
+
+		return new HashSet<>(creditedIds);
+	}
+
 	// 인물 하나의 참여 작품 목록 조회 - 매퍼의 person_id 검색축을 쓴다
 	@Override
 	public List<ContentCreditVO> retrieveByPerson(int personId, DTO param) {

@@ -60,18 +60,5 @@
 	</div>
 </a>
 
-<!-- 컬렉션 카드 - 제목/작성자/작품 수. CollectionVO는 팀원 소유라 필드를 읽기만 한다 -->
-<div th:fragment="collectionCard(collection)" class="ec-card ec-collection-card">
-	<a th:href="@{'/collections/' + ${collection.collectionId}}" class="ec-card-link">
-		<div class="ec-card-body">
-			<div class="ec-card-title" th:text="${collection.title}">컬렉션 제목</div>
-			<div class="ec-card-meta">
-				<span th:text="${collection.nickname}">작성자</span>
-				<span th:text="' · 작품 ' + ${collection.itemCount}"> · 작품 0</span>
-			</div>
-		</div>
-	</a>
-</div>
-
 </body>
 </html>
