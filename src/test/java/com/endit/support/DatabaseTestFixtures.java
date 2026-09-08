@@ -4,12 +4,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import com.endit.domain.CollectionVO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonVO;
 
 /**
- * 통합 테스트의 외래 키를 위한 회원·콘텐츠·인물 픽스처
+ * 통합 테스트의 외래 키를 위한 회원·컬렉션·콘텐츠·인물 픽스처
  *
  * <p>운영 시퀀스와 적재 데이터의 PK 불일치 영향을 피하도록 테스트 전용 양수 PK로 직접 등록.</p>
  *
@@ -18,6 +19,7 @@ import com.endit.domain.PersonVO;
 public final class DatabaseTestFixtures {
 
 	private static final AtomicInteger MEMBER_IDS = new AtomicInteger(1_900_000_000);
+	private static final AtomicInteger COLLECTION_IDS = new AtomicInteger(1_600_000_000);
 	private static final AtomicInteger CONTENT_IDS = new AtomicInteger(1_800_000_000);
 	private static final AtomicInteger PERSON_IDS = new AtomicInteger(1_700_000_000);
 
@@ -46,6 +48,32 @@ public final class DatabaseTestFixtures {
 
 		assertSingleInsert("MEMBER", affected);
 		return member;
+	}
+
+	/**
+	 * 대상 테스트의 외래 키와 컬렉션 JOIN을 만족하는 컬렉션을 등록
+	 *
+	 * @param jdbcTemplate 현재 테스트 트랜잭션에 참여하는 JdbcTemplate
+	 * @param collection 등록할 컬렉션 정보
+	 * @return PK가 채워진 동일 컬렉션 객체
+	 */
+	public static CollectionVO insertCollection(JdbcTemplate jdbcTemplate, CollectionVO collection) {
+		int collectionId = nextUnusedId(
+				jdbcTemplate,
+				COLLECTION_IDS,
+				"SELECT COUNT(*) FROM COLLECTION WHERE COLLECTION_ID = ?");
+		collection.setCollectionId(collectionId);
+
+		int affected = jdbcTemplate.update("""
+				INSERT INTO COLLECTION (
+					COLLECTION_ID, MEMBER_ID, TITLE, DESCRIPTION,
+					IS_PUBLIC, CREATED_DT
+				) VALUES (?, ?, ?, ?, ?, SYSDATE)
+				""", collectionId, collection.getMemberId(), collection.getTitle(), collection.getDescription(),
+				collection.getIsPublic());
+
+		assertSingleInsert("COLLECTION", affected);
+		return collection;
 	}
 
 	/**

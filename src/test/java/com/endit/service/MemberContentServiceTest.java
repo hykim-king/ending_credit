@@ -1,5 +1,7 @@
 package com.endit.service;
 
+import static com.endit.support.DatabaseTestFixtures.insertContent;
+import static com.endit.support.DatabaseTestFixtures.insertMember;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -15,15 +17,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.MemberContentVO;
 import com.endit.domain.MemberVO;
-import com.endit.mapper.ContentMapper;
 import com.endit.mapper.MemberContentMapper;
-import com.endit.mapper.MemberMapper;
 
 /**
  * <pre>
@@ -36,6 +37,7 @@ import com.endit.mapper.MemberMapper;
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 9. 03. jinyoung    회원별 평가·보고싶어요 건수 조회 검증 추가
+ * 2026. 9. 05. jinyoung    회원·콘텐츠 부모 픽스처를 운영 시퀀스와 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -54,14 +56,12 @@ class MemberContentServiceTest {
 	private MemberContentMapper memberContentMapper;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
-	private ContentMapper contentMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	private int memberId;
 	private int contentId;
 
+	/** 테스트별 회원과 대상 데이터 준비 */
 	@BeforeEach
 	void setUp() {
 		memberId = createMemberId();
@@ -71,7 +71,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("평가 목록 조회")
 	void retrieveRatings() {
-
 		// Given: 한 콘텐츠에는 별점을, 다른 콘텐츠에는 보고싶어요만 등록한다.
 		memberContentService.saveRating(memberId, contentId, 4);
 
@@ -99,7 +98,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("보고싶어요 목록 조회")
 	void retrieveWatchlist() {
-
 		// Given: 한 콘텐츠에는 보고싶어요를, 다른 콘텐츠에는 별점만 등록한다.
 		memberContentService.addWatchlist(memberId, contentId);
 
@@ -127,7 +125,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("회원별 평가 건수 조회")
 	void countRatingByMember() {
-
 		// Given: 평가 전용, 보고싶어요 전용, 평가와 보고싶어요가 모두 있는 콘텐츠를 준비한다.
 		memberContentService.saveRating(memberId, contentId, 4);
 
@@ -148,7 +145,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("회원별 보고싶어요 건수 조회")
 	void countWatchlistByMember() {
-
 		// Given: 보고싶어요 전용, 평가 전용, 평가와 보고싶어요가 모두 있는 콘텐츠를 준비한다.
 		memberContentService.addWatchlist(memberId, contentId);
 
@@ -169,8 +165,7 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("회원별 콘텐츠 건수 조회 시 회원 번호 검증")
 	void validateCountMemberId() {
-
-		// Then: 실제 회원 PK로 사용할 수 없는 번호는 Mapper 호출 전에 거부해야 한다.
+		// When, Then: 실제 회원 PK로 사용할 수 없는 번호는 Mapper 호출 전에 거부해야 한다.
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.countRatingByMember(0));
 
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.countWatchlistByMember(-1));
@@ -179,6 +174,7 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("첫 별점은 보고싶어요 N으로 저장")
 	void saveFirstRating() {
+		// Given: 평가와 보고싶어요 기록이 없는 회원과 콘텐츠를 준비한다.
 
 		// When: 활동 기록이 없는 콘텐츠에 별점을 최초 저장한다.
 		MemberContentVO result = memberContentService.saveRating(memberId, contentId, 4);
@@ -196,7 +192,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("별점 변경 시 보고싶어요 유지")
 	void updateRating() {
-
 		// Given: 별점과 보고싶어요가 모두 등록된 행을 준비한다.
 		memberContentService.addWatchlist(memberId, contentId);
 		memberContentService.saveRating(memberId, contentId, 3);
@@ -217,7 +212,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("보고싶어요가 있으면 별점만 해제")
 	void deleteRatingKeepsRow() {
-
 		// Given: 별점과 보고싶어요가 모두 등록된 행을 준비한다.
 		memberContentService.addWatchlist(memberId, contentId);
 		memberContentService.saveRating(memberId, contentId, 4);
@@ -237,7 +231,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("별점만 있으면 행 삭제")
 	void deleteRatingDeletesRow() {
-
 		// Given: 별점만 등록된 행을 준비한다.
 		memberContentService.saveRating(memberId, contentId, 4);
 
@@ -251,7 +244,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("보고싶어요 등록 시 별점 유지")
 	void addWatchlist() throws InterruptedException {
-
 		// Given: 별점만 등록된 행을 준비한다.
 		MemberContentVO rating = memberContentService.saveRating(memberId, contentId, 3);
 		String ratedDt = rating.getRatedDt();
@@ -272,7 +264,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("별점이 있으면 보고싶어요만 해제")
 	void deleteWatchlistKeepsRow() throws InterruptedException {
-
 		// Given: 별점과 보고싶어요가 모두 등록된 행을 준비한다.
 		memberContentService.saveRating(memberId, contentId, 5);
 		memberContentService.addWatchlist(memberId, contentId);
@@ -298,7 +289,6 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("보고싶어요만 있으면 행 삭제")
 	void deleteWatchlistDeletesRow() {
-
 		// Given: 별점 없이 보고싶어요만 등록된 행을 준비한다.
 		memberContentService.addWatchlist(memberId, contentId);
 
@@ -312,6 +302,7 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("보고싶어요 등록·해제 반복 요청 허용")
 	void watchlistIdempotency() {
+		// Given: 보고싶어요 기록이 없는 회원과 콘텐츠를 준비한다.
 
 		// When: 같은 보고싶어요 등록 요청을 두 번 수행한다.
 		MemberContentVO first = memberContentService.addWatchlist(memberId, contentId);
@@ -332,16 +323,16 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("별점 범위 검증")
 	void validateRatingRange() {
+		// When, Then: 허용 범위를 벗어나거나 null인 별점은 입력값 예외가 발생해야 한다.
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, 0));
-
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, 6));
-
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, null));
 	}
 
 	@Test
 	@DisplayName("정렬 조건 검증")
 	void validateSort() {
+		// When, Then: 허용되지 않은 정렬 조건으로 조회하면 입력값 예외가 발생해야 한다.
 		assertThrows(IllegalArgumentException.class,
 				() -> memberContentService.retrieveRatings(memberId, new DTO(), "rating"));
 	}
@@ -349,7 +340,7 @@ class MemberContentServiceTest {
 	@Test
 	@DisplayName("평가가 없으면 빈 목록 반환")
 	void retrieveEmptyRatings() {
-
+		// Given: 평가 기록이 없는 신규 회원과 조회 조건을 준비한다.
 		DTO param = new DTO();
 
 		// When: 평가 기록이 없는 신규 회원의 평가 목록을 조회한다.
@@ -362,6 +353,8 @@ class MemberContentServiceTest {
 
 	/**
 	 * 현재 테스트 회원과 콘텐츠의 복합 PK 조회
+	 *
+	 * @return 회원 콘텐츠 기록
 	 */
 	private MemberContentVO selectMemberContent() {
 		MemberContentVO key = new MemberContentVO();
@@ -374,6 +367,8 @@ class MemberContentServiceTest {
 
 	/**
 	 * MEMBER_CONTENT 외래 키를 만족하는 테스트 회원 생성
+	 *
+	 * @return 등록된 테스트 회원 번호
 	 */
 	private int createMemberId() {
 		String token = createToken();
@@ -385,14 +380,14 @@ class MemberContentServiceTest {
 		member.setIntroduction("회원 콘텐츠 Service 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
 	/**
 	 * MEMBER_CONTENT 외래 키를 만족하는 테스트 콘텐츠 생성
+	 *
+	 * @param prefix 테스트 데이터 식별용 접두사
+	 * @return 등록된 테스트 콘텐츠 번호
 	 */
 	private int createContentId(String prefix) {
 		String token = createToken();
@@ -401,13 +396,14 @@ class MemberContentServiceTest {
 				"Member Content Integration Test", "회원 콘텐츠 Service 통합 테스트 영화", "2026-08-27", 120, "Korea",
 				"https://example.com/poster.jpg", "https://example.com/backdrop.jpg", null);
 
-		assertEquals(1, contentMapper.doSave(content));
-
-		return content.getContentId();
+		// 회원 콘텐츠 로직만 검증하도록 CONTENT 시퀀스를 거치지 않는 부모 행을 사용한다.
+		return insertContent(jdbcTemplate, content).getContentId();
 	}
 
 	/**
 	 * DB 고유 제약조건 충돌 방지용 문자열 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
 	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");
