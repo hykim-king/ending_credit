@@ -185,6 +185,61 @@ class UserCommentMapperDaoTest {
 	}
 
 	@Test
+	public void doUpdateOtherMemberComment() {
+		log.debug("---------------------------");
+		log.debug("*doUpdateOtherMemberComment()*");
+		log.debug("---------------------------");
+		// 1. 회원A가 코멘트 등록
+		// 2. 회원B 이름으로 수정 시도 → 0건이어야 한다
+		// 3. 원문이 그대로인지 확인
+
+		// 1.
+		int flag = mapper.doSave(comment01);
+		assertEquals(1, flag);
+
+		// 2.
+		UserCommentVO attacker = new UserCommentVO();
+		attacker.setCommentId(comment01.getCommentId());
+		attacker.setMemberId(MEMBER_B);
+		attacker.setCommentDetail("남이 바꿔치기한 내용");
+		attacker.setSpoiler(UserCommentVO.SPOILER_YES);
+
+		flag = mapper.doUpdate(attacker);
+		assertEquals(0, flag);
+
+		// 3.
+		UserCommentVO outVO = mapper.doSelectOne(comment01);
+		assertNotNull(outVO);
+		assertEquals(comment01.getCommentDetail(), outVO.getCommentDetail());
+		assertEquals(UserCommentVO.SPOILER_NO, outVO.getSpoiler());
+	}
+
+	@Test
+	public void doDeleteOtherMemberComment() {
+		log.debug("---------------------------");
+		log.debug("*doDeleteOtherMemberComment()*");
+		log.debug("---------------------------");
+		// 1. 회원A가 코멘트 등록
+		// 2. 회원B 이름으로 삭제 시도 → 0건이어야 한다
+		// 3. 코멘트가 그대로 남아 있는지 확인
+
+		// 1.
+		int flag = mapper.doSave(comment01);
+		assertEquals(1, flag);
+
+		// 2.
+		UserCommentVO attacker = new UserCommentVO();
+		attacker.setCommentId(comment01.getCommentId());
+		attacker.setMemberId(MEMBER_B);
+
+		flag = mapper.doDelete(attacker);
+		assertEquals(0, flag);
+
+		// 3.
+		assertNotNull(mapper.doSelectOne(comment01));
+	}
+
+	@Test
 	public void doRetrieve() {
 		log.debug("---------------------------");
 		log.debug("*doRetrieve()*");
