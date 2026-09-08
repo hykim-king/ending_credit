@@ -6,7 +6,62 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>공지 관리</title>
+
+    <!--
+        공지 관리자 화면만 적용되는 좁은 화면 처리.
+        인물 관리와 동일하게 표의 최소 폭을 유지하고,
+        화면보다 넓어지면 표 영역에서 가로 스크롤로 확인한다.
+        공통 endit.css / 다른 관리자 파트 CSS는 건드리지 않는다.
+    -->
+    <style>
+        .admin-notice-content {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /*
+         * 검색 영역과 표를 같은 가로 스크롤 영역에 넣는다.
+         * 화면이 좁아져도 컨트롤/컬럼 폭을 억지로 줄이지 않고
+         * 인물 관리처럼 오른쪽 부분이 화면 밖으로 넘어가도록 한다.
+         */
+        .admin-notice-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .admin-notice-inner {
+            min-width: 860px;
+        }
+
+        .admin-notice-toolbar {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .admin-notice-query-col {
+            flex: 1 0 360px;
+            min-width: 360px;
+        }
+
+        .admin-notice-toolbar .admin-notice-control {
+            flex: 0 0 auto;
+        }
+
+        .admin-notice-table {
+            width: 100%;
+            min-width: 860px;
+        }
+
+        .admin-notice-table th,
+        .admin-notice-table td {
+            white-space: nowrap;
+        }
+    </style>
 </head>
 
 <body data-page="admin-notice-list">
@@ -21,124 +76,78 @@
         </aside>
 
         <!-- 공지 관리 -->
-        <div class="flex-grow-1">
+        <div class="flex-grow-1 admin-notice-content">
 
             <h4 class="fw-bold mb-3">
                 공지 관리 목록
             </h4>
 
 
-            <!-- 검색 영역 -->
-            <div class="row g-1 mb-3 filter-bar">
+            <!-- 검색 영역 + 목록 : 인물 관리처럼 같은 가로 스크롤 영역 사용 -->
+            <div class="admin-notice-scroll">
 
-                <!-- 제목 검색 -->
-                <div class="col">
+                <div class="admin-notice-inner">
 
-                    <input type="search"
-                           id="adminQuery"
-                           class="form-control form-control-sm"
-                           maxlength="200"
-                           placeholder="공지 제목 검색">
+                    <!-- 검색 영역 -->
+                    <div class="admin-notice-toolbar mb-3 filter-bar">
+
+                        <!-- 제목 검색 -->
+                        <div class="admin-notice-query-col">
+                            <input type="search"
+                                   id="adminQuery"
+                                   class="form-control form-control-sm"
+                                   maxlength="200"
+                                   placeholder="공지 제목 검색">
+                        </div>
+
+                        <!-- 중요 여부 -->
+                        <div class="admin-notice-control">
+                            <select id="adminImportant"
+                                    class="form-select form-select-sm"
+                                    aria-label="중요 여부">
+                                <option value="">전체</option>
+                                <option value="Y">중요 Y</option>
+                                <option value="N">중요 N</option>
+                            </select>
+                        </div>
+
+                        <!-- 검색 -->
+                        <div class="admin-notice-control">
+                            <button type="button"
+                                    id="adminSearchButton"
+                                    class="btn btn-outline-primary btn-sm">
+                                검색
+                            </button>
+                        </div>
+
+                        <!-- 등록 -->
+                        <div class="admin-notice-control">
+                            <button type="button"
+                                    id="createNoticeButton"
+                                    class="btn btn-primary btn-sm">
+                                공지 등록
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- 목록 -->
+                    <table class="table table-sm table-hover align-middle admin-table bg-white admin-notice-table">
+                        <thead>
+                        <tr class="text-nowrap">
+                            <th style="width: 7%;">번호</th>
+                            <th>제목</th>
+                            <th style="width: 8%;">중요</th>
+                            <th style="width: 8%;">조회</th>
+                            <th style="width: 14%;">작성자</th>
+                            <th style="width: 12%;">등록일</th>
+                            <th style="width: 12%;">수정일</th>
+                        </tr>
+                        </thead>
+                        <tbody id="adminNoticeBody"></tbody>
+                    </table>
 
                 </div>
-
-
-                <!-- 중요 여부 -->
-                <div class="col-auto">
-
-                    <select id="adminImportant"
-                            class="form-select form-select-sm"
-                            aria-label="중요 여부">
-
-                        <option value="">
-                            중요 전체
-                        </option>
-
-                        <option value="Y">
-                            중요 Y
-                        </option>
-
-                        <option value="N">
-                            중요 N
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <!-- 검색 -->
-                <div class="col-auto">
-
-                    <button type="button"
-                            id="adminSearchButton"
-                            class="btn btn-outline-primary btn-sm">
-                        검색
-                    </button>
-
-                </div>
-
-
-                <!-- 등록 -->
-                <div class="col-auto">
-
-                    <button type="button"
-                            id="createNoticeButton"
-                            class="btn btn-primary btn-sm">
-                        공지 등록
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <!-- 목록 -->
-            <div class="table-responsive">
-
-                <table class="table table-sm table-hover align-middle admin-table bg-white">
-
-                    <thead>
-
-                    <tr class="text-nowrap">
-
-                        <th style="width: 7%;">
-                            번호
-                        </th>
-
-                        <th>
-                            제목
-                        </th>
-
-                        <th style="width: 8%;">
-                            중요
-                        </th>
-
-                        <th style="width: 8%;">
-                            조회
-                        </th>
-
-                        <th style="width: 14%;">
-                            작성자
-                        </th>
-
-                        <th style="width: 12%;">
-                            등록일
-                        </th>
-
-                        <th style="width: 12%;">
-                            수정일
-                        </th>
-
-                    </tr>
-
-                    </thead>
-
-
-                    <tbody id="adminNoticeBody">
-                    </tbody>
-
-                </table>
 
             </div>
 

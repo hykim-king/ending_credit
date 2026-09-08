@@ -105,14 +105,13 @@
         totalPages,
         move
     ) {
-
         container.innerHTML = "";
 
         if (totalPages <= 1) {
             return;
         }
 
-        const blockSize = 5;
+        const blockSize = 10;
 
         const start =
             Math.floor(
@@ -125,38 +124,169 @@
                 start + blockSize - 1
             );
 
-        const button = (
+        const list =
+            document.createElement("ul");
+
+        // 관리자 페이지와 동일한 Bootstrap 페이지네이션 스타일
+        list.className =
+            "pagination pagination-sm justify-content-center";
+
+        const item = (
+            label,
+            target,
+            active = false,
+            disabled = false
+        ) => {
+            const li =
+                document.createElement("li");
+
+            li.className =
+                `page-item${active ? " active" : ""}${disabled ? " disabled" : ""}`;
+
+            const link =
+                document.createElement("a");
+
+            link.className = "page-link";
+            link.href = "javascript:void(0)";
+            link.textContent = label;
+
+            if (!disabled) {
+                link.addEventListener(
+                    "click",
+                    () => move(target)
+                );
+            }
+
+            li.appendChild(link);
+            list.appendChild(li);
+        };
+
+        // 맨 처음 페이지
+        item(
+            "<<",
+            1,
+            false,
+            pageNo === 1
+        );
+
+        // 이전 10페이지 묶음
+        item(
+            "<",
+            Math.max(1, start - 1),
+            false,
+            start === 1
+        );
+
+        // 페이지 번호
+        for (
+            let i = start;
+            i <= end;
+            i++
+        ) {
+            item(
+                String(i),
+                i,
+                i === pageNo
+            );
+        }
+
+        // 다음 10페이지 묶음
+        item(
+            ">",
+            Math.min(
+                totalPages,
+                end + 1
+            ),
+            false,
+            end === totalPages
+        );
+
+        // 맨 마지막 페이지
+        item(
+            ">>",
+            totalPages,
+            false,
+            pageNo === totalPages
+        );
+
+        container.appendChild(list);
+    }
+    function renderAdminPagination(
+        container,
+        pageNo,
+        totalPages,
+        move
+    ) {
+
+        container.innerHTML = "";
+
+        if (totalPages < 1) {
+            return;
+        }
+
+        const blockSize = 10;
+
+        const start =
+            Math.floor(
+                (pageNo - 1) / blockSize
+            ) * blockSize + 1;
+
+        const end =
+            Math.min(
+                totalPages,
+                start + blockSize - 1
+            );
+
+        const list =
+            document.createElement(
+                "ul"
+            );
+
+        list.className =
+            "pagination pagination-sm justify-content-center";
+
+        const item = (
             label,
             target,
             active = false,
             disabled = false
         ) => {
 
-            const el =
+            const li =
                 document.createElement(
-                    "button"
+                    "li"
                 );
 
-            el.type = "button";
+            li.className =
+                `page-item${active ? " active" : ""}${disabled ? " disabled" : ""}`;
 
-            el.className =
-                `page-button${active ? " active" : ""}`;
+            const link =
+                document.createElement(
+                    "a"
+                );
 
-            el.textContent = label;
-            el.disabled = disabled;
+            link.className =
+                "page-link";
+
+            link.href =
+                "javascript:void(0)";
+
+            link.textContent =
+                label;
 
             if (!disabled) {
-                el.addEventListener(
+                link.addEventListener(
                     "click",
                     () => move(target)
                 );
             }
 
-            container.appendChild(el);
+            li.appendChild(link);
+            list.appendChild(li);
         };
 
-        button(
-            "‹",
+        item(
+            "이전",
             Math.max(1, start - 1),
             false,
             start === 1
@@ -167,15 +297,15 @@
             i <= end;
             i++
         ) {
-            button(
+            item(
                 String(i),
                 i,
                 i === pageNo
             );
         }
 
-        button(
-            "›",
+        item(
+            "다음",
             Math.min(
                 totalPages,
                 end + 1
@@ -183,6 +313,8 @@
             false,
             end === totalPages
         );
+
+        container.appendChild(list);
     }
 
     async function loadPublicList() {
@@ -210,9 +342,6 @@
                 )
             );
 
-        const importantArea =
-            $("#importantArea");
-
         const listArea =
             $("#noticeList");
 
@@ -222,7 +351,6 @@
         const errorState =
             $("#errorState");
 
-        importantArea.innerHTML = "";
         listArea.innerHTML = "";
 
         emptyState.hidden = true;
@@ -251,67 +379,25 @@
                             `/notices/${notice.noticeId}?returnUrl=${back}`;
                     };
 
-                    if (
-                        notice.important === "Y"
-                    ) {
-
-                        const row =
-                            document.createElement(
-                                "div"
-                            );
-
-                        row.className =
-                            "important-notice";
-
-                        row.tabIndex = 0;
-
-                        row.innerHTML = `
-                            <span class="important-label">중요</span>
-                            <span class="notice-title-cell"></span>
-                            <span class="notice-date">${formatDate(notice.createdDt)}</span>
-                            <span class="notice-view">${notice.viewCount ?? 0}</span>
-                        `;
-
-                        row.querySelector(
-                            ".notice-title-cell"
-                        ).textContent =
-                            notice.title;
-
-                        row.addEventListener(
-                            "click",
-                            goDetail
-                        );
-
-                        row.addEventListener(
-                            "keydown",
-                            (e) => {
-                                if (
-                                    e.key === "Enter"
-                                    || e.key === " "
-                                ) {
-                                    goDetail();
-                                }
-                            }
-                        );
-
-                        importantArea
-                            .appendChild(row);
-
-                        return;
-                    }
-
                     const row =
                         document.createElement(
                             "div"
                         );
 
                     row.className =
-                        "notice-row";
+                        notice.important === "Y"
+                            ? "notice-row important-row"
+                            : "notice-row";
 
                     row.tabIndex = 0;
 
+                    const numberText =
+                        notice.important === "Y"
+                            ? "중요!"
+                            : (notice.displayNo ?? "-");
+
                     row.innerHTML = `
-                        <span>${notice.displayNo ?? "-"}</span>
+                        <span class="${notice.important === "Y" ? "important-label" : ""}">${numberText}</span>
                         <span class="notice-title-cell"></span>
                         <span>${formatDate(notice.createdDt)}</span>
                         <span class="notice-view">${notice.viewCount ?? 0}</span>
@@ -572,6 +658,8 @@
                             );
 
                         tr.tabIndex = 0;
+                        tr.className =
+                            "text-nowrap";
 
                         tr.innerHTML = `
                             <td>${notice.displayNo ?? "-"}</td>
@@ -627,7 +715,7 @@
                     }
                 );
 
-                renderPagination(
+                renderAdminPagination(
                     $("#adminPagination"),
                     data.pageNo,
                     data.totalPages,

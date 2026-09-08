@@ -59,35 +59,46 @@
     function renderPagination(container, pageNo, totalPages, move) {
         container.innerHTML = "";
 
-        if (totalPages <= 1) {
+        if (totalPages < 1) {
             return;
         }
 
-        const blockSize = 5;
+        // 회원/신고 관리자 목록과 같은 10페이지 단위 페이징
+        const blockSize = 10;
         const start = Math.floor((pageNo - 1) / blockSize) * blockSize + 1;
         const end = Math.min(totalPages, start + blockSize - 1);
 
-        const button = (label, target, active, disabled) => {
-            const el = document.createElement("button");
-            el.type = "button";
-            el.className = "page-button" + (active ? " active" : "");
-            el.textContent = label;
-            el.disabled = disabled;
+        const list = document.createElement("ul");
+        list.className = "pagination pagination-sm justify-content-center";
+
+        const item = (label, target, active = false, disabled = false) => {
+            const li = document.createElement("li");
+            li.className = "page-item"
+                + (active ? " active" : "")
+                + (disabled ? " disabled" : "");
+
+            const link = document.createElement("a");
+            link.className = "page-link";
+            link.href = "javascript:void(0)";
+            link.textContent = label;
 
             if (!disabled) {
-                el.addEventListener("click", () => move(target));
+                link.addEventListener("click", () => move(target));
             }
 
-            container.appendChild(el);
+            li.appendChild(link);
+            list.appendChild(li);
         };
 
-        button("<", Math.max(1, start - 1), false, start === 1);
+        item("이전", Math.max(1, start - 1), false, start === 1);
 
         for (let i = start; i <= end; i++) {
-            button(String(i), i, i === pageNo, false);
+            item(String(i), i, i === pageNo);
         }
 
-        button(">", Math.min(totalPages, end + 1), false, end === totalPages);
+        item("다음", Math.min(totalPages, end + 1), false, end === totalPages);
+
+        container.appendChild(list);
     }
 
     // ── AD-05 인물 관리 목록 ──────────────────────────
