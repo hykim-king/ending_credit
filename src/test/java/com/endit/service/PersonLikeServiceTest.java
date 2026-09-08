@@ -1,5 +1,7 @@
 package com.endit.service;
 
+import static com.endit.support.DatabaseTestFixtures.insertMember;
+import static com.endit.support.DatabaseTestFixtures.insertPerson;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -15,14 +17,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonLikeVO;
 import com.endit.domain.PersonVO;
-import com.endit.mapper.MemberMapper;
-import com.endit.mapper.PersonMapper;
 
 /**
  * <pre>
@@ -34,6 +35,7 @@ import com.endit.mapper.PersonMapper;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
+ * 2026. 9. 05. jinyoung    회원·인물 부모 픽스처를 운영 시퀀스와 분리
  * ------------------------------------------------------------
  * </pre>
  *
@@ -49,14 +51,12 @@ class PersonLikeServiceTest {
 	private PersonLikeService personLikeService;
 
 	@Autowired
-	private MemberMapper memberMapper;
-
-	@Autowired
-	private PersonMapper personMapper;
+	private JdbcTemplate jdbcTemplate;
 
 	private int memberId;
 	private int personId;
 
+	/** 테스트별 회원과 대상 데이터 준비 */
 	@BeforeEach
 	void setUp() {
 		// 공용 데이터에 의존하지 않도록 테스트마다 회원과 인물을 생성한다.
@@ -101,6 +101,7 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("빈 목록 조회")
 	void retrieveEmpty() {
+		// Given: 좋아요 기록이 없는 회원과 조회 조건을 준비한다.
 		DTO param = new DTO();
 
 		// When: 좋아요가 없는 회원의 목록을 조회한다.
@@ -115,6 +116,7 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("페이징 보정")
 	void normalizePaging() {
+		// Given: 허용 범위를 벗어난 페이지 번호와 크기를 설정한다.
 		DTO param = new DTO();
 		param.setPageNo(0);
 		param.setPageSize(101);
@@ -130,6 +132,8 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("좋아요 등록")
 	void addLike() {
+		// Given: 좋아요 기록이 없는 회원과 인물을 준비한다.
+
 		// When: 좋아요가 없는 회원과 인물 조합을 등록한다.
 		PersonLikeVO result = personLikeService.addLike(memberId, personId);
 
@@ -159,6 +163,8 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("좋아요 여부 조회")
 	void checkLiked() {
+		// Given: 좋아요 기록이 없는 회원과 인물을 준비한다.
+
 		// Then: 등록 전에는 false여야 한다.
 		assertFalse(personLikeService.isLiked(memberId, personId));
 
@@ -177,7 +183,7 @@ class PersonLikeServiceTest {
 		personLikeService.addLike(memberId, personId);
 		personLikeService.addLike(secondMemberId, personId);
 
-		// When, Then: 해당 인물의 좋아요 수는 2여야 한다.
+		// When, Then: 좋아요 수를 조회하면 두 회원의 기록이 집계되어야 한다.
 		assertEquals(2, personLikeService.countLikes(personId));
 	}
 
@@ -198,13 +204,16 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("반복 해제")
 	void deleteLikeAgain() {
-		// Then: 등록되지 않은 좋아요 해제 요청도 예외 없이 처리되어야 한다.
+		// Given: 좋아요 기록이 없는 회원과 인물을 준비한다.
+
+		// When, Then: 등록되지 않은 좋아요 해제 요청도 예외 없이 처리되어야 한다.
 		assertDoesNotThrow(() -> personLikeService.deleteLike(memberId, personId));
 
+		// Given: 좋아요를 등록한 뒤 다시 해제한다.
 		personLikeService.addLike(memberId, personId);
 		personLikeService.deleteLike(memberId, personId);
 
-		// Then: 이미 해제된 좋아요를 다시 해제해도 최종 상태는 같아야 한다.
+		// When, Then: 이미 해제된 좋아요를 다시 해제해도 최종 상태는 같아야 한다.
 		assertDoesNotThrow(() -> personLikeService.deleteLike(memberId, personId));
 		assertFalse(personLikeService.isLiked(memberId, personId));
 	}
@@ -212,9 +221,9 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("정렬 조건 검증")
 	void validateSort() {
+		// When, Then: 허용되지 않거나 null인 정렬 조건은 입력값 예외가 발생해야 한다.
 		assertThrows(IllegalArgumentException.class,
 				() -> personLikeService.retrieveLikes(memberId, new DTO(), "popular"));
-
 		assertThrows(IllegalArgumentException.class,
 				() -> personLikeService.retrieveLikes(memberId, new DTO(), null));
 	}
@@ -222,6 +231,7 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("조회 조건 검증")
 	void validateParam() {
+		// When, Then: 조회 조건이 null이면 입력값 예외가 발생해야 한다.
 		assertThrows(IllegalArgumentException.class,
 				() -> personLikeService.retrieveLikes(memberId, null, "latest"));
 	}
@@ -229,27 +239,20 @@ class PersonLikeServiceTest {
 	@Test
 	@DisplayName("번호 검증")
 	void validateIds() {
+		// When, Then: 유효하지 않은 회원·인물 번호는 각 작업 전에 거부되어야 한다.
 		assertThrows(IllegalArgumentException.class,
 				() -> personLikeService.retrieveLikes(0, new DTO(), "latest"));
-
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.countLikes(0));
-
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.isLiked(0, personId));
-
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.isLiked(memberId, 0));
-
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.addLike(memberId, -1));
-
-		assertThrows(IllegalArgumentException.class,
-				() -> personLikeService.deleteLike(-1, personId));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.countLikes(0));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.isLiked(0, personId));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.isLiked(memberId, 0));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.addLike(memberId, -1));
+		assertThrows(IllegalArgumentException.class, () -> personLikeService.deleteLike(-1, personId));
 	}
 
 	/**
 	 * PERSON_LIKE 외래 키를 만족하는 고유 테스트 회원 생성
+	 *
+	 * @return 등록된 테스트 회원 번호
 	 */
 	private int createMemberId() {
 		String token = createToken();
@@ -261,35 +264,30 @@ class PersonLikeServiceTest {
 		member.setIntroduction("인물 좋아요 Service 통합 테스트 회원");
 		member.setRole("USER");
 
-		assertEquals(1, memberMapper.insertMember(member));
-		assertNotNull(member.getMemberId());
-
-		return member.getMemberId().intValue();
+		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
 	/**
 	 * PERSON_LIKE 외래 키와 목록 JOIN을 만족하는 고유 테스트 인물 생성
+	 *
+	 * @param prefix 테스트 데이터 식별용 접두사
+	 * @return 등록된 테스트 인물 번호
 	 */
 	private int createPersonId(String prefix) {
 		String token = createToken();
 
-		PersonVO person = new PersonVO(
-				0,
-				"PERSON_LIKE_" + prefix + "_" + token.substring(0, 20),
-				"인물좋아요" + token.substring(0, 6),
-				"Person Like " + token.substring(0, 6),
-				"https://example.com/person.jpg",
-				null,
-				null);
+		PersonVO person = new PersonVO(0, "PERSON_LIKE_" + prefix + "_" + token.substring(0, 20),
+				"인물좋아요" + token.substring(0, 6), "Person Like " + token.substring(0, 6),
+				"https://example.com/person.jpg", null, null);
 
-		assertEquals(1, personMapper.doSave(person));
-		assertTrue(person.getPersonId() > 0);
-
-		return person.getPersonId();
+		// PERSON 생성 자체는 대상이 아니므로 PERSON 시퀀스 상태와 분리한다.
+		return insertPerson(jdbcTemplate, person).getPersonId();
 	}
 
 	/**
 	 * 회원과 인물의 고유 제약조건 충돌 방지용 문자열 생성
+	 *
+	 * @return 하이픈을 제외한 UUID 문자열
 	 */
 	private String createToken() {
 		return UUID.randomUUID().toString().replace("-", "");

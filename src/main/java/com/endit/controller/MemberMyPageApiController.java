@@ -28,8 +28,10 @@ import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CollectionLikeItemVO;
 import com.endit.domain.CommentLikeVO;
+import com.endit.domain.GenrePreferenceVO;
 import com.endit.domain.MemberVO;
 import com.endit.domain.PersonLikeVO;
+import com.endit.domain.RatingDistributionVO;
 import com.endit.domain.UserCommentVO;
 import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionService;
@@ -427,7 +429,88 @@ public class MemberMyPageApiController {
 		response.put("totalCount", param.getTotalCnt());
 	 
 		return ResponseEntity.ok(response);
-	}	
+	}
+	
+	/**
+	 * 로그인 회원의 선호 장르 조회.
+	 * 평가한 영화들의 장르별 집계를 개수 내림차순으로 반환한다. 첫 번째가 선호 장르.
+	 *
+	 * @return { items: [{genreId, genreName, ratedCnt}], topGenre: "공포" }
+	 */
+	@GetMapping("/me/genre-preference")
+	public ResponseEntity<Map<String, Object>> getMyGenrePreference() {
+
+	    Long memberId = LoginMemberHelper.getMemberId();
+
+	    log.debug("getMyGenrePreference(memberId={})", memberId);
+
+	    List<GenrePreferenceVO> genres =
+	            memberContentService.retrieveGenrePreference(memberId.intValue());
+
+	    // 화면에 쓸 필드만 골라 담기
+	    List<Map<String, Object>> items = new ArrayList<>();
+	    for (GenrePreferenceVO g : genres) {
+	        Map<String, Object> item = new LinkedHashMap<>();
+	        item.put("genreId",   g.getGenreId());
+	        item.put("genreName", g.getGenreName());
+	        item.put("ratedCnt",  g.getRatedCnt());
+	        items.add(item);
+	    }
+
+	    Map<String, Object> response = new LinkedHashMap<>();
+	    response.put("items", items);
+	    // 1등 장르명 (없으면 null). 프론트가 멘트 매핑에 쓰기 편하게 따로 담아줌
+	    response.put("topGenre", genres.isEmpty() ? null : genres.get(0).getGenreName());
+
+	    return ResponseEntity.ok(response);
+	}
+	
+	/**
+	 * 로그인 회원의 별점 분포 조회
+	 *
+	 * @return 1~5점 개수 배열(dist), 총 개수(total), 평균(average), 최다 점수(topScore)
+	 */
+	@GetMapping("/me/rating-distribution")
+	public ResponseEntity<Map<String, Object>> getMyRatingDistribution() {
+	 
+	    Long memberId = LoginMemberHelper.getMemberId();
+	 
+	    log.debug("getMyRatingDistribution(memberId={})", memberId);
+	 
+	    List<RatingDistributionVO> rows =
+	            memberContentService.retrieveRatingDistribution(memberId.intValue());
+	 
+	    // 1~5점 개수를 배열로 정리 (없는 점수는 0). dist[0]=1점 ... dist[4]=5점
+	    int[] dist = new int[5];
+	    int total = 0;
+	    long sum = 0;
+	    for (RatingDistributionVO row : rows) {
+	        int score = row.getRatingScore();   // 1~5
+	        int cnt   = row.getScoreCnt();
+	        if (score >= 1 && score <= 5) {
+	            dist[score - 1] = cnt;
+	            total += cnt;
+	            sum   += (long) score * cnt;
+	        }
+	    }
+	 
+	    // 평균 (소수 1자리), 최다 점수
+	    String average = total == 0 ? "0.0"
+	            : String.format("%.1f", (double) sum / total);
+	    int topScore = 0;
+	    int topCnt = -1;
+	    for (int i = 0; i < 5; i++) {
+	        if (dist[i] > topCnt) { topCnt = dist[i]; topScore = i + 1; }
+	    }
+	 
+	    Map<String, Object> response = new LinkedHashMap<>();
+	    response.put("dist", dist);          // [1점,2점,3점,4점,5점] 개수
+	    response.put("total", total);        // 총 평가 개수
+	    response.put("average", average);    // 평균 별점
+	    response.put("topScore", total == 0 ? 0 : topScore);  // 가장 많이 준 별점
+	 
+	    return ResponseEntity.ok(response);
+	}
 
 	// ===================== 내 댓글 기록 =====================
 

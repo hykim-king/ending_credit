@@ -75,24 +75,6 @@ textarea {
     margin-right: 0;
 }
 
-.important-area {
-    display: grid;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-
-.important-notice {
-    min-height: 96px;
-    padding: 18px 28px;
-    display: grid;
-    grid-template-columns: 90px 1fr 140px 90px;
-    gap: 16px;
-    align-items: center;
-    background: var(--notice-important);
-    border-radius: 16px;
-    cursor: pointer;
-}
-
 .important-label {
     color: var(--notice-primary);
     font-weight: 700;
@@ -147,9 +129,9 @@ textarea {
 }
 
 .page-button {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
+    width: 36px;
+    min-width: 36px;
+    height: 40px;
     border: 0;
     border-radius: 8px;
     background: transparent;
@@ -252,192 +234,6 @@ textarea {
     overflow-wrap: anywhere;
 }
 
-/* 관리자 */
-.admin-layout {
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 220px 1fr;
-}
-
-.admin-sidebar {
-    padding: 36px 24px;
-    color: #D7D5DF;
-    background: #222129;
-}
-
-.admin-logo {
-    margin-bottom: 34px;
-    display: block;
-    color: #fff;
-    font-weight: 700;
-}
-
-.admin-nav {
-    display: grid;
-    gap: 7px;
-}
-
-.admin-nav a {
-    padding: 0 14px;
-    display: flex;
-    align-items: center;
-    border-radius: 8px;
-}
-
-.admin-nav a:hover,
-.admin-nav a.active {
-    background: rgba(255, 255, 255, .08);
-}
-
-.admin-nav a.active {
-    color: #FF5A82;
-}
-
-.admin-content {
-    min-width: 0;
-    padding: 42px;
-}
-
-.admin-page-title {
-    margin: 0 0 28px;
-    font-size: 30px;
-    font-weight: 700;
-}
-
-.admin-filter-box {
-    margin-bottom: 24px;
-    display: grid;
-    grid-template-columns: minmax(240px, 1fr) 160px 140px auto auto;
-    gap: 10px;
-}
-
-.admin-filter-box input,
-.admin-filter-box select,
-.notice-form input[type="text"],
-.notice-form textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--notice-border);
-    border-radius: 10px;
-    background: #fff;
-    outline: none;
-}
-
-.admin-filter-box input:focus,
-.admin-filter-box select:focus,
-.notice-form input[type="text"]:focus,
-.notice-form textarea:focus {
-    border-color: var(--notice-primary);
-    box-shadow: 0 0 0 3px var(--notice-focus);
-}
-
-.admin-table-scroll {
-    overflow-x: auto;
-}
-
-.admin-notice-table {
-    width: 100%;
-    min-width: 900px;
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
-.admin-notice-table th,
-.admin-notice-table td {
-    padding: 15px 12px;
-    text-align: center;
-    font-size: 14px;
-    border-bottom: 1px solid var(--notice-border);
-}
-
-.admin-notice-table th {
-    background: var(--notice-soft);
-}
-
-.admin-notice-table td:nth-child(2) {
-    text-align: left;
-}
-
-.admin-notice-table tbody tr {
-    cursor: pointer;
-}
-
-.admin-notice-table tbody tr:hover {
-    background: #FAF9FC;
-}
-
-.notice-form {
-    max-width: 820px;
-    display: grid;
-    gap: 12px;
-}
-
-.notice-form > label,
-.notice-form legend {
-    font-weight: 700;
-}
-
-.notice-form textarea {
-    min-height: 230px;
-    resize: vertical;
-}
-
-.notice-form fieldset {
-    margin: 0;
-    padding: 12px 0;
-    border: 0;
-}
-
-.choice-group {
-    margin-top: 10px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.choice-group input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.choice-group span {
-    min-width: 96px;
-    min-height: 44px;
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--notice-border);
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-.choice-group input:checked + span {
-    color: var(--notice-primary);
-    font-weight: 700;
-    border-color: var(--notice-primary);
-    background: var(--notice-important);
-}
-
-.status-choice-group span {
-    min-width: 140px;
-}
-
-.form-error {
-    padding: 12px 14px;
-    color: var(--notice-danger);
-    background: #FFF0F2;
-    border-radius: 8px;
-}
-
-.form-actions {
-    margin-top: 18px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-}
-
 @media (max-width: 900px) {
     .endit-header {
         height: 56px;
@@ -453,15 +249,6 @@ textarea {
         margin-top: 28px;
     }
 
-    .important-notice {
-        grid-template-columns: 64px 1fr;
-    }
-
-    .important-notice .notice-date,
-    .important-notice .notice-view {
-        display: none;
-    }
-
     .notice-table-head,
     .notice-row {
         grid-template-columns: 60px 1fr 105px;
@@ -473,44 +260,23 @@ textarea {
     .notice-row .notice-view {
         display: none;
     }
-
-    .admin-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .admin-sidebar {
-        display: none;
-    }
-
-    .admin-content {
-        padding: 24px 16px;
-    }
-
-    .admin-filter-box {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .admin-filter-box input {
-        grid-column: 1 / -1;
-    }
 }
 
 
-/* 관리자 화면 서체 - 디자인 원칙의 "문서(관리자 화면 등) 서체: Arial, Fallback: Noto Sans KR".
-   body 규칙은 그대로 두고 .admin-layout 안쪽에만 적용한다 -
-   notice.css 는 일반 공지 화면도 함께 쓰므로 그쪽 서체를 바꾸지 않기 위해서다. */
-.admin-layout {
-    font-family: Arial, "Noto Sans KR", sans-serif;
+
+/* =========================================================
+   공개 공지 목록 - 중요 공지 강조
+   중요 공지는 일반 공지와 같은 목록 안에 두되,
+   행 전체에 연보라 배경을 주어 한눈에 구분되게 한다.
+   ========================================================= */
+.notice-row.important-row {
+    background: var(--notice-important);
 }
 
-/* 로고 | 세로선 | 메인으로 나가는 버튼
-   관리자 화면에는 공용 헤더가 없어 여기가 메인(H-01)으로 가는 유일한 통로다.
-   마크업은 fragments/admin_side.html 한 곳에서 나온다. */
-.admin-brandbar {
-    margin-bottom: 34px;
+.notice-row.important-row:hover {
+    background: #E8E3FF;
 }
 
-/* 하단 여백은 브랜드바가 갖는다 - 로고에 그대로 두면 선까지 같이 내려간다 */
-.admin-brandbar .admin-logo {
-    margin-bottom: 0;
+.notice-row.important-row .notice-title-cell {
+    font-weight: 600;
 }

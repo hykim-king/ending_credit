@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingRequestValueException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -110,6 +111,30 @@ public class GlobalRestExceptionHandler {
 		messageVO.setDetailMessage(ExceptionUtils.getStackTrace(e));
 
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(messageVO);
+	}
+
+	/**
+	 * 필수 요청 헤더·파라미터 누락 — 400
+	 *
+	 * @param e 필수 요청값 누락 예외
+	 * @return ResponseEntity<MessageVO>
+	 */
+	@ExceptionHandler(MissingRequestValueException.class)
+	public ResponseEntity<MessageVO> handlerMissingRequestValueException(
+			MissingRequestValueException e) {
+
+		log.debug(
+				"handlerMissingRequestValueException: {}",
+				e.getMessage());
+
+		MessageVO messageVO = new MessageVO();
+		messageVO.setId("400");
+		messageVO.setMessage("필수 요청값이 누락되었습니다.");
+		messageVO.setDetailMessage(ExceptionUtils.getStackTrace(e));
+
+		return ResponseEntity
+				.status(HttpStatus.BAD_REQUEST)
+				.body(messageVO);
 	}
 
 	/**

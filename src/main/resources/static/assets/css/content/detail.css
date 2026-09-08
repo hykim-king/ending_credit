@@ -53,12 +53,18 @@
 	background-color: #ccc;
 	color: #666;
 }
+/* 포스터도 아이콘 한 개다. 백드롭은 문구를 그대로 두므로 여기서만 키운다 */
+.poster-placeholder {
+	background-color: #ECEAF2;
+	color: #A49EB1;
+	font-size: 2.6rem;
+}
 .backdrop-placeholder {
 	height: 100%;
 	width: 100%;
 }
 
-/* ── C-01 평가 분석 (포스터 아래 점수별 막대) ─────────── */
+/* ── C-01 평가 분석 (포스터 아래 점수별 분포 그래프) ── */
 .rating-chart {
 	margin-top: 16px;
 }
@@ -89,44 +95,29 @@
 	font-weight: 400;
 	color: #777;
 }
-.rating-chart-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	/* 한 줄 높이를 고정해 막대 다섯 줄이 눈금처럼 나란히 선다 */
-	height: 20px;
+/* 캔버스는 스스로 높이를 못 가져 감싼 쪽이 잡아 준다(maintainAspectRatio:false) */
+.rating-chart-canvas {
+	position: relative;
+	height: 150px;
+}
+/* Chart.js를 못 받아 왔을 때만 펼쳐지는 대체 표 */
+.rating-chart-table {
+	width: 100%;
 	font-size: 12px;
 	color: #777;
 	font-variant-numeric: tabular-nums;
 }
-.rating-chart-score {
-	display: inline-flex;
-	align-items: center;
-	gap: 2px;
-	/* "5★"이 두 글자라 폭을 잡아 두지 않으면 인원 수에 따라 막대 시작점이 흔들린다 */
-	width: 26px;
-	color: var(--endit-primary);
+.rating-chart-table caption {
+	caption-side: top;
+	padding: 0;
+	font-size: 12px;
+	color: #777;
+}
+.rating-chart-table th {
 	font-weight: 600;
+	color: var(--endit-primary);
 }
-.rating-chart-score i {
-	font-size: .8em;
-}
-.rating-chart-bar {
-	flex: 1;
-	height: 8px;
-	border-radius: 4px;
-	background: #ECEAF2;
-	overflow: hidden;
-}
-.rating-chart-fill {
-	display: block;
-	height: 100%;
-	border-radius: 4px;
-	background: var(--endit-primary);
-}
-/* 세 자리(999명)까지 자리를 미리 잡는다 */
-.rating-chart-count {
-	width: 28px;
+.rating-chart-table td {
 	text-align: right;
 }
 
@@ -511,14 +502,24 @@
 	opacity: .6;
 }
 
+/*
+ * 칸이 줄면 같은 8장이 4줄·8줄로 늘어져 화면이 한없이 깊어진다.
+ * 줄 수를 2줄로 고정하고 넘치는 카드는 감춘다 - 감춘 게 있으면 detail.js가 더보기를 띄운다.
+ */
 @media (max-width: 900px) {
 	.comment-grid {
 		grid-template-columns: repeat(2, 1fr);
+	}
+	.comment-grid > :nth-child(n+5) {
+		display: none;
 	}
 }
 @media (max-width: 560px) {
 	.comment-grid {
 		grid-template-columns: 1fr;
+	}
+	.comment-grid > :nth-child(n+3) {
+		display: none;
 	}
 }
 
@@ -751,14 +752,14 @@
 	border-radius: 8px;
 	object-fit: cover;
 }
+/* 프로필이 없으면 문구 대신 아이콘 하나만 둔다 - 3조 컬렉션 카드의 작성자 아바타와 같은 규칙이다 */
 .cast-avatar-placeholder {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background-color: #ccc;
-	color: #666;
-	font-size: 11px;
-	text-align: center;
+	background-color: #F0EEF2;
+	color: #AAA4B1;
+	font-size: 1.25rem;
 }
 .cast-text {
 	min-width: 0;
@@ -783,14 +784,24 @@
 	color: #6550C8;
 	font-weight: 600;
 }
+/*
+ * 코멘트와 같은 규칙으로 3줄을 유지한다. 상한은 미리보기 격자(.cast-preview)에만 건다 -
+ * 모달 안의 .cast-grid는 전체를 보여 주는 자리라 감추면 안 된다.
+ */
 @media (max-width: 900px) {
 	.cast-grid {
 		grid-template-columns: repeat(2, 1fr);
+	}
+	.cast-preview > :nth-child(n+7) {
+		display: none;
 	}
 }
 @media (max-width: 560px) {
 	.cast-grid {
 		grid-template-columns: 1fr;
+	}
+	.cast-preview > :nth-child(n+4) {
+		display: none;
 	}
 }
 
@@ -989,38 +1000,3 @@
 	color: #6550C8;
 }
 
-/* 맨 위로. 홈(home/index.html)의 같은 이름 규칙을 그대로 쓴다 - 스크롤이 THRESHOLD를 넘을 때만 detail.js가 띄운다 */
-.scroll-top {
-	position: fixed;
-	right: 24px;
-	bottom: 24px;
-	/* 접근성 원칙: 44px 터치 영역 */
-	width: 44px;
-	height: 44px;
-	border-radius: 50%;
-	border: none;
-	background: var(--endit-primary);
-	color: #fff;
-	font-size: 18px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
-	cursor: pointer;
-	/* 모달(1050)보다 아래여야 딤 위로 떠오르지 않는다 */
-	z-index: 3;
-}
-.scroll-top:hover {
-	background: var(--endit-hover);
-}
-.scroll-top:active {
-	background: var(--endit-active);
-}
-.scroll-top:focus-visible {
-	outline: 3px solid #D8D1FF;
-	outline-offset: 2px;
-}
-/* display:flex가 hidden을 덮어쓴다 */
-.scroll-top[hidden] {
-	display: none;
-}

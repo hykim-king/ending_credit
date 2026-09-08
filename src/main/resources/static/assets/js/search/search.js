@@ -90,7 +90,9 @@
         } else {
             const empty = document.createElement("div");
             empty.className = "ec-poster-empty";
-            empty.textContent = "이미지 없음";
+            // 서버가 그린 카드(fragments/cards.html)와 같은 폴백 - 아이콘만 넣고 문구는 title로 남긴다
+            empty.title = "이미지 없음";
+            empty.innerHTML = "<i class=\"bi bi-film\" aria-hidden=\"true\"></i>";
             poster.appendChild(empty);
         }
 

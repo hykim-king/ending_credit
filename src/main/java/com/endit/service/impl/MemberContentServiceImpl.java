@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.endit.cmn.DTO;
+import com.endit.domain.GenrePreferenceVO;
 import com.endit.domain.MemberContentVO;
+import com.endit.domain.RatingDistributionVO;
 import com.endit.mapper.MemberContentMapper;
 import com.endit.service.MemberContentService;
 
@@ -23,6 +25,7 @@ import com.endit.service.MemberContentService;
  * ------------------------------------------------------------
  * 2026. 8. 27. jinyoung    최초 생성
  * 2026. 9. 03. jinyoung    회원별 기록 정렬 및 평가·보고싶어요 건수 조회 추가
+ * 2026. 9. 09. heetae      회원이 평가한 영화들의 장르별 집계 조회 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -54,6 +57,38 @@ public class MemberContentServiceImpl implements MemberContentService {
 	public MemberContentServiceImpl(MemberContentMapper memberContentMapper) {
 
 		this.memberContentMapper = memberContentMapper;
+	}
+	
+	/**
+	 * 회원 별점 분포 조회
+	 *
+	 * @param memberId 조회할 회원 번호
+	 * @return 별점(1~5)별 개수 목록
+	 */
+	@Override
+	public List<RatingDistributionVO> retrieveRatingDistribution(int memberId) {
+	    validateMemberId(memberId);
+	 
+	    DTO param = new DTO();
+	    param.setSearchWord(String.valueOf(memberId));
+	 
+	    return memberContentMapper.selectRatingDistribution(param);
+	}
+	
+	/**
+	 * 회원 선호 장르 분석
+	 *
+	 * @param memberId 조회할 회원 번호
+	 * @return 회원이 평가한 영화들의 장르별 집계 목록 (평가 개수 내림차순)
+	 */
+	@Override
+	public List<GenrePreferenceVO> retrieveGenrePreference(int memberId) {
+	    validateMemberId(memberId);
+
+	    DTO param = new DTO();
+	    param.setSearchWord(String.valueOf(memberId));   // 매퍼가 #{searchNumber}로 쓰는 값
+
+	    return memberContentMapper.selectGenrePreference(param);
 	}
 
 	/**
