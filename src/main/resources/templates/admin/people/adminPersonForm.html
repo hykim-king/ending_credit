@@ -6,6 +6,9 @@
     <title th:text="${isEdit ? '인물 수정' : '인물 등록'} + ' | END IT ADMIN'">인물 등록 | END IT ADMIN</title>
 
     <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
+    <!-- 사이드바(admin_side)가 쓰는 .admin-side 스킨이 endit.css에 있다.
+         목록 화면은 공용 레이아웃이 실어 주지만 이 화면은 레이아웃을 안 써서 직접 싣는다 -->
+    <link rel="stylesheet" href="/assets/css/endit.css">
     <link rel="stylesheet" href="/assets/css/admin/people.css">
 </head>
 <body data-page="admin-person-form"

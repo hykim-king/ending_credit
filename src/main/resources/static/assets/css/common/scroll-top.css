@@ -1,0 +1,38 @@
+/*
+ * 맨 위로 버튼. 홈(H-01)·영화 상세(C-01)·관리자 영화/인물 목록(AD-02·AD-05)이 함께 쓴다.
+ * 마크업은 templates/fragments/scroll_top.html, 동작은 assets/js/common/scroll-top.js 한 벌이다.
+ */
+.scroll-top {
+	position: fixed;
+	right: 24px;
+	bottom: 24px;
+	/* 접근성 원칙의 44px 터치 영역. 원 자체를 그만큼 그린다 */
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	border: none;
+	background: var(--endit-primary);
+	color: #fff;
+	font-size: 18px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+	cursor: pointer;
+	/* 모달(1050)보다 아래여야 딤 위로 떠오르지 않는다 */
+	z-index: 3;
+}
+.scroll-top:hover {
+	background: var(--endit-hover);
+}
+.scroll-top:active {
+	background: var(--endit-active);
+}
+.scroll-top:focus-visible {
+	outline: 3px solid #D8D1FF;
+	outline-offset: 2px;
+}
+/* display:flex가 hidden을 덮어쓴다(.shelf-nav과 같은 함정) */
+.scroll-top[hidden] {
+	display: none;
+}
