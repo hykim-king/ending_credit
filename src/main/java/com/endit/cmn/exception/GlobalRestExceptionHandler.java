@@ -25,13 +25,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.endit.auth.AuthenticationRequiredException;
 import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.MessageVO;
+import com.endit.controller.AdminMemberController;
 import com.endit.controller.CommentController;
 import com.endit.controller.CommentLikeController;
 import com.endit.controller.ReportCommentController;
 
 @Order(1)
 @RestControllerAdvice(assignableTypes = { CommentController.class, CommentLikeController.class,
-		ReportCommentController.class })
+		ReportCommentController.class, AdminMemberController.class })
 public class GlobalRestExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());

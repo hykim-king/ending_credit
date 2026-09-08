@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+layout:decorate="~{layout/layout}">
+<head>
+<meta charset="UTF-8">
+<title>회원 관리</title>
+</head>
+<body>
+<div layout:fragment="content">
+
+<div class="d-flex gap-3">
+    <!--관리자 사이드 메뉴-->
+    <aside th:replace="~{fragments/admin_side :: admin_side('users')}">side</aside>
+    <!--//관리자 사이드 메뉴-->
+
+    <div class="flex-grow-1">
+        <h4 class="fw-bold mb-3">회원 관리 목록</h4>
+
+        <!--검색폼: 이메일/닉네임, 빈값이면 둘 다 검색-->
+        <form id="searchForm" th:action="@{/admin/users/doRetrieve}" method="get" class="row g-1 mb-3 filter-bar">
+            <input type="hidden" name="pageNo" id="pageNo" th:value="${dto.pageNo}">
+            <div class="col-auto">
+                <select name="searchDiv" id="searchDiv" class="form-select form-select-sm">
+                    <option value=""         th:selected="${dto.searchDiv == ''}">전체</option>
+                    <option value="email"    th:selected="${dto.searchDiv == 'email'}">이메일</option>
+                    <option value="nickname" th:selected="${dto.searchDiv == 'nickname'}">닉네임</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <input type="text" name="searchWord" id="searchWord" class="form-control form-control-sm"
+                       placeholder="검색어" th:value="${dto.searchWord}">
+            </div>
+            <div class="col-auto">
+                <select name="pageSize" id="pageSize" class="form-select form-select-sm">
+                    <option value="10" th:selected="${dto.pageSize == 10}">10개</option>
+                    <option value="20" th:selected="${dto.pageSize == 20}">20개</option>
+                    <option value="30" th:selected="${dto.pageSize == 30}">30개</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="doSearch(1)">검색</button>
+            </div>
+        </form>
+        <!--//검색폼-->
+
+        <div class="mb-2 text-muted small" th:text="|전체 ${totalCnt}명|">전체 0명</div>
+
+        <table class="table table-sm table-hover align-middle admin-table bg-white">
+            <thead class="table-light">
+                <tr class="text-nowrap">
+                    <th style="width:7%;">ID</th>
+                    <th style="width:24%;">이메일</th>
+                    <th style="width:16%;">닉네임</th>
+                    <th style="width:9%;">권한</th>
+                    <th>소개</th>
+                    <th style="width:13%;">가입일</th>
+                    <th style="width:10%;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="memberTbody">
+                <tr th:if="${#lists.isEmpty(list)}">
+                    <td colspan="7" class="text-center text-muted py-4">회원이 없습니다.</td>
+                </tr>
+                <tr th:each="vo : ${list}" th:attr="data-member-id=${vo.memberId},data-nickname=${vo.nickname}"
+                    class="text-nowrap">
+                    <td th:text="${vo.memberId}">1</td>
+                    <td class="text-truncate" th:title="${vo.email}" th:text="${vo.email}">a@b.com</td>
+                    <td class="text-truncate" th:title="${vo.nickname}" th:text="${vo.nickname}">닉네임</td>
+                    <td>
+                        <span class="badge badge-accepted" th:if="${vo.role == 'ADMIN'}">관리자</span>
+                        <span class="badge badge-received" th:unless="${vo.role == 'ADMIN'}">회원</span>
+                    </td>
+                    <td class="text-truncate" th:title="${vo.introduction}"
+                        th:text="${vo.introduction != null} ? ${vo.introduction} : '-'">-</td>
+                    <td th:title="${vo.createdDt}"
+                        th:text="${vo.createdDt != null} ? ${#strings.substring(vo.createdDt, 0, 10)} : '-'">2026-01-01</td>
+                    <td>
+                        <button type="button" class="btn btn-outline-danger btn-sm ban-btn"
+                                th:unless="${vo.role == 'ADMIN'}">강퇴</button>
+                        <span class="text-muted small" th:if="${vo.role == 'ADMIN'}">-</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!--페이징: 계산은 DTO 생성자가 한다-->
+        <nav th:if="${pageDTO.totalCnt > 0}">
+            <ul class="pagination pagination-sm justify-content-center">
+                <li class="page-item" th:classappend="${!pageDTO.pre} ? 'disabled'">
+                    <a class="page-link" href="javascript:void(0)"
+                       th:onclick="|doSearch(${pageDTO.startNo - 1})|">이전</a></li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(pageDTO.startNo, pageDTO.endNo)}"
+                    th:classappend="${i == dto.pageNo} ? 'active'">
+                    <a class="page-link" href="javascript:void(0)"
+                       th:onclick="|doSearch(${i})|" th:text="${i}">1</a></li>
+                <li class="page-item" th:classappend="${!pageDTO.next} ? 'disabled'">
+                    <a class="page-link" href="javascript:void(0)"
+                       th:onclick="|doSearch(${pageDTO.endNo + 1})|">다음</a></li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<script th:src="@{/assets/js/admin/member_list.js}" defer></script>
+</div>
+</body>
+</html>
