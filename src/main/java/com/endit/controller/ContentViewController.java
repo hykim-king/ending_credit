@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -284,7 +285,7 @@ public class ContentViewController {
 			param.setSearchWord(String.valueOf(contentId));
 			param.getSearchMap().put(SEARCH_KEY_SORT, COLLECTION_SORT_LIKES);
 
-			collections = collectionService.retrieve(param, currentMemberProvider.findCurrentMemberId());
+			collections = collectionService.retrieve(param, findCurrentMemberId());
 			totalCnt = param.getTotalCnt();
 		} catch (RuntimeException e) {
 			// 컬렉션 줄만 빼고 나머지 섹션은 살린다
@@ -531,9 +532,20 @@ public class ContentViewController {
 	 * @throws ArithmeticException 회원 번호가 int 범위를 벗어난 경우
 	 */
 	private Integer toCurrentMemberId() {
+		OptionalLong currentMemberId = findCurrentMemberId();
+
+		return currentMemberId.isEmpty() ? null : Math.toIntExact(currentMemberId.getAsLong());
+	}
+
+	/**
+	 * 팀 공용 인증 정보에서 컬렉션 서비스에 전달할 현재 회원 번호 조회
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 빈 OptionalLong
+	 */
+	private static OptionalLong findCurrentMemberId() {
 		LoginMember loginMember = LoginMemberHelper.getLoginMember();
 
-		return loginMember == null ? null : Math.toIntExact(loginMember.getMemberId());
+		return loginMember == null ? OptionalLong.empty() : OptionalLong.of(loginMember.getMemberId());
 	}
 
 }
