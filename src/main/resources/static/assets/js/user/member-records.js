@@ -3,11 +3,10 @@
  * 2026. 8. 31. jinyoung - 평가·보고싶어요 카드의 TMDB 이미지·공통 페이지네이션 적용
  * 2026. 9. 01. jinyoung - U-03~U-06 4탭 UI와 회원 컬렉션 조회 연결
  * 2026. 9. 03. jinyoung - 작품 정렬·평균 별점·컬렉션 카드 및 더보기 UI 적용
+ * 2026. 9. 05. jinyoung - 본인 영화·컬렉션 코멘트 조회와 수정·삭제·좋아요 UI 적용
  */
 
-/** ===================================
- *  기록 탭 설정
- *  =================================== */
+// ==================== 기록 탭 설정 ====================
 const RECORD_PAGE_SIZE = 12; // 페이지당 기록 수
 const RECORD_PAGINATION_GROUP_SIZE = 5; // 한 구간의 최대 페이지 수
 const RECORD_TABS = ["ratings", "comments", "collections", "watchlist"]; // 지원 탭
@@ -18,27 +17,23 @@ const RECORD_CONFIG = Object.freeze({
         empty: "아직 평가한 작품이 없습니다.",
         countKey: "ratingsCount",
         sorts: [
-            ["latest", "최신 순"],
-            ["oldest", "오래된 순"],
-            ["rating_desc", "별점 높은 순"],
-            ["rating_asc", "별점 낮은 순"]
+            ["latest", "최신 순"], ["oldest", "오래된 순"], ["rating_desc", "별점 높은 순"], ["rating_asc", "별점 낮은 순"]
         ]
     },
     comments: {
         title: "작성한 코멘트",
-        empty: "코멘트 API가 연결되면 작성한 코멘트가 표시됩니다.",
+        empty: "아직 작성한 코멘트가 없습니다.",
         countKey: "commentsCount",
-        sorts: [],
-        integrationPending: true
+        sorts: [
+            ["latest", "최신 순"], ["oldest", "오래된 순"], ["likes", "좋아요 많은 순"]
+        ]
     },
     collections: {
         title: "만든 컬렉션",
         empty: "아직 만든 컬렉션이 없습니다.",
         countKey: "collectionsCount",
         sorts: [
-            ["latest", "최신 순"],
-            ["oldest", "오래된 순"],
-            ["likes", "좋아요 많은 순"]
+            ["latest", "최신 순"], ["oldest", "오래된 순"], ["likes", "좋아요 많은 순"]
         ]
     },
     watchlist: {
@@ -46,28 +41,20 @@ const RECORD_CONFIG = Object.freeze({
         empty: "아직 보고싶어요로 등록한 작품이 없습니다.",
         countKey: "watchlistCount",
         sorts: [
-            ["latest", "최신 순"],
-            ["oldest", "오래된 순"]
+            ["latest", "최신 순"], ["oldest", "오래된 순"]
         ]
     }
 });
 
-/** ===================================
- *  화면 요소 및 탭별 상태
- *  =================================== */
+// ==================== 화면 요소 및 탭별 상태 ====================
 
 const recordsPage = document.querySelector("#memberRecordsPage"); // 기록 화면 루트 요소
-const memberId = Number(recordsPage.dataset.memberId); // 조회 대상 회원 번호
 // 서버에서 전달받은 탭별 전체 건수
-const recordCounts = Object.fromEntries(
-    RECORD_TABS.map((tab) => [
-        tab,
-        Number(recordsPage.dataset[RECORD_CONFIG[tab].countKey] || 0)
-    ])
-);
+const recordCounts = Object.fromEntries(RECORD_TABS.map((tab) => [
+        tab, Number(recordsPage.dataset[RECORD_CONFIG[tab].countKey] || 0)
+    ]));
 // 페이지 번호, 정렬값, 조회 결과, 스크롤 위치를 보관하는 탭별 상태
-const recordState = Object.fromEntries(
-    RECORD_TABS.map((tab) => [
+const recordState = Object.fromEntries(RECORD_TABS.map((tab) => [
         tab,
         {
             pageNo: 1,
@@ -75,20 +62,23 @@ const recordState = Object.fromEntries(
             data: null,
             scrollY: 0
         }
-    ])
-);
+    ]));
 // 페이지 표시선의 이전 위치를 보관하는 탭별 상태
-const paginationIndicatorState = Object.fromEntries(
-    RECORD_TABS.map((tab) => [tab, null])
-);
+const paginationIndicatorState = Object.fromEntries(RECORD_TABS.map((tab) => [tab, null]));
 
 let activeTab = normalizeTab(recordsPage.dataset.initialTab || new URLSearchParams(window.location.search).get("tab")); // 현재 탭
+let commentEditModal;
+let commentDeleteModal;
+let pendingDeleteCommentId = null;
 
-/** ===================================
- *  화면 초기화 및 이벤트 연결
- *  =================================== */
+// ==================== 화면 초기화 및 이벤트 연결 ====================
 
 document.addEventListener("DOMContentLoaded", () => {
+    const commentEditModalElement = document.querySelector("#commentEditModal");
+    commentEditModal = commentEditModalElement ? new bootstrap.Modal(commentEditModalElement) : null;
+    const commentDeleteModalElement = document.querySelector("#commentDeleteModal");
+    commentDeleteModal = commentDeleteModalElement ? new bootstrap.Modal(commentDeleteModalElement) : null;
+
     document.querySelectorAll("#recordTabs [data-tab]").forEach((tabLink) => tabLink.addEventListener("click", changeTab));
 
     document.querySelector("#recordRetryButton")
@@ -117,6 +107,15 @@ document.addEventListener("DOMContentLoaded", () => {
             loadRecords("collections", state.pageNo + 1, true);
         });
 
+    document.querySelector("#recordList").addEventListener("click", handleCommentAction);
+    document.querySelector("#commentEditSaveButton")
+        ?.addEventListener("click", saveCommentEdit);
+    document.querySelector("#commentDeleteConfirmButton")
+        ?.addEventListener("click", deleteComment);
+    commentDeleteModalElement?.addEventListener("hidden.bs.modal", () => {
+        pendingDeleteCommentId = null;
+    });
+
     window.addEventListener("popstate", () => {
         const tab = normalizeTab(new URLSearchParams(window.location.search).get("tab"));
         switchTab(tab, false);
@@ -124,34 +123,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     updateTabView();
 
-    if (!Number.isInteger(memberId) || memberId <= 0) {
-        showRecordError("올바른 회원 번호가 필요합니다.");
-        return;
-    }
-
     loadRecords(activeTab, 1);
 });
 
-/** ===================================
- *  탭 전환 및 정렬
- *  =================================== */
+// ==================== 탭 전환 및 정렬 ====================
 
 /** 요청 탭 이름 정규화 */
 function normalizeTab(tab) {
-
     return RECORD_TABS.includes(tab) ? tab : "ratings";
 }
 
 /** 탭 클릭 처리 */
 function changeTab(event) {
-
     event.preventDefault();
     switchTab(normalizeTab(event.currentTarget.dataset.tab), true);
 }
 
 /** 활성 탭 전환 */
 function switchTab(nextTab, updateHistory) {
-
     if (nextTab === activeTab) {
         return;
     }
@@ -184,7 +173,6 @@ function switchTab(nextTab, updateHistory) {
 
 /** 정렬 조건 변경 */
 function changeSort(sort) {
-
     const state = recordState[activeTab];
 
     if (!state.sort || state.sort === sort) {
@@ -198,14 +186,12 @@ function changeSort(sort) {
 
 /** 탭 조회 상태 초기화 */
 function resetTabState(tab, keepSort = false) {
-
     const sort = keepSort ? recordState[tab].sort : RECORD_CONFIG[tab].sorts[0]?.[0] || null;
     recordState[tab] = { pageNo: 1, sort, data: null, scrollY: 0 };
 }
 
 /** 활성 탭 화면 갱신 */
 function updateTabView() {
-
     document.querySelectorAll("#recordTabs [data-tab]")
         .forEach((tabLink) => {
             const selected = tabLink.dataset.tab === activeTab;
@@ -228,7 +214,6 @@ function updateTabView() {
 
 /** 정렬 드롭다운 갱신 */
 function updateSortControl() {
-
     const config = RECORD_CONFIG[activeTab];
     const sortWrap = document.querySelector("#recordSortWrap");
     const sortButton = document.querySelector("#recordSortButton");
@@ -274,7 +259,6 @@ function updateSortControl() {
 
 /** 정렬 드롭다운 열기·닫기 */
 function toggleSortMenu() {
-
     const sortButton = document.querySelector("#recordSortButton");
     const sortMenu = document.querySelector("#recordSortMenu");
     const opening = sortMenu.classList.contains("d-none");
@@ -290,7 +274,6 @@ function toggleSortMenu() {
 
 /** 정렬 드롭다운 닫기 */
 function closeSortMenu(returnFocus = false) {
-
     const sortButton = document.querySelector("#recordSortButton");
     const sortMenu = document.querySelector("#recordSortMenu");
     const wasOpen = !sortMenu.classList.contains("d-none");
@@ -304,31 +287,11 @@ function closeSortMenu(returnFocus = false) {
     }
 }
 
-/** ===================================
- *  기록 API 조회
- *  =================================== */
+// ==================== 기록 API 조회 ====================
 
 /** 탭별 기록 조회 */
 async function loadRecords(tab, pageNo, append = false) {
-
     const requestTab = tab;
-    const config = RECORD_CONFIG[tab];
-
-    // 코멘트 API 연결 전에는 서버를 호출하지 않고 준비 상태 데이터를 사용한다.
-    if (config.integrationPending) {
-        const pendingData = {
-            items: [],
-            page: {
-                pageNo: 1,
-                pageSize: RECORD_PAGE_SIZE,
-                totalCnt: recordCounts.comments
-            },
-            integrationPending: true
-        };
-        recordState[tab].data = pendingData;
-        renderRecords(tab, pendingData);
-        return;
-    }
 
     if (append) {
         setLoadMoreLoading(true);
@@ -362,17 +325,18 @@ async function loadRecords(tab, pageNo, append = false) {
 
 /** 탭별 API 주소 생성 */
 function createRecordEndpoint(tab) {
-
     if (tab === "collections") {
-        return `/api/users/${memberId}/collections`;
+        return "/api/members/collections";
+    }
+    if (tab === "comments") {
+        return "/api/members/comments";
     }
 
-    return tab === "ratings" ? `/api/users/${memberId}/ratings` : `/api/users/${memberId}/watchlist`;
+    return tab === "ratings" ? "/api/members/ratings" : "/api/members/watchlist";
 }
 
 /** 탭별 API 요청 조건 생성 */
 function createRecordParams(tab, pageNo) {
-
     if (tab === "collections") {
         return {
             pageNo,
@@ -380,7 +344,6 @@ function createRecordParams(tab, pageNo) {
             sort: recordState[tab].sort
         };
     }
-
     return {
         page: pageNo,
         size: RECORD_PAGE_SIZE,
@@ -388,13 +351,10 @@ function createRecordParams(tab, pageNo) {
     };
 }
 
-/** ===================================
- *  기록 결과 및 작품 카드
- *  =================================== */
+// ==================== 기록 결과 및 작품 카드 ====================
 
 /** 탭별 조회 결과 렌더링 */
 function renderRecords(tab, data) {
-
     const items = Array.isArray(data.items) ? data.items : [];
     const page = data.page || {};
     const totalCount = Number(page.totalCnt ?? recordCounts[tab] ?? 0);
@@ -403,36 +363,293 @@ function renderRecords(tab, data) {
     hideRecordStatus();
     document.querySelector("#recordTotalCount").textContent = String(totalCount);
 
-    if (data.integrationPending) {
-        showRecordEmpty(
-            "코멘트 연동 준비 중",
-            RECORD_CONFIG.comments.empty,
-            "bi-chat-square-text"
-        );
-        return;
-    }
-
     if (items.length === 0) {
-        showRecordEmpty(
-            "아직 기록이 없습니다.",
-            RECORD_CONFIG[tab].empty,
-            tab === "collections" ? "bi-collection" : "bi-film"
-        );
+        const icon = tab === "collections" ? "bi-collection" : tab === "comments" ? "bi-chat-square-text" : "bi-film";
+        showRecordEmpty("아직 기록이 없습니다.", RECORD_CONFIG[tab].empty, icon);
         return;
     }
 
     if (tab === "collections") {
         renderCollectionCards(items);
         renderCollectionLoadMore(items.length, totalCount);
+        return;
+    }
+
+    if (tab === "comments") {
+        renderCommentCards(items);
     } else {
         renderMovieCards(items);
-        renderPagination(page, Number(page.pageNo || recordState[tab].pageNo));
+    }
+
+    renderPagination(page, Number(page.pageNo || recordState[tab].pageNo));
+}
+
+// ==================== 회원 코멘트 카드 ====================
+
+/** 영화·컬렉션 코멘트 카드 목록 렌더링 */
+function renderCommentCards(items) {
+    const recordList = document.querySelector("#recordList");
+
+    recordList.className = "member-comment-list";
+    recordList.replaceChildren();
+    items.forEach((item) => recordList.append(createCommentCard(item)));
+    recordList.classList.remove("d-none");
+}
+
+/** 회원 코멘트 카드 생성 */
+function createCommentCard(item) {
+    const card = document.createElement("article");
+    const header = document.createElement("header");
+    const target = document.createElement("a");
+    const targetTitleText = document.createElement("span");
+    const targetInfo = document.createElement("span");
+    const body = document.createElement("div");
+    const detail = document.createElement("p");
+    const moreButton = document.createElement("button");
+    const footer = document.createElement("footer");
+    const likeButton = document.createElement("button");
+    const actions = document.createElement("div");
+    const editButton = document.createElement("button");
+    const deleteButton = document.createElement("button");
+    const isMovie = item.targetType === "MOVIE" || item.contentId != null;
+    const targetTitle = item.targetTitle || (isMovie
+        ? `영화 ${item.contentId}`
+        : `컬렉션 ${item.collectionId}`);
+    const targetInfoText = isMovie
+        ? `${item.releaseYear || "개봉년도 미상"} | 영화`
+        : `${item.collectionAuthorNickname || "작성자 미상"} | 컬렉션`;
+
+    card.className = "member-comment-card";
+    card.dataset.commentId = String(item.commentId);
+    card.dataset.commentDetail = item.commentDetail || "";
+    card.dataset.spoiler = item.spoiler || "N";
+
+    header.className = "member-comment-header";
+    target.className = "member-comment-target";
+    target.href = isMovie
+        ? `/movies/${item.contentId}`
+        : `/collections/${item.collectionId}`;
+    targetTitleText.className = "member-comment-target-title";
+    targetTitleText.textContent = targetTitle;
+    targetInfo.className = "member-comment-target-info";
+    targetInfo.textContent = targetInfoText;
+    target.append(targetTitleText, targetInfo);
+    header.append(target);
+
+    if (item.ratingScore != null && Number.isFinite(Number(item.ratingScore))) {
+        const rating = createMemberRatingStars(Number(item.ratingScore));
+        rating.classList.add("member-comment-rating");
+        header.append(rating);
+    }
+
+    body.className = "member-comment-body";
+    detail.className = "member-comment-detail is-clamped";
+    detail.textContent = item.commentDetail || "";
+    moreButton.className = "member-comment-more d-none";
+    moreButton.type = "button";
+    moreButton.dataset.action = "expand";
+    moreButton.textContent = "더보기";
+
+    if (item.spoiler === "Y") {
+        const spoilerNotice = document.createElement("p");
+        const spoilerButton = document.createElement("button");
+        spoilerNotice.className = "member-comment-spoiler";
+        spoilerNotice.append("스포일러가 있어요!! ");
+        spoilerButton.className = "member-comment-spoiler-button";
+        spoilerButton.type = "button";
+        spoilerButton.dataset.action = "spoiler";
+        spoilerButton.textContent = "보기";
+        spoilerNotice.append(spoilerButton);
+        detail.classList.add("d-none");
+        body.append(spoilerNotice, detail, moreButton);
+    } else {
+        body.append(detail, moreButton);
+        configureCommentOverflow(detail, moreButton);
+    }
+
+    footer.className = "member-comment-footer";
+    likeButton.className = "member-comment-like";
+    likeButton.type = "button";
+    likeButton.dataset.action = "like";
+    likeButton.setAttribute("aria-pressed", String(Boolean(item.likedByMember)));
+    likeButton.innerHTML = `<i class="bi ${item.likedByMember ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up"}" aria-hidden="true"></i>`;
+    const likeCount = document.createElement("span");
+    likeCount.className = "member-comment-like-count";
+    likeCount.textContent = String(Number(item.likeCnt || 0));
+    likeButton.append(likeCount);
+
+    actions.className = "member-comment-actions";
+    editButton.className = "member-comment-action";
+    editButton.type = "button";
+    editButton.dataset.action = "edit";
+    editButton.textContent = "수정";
+    deleteButton.className = "member-comment-action is-delete";
+    deleteButton.type = "button";
+    deleteButton.dataset.action = "delete";
+    deleteButton.textContent = "삭제";
+    actions.append(editButton, deleteButton);
+    footer.append(likeButton, actions);
+
+    card.append(header, body, footer);
+    return card;
+}
+
+/** 세 줄을 넘는 코멘트에만 더보기 버튼 표시 */
+function configureCommentOverflow(detail, moreButton) {
+    window.requestAnimationFrame(() => {
+        const overflowing = detail.scrollHeight > detail.clientHeight + 1;
+        moreButton.classList.toggle("d-none", !overflowing);
+    });
+}
+
+// ==================== 코멘트 펼치기·수정·삭제·좋아요 ====================
+
+/** 코멘트 카드 버튼 이벤트 처리 */
+function handleCommentAction(event) {
+    const actionButton = event.target.closest("[data-action]");
+    const card = event.target.closest(".member-comment-card");
+
+    if (!actionButton || !card) {
+        return;
+    }
+
+    const action = actionButton.dataset.action;
+    if (action === "spoiler") {
+        showSpoilerComment(card, actionButton);
+    } else if (action === "expand") {
+        toggleCommentDetail(card, actionButton);
+    } else if (action === "like") {
+        toggleCommentLike(card, actionButton);
+    } else if (action === "edit") {
+        openCommentEdit(card);
+    } else if (action === "delete") {
+        openCommentDelete(card);
     }
 }
 
+/** 스포일러 안내를 숨기고 실제 코멘트를 표시 */
+function showSpoilerComment(card, button) {
+    const notice = button.closest(".member-comment-spoiler");
+    const detail = card.querySelector(".member-comment-detail");
+    const moreButton = card.querySelector(".member-comment-more");
+    notice.classList.add("d-none");
+    detail.classList.remove("d-none");
+    configureCommentOverflow(detail, moreButton);
+}
+
+/** 코멘트 세 줄 제한 열기·닫기 */
+function toggleCommentDetail(card, button) {
+    const detail = card.querySelector(".member-comment-detail");
+    const expanded = detail.classList.toggle("is-expanded");
+    button.textContent = expanded ? "접기" : "더보기";
+}
+
+/** 코멘트 수정 모달 열기 */
+function openCommentEdit(card) {
+    document.querySelector("#commentEditId").value = card.dataset.commentId;
+    document.querySelector("#commentEditDetail").value = card.dataset.commentDetail;
+    document.querySelector("#commentEditSpoiler").checked = card.dataset.spoiler === "Y";
+    commentEditModal?.show();
+}
+
+/** 코멘트 수정 저장 */
+async function saveCommentEdit() {
+    const commentId = document.querySelector("#commentEditId").value;
+    const detail = document.querySelector("#commentEditDetail").value.trim();
+    const spoiler = document.querySelector("#commentEditSpoiler").checked ? "Y" : "N";
+
+    if (!detail) {
+        alert("코멘트 내용을 입력해 주세요.");
+        return;
+    }
+
+    try {
+        await requestCommentChange(`/api/members/comments/${commentId}`, "PATCH", {
+            commentDetail: detail,
+            spoiler
+        });
+        commentEditModal?.hide();
+        await reloadComments();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+/** 코멘트 삭제 확인 모달 열기 */
+function openCommentDelete(card) {
+    pendingDeleteCommentId = card.dataset.commentId;
+    commentDeleteModal?.show();
+}
+
+/** 삭제 확인 후 코멘트 삭제 */
+async function deleteComment() {
+    if (!pendingDeleteCommentId) {
+        return;
+    }
+
+    const deleteButton = document.querySelector("#commentDeleteConfirmButton");
+    deleteButton.disabled = true;
+    deleteButton.textContent = "삭제 중...";
+
+    try {
+        await requestCommentChange(
+            `/api/members/comments/${pendingDeleteCommentId}`, "DELETE");
+        commentDeleteModal?.hide();
+        await reloadComments();
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        deleteButton.disabled = false;
+        deleteButton.textContent = "삭제";
+    }
+}
+
+/** 코멘트 좋아요 토글 */
+async function toggleCommentLike(card, button) {
+    button.disabled = true;
+
+    try {
+        const result = await requestCommentChange(
+            `/api/members/comments/${card.dataset.commentId}/likes`, "POST");
+        button.setAttribute("aria-pressed", String(Boolean(result.liked)));
+        button.querySelector("i").className =
+            `bi ${result.liked ? "bi-hand-thumbs-up-fill" : "bi-hand-thumbs-up"}`;
+        button.querySelector(".member-comment-like-count").textContent = String(Number(result.likeCount || 0));
+    } catch (error) {
+        alert(error.message);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+/** 현재 코멘트 페이지 다시 조회 */
+async function reloadComments() {
+    resetTabState("comments", true);
+    await loadRecords("comments", 1);
+}
+
+/** 회원 코멘트 변경용 JSON 요청 */
+function requestCommentChange(url, method, data = null) {
+    const options = {
+        method,
+        headers: {
+            "Accept": "application/json",
+            ...getCsrfHeaders()
+        }
+    };
+
+    if (data) {
+        options.headers["Content-Type"] = "application/json";
+        options.body = JSON.stringify(data);
+    }
+
+    return requestFetch(url, options);
+}
+
+// ==================== 평가·보고싶어요 작품 카드 ====================
+
 /** 평가·보고싶어요 작품 카드 렌더링 */
 function renderMovieCards(items) {
-
     const recordList = document.querySelector("#recordList");
 
     recordList.className = "member-card-grid";
@@ -453,9 +670,7 @@ function renderMovieCards(items) {
         title.textContent = movieTitle;
         renderRatingMeta(meta, item);
 
-        const poster = item.posterUrl
-            ? createPosterImage(item.posterUrl, movieTitle)
-            : createPosterPlaceholder(movieTitle);
+        const poster = item.posterUrl ? createPosterImage(item.posterUrl, movieTitle) : createPosterPlaceholder(movieTitle);
 
         body.append(title, meta);
         link.append(poster, body);
@@ -465,13 +680,10 @@ function renderMovieCards(items) {
     recordList.classList.remove("d-none");
 }
 
-/** ===================================
- *  작품 별점 표시
- *  =================================== */
+// ==================== 작품 별점 표시 ====================
 
 /** 작품 카드 별점 정보 렌더링 */
 function renderRatingMeta(meta, item) {
-
     const averageRating = Number(item.averageRating);
     const myRating = Number(item.ratingScore);
     const hasAverageRating = item.averageRating != null && Number.isFinite(averageRating);
@@ -489,7 +701,6 @@ function renderRatingMeta(meta, item) {
 
 /** 평균 별점 요소 생성 */
 function createAverageRating(averageRating) {
-
     const average = document.createElement("span");
     const star = document.createElement("span");
     const score = document.createElement("span");
@@ -506,14 +717,13 @@ function createAverageRating(averageRating) {
 
 /** 회원 평가 별 아이콘 생성 */
 function createMemberRatingStars(rating) {
-
     const stars = document.createElement("span");
     const normalizedRating = Math.max(0, Math.min(5, rating));
 
     stars.className = "member-rating-stars";
     stars.setAttribute("aria-label", `내 평가 ${normalizedRating}점`);
 
-    for (let index = 1;index <= 5;index += 1) {
+    for (let index = 1; index <= 5; index += 1) {
         const star = document.createElement("span");
         const remaining = normalizedRating - (index - 1);
         star.className = "member-rating-star";
@@ -533,13 +743,10 @@ function createMemberRatingStars(rating) {
     return stars;
 }
 
-/** ===================================
- *  컬렉션 카드
- *  =================================== */
+// ==================== 컬렉션 카드 ====================
 
 /** 컬렉션 카드 목록 렌더링 */
 function renderCollectionCards(items) {
-
     const recordList = document.querySelector("#recordList");
 
     recordList.className = "collection-card-grid";
@@ -554,16 +761,12 @@ function renderCollectionCards(items) {
 
 /** 컬렉션 링크 카드 생성 */
 function createCollectionCard(collection) {
-
     const article = document.createElement("article");
     const link = document.createElement("a");
     const itemCount = Math.max(0, Number(collection.itemCount || 0));
     const isEmptyCollection = itemCount === 0;
     const previewPosters = [
-        collection.previewPosterUrl1,
-        collection.previewPosterUrl2,
-        collection.previewPosterUrl3,
-        collection.previewPosterUrl4,
+        collection.previewPosterUrl1, collection.previewPosterUrl2, collection.previewPosterUrl3, collection.previewPosterUrl4,
         collection.previewPosterUrl5
     ].filter(Boolean);
     const visual = createCollectionVisual(collection, itemCount, isEmptyCollection, previewPosters);
@@ -582,7 +785,6 @@ function createCollectionCard(collection) {
 
 /** 컬렉션 시각 영역 생성 */
 function createCollectionVisual(collection, itemCount, isEmptyCollection, previewPosters) {
-
     const visual = document.createElement("div");
     visual.className = "collection-list-card-visual";
 
@@ -619,7 +821,6 @@ function createCollectionVisual(collection, itemCount, isEmptyCollection, previe
 
 /** 빈 컬렉션 안내 요소 생성 */
 function createEmptyCollectionContent() {
-
     const empty = document.createElement("span");
     const iconWrap = document.createElement("span");
     const defaultIcon = document.createElement("i");
@@ -648,7 +849,6 @@ function createEmptyCollectionContent() {
 
 /** 컬렉션 본문 정보 생성 */
 function createCollectionBody(collection) {
-
     const body = document.createElement("div");
     const title = document.createElement("h3");
     const titleText = document.createElement("span");
@@ -670,10 +870,7 @@ function createCollectionBody(collection) {
     }
 
     stats.className = "collection-list-card-stats";
-    stats.append(
-        createCollectionStat("heart", "좋아요", collection.likeCount),
-        createCollectionStat("chat", "코멘트", collection.commentCount)
-    );
+    stats.append(createCollectionStat("heart", "좋아요", collection.likeCount), createCollectionStat("chat", "코멘트", collection.commentCount));
     body.append(stats);
 
     requestAnimationFrame(() => configureScrollableTitle(title, titleText));
@@ -683,16 +880,12 @@ function createCollectionBody(collection) {
 
 /** 컬렉션 대표 포스터 콜라주 생성 */
 function createCollectionPosterCollage(posterUrls, visual) {
-
     const collage = document.createElement("div");
     const usesSevenSlotLayout = posterUrls.length === 5;
     // 포스터가 5개일 때는 두 장을 반복 배치하여 일곱 칸 콜라주를 채운다.
-    const posterIndexes = usesSevenSlotLayout
-        ? [0, 1, 2, 3, 3, 4, 4]
-        : posterUrls.map((_, index) => index);
+    const posterIndexes = usesSevenSlotLayout ? [0, 1, 2, 3, 3, 4, 4] : posterUrls.map((_, index) => index);
 
-    collage.className = usesSevenSlotLayout
-        ? "collection-list-poster-collage poster-count-5 is-seven-slot-layout"
+    collage.className = usesSevenSlotLayout ? "collection-list-poster-collage poster-count-5 is-seven-slot-layout"
         : `collection-list-poster-collage poster-count-${posterUrls.length} is-simple-layout`;
 
     posterIndexes.forEach((posterIndex, slotIndex) => {
@@ -720,7 +913,6 @@ function createCollectionPosterCollage(posterUrls, visual) {
 
 /** 컬렉션 통계 항목 생성 */
 function createCollectionStat(icon, label, count) {
-
     const stat = document.createElement("span");
     const text = document.createElement("span");
 
@@ -733,7 +925,6 @@ function createCollectionStat(icon, label, count) {
 
 /** 긴 컬렉션 제목의 이동 거리 계산 */
 function configureScrollableTitle(title, titleText) {
-
     const overflowWidth = Math.ceil(titleText.getBoundingClientRect().width - title.clientWidth);
     const overflowing = overflowWidth > 0;
 
@@ -746,19 +937,14 @@ function configureScrollableTitle(title, titleText) {
     title.title = titleText.textContent;
 
     title.style.setProperty("--collection-title-scroll-distance", `-${overflowWidth}px`);
-    title.style.setProperty(
-        "--collection-title-scroll-duration",
-        `${Math.min(7, Math.max(2.4, overflowWidth / 45))}s`
-    );
+    title.style.setProperty("--collection-title-scroll-duration",
+        `${Math.min(7, Math.max(2.4, overflowWidth / 45))}s`);
 }
 
-/** ===================================
- *  작품 포스터
- *  =================================== */
+// ==================== 작품 포스터 ====================
 
 /** 작품 포스터 이미지 생성 */
 function createPosterImage(posterUrl, movieTitle) {
-
     const image = document.createElement("img");
 
     image.className = "member-card-poster";
@@ -776,7 +962,6 @@ function createPosterImage(posterUrl, movieTitle) {
 
 /** 작품 포스터 대체 요소 생성 */
 function createPosterPlaceholder(movieTitle) {
-
     const placeholder = document.createElement("div");
 
     placeholder.className = "member-card-poster-placeholder";
@@ -785,13 +970,10 @@ function createPosterPlaceholder(movieTitle) {
     return placeholder;
 }
 
-/** ===================================
- *  페이지네이션
- *  =================================== */
+// ==================== 페이지네이션 ====================
 
 /** 기록 페이지네이션 렌더링 */
 function renderPagination(page, currentPage) {
-
     const navigation = document.querySelector("#recordPaginationNavigation");
     const pagination = document.querySelector("#recordPagination");
 
@@ -836,7 +1018,6 @@ function renderPagination(page, currentPage) {
 
 /** 활성 페이지 이동 표시선 생성 */
 function renderPaginationIndicator(pagination, numberItems) {
-
     const activeIndex = numberItems.findIndex((item) => item.classList.contains("active"));
 
     if (activeIndex < 0 || numberItems.length === 0) {
@@ -852,8 +1033,7 @@ function renderPaginationIndicator(pagination, numberItems) {
     const startPage = Number(numberItems[0].querySelector(".page-link").textContent);
     const previousState = paginationIndicatorState[activeTab];
     // 같은 페이지 구간에서는 직전 위치를 시작점으로 사용하여 표시선이 자연스럽게 이동한다.
-    const previousIndex = previousState?.startPage === startPage
-        ? Math.min(previousState.activeIndex, numberItems.length - 1)
+    const previousIndex = previousState?.startPage === startPage ? Math.min(previousState.activeIndex, numberItems.length - 1)
         : activeIndex;
     const previousRect = numberItems[previousIndex].getBoundingClientRect();
 
@@ -877,19 +1057,15 @@ function renderPaginationIndicator(pagination, numberItems) {
     paginationIndicatorState[activeTab] = { startPage, activeIndex };
 }
 
-/** ===================================
- *  더보기 및 화면 상태
- *  =================================== */
+// ==================== 더보기 및 화면 상태 ====================
 
 /** 컬렉션 더보기 버튼 표시 */
 function renderCollectionLoadMore(loadedCount, totalCount) {
-
     document.querySelector("#collectionLoadMoreWrap").classList.toggle("d-none", loadedCount >= totalCount);
 }
 
 /** 컬렉션 더보기 로딩 상태 표시 */
 function setLoadMoreLoading(loading) {
-
     const button = document.querySelector("#collectionLoadMoreButton");
 
     button.disabled = loading;
@@ -898,14 +1074,12 @@ function setLoadMoreLoading(loading) {
 
 /** 기록 로딩 상태 표시 */
 function showRecordLoading() {
-
     hideRecordStatus();
     document.querySelector("#recordLoading").classList.remove("d-none");
 }
 
 /** 기록 빈 상태 표시 */
 function showRecordEmpty(title, message, iconName) {
-
     const empty = document.querySelector("#recordEmpty");
 
     document.querySelector("#recordEmptyTitle").textContent = title;
@@ -917,7 +1091,6 @@ function showRecordEmpty(title, message, iconName) {
 
 /** 기록 오류 상태 표시 */
 function showRecordError(message) {
-
     hideRecordStatus();
 
     document.querySelector("#recordErrorMessage").textContent = message;
@@ -926,7 +1099,6 @@ function showRecordError(message) {
 
 /** 기록 조회 상태 초기화 */
 function hideRecordStatus() {
-
     document.querySelector("#recordLoading").classList.add("d-none");
     document.querySelector("#recordError").classList.add("d-none");
     document.querySelector("#recordEmpty").classList.add("d-none");

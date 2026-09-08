@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.OptionalLong;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -16,11 +17,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.endit.auth.CurrentMemberProvider;
+import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.domain.CollectionLikeItemVO;
 import com.endit.domain.CollectionLikeVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CollectionLikeService;
 
 /**
@@ -35,6 +38,7 @@ import com.endit.service.CollectionLikeService;
  * 2026. 8. 27. gunwoo      최초 생성
  * 2026. 8. 28. jinyoung    조회 규격 및 예외 처리 보완
  * 2026. 8. 29. jinyoung    인증·공개 범위·본인 제한 및 좋아요 상태 조회 적용
+ * 2026. 9. 05. jinyoung    본인 좋아요 목록 API 추가 및 LoginMemberHelper 적용
  * ------------------------------------------------------------
  * </pre>
  *
@@ -47,70 +51,72 @@ public class CollectionLikeController {
 	private static final String TYPE_COLLECTION = "collection";
 
 	private final CollectionLikeService collectionLikeService;
-	private final CurrentMemberProvider currentMemberProvider;
 
 	/**
 	 * CollectionLikeService를 주입받아 Controller 생성
 	 *
 	 * @param collectionLikeService 컬렉션 좋아요 Service
-	 * @param currentMemberProvider 현재 로그인 회원 Provider
 	 */
-	public CollectionLikeController(
-			CollectionLikeService collectionLikeService,
-			CurrentMemberProvider currentMemberProvider) {
-
+	public CollectionLikeController(CollectionLikeService collectionLikeService) {
 		this.collectionLikeService = collectionLikeService;
-		this.currentMemberProvider = currentMemberProvider;
 	}
 
 	/**
-	 * 컬렉션 좋아요 등록 (D-01 좋아요 토글)
-	 *
-	 * 정책(POL-010) · 이미 좋아요를 누른 상태에서 재요청해도 오류 없이
-	 * 현재 좋아요 정보를 그대로 응답하는 멱등 처리를 한다.
+	 * 컬렉션 좋아요 등록 (POL-010)
+	 * 이미 등록된 경우 기존 정보 반환
 	 *
 	 * @param collectionId 컬렉션 번호
 	 * @return 등록된(또는 이미 등록되어 있던) 컬렉션 좋아요 정보
 	 */
 	@PostMapping("/api/collections/{collectionId}/likes")
-	public ResponseEntity<CollectionLikeVO> like(
-			@PathVariable int collectionId) {
+	public ResponseEntity<CollectionLikeVO> like(@PathVariable int collectionId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
-		CollectionLikeVO like = collectionLikeService.create(
-				memberId, collectionId);
+		long memberId = LoginMemberHelper.getMemberId();
+		CollectionLikeVO like = collectionLikeService.create(memberId, collectionId);
 
 		return ResponseEntity.status(HttpStatus.CREATED).body(like);
 	}
 
 	/**
-	 * 컬렉션 좋아요 취소 (D-01 좋아요 토글)
+	 * 컬렉션 좋아요 취소 (POL-011)
+	 * 좋아요가 없는 경우에도 HTTP 204 반환
 	 *
-	 * 정책(POL-011) · 이미 좋아요가 없는 상태에서 취소 요청이 와도 오류 없이
-	 * 204 응답으로 처리하는 멱등 처리를 한다.
+	 * @param collectionId 컬렉션 번호
+	 * @return 본문 없는 HTTP 204 응답
 	 */
 	@DeleteMapping("/api/collections/{collectionId}/likes")
-	public ResponseEntity<Void> unlike(
-			@PathVariable int collectionId) {
+	public ResponseEntity<Void> unlike(@PathVariable int collectionId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		collectionLikeService.delete(memberId, collectionId);
 
 		return ResponseEntity.noContent().build();
 	}
 
-	/** 현재 인증 회원의 컬렉션 좋아요 여부 조회 */
+	/**
+	 * 현재 인증 회원의 컬렉션 좋아요 여부 조회
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @return 현재 회원의 좋아요 여부
+	 */
 	@GetMapping("/api/collections/{collectionId}/likes")
-	public ResponseEntity<Map<String, Boolean>> likeStatus(
-			@PathVariable int collectionId) {
+	public ResponseEntity<Map<String, Boolean>> likeStatus(@PathVariable int collectionId) {
 
-		long memberId = currentMemberProvider.requireMemberId();
+		long memberId = LoginMemberHelper.getMemberId();
 		boolean liked = collectionLikeService.isLiked(memberId, collectionId);
 
 		return ResponseEntity.ok(Map.of("liked", liked));
 	}
 
-	/**특정 회원이 좋아요를 누른 컬렉션 목록 조회 (U-07 좋아요 목록 · 컬렉션 탭)*/
+	/**
+	 * 특정 회원이 좋아요를 누른 컬렉션 목록 조회 (U-07 좋아요 목록 · 컬렉션 탭)
+	 *
+	 * @param memberId 회원 번호
+	 * @param type     요청한 좋아요 유형
+	 * @param pageNo   페이지 번호
+	 * @param pageSize 페이지당 건수
+	 * @return 조회 목록과 페이징 정보
+	 */
 	@GetMapping("/api/users/{memberId}/likes")
 	public ResponseEntity<Map<String, Object>> retrieveByMember(
 			@PathVariable int memberId,
@@ -119,18 +125,15 @@ public class CollectionLikeController {
 			@RequestParam(name = "size", defaultValue = "12") int pageSize) {
 
 		if (!TYPE_COLLECTION.equals(type)) {
-			throw new IllegalArgumentException(
-					"이 API는 type=" + TYPE_COLLECTION + " 요청만 처리합니다.");
+			throw new IllegalArgumentException("이 API는 type=" + TYPE_COLLECTION + " 요청만 처리합니다.");
 		}
 
 		DTO param = new DTO();
 		param.setPageNo(pageNo);
 		param.setPageSize(pageSize);
 
-		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(
-				memberId,
-				param,
-				currentMemberProvider.findCurrentMemberId());
+		List<CollectionLikeItemVO> items =
+				collectionLikeService.retrieveByMember(memberId, param, findCurrentMemberId());
 
 		Map<String, Object> response = new LinkedHashMap<>();
 		response.put("items", items);
@@ -139,64 +142,120 @@ public class CollectionLikeController {
 		return ResponseEntity.ok(response);
 	}
 
-	/**잘못된 요청값 예외를 HTTP 400 응답으로 변환*/
+	/**
+	 * 로그인 회원이 좋아요한 컬렉션 목록 조회
+	 *
+	 * @param pageNo   페이지 번호
+	 * @param pageSize 페이지당 건수
+	 * @return 조회 목록과 페이징 정보
+	 */
+	@GetMapping(value = "/api/members/likes", params = "type=collection")
+	public ResponseEntity<Map<String, Object>> retrieveMine(
+			@RequestParam(name = "page", defaultValue = "1") int pageNo,
+			@RequestParam(name = "size", defaultValue = "12") int pageSize) {
+
+		long memberId = LoginMemberHelper.getMemberId();
+
+		DTO param = new DTO();
+		param.setPageNo(pageNo);
+		param.setPageSize(pageSize);
+
+		List<CollectionLikeItemVO> items = collectionLikeService.retrieveByMember(
+				Math.toIntExact(memberId), param, OptionalLong.of(memberId));
+
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("page", param);
+
+		return ResponseEntity.ok(response);
+	}
+
+	/**
+	 * 잘못된 요청값 예외를 HTTP 400 응답으로 변환
+	 *
+	 * @param exception 잘못된 요청값 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
 	@ExceptionHandler(IllegalArgumentException.class)
-	public ResponseEntity<MessageVO> handleBadRequest(
-			IllegalArgumentException exception) {
+	public ResponseEntity<MessageVO> handleBadRequest(IllegalArgumentException exception) {
 
 		MessageVO message = new MessageVO(
-				"400",
-				exception.getMessage(),
-				"컬렉션 좋아요 요청값을 확인해 주세요.");
+				"400", exception.getMessage(), "컬렉션 좋아요 요청값을 확인해 주세요.");
 
-		return ResponseEntity
-				.status(HttpStatus.BAD_REQUEST)
-				.body(message);
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
 	}
 
-	/**존재하지 않는 회원 또는 컬렉션 등의 데이터 무결성 예외를 HTTP 400 응답으로 변환*/
+	/**
+	 * 인증 회원에게 허용되지 않은 컬렉션 좋아요를 HTTP 403으로 변환
+	 *
+	 * @param exception 접근 권한 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
+	@ExceptionHandler(ForbiddenOperationException.class)
+	public ResponseEntity<MessageVO> handleForbidden(ForbiddenOperationException exception) {
+
+		MessageVO message = new MessageVO(
+				"403", exception.getMessage(), "요청한 좋아요 작업을 수행할 권한이 없습니다.");
+
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(message);
+	}
+
+	/**
+	 * 존재하지 않는 회원 또는 컬렉션 등의 데이터 무결성 예외를 HTTP 400 응답으로 변환
+	 *
+	 * @param exception 데이터 무결성 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
 	@ExceptionHandler(DataIntegrityViolationException.class)
-	public ResponseEntity<MessageVO> handleDataIntegrityViolation(
-			DataIntegrityViolationException exception) {
+	public ResponseEntity<MessageVO> handleDataIntegrityViolation(DataIntegrityViolationException exception) {
 
 		MessageVO message = new MessageVO(
-				"400",
-				"존재하는 회원과 컬렉션 번호를 입력해 주세요.",
-				"컬렉션 좋아요 데이터의 참조 관계를 확인해 주세요.");
+				"400", "존재하는 회원과 컬렉션 번호를 입력해 주세요.", "컬렉션 좋아요 데이터의 참조 관계를 확인해 주세요.");
 
-		return ResponseEntity
-				.status(HttpStatus.BAD_REQUEST)
-				.body(message);
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(message);
 	}
 
-	/** 존재하지 않거나 접근할 수 없는 컬렉션을 HTTP 404 응답으로 변환 */
+	/**
+	 * 존재하지 않거나 접근할 수 없는 컬렉션을 HTTP 404 응답으로 변환
+	 *
+	 * @param exception 대상 미존재 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
 	@ExceptionHandler(NoSuchElementException.class)
-	public ResponseEntity<MessageVO> handleNotFound(
-			NoSuchElementException exception) {
+	public ResponseEntity<MessageVO> handleNotFound(NoSuchElementException exception) {
 
 		MessageVO message = new MessageVO(
-				"404",
-				exception.getMessage(),
-				"요청한 컬렉션을 찾을 수 없습니다.");
+				"404", exception.getMessage(), "요청한 컬렉션을 찾을 수 없습니다.");
 
-		return ResponseEntity
-				.status(HttpStatus.NOT_FOUND)
-				.body(message);
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(message);
 	}
 
-	/**저장 및 상태 변경 실패를 HTTP 409 응답으로 변환*/
+	/**
+	 * 저장 및 상태 변경 실패를 HTTP 409 응답으로 변환
+	 *
+	 * @param exception 처리 중 발생한 상태 예외
+	 * @return 오류 상태와 안내 메시지
+	 */
 	@ExceptionHandler(IllegalStateException.class)
-	public ResponseEntity<MessageVO> handleConflict(
-			IllegalStateException exception) {
+	public ResponseEntity<MessageVO> handleConflict(IllegalStateException exception) {
 
 		MessageVO message = new MessageVO(
-				"409",
-				exception.getMessage(),
-				"컬렉션 좋아요의 현재 상태를 확인해 주세요.");
+				"409", exception.getMessage(), "컬렉션 좋아요의 현재 상태를 확인해 주세요.");
 
-		return ResponseEntity
-				.status(HttpStatus.CONFLICT)
-				.body(message);
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(message);
 	}
 
+	// 내부 조회 조건·응답 구성
+
+	/**
+	 * 비회원 조회를 지원하기 위한 현재 로그인 회원 번호
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 빈 OptionalLong
+	 */
+	private static OptionalLong findCurrentMemberId() {
+
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		return loginMember == null ? OptionalLong.empty() : OptionalLong.of(loginMember.getMemberId());
+	}
 }

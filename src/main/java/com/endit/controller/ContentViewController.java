@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.OptionalLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,8 +20,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.endit.auth.CurrentMemberProvider;
 import com.endit.cmn.DTO;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.LocaleTextHelper;
 import com.endit.domain.CodeVO;
 import com.endit.domain.CollectionVO;
@@ -35,6 +34,7 @@ import com.endit.domain.MemberContentVO;
 import com.endit.domain.EnglishContentVO;
 import com.endit.domain.UserCommentVO;
 import com.endit.mapper.MemberContentMapper;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.CodeService;
 import com.endit.service.CollectionService;
 import com.endit.service.CommentLikeService;
@@ -45,7 +45,16 @@ import com.endit.service.ContentService;
 import com.endit.service.UserCommentService;
 
 /**
+ * <pre>
  * 영화 상세 화면(C-01 영화 상세 페이지 + C-02 출연/제작·갤러리)의 경로를 처리하는 Controller
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 9. 05. jinyoung    로그인 회원 조회를 팀 공용 LoginMemberHelper로 통일
+ * ------------------------------------------------------------
+ * </pre>
  */
 @Controller
 public class ContentViewController {
@@ -123,7 +132,6 @@ public class ContentViewController {
 	private final CommentLikeService commentLikeService;
 	private final MemberContentMapper memberContentMapper;
 	private final CollectionService collectionService;
-	private final CurrentMemberProvider currentMemberProvider;
 	private final LocaleTextHelper localeText;
 	private final MessageSource messageSource;
 
@@ -137,7 +145,6 @@ public class ContentViewController {
 			CommentLikeService commentLikeService,
 			MemberContentMapper memberContentMapper,
 			CollectionService collectionService,
-			CurrentMemberProvider currentMemberProvider,
 			LocaleTextHelper localeText,
 			MessageSource messageSource) {
 		this.contentService = contentService;
@@ -149,7 +156,6 @@ public class ContentViewController {
 		this.commentLikeService = commentLikeService;
 		this.memberContentMapper = memberContentMapper;
 		this.collectionService = collectionService;
-		this.currentMemberProvider = currentMemberProvider;
 		this.localeText = localeText;
 		this.messageSource = messageSource;
 	}
@@ -518,11 +524,16 @@ public class ContentViewController {
 		model.addAttribute("reportReasons", reasons);
 	}
 
-	// C-01 쓰기 버튼용 로그인 회원 번호 - 타 조 API가 X-Member-Id 헤더를 받는 동안만 필요하다
+	/**
+	 * 팀 공용 인증 정보에서 화면에 사용할 로그인 회원 번호 조회
+	 *
+	 * @return 로그인 회원 번호, 비회원이면 null
+	 * @throws ArithmeticException 회원 번호가 int 범위를 벗어난 경우
+	 */
 	private Integer toCurrentMemberId() {
-		OptionalLong memberId = currentMemberProvider.findCurrentMemberId();
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
 
-		return memberId.isPresent() ? (int) memberId.getAsLong() : null;
+		return loginMember == null ? null : Math.toIntExact(loginMember.getMemberId());
 	}
 
 }

@@ -1,5 +1,6 @@
 /* 컬렉션 상세 */
 
+/* ==================== 상세 화면과 이전 링크 ==================== */
 .collection-detail-page {
     width: min(100%, 940px);
     margin: 0 auto;
@@ -20,6 +21,7 @@
     color: var(--endit-primary);
 }
 
+/* ==================== 표지와 포스터 콜라주 ==================== */
 .collection-detail-hero {
     overflow: hidden;
 }
@@ -38,12 +40,7 @@
     position: absolute;
     z-index: 2;
     inset: 0;
-    background: linear-gradient(
-        180deg,
-        rgba(13, 10, 20, .36) 0%,
-        rgba(13, 10, 20, .2) 38%,
-        rgba(13, 10, 20, .78) 100%
-    );
+    background: linear-gradient(180deg, rgba(13, 10, 20, .36) 0%, rgba(13, 10, 20, .2) 38%, rgba(13, 10, 20, .78) 100%);
     content: "";
     pointer-events: none;
 }
@@ -90,10 +87,7 @@
 }
 
 .collection-detail-poster-collage.poster-count-5 img {
-    flex: 0 0 calc(
-        (100% + var(--poster-overlap) + var(--poster-overlap)
-        + var(--poster-overlap) + var(--poster-overlap)) / 5
-    );
+    flex: 0 0 calc((100% + var(--poster-overlap) + var(--poster-overlap) + var(--poster-overlap) + var(--poster-overlap)) / 5);
 }
 
 .collection-detail-poster-collage img + img {
@@ -128,6 +122,7 @@
     background: transparent;
 }
 
+/* ==================== 작성자와 공개 범위 ==================== */
 .collection-cover-author,
 .collection-private-badge {
     position: absolute;
@@ -191,6 +186,7 @@
     backdrop-filter: blur(5px);
 }
 
+/* ==================== 제목과 설명 ==================== */
 .collection-detail-heading {
     position: relative;
     padding: 30px 36px 26px;
@@ -223,6 +219,7 @@
     white-space: pre-line;
 }
 
+/* ==================== 소유자 수정·삭제 ==================== */
 .collection-owner-actions {
     position: absolute;
     z-index: 3;
@@ -268,6 +265,7 @@
     background: rgba(255, 255, 255, .12);
 }
 
+/* ==================== 좋아요·댓글·링크 공유 ==================== */
 .collection-detail-stats {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -319,6 +317,7 @@
     color: #f04465;
 }
 
+/* ==================== 링크 복사 안내 ==================== */
 .collection-copy-feedback {
     position: fixed;
     z-index: 1080;
@@ -350,6 +349,7 @@
     transition-delay: 0s;
 }
 
+/* ==================== 작품 목록과 보기 전환 ==================== */
 .collection-movies-section {
     padding: 34px 36px 38px;
 }
@@ -504,6 +504,7 @@
     animation: collection-pulse 1.25s ease-in-out infinite alternate;
 }
 
+/* ==================== 작품 더보기 ==================== */
 .collection-load-more-wrap {
     display: flex;
     justify-content: center;
@@ -537,6 +538,7 @@
     background: #f7f5f8;
 }
 
+/* ==================== 댓글 기본 배치 (입력·카드는 comment.css에서 보정) ==================== */
 .collection-comments-section {
     padding: 26px 36px 36px;
     border-top: 1px solid var(--endit-border);
@@ -590,11 +592,13 @@
     cursor: not-allowed;
 }
 
+/* ==================== 로딩 애니메이션 ==================== */
 @keyframes collection-pulse {
     from { opacity: .48; }
     to { opacity: 1; }
 }
 
+/* ==================== 삭제 확인 모달 ==================== */
 .collection-delete-icon {
     display: grid;
     place-items: center;
@@ -607,17 +611,19 @@
     border-radius: 50%;
 }
 
+/* ==================== 태블릿 반응형 ==================== */
 @media (min-width: 768px) and (max-width: 991.98px) {
     .collection-movie-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .collection-movies-section,
-        .collection-comments-section {
+    .collection-comments-section {
         padding-inline: 28px;
     }
 }
 
+/* ==================== 모바일 반응형 ==================== */
 @media (max-width: 767.98px) {
     .collection-detail-cover {
         min-height: 250px;
@@ -707,7 +713,7 @@
     }
 
     .collection-movie-grid.is-list-view .collection-movie-poster,
-        .collection-movie-grid.is-list-view .collection-movie-poster-placeholder {
+    .collection-movie-grid.is-list-view .collection-movie-poster-placeholder {
         width: 66px;
     }
 
@@ -733,6 +739,7 @@
     }
 }
 
+/* ==================== 작은 화면 여백 ==================== */
 @media (max-width: 575.98px) {
     .collection-detail-page {
         width: calc(100% + 2rem);
