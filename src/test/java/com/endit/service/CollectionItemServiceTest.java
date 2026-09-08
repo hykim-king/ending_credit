@@ -67,19 +67,24 @@ class CollectionItemServiceTest {
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
-	/** 실제 DB 목록 조회와 컬렉션 조건 및 기본 페이징값 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 목록 조회 시 컬렉션 조건과 페이징 설정")
 	void retrieve() {
+		// Given: 두 회원의 별점이 등록된 작품 하나를 컬렉션에 추가한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
+		
+		collectionItemService.create(
+				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 		saveRating(collection.getMemberId(), content.getContentId(), 3);
 		saveRating(createMemberId(), content.getContentId(), 5);
 		DTO param = new DTO();
 
-		List<CollectionItemVO> result = collectionItemService.retrieve(collection.getCollectionId(), param, viewer(collection));
+		// When: 컬렉션 소유자가 작품 목록을 조회한다.
+		List<CollectionItemVO> result = collectionItemService
+				.retrieve(collection.getCollectionId(), param, viewer(collection));
 
+		// Then: 작품 정보, 평균 별점, 기본 페이징과 컬렉션 검색 조건이 반환되어야 한다.
 		assertEquals(1, result.size());
 		assertEquals(collection.getCollectionId(), result.get(0).getCollectionId());
 		assertEquals(content.getContentId(), result.get(0).getContentId());
@@ -92,102 +97,128 @@ class CollectionItemServiceTest {
 		assertEquals(String.valueOf(collection.getCollectionId()), param.getSearchWord());
 	}
 
-	/** 작품이 없는 컬렉션의 실제 DB 목록 조회 결과 검증 */
 	@Test
 	@DisplayName("컬렉션 작품이 없으면 빈 목록 반환")
 	void retrieveEmpty() {
+		// Given: 작품이 등록되지 않은 컬렉션과 조회 조건을 준비한다.
 		CollectionVO collection = createCollection();
 		DTO param = new DTO();
 
-		List<CollectionItemVO> result = collectionItemService.retrieve(collection.getCollectionId(), param, viewer(collection));
+		// When: 컬렉션 작품 목록을 조회한다.
+		List<CollectionItemVO> result = collectionItemService
+				.retrieve(collection.getCollectionId(), param,viewer(collection));
 
+		// Then: 빈 목록을 반환하고 전체 건수는 0이어야 한다.
 		assertTrue(result.isEmpty());
 		assertEquals(0, param.getTotalCnt());
 	}
 
-	/** 실제 DB에 추가한 컬렉션 작품 단건 조회 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 단건 조회")
 	void get() {
+		// Given: 컬렉션에 작품 하나를 등록한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
+		
+		collectionItemService.create(
+				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		CollectionItemVO result = collectionItemService.get(collection.getCollectionId(), content.getContentId(), viewer(collection));
+		// When: 컬렉션과 콘텐츠 번호로 작품을 조회한다.
+		CollectionItemVO result = collectionItemService
+				.get(collection.getCollectionId(), content.getContentId(), viewer(collection));
 
+		// Then: 등록한 복합 키와 추가 일시가 반환되어야 한다.
 		assertEquals(collection.getCollectionId(), result.getCollectionId());
 		assertEquals(content.getContentId(), result.getContentId());
 		assertNotNull(result.getAddedDt());
 	}
 
-	/** 존재하지 않는 컬렉션 작품 조회 결과 검증 */
 	@Test
 	@DisplayName("존재하지 않는 컬렉션 작품 조회 시 예외 발생")
 	void getNotFound() {
+		// Given: 작품이 등록되지 않은 컬렉션을 준비한다.
 		CollectionVO collection = createCollection();
 
-		assertThrows(NoSuchElementException.class, () -> collectionItemService.get(collection.getCollectionId(), MISSING_CONTENT_ID,
-						viewer(collection)));
+		// When, Then: 존재하지 않는 콘텐츠 번호로 조회하면 예외가 발생해야 한다.
+		assertThrows(NoSuchElementException.class,
+				() -> collectionItemService.get(
+						collection.getCollectionId(), MISSING_CONTENT_ID, viewer(collection)));
 	}
 
-	/** 실제 DB 중복 확인과 컬렉션 작품 추가 결과 검증 */
 	@Test
 	@DisplayName("중복 확인 후 컬렉션 작품 추가")
 	void create() {
+		// Given: 소유자 컬렉션과 추가할 콘텐츠를 준비한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
 
-		CollectionItemVO result = collectionItemService.create(collection.getMemberId(), collection.getCollectionId(),
-				createItem(content.getContentId()));
+		// When: 컬렉션에 작품을 추가한다.
+		CollectionItemVO result = collectionItemService.create(
+				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
+		// Then: 등록한 복합 키와 추가 일시가 반환되어야 한다.
 		assertEquals(collection.getCollectionId(), result.getCollectionId());
 		assertEquals(content.getContentId(), result.getContentId());
 		assertNotNull(result.getAddedDt());
 	}
 
-	/** 실제 DB에 이미 포함된 작품의 중복 추가 방지 검증 */
 	@Test
 	@DisplayName("이미 포함된 작품은 추가하지 않음")
 	void createDuplicate() {
+		// Given: 컬렉션에 작품 하나를 먼저 등록한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
+		
+		collectionItemService.create(
+				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		assertThrows(IllegalStateException.class, () -> collectionItemService.create(collection.getMemberId(), collection.getCollectionId(),
-						createItem(content.getContentId())));
+		// When, Then: 같은 작품을 다시 추가하면 중복 예외가 발생해야 한다.
+		assertThrows(IllegalStateException.class, 
+				() -> collectionItemService.create(
+						collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId())));
 	}
 
-	/** 비소유자는 공개 컬렉션에도 작품을 추가할 수 없음을 검증 */
 	@Test
 	@DisplayName("비소유자의 컬렉션 작품 추가는 403 예외")
 	void createByNonOwner() {
+		// Given: 컬렉션 소유자와 다른 회원 및 추가할 콘텐츠를 준비한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
+		
 		int otherMemberId = createMemberId();
 
-		assertThrows(ForbiddenOperationException.class, () -> collectionItemService.create(otherMemberId, collection.getCollectionId(),
-						createItem(content.getContentId())));
+		// When, Then: 비소유자가 작품을 추가하면 권한 예외가 발생해야 한다.
+		assertThrows(ForbiddenOperationException.class, 
+				() -> collectionItemService.create(
+						otherMemberId, collection.getCollectionId(), createItem(content.getContentId())));
 	}
 
-	/** 실제 DB에서 컬렉션 작품 삭제 결과 검증 */
 	@Test
 	@DisplayName("컬렉션 작품 삭제")
 	void delete() {
+		// Given: 컬렉션에 삭제할 작품을 등록한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
-		collectionItemService.create(collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
+		
+		collectionItemService.create(
+				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		collectionItemService.delete(collection.getMemberId(), collection.getCollectionId(), content.getContentId());
+		// When: 소유자가 컬렉션 작품을 삭제한다.
+		collectionItemService.delete(
+				collection.getMemberId(), collection.getCollectionId(), content.getContentId());
 
-		assertThrows(NoSuchElementException.class, () -> collectionItemService.get(collection.getCollectionId(), content.getContentId(),
-						viewer(collection)));
+		// Then: 삭제한 작품을 다시 조회하면 예외가 발생해야 한다.
+		assertThrows(NoSuchElementException.class, 
+				() -> collectionItemService.get(
+						collection.getCollectionId(), content.getContentId(), viewer(collection)));
 	}
 
-	/** 잘못된 컬렉션 번호에 대한 입력값 검증 */
 	@Test
 	@DisplayName("잘못된 컬렉션 번호이면 예외 발생")
 	void invalidCollectionId() {
-		assertThrows(IllegalArgumentException.class, () -> collectionItemService.retrieve(0, new DTO(), OptionalLong.empty()));
+		// When, Then: 유효하지 않은 컬렉션 번호로 조회하면 예외가 발생해야 한다.
+		assertThrows(IllegalArgumentException.class,
+				() -> collectionItemService.retrieve(0, new DTO(), OptionalLong.empty()));
 	}
 
 	/**
@@ -198,7 +229,9 @@ class CollectionItemServiceTest {
 	private CollectionVO createCollection() {
 		int memberId = createMemberId();
 
-		CollectionVO collection = new CollectionVO(0, memberId, "작품 통합 테스트 컬렉션", "컬렉션 작품 Service 통합 테스트", "Y", null, null);
+		CollectionVO collection = new CollectionVO(
+				0, memberId, "작품 통합 테스트 컬렉션", "컬렉션 작품 Service 통합 테스트", "Y", null, null);
+
 		assertEquals(1, collectionMapper.doSave(collection));
 
 		return collection;
@@ -211,12 +244,14 @@ class CollectionItemServiceTest {
 	 */
 	private int createMemberId() {
 		String token = createToken();
+
 		MemberVO member = new MemberVO();
 		member.setEmail("item-service-" + token + "@test.local");
 		member.setPassword("encoded-password");
 		member.setNickname("작품서비스" + token.substring(0, 8));
 		member.setIntroduction("컬렉션 작품 통합 테스트 회원");
 		member.setRole("USER");
+
 		return insertMember(jdbcTemplate, member).getMemberId().intValue();
 	}
 
@@ -227,11 +262,11 @@ class CollectionItemServiceTest {
 	 */
 	private ContentVO createContent() {
 		String token = createToken();
-		ContentVO content = new ContentVO(0, "INTEGRATION_" + token, "통합 테스트 콘텐츠", "Integration Test Content", "컬렉션 작품 Service 통합 테스트 콘텐츠",
-				"2026-08-26", 120, "Korea",
-				"https://example.com/poster.jpg",
-				"https://example.com/backdrop.jpg",
-				null);
+
+		ContentVO content = new ContentVO(0, "INTEGRATION_" + token, "통합 테스트 콘텐츠", "Integration Test Content",
+				"컬렉션 작품 Service 통합 테스트 콘텐츠", "2026-08-26", 120, "Korea", "https://example.com/poster.jpg",
+				"https://example.com/backdrop.jpg", null);
+
 		// 컬렉션 작품 Service만 검증하도록 CONTENT 시퀀스와 부모 준비를 분리한다.
 		return insertContent(jdbcTemplate, content);
 	}
@@ -249,8 +284,8 @@ class CollectionItemServiceTest {
 	/**
 	 * 콘텐츠 평균 별점 검증에 사용할 회원 평가 등록
 	 *
-	 * @param memberId 회원 번호
-	 * @param contentId 콘텐츠 번호
+	 * @param memberId    회원 번호
+	 * @param contentId   콘텐츠 번호
 	 * @param ratingScore 별점
 	 */
 	private void saveRating(int memberId, int contentId, int ratingScore) {

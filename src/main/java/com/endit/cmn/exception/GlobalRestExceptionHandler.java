@@ -1,26 +1,15 @@
 /**
- * <pre>
- * Class Name : GlobalRestExceptionHandler
- * Description : Fetch(AJAX) 예외 처리
- *               컨트롤러에서 던져진 예외를 한 곳에서 받아 MessageVO(JSON)로 응답한다.
- *               id="0"(실패), message=사용자 안내, detailMessage=스택트레이스.
- *               ※ 학원 원본(sb13)은 NotFound를 NO_CONTENT(204)로 응답하나
- *                 주석 의도(404)대로 교정했다.
- *               ※ @Order(1)로 advice 처리 순서를 명시한다.
- *               ※ assignableTypes로 지정된 REST 컨트롤러만 대상으로 한정한다.
- *                 다른 화면 컨트롤러의 예외를 가로채 JSON으로 응답하는 문제를 방지한다.
- *
- * Modification History
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 18.  홍선기   최초 생성
- * 2026. 8. 29.  이진영   인증 필요(401) 및 권한 없음(403) 응답 처리 추가
- * 2026. 8. 31.  이진영   필수 요청 헤더·파라미터 누락 시 400 응답 처리 추가
- * 2026. 9. 05.  이진영   Spring Security 기반 인증 체계 통일 이력 반영
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 18.
+ * Fetch(AJAX) 예외 처리
+ * 컨트롤러에서 던져진 예외를 한 곳에서 받아 MessageVO(JSON)로 응답한다.
+ * id="0"(실패), message=사용자 안내, detailMessage=스택트레이스.
+ * ※ 학원 원본(sb13)은 NotFound를 NO_CONTENT(204)로 응답하나 주석 의도(404)대로 교정했다
+ * (204는 fetch에서 응답 본문이 무시될 수 있음).
+ * ※ @Order(1): 화면용 advice와 순서를 명시해 동작을 결정적으로 고정(AJAX 우선).
+ * ※ assignableTypes로 4조 컨트롤러만 대상으로 한정한다 —
+ * 전역으로 두면 타 조 화면 컨트롤러의 예외까지 가로채 JSON으로 응답하려다
+ * (응답이 text/html로 정해진 뒤라) 변환 실패로 백지 500이 된다.
+ * 실측 2026-08-31: 2조 공지 화면(/notices) 템플릿 부재 예외를 이 advice가 가로챔.
+ * ※ 401(인증 필요)·403(권한 없음) 처리는 3조 이진영 추가(2026-08-29).
  */
 package com.endit.cmn.exception;
 

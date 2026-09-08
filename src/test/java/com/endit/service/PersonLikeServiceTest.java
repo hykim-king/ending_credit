@@ -64,7 +64,6 @@ class PersonLikeServiceTest {
 		personId = createPersonId("DEFAULT");
 	}
 
-	/** 좋아요 목록 조회 검증 */
 	@Test
 	@DisplayName("좋아요 목록 조회")
 	void retrieveLikes() {
@@ -99,10 +98,10 @@ class PersonLikeServiceTest {
 		assertEquals(String.valueOf(memberId), param.getSearchWord());
 	}
 
-	/** 빈 목록 조회 검증 */
 	@Test
 	@DisplayName("빈 목록 조회")
 	void retrieveEmpty() {
+		// Given: 좋아요 기록이 없는 회원과 조회 조건을 준비한다.
 		DTO param = new DTO();
 
 		// When: 좋아요가 없는 회원의 목록을 조회한다.
@@ -114,10 +113,10 @@ class PersonLikeServiceTest {
 		assertEquals(0, param.getTotalCnt());
 	}
 
-	/** 페이징 보정 검증 */
 	@Test
 	@DisplayName("페이징 보정")
 	void normalizePaging() {
+		// Given: 허용 범위를 벗어난 페이지 번호와 크기를 설정한다.
 		DTO param = new DTO();
 		param.setPageNo(0);
 		param.setPageSize(101);
@@ -130,10 +129,11 @@ class PersonLikeServiceTest {
 		assertEquals(100, param.getPageSize());
 	}
 
-	/** 좋아요 등록 검증 */
 	@Test
 	@DisplayName("좋아요 등록")
 	void addLike() {
+		// Given: 좋아요 기록이 없는 회원과 인물을 준비한다.
+
 		// When: 좋아요가 없는 회원과 인물 조합을 등록한다.
 		PersonLikeVO result = personLikeService.addLike(memberId, personId);
 
@@ -144,7 +144,6 @@ class PersonLikeServiceTest {
 		assertTrue(personLikeService.isLiked(memberId, personId));
 	}
 
-	/** 중복 등록 검증 */
 	@Test
 	@DisplayName("중복 등록")
 	void addLikeAgain() {
@@ -161,10 +160,11 @@ class PersonLikeServiceTest {
 		assertEquals(1, personLikeService.countLikes(personId));
 	}
 
-	/** 좋아요 여부 조회 검증 */
 	@Test
 	@DisplayName("좋아요 여부 조회")
 	void checkLiked() {
+		// Given: 좋아요 기록이 없는 회원과 인물을 준비한다.
+
 		// Then: 등록 전에는 false여야 한다.
 		assertFalse(personLikeService.isLiked(memberId, personId));
 
@@ -175,7 +175,6 @@ class PersonLikeServiceTest {
 		assertTrue(personLikeService.isLiked(memberId, personId));
 	}
 
-	/** 좋아요 수 조회 검증 */
 	@Test
 	@DisplayName("좋아요 수 조회")
 	void countLikes() {
@@ -184,11 +183,10 @@ class PersonLikeServiceTest {
 		personLikeService.addLike(memberId, personId);
 		personLikeService.addLike(secondMemberId, personId);
 
-		// When, Then: 해당 인물의 좋아요 수는 2여야 한다.
+		// When, Then: 좋아요 수를 조회하면 두 회원의 기록이 집계되어야 한다.
 		assertEquals(2, personLikeService.countLikes(personId));
 	}
 
-	/** 좋아요 해제 검증 */
 	@Test
 	@DisplayName("좋아요 해제")
 	void deleteLike() {
@@ -203,51 +201,51 @@ class PersonLikeServiceTest {
 		assertEquals(0, personLikeService.countLikes(personId));
 	}
 
-	/** 반복 해제 검증 */
 	@Test
 	@DisplayName("반복 해제")
 	void deleteLikeAgain() {
-		// Then: 등록되지 않은 좋아요 해제 요청도 예외 없이 처리되어야 한다.
+		// Given: 좋아요 기록이 없는 회원과 인물을 준비한다.
+
+		// When, Then: 등록되지 않은 좋아요 해제 요청도 예외 없이 처리되어야 한다.
 		assertDoesNotThrow(() -> personLikeService.deleteLike(memberId, personId));
 
+		// Given: 좋아요를 등록한 뒤 다시 해제한다.
 		personLikeService.addLike(memberId, personId);
 		personLikeService.deleteLike(memberId, personId);
 
-		// Then: 이미 해제된 좋아요를 다시 해제해도 최종 상태는 같아야 한다.
+		// When, Then: 이미 해제된 좋아요를 다시 해제해도 최종 상태는 같아야 한다.
 		assertDoesNotThrow(() -> personLikeService.deleteLike(memberId, personId));
 		assertFalse(personLikeService.isLiked(memberId, personId));
 	}
 
-	/** 정렬 조건 검증 */
 	@Test
 	@DisplayName("정렬 조건 검증")
 	void validateSort() {
-		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(memberId, new DTO(), "popular"));
-
-		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(memberId, new DTO(), null));
+		// When, Then: 허용되지 않거나 null인 정렬 조건은 입력값 예외가 발생해야 한다.
+		assertThrows(IllegalArgumentException.class,
+				() -> personLikeService.retrieveLikes(memberId, new DTO(), "popular"));
+		assertThrows(IllegalArgumentException.class,
+				() -> personLikeService.retrieveLikes(memberId, new DTO(), null));
 	}
 
-	/** 조회 조건 검증 */
 	@Test
 	@DisplayName("조회 조건 검증")
 	void validateParam() {
-		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(memberId, null, "latest"));
+		// When, Then: 조회 조건이 null이면 입력값 예외가 발생해야 한다.
+		assertThrows(IllegalArgumentException.class,
+				() -> personLikeService.retrieveLikes(memberId, null, "latest"));
 	}
 
-	/** 번호 검증 */
 	@Test
 	@DisplayName("번호 검증")
 	void validateIds() {
-		assertThrows(IllegalArgumentException.class, () -> personLikeService.retrieveLikes(0, new DTO(), "latest"));
-
+		// When, Then: 유효하지 않은 회원·인물 번호는 각 작업 전에 거부되어야 한다.
+		assertThrows(IllegalArgumentException.class,
+				() -> personLikeService.retrieveLikes(0, new DTO(), "latest"));
 		assertThrows(IllegalArgumentException.class, () -> personLikeService.countLikes(0));
-
 		assertThrows(IllegalArgumentException.class, () -> personLikeService.isLiked(0, personId));
-
 		assertThrows(IllegalArgumentException.class, () -> personLikeService.isLiked(memberId, 0));
-
 		assertThrows(IllegalArgumentException.class, () -> personLikeService.addLike(memberId, -1));
-
 		assertThrows(IllegalArgumentException.class, () -> personLikeService.deleteLike(-1, personId));
 	}
 
@@ -278,10 +276,9 @@ class PersonLikeServiceTest {
 	private int createPersonId(String prefix) {
 		String token = createToken();
 
-		PersonVO person = new PersonVO(0, "PERSON_LIKE_" + prefix + "_" + token.substring(0, 20), "인물좋아요" + token.substring(0, 6),
-				"Person Like " + token.substring(0, 6),
-				"https://example.com/person.jpg",
-				null, null);
+		PersonVO person = new PersonVO(0, "PERSON_LIKE_" + prefix + "_" + token.substring(0, 20),
+				"인물좋아요" + token.substring(0, 6), "Person Like " + token.substring(0, 6),
+				"https://example.com/person.jpg", null, null);
 
 		// PERSON 생성 자체는 대상이 아니므로 PERSON 시퀀스 상태와 분리한다.
 		return insertPerson(jdbcTemplate, person).getPersonId();

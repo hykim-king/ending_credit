@@ -68,7 +68,6 @@ class MemberContentServiceTest {
 		contentId = createContentId("DEFAULT");
 	}
 
-	/** 평가 목록 조회 검증 */
 	@Test
 	@DisplayName("평가 목록 조회")
 	void retrieveRatings() {
@@ -96,7 +95,6 @@ class MemberContentServiceTest {
 		assertEquals(String.valueOf(memberId), param.getSearchWord());
 	}
 
-	/** 보고싶어요 목록 조회 검증 */
 	@Test
 	@DisplayName("보고싶어요 목록 조회")
 	void retrieveWatchlist() {
@@ -124,7 +122,6 @@ class MemberContentServiceTest {
 		assertEquals(String.valueOf(memberId), param.getSearchWord());
 	}
 
-	/** 회원별 평가 건수 조회 검증 */
 	@Test
 	@DisplayName("회원별 평가 건수 조회")
 	void countRatingByMember() {
@@ -145,7 +142,6 @@ class MemberContentServiceTest {
 		assertEquals(2, result);
 	}
 
-	/** 회원별 보고싶어요 건수 조회 검증 */
 	@Test
 	@DisplayName("회원별 보고싶어요 건수 조회")
 	void countWatchlistByMember() {
@@ -166,20 +162,20 @@ class MemberContentServiceTest {
 		assertEquals(2, result);
 	}
 
-	/** 회원별 콘텐츠 건수 조회 시 회원 번호 검증 */
 	@Test
 	@DisplayName("회원별 콘텐츠 건수 조회 시 회원 번호 검증")
 	void validateCountMemberId() {
-		// Then: 실제 회원 PK로 사용할 수 없는 번호는 Mapper 호출 전에 거부해야 한다.
+		// When, Then: 실제 회원 PK로 사용할 수 없는 번호는 Mapper 호출 전에 거부해야 한다.
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.countRatingByMember(0));
 
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.countWatchlistByMember(-1));
 	}
 
-	/** 첫 별점은 보고싶어요 N으로 저장 검증 */
 	@Test
 	@DisplayName("첫 별점은 보고싶어요 N으로 저장")
 	void saveFirstRating() {
+		// Given: 평가와 보고싶어요 기록이 없는 회원과 콘텐츠를 준비한다.
+
 		// When: 활동 기록이 없는 콘텐츠에 별점을 최초 저장한다.
 		MemberContentVO result = memberContentService.saveRating(memberId, contentId, 4);
 
@@ -193,7 +189,6 @@ class MemberContentServiceTest {
 		assertNotNull(result.getUpdatedDt());
 	}
 
-	/** 별점 변경 시 보고싶어요 유지 검증 */
 	@Test
 	@DisplayName("별점 변경 시 보고싶어요 유지")
 	void updateRating() {
@@ -214,7 +209,6 @@ class MemberContentServiceTest {
 		assertEquals(watchlistDt, result.getWatchlistDt());
 	}
 
-	/** 보고싶어요가 있으면 별점만 해제 검증 */
 	@Test
 	@DisplayName("보고싶어요가 있으면 별점만 해제")
 	void deleteRatingKeepsRow() {
@@ -234,7 +228,6 @@ class MemberContentServiceTest {
 		assertNotNull(result.getWatchlistDt());
 	}
 
-	/** 별점만 있으면 행 삭제 검증 */
 	@Test
 	@DisplayName("별점만 있으면 행 삭제")
 	void deleteRatingDeletesRow() {
@@ -248,11 +241,6 @@ class MemberContentServiceTest {
 		assertNull(selectMemberContent());
 	}
 
-	/**
-	 * 보고싶어요 등록 시 별점 유지 검증
-	 *
-	 * @throws InterruptedException 평가 일시 비교 대기 중 인터럽트 발생
-	 */
 	@Test
 	@DisplayName("보고싶어요 등록 시 별점 유지")
 	void addWatchlist() throws InterruptedException {
@@ -273,11 +261,6 @@ class MemberContentServiceTest {
 		assertNotNull(result.getWatchlistDt());
 	}
 
-	/**
-	 * 별점이 있으면 보고싶어요만 해제 검증
-	 *
-	 * @throws InterruptedException 평가 일시 비교 대기 중 인터럽트 발생
-	 */
 	@Test
 	@DisplayName("별점이 있으면 보고싶어요만 해제")
 	void deleteWatchlistKeepsRow() throws InterruptedException {
@@ -303,7 +286,6 @@ class MemberContentServiceTest {
 		assertNull(result.getWatchlistDt());
 	}
 
-	/** 보고싶어요만 있으면 행 삭제 검증 */
 	@Test
 	@DisplayName("보고싶어요만 있으면 행 삭제")
 	void deleteWatchlistDeletesRow() {
@@ -317,10 +299,11 @@ class MemberContentServiceTest {
 		assertNull(selectMemberContent());
 	}
 
-	/** 보고싶어요 등록·해제 반복 요청 허용 검증 */
 	@Test
 	@DisplayName("보고싶어요 등록·해제 반복 요청 허용")
 	void watchlistIdempotency() {
+		// Given: 보고싶어요 기록이 없는 회원과 콘텐츠를 준비한다.
+
 		// When: 같은 보고싶어요 등록 요청을 두 번 수행한다.
 		MemberContentVO first = memberContentService.addWatchlist(memberId, contentId);
 		MemberContentVO second = memberContentService.addWatchlist(memberId, contentId);
@@ -337,28 +320,27 @@ class MemberContentServiceTest {
 		assertNull(selectMemberContent());
 	}
 
-	/** 별점 범위 검증 */
 	@Test
 	@DisplayName("별점 범위 검증")
 	void validateRatingRange() {
+		// When, Then: 허용 범위를 벗어나거나 null인 별점은 입력값 예외가 발생해야 한다.
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, 0));
-
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, 6));
-
 		assertThrows(IllegalArgumentException.class, () -> memberContentService.saveRating(memberId, contentId, null));
 	}
 
-	/** 정렬 조건 검증 */
 	@Test
 	@DisplayName("정렬 조건 검증")
 	void validateSort() {
-		assertThrows(IllegalArgumentException.class, () -> memberContentService.retrieveRatings(memberId, new DTO(), "rating"));
+		// When, Then: 허용되지 않은 정렬 조건으로 조회하면 입력값 예외가 발생해야 한다.
+		assertThrows(IllegalArgumentException.class,
+				() -> memberContentService.retrieveRatings(memberId, new DTO(), "rating"));
 	}
 
-	/** 평가가 없으면 빈 목록 반환 검증 */
 	@Test
 	@DisplayName("평가가 없으면 빈 목록 반환")
 	void retrieveEmptyRatings() {
+		// Given: 평가 기록이 없는 신규 회원과 조회 조건을 준비한다.
 		DTO param = new DTO();
 
 		// When: 평가 기록이 없는 신규 회원의 평가 목록을 조회한다.
