@@ -138,14 +138,13 @@ Modification History
                  aria-labelledby="collectionCommentsHeading"
                  tabindex="-1">
             <h2 id="collectionCommentsHeading" class="collection-section-title">댓글 <span id="commentSectionCount">0</span></h2>
-            <!-- 코멘트(D-07): 작성·목록은 4조 코멘트 화면에서 처리한다.
-                 여기 입력칸을 따로 두면 같은 기능이 두 곳에 생겨 설계와 어긋난다 -->
             <div class="collection-comment-composer">
-                <a class="btn btn-outline-primary btn-sm text-decoration-none"
-                   th:href="@{/comment/doRetrieve(collectionId=${collectionId})}">
+                <label class="visually-hidden" for="collectionCommentInput">컬렉션 댓글</label>
+                <textarea id="collectionCommentInput" rows="1" placeholder="컬렉션에 댓글을 남겨보세요." disabled></textarea>
+                <button type="button" disabled>
                     <i class="bi bi-chat" aria-hidden="true"></i>
-                    코멘트 보기·작성
-                </a>
+                    등록
+                </button>
             </div>
         </section>
     </div>
