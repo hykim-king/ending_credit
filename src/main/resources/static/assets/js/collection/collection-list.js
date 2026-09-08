@@ -4,6 +4,7 @@
  * 2026. 9. 01. jinyoung - 목록 카드·포스터 콜라주·검색 결과 UI 적용
  * 2026. 9. 02. jinyoung - 빈 설명과 내 컬렉션 표시 개선
  * 2026. 9. 03. jinyoung - 5개 단위 페이지 이동 표시
+ * 2026. 9. 05. eunhu    - 컬렉션 카드 생성 함수를 쓰는 화면을 위해 목록 초기화 가드 추가
  */
 
 /** ===================================
@@ -21,6 +22,12 @@ let collectionPaginationIndicatorState = null; // 이전 활성 페이지 위치
 document.addEventListener("DOMContentLoaded", () => {
 
     const searchForm = document.querySelector("#searchForm");
+
+    /** 강은후- "카드 생성 함수만 쓰려고 이 파일을 싣는 화면(검색 등)에서는 목록 초기화를 건너뛴다" */
+    if (!searchForm) {
+        return;
+    }
+
     const pageSize = document.querySelector("#pageSize");
     const query = new URLSearchParams(window.location.search);
     const requestedPageSize = query.get("pageSize");

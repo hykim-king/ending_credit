@@ -1,9 +1,11 @@
 package com.endit.controller;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -87,7 +89,7 @@ public class HomeViewController {
 	private static final int BOXOFFICE_PAGES = 4;
 	private static final int CURATION_PAGES = 3;
 
-	// 순위 배지와 국가 표기는 박스오피스 선반만 단다.
+	// 순위 배지는 박스오피스 선반만 단다.
 	// 배지를 그쪽만 다는 이유는 ContentVO.no에 순위 숫자가 실려 오는 축이 popular뿐이기 때문이다 -
 	// 순위가 비어 서비스가 boxoffice로 폴백해도 no는 적재순 행번호라 배지가 깨지지는 않는다
 	// 고정 2줄도 제목이 로케일마다 달라 static 상수로 둘 수 없다. 매 요청 만든다
@@ -136,8 +138,9 @@ public class HomeViewController {
 	 *               정렬은 박스오피스와 장르가 popular, 최신 개봉작이 latest, 나머지가 boxoffice다 -
 	 *               popular 경로는 WHERE를 타지 않아 장르 말고는 필터를 걸 수 없다(장르만 순위 목록이 따로 있다).
 	 *               장르 순위가 아직 없으면(동기화 전·실패) 전체 장르에서 뽑고 boxoffice로 물러난다.
-	 *               칸 수·순위 배지·국가 표기는 선반마다 다르다(ShelfSpec) -
-	 *               박스오피스만 5칸 20건에 배지와 국가를 달고, 나머지는 7칸 21건에 제목·연도만 쓴다.
+	 *               칸 수와 순위 배지는 선반마다 다르다(ShelfSpec) -
+	 *               박스오피스만 5칸 20건에 배지를 달고, 나머지는 7칸 21건이다.
+	 *               카드 메타는 선반과 무관하게 개봉연도와 평균 별점이며, 평균은 선반 전체를 모아 한 번에 읽는다.
 	 *               pageNo는 선반 전체에 같이 걸린다.
 	 * </pre>
 	 * @param pageNo
@@ -159,8 +162,33 @@ public class HomeViewController {
 		addShelf(shelves, getLatestSpec(), pageNo);
 
 		model.addAttribute("shelves", shelves);
+		model.addAttribute("ratingAverages", getRatingAverages(shelves));
 
 		return HOME_VIEW;
+	}
+
+	// 선반에 실린 영화들의 평균 별점을 한 번에 읽는다. 카드마다 부르면 홈 한 번에 쿼리가 100건을 넘는다.
+	// 선반끼리 같은 영화가 겹치므로 id는 Set으로 모은다
+	private Map<Integer, Double> getRatingAverages(List<Shelf> shelves) {
+		Set<Integer> contentIds = new LinkedHashSet<>();
+
+		for (Shelf shelf : shelves) {
+			for (ContentVO movie : shelf.getMovies()) {
+				contentIds.add(movie.getContentId());
+			}
+		}
+
+		if (contentIds.isEmpty()) {
+			return Map.of();
+		}
+
+		// 별점이 안 읽혀도 카드는 그린다(정의서 H-04). 평균 자리만 빈다
+		try {
+			return contentService.retrieveAverageRatings(new ArrayList<>(contentIds));
+		} catch (RuntimeException e) {
+			log.warn("평균 별점 조회 실패로 카드에 별점을 빼고 그립니다.", e);
+			return Map.of();
+		}
 	}
 
 	// 선반 하나를 조회해 목록에 담는다. 비거나 대상을 못 정했거나 조회가 실패한 선반은 담지 않는다
@@ -256,13 +284,13 @@ public class HomeViewController {
 	// 고정 선반 2줄
 	private ShelfSpec getBoxOfficeSpec() {
 		return new ShelfSpec(toMessage(MSG_SHELF_BOXOFFICE), SORT_POPULAR, Map.of(),
-				true, true, BOXOFFICE_PER_VIEW, BOXOFFICE_PAGES);
+				true, BOXOFFICE_PER_VIEW, BOXOFFICE_PAGES);
 	}
 
 	private ShelfSpec getLatestSpec() {
 		return new ShelfSpec(toMessage(MSG_SHELF_LATEST), SORT_LATEST,
 				Map.of(SEARCH_KEY_RELEASED, RELEASED_ONLY),
-				false, false, CURATION_PER_VIEW, CURATION_PAGES);
+				false, CURATION_PER_VIEW, CURATION_PAGES);
 	}
 
 	// 번들에서 문구를 꺼낸다. 키가 없으면 코드를 그대로 돌려주므로 화면이 비지 않고 무엇이 빠졌는지 보인다
@@ -329,7 +357,7 @@ public class HomeViewController {
 	// 큐레이션 4줄은 제목·정렬·필터만 다르고 크기·배지가 같다
 	private ShelfSpec toCurationSpec(String title, String sort, Map<String, String> filters) {
 		return new ShelfSpec(title, sort, filters,
-				false, false, CURATION_PER_VIEW, CURATION_PAGES);
+				false, CURATION_PER_VIEW, CURATION_PAGES);
 	}
 
 	// 선반 한 줄의 명세. 값이 여섯이라 addShelf 파라미터로 늘어놓지 않고 묶어서 상수로 둔다
@@ -340,17 +368,15 @@ public class HomeViewController {
 		// searchMap에 그대로 실린다. 비면 거르지 않는다
 		private final Map<String, String> filters;
 		private final boolean ranked;
-		private final boolean countryShown;
 		private final int perView;
 		private final int pages;
 
 		private ShelfSpec(String title, String sort, Map<String, String> filters,
-				boolean ranked, boolean countryShown, int perView, int pages) {
+				boolean ranked, int perView, int pages) {
 			this.title = title;
 			this.sort = sort;
 			this.filters = filters;
 			this.ranked = ranked;
-			this.countryShown = countryShown;
 			this.perView = perView;
 			this.pages = pages;
 		}
@@ -369,10 +395,6 @@ public class HomeViewController {
 
 		private boolean isRanked() {
 			return ranked;
-		}
-
-		private boolean isCountryShown() {
-			return countryShown;
 		}
 
 		private int getPerView() {
@@ -404,11 +426,6 @@ public class HomeViewController {
 		// 포스터에 순위 배지를 달지. 템플릿이 ${shelf.ranked}로 읽는다
 		public boolean isRanked() {
 			return spec.isRanked();
-		}
-
-		// 카드 메타에 국가까지 쓸지. 끄면 개봉연도만 남는다
-		public boolean isCountryShown() {
-			return spec.isCountryShown();
 		}
 
 		// 한 화면 칸 수. 템플릿이 CSS 변수 --per-view로 내려 칸 너비와 캐러셀 이동량을 함께 정한다

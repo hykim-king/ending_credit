@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  S-01·S-03·S-04가 함께 쓰는 검색창. 세 화면에 같은 골격이 복사돼 있던 것을 모았다.
+  글자 수 상한은 SearchViewController.MAX_QUERY_LENGTH 하나가 정한다 -
+  maxlength와 안내 문구가 그 값을 함께 읽으므로 상한을 바꿀 때 고칠 곳이 한 군데다.
+
+  heroTitle  null이면 제목을 그리지 않는다(통합검색이 검색어를 받은 뒤 쓰는 형태)
+  compact    결과가 있는 화면에서 검색창을 위로 붙인다
+-->
+<div th:fragment="hero(heroTitle, action, placeholder, ariaLabel, compact)"
+     class="search-hero" th:classappend="${compact} ? 'compact' : ''">
+
+	<h1 class="search-title" th:if="${heroTitle != null}" th:text="${heroTitle}">검색</h1>
+
+	<form class="search-box" th:action="${action}" method="get">
+		<input type="text" name="query" th:value="${query}" autofocus
+		       th:maxlength="${maxQueryLength}"
+		       th:placeholder="${placeholder}" th:aria-label="${ariaLabel}"
+		       placeholder="영화, 인물, 컬렉션을 검색해 보세요" aria-label="검색어">
+		<button type="submit">검색</button>
+	</form>
+
+	<p class="query-notice" th:if="${queryTooLong != null}"
+	   th:text="|검색어는 ${maxQueryLength}자 이내로 입력해 주세요.|">
+		검색어는 100자 이내로 입력해 주세요.
+	</p>
+</div>
+
+</body>
+</html>

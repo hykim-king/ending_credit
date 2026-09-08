@@ -75,6 +75,22 @@ public interface ContentCreditService {
 	/**
 	 *
 	 * <pre>
+	 * Method Name : retrieveCreditedIds
+	 * Description : 인물 여럿 중 크레딧을 하나라도 가진 인물의 id
+	 *               역할 표기에서 "크레딧이 아예 없는 인물"을 가려내는 데 쓴다 -
+	 *               그런 인물은 감독도 배우도 아니므로 라벨을 걸지 않는다.
+	 *               빈 목록을 주면 조회하지 않고 빈 Set이다.
+	 *
+	 * </pre>
+	 *
+	 * @param personIds
+	 * @return Set<Integer> (크레딧을 가진 personId만)
+	 */
+	Set<Integer> retrieveCreditedIds(List<Integer> personIds);
+
+	/**
+	 *
+	 * <pre>
 	 * Method Name : get
 	 * Description : 크레딧 단건 조회
 	 *

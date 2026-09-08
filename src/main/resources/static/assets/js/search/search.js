@@ -234,6 +234,18 @@
         load();
     }
 
+    /* ── S-02 컬렉션 카드 ─────────────────────────────────── */
+
+    // 카드는 컬렉션 목록 화면의 createCollectionCard가 그린다.
+    // 검색은 서버가 이미 읽어 둔 목록만 넘기므로 /api/collections를 다시 부르지 않는다
+    function initCollectionCards() {
+        const grid = document.getElementById("collectionGrid");
+
+        // 컬렉션이 0건이거나 조회에 실패하면 서버가 격자 자체를 그리지 않는다.
+        // 카드 그리기는 상세·전체보기와 같은 공용 모듈이 맡는다
+        window.enditCollectionGrid.fill(grid);
+    }
+
     /* ── S-05 검색 오류 재시도 ────────────────────────────── */
 
     // S-02는 서버 렌더라 같은 주소를 다시 요청하는 것이 곧 재시도다.
@@ -250,10 +262,16 @@
 
     switch (pageType) {
         case "search-movies":
-            initMovieResults();
+            // 검색어가 없으면 결과가 아니라 영화 전용 검색 시작 화면이다. 순위만 채운다
+            if (document.body.dataset.hasQuery === "true") {
+                initMovieResults();
+            } else {
+                loadRankings();
+            }
             break;
         default:
             loadRankings();
+            initCollectionCards();
             initRetryButtons();
             break;
     }
