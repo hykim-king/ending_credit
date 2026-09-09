@@ -20,11 +20,14 @@ public class TmdbConfig {
 		return new TmdbApi(properties.getApiKey());
 	}
 
-	// api 키 없으면 기동 시 에러 알림 - 안 세우면 조용히 적재순으로 폴백한다
+	// api 키 없으면 기동 시 에러 알림 - 안 세우면 조용히 적재순으로 폴백한다.
+	// 토큰은 저장소에 두지 않으므로 사람마다 자기 환경에 넣어야 한다
 	private void validateApiKey(String apiKey) {
 		if (!StringUtils.hasText(apiKey)) {
 			throw new IllegalStateException(
-					"tmdb.api-key 설정이 필요합니다. application.yaml의 tmdb 아래에 api-key가 있는지 확인한다.");
+					"TMDB_API_KEY 환경변수가 필요합니다. "
+					+ "STS는 Run Configurations > Environment 탭에 TMDB_API_KEY를 추가한다. "
+					+ "토큰은 themoviedb.org 설정 > API의 Read Access Token이다.");
 		}
 	}
 
