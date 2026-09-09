@@ -5,6 +5,7 @@
  * 2026. 9. 01. jinyoung - 등록·수정 화면과 공개 정책 UI 적용
  * 2026. 9. 02. jinyoung - 길이 경고와 작품 추가·제거 흐름 개선
  * 2026. 9. 05. jinyoung - 수정 화면 컬렉션 삭제 확인·요청 추가
+ * 2026. 9. 09. jinyoung - 수정 폼 초기 조회 완료 전 편집·저장 차단 및 재시도 추가
  */
 // ==================== 설정과 화면 상태 ====================
 
@@ -31,6 +32,7 @@ let isContentEditMode = false;
 let isContentEditEntering = false;
 let initialFormState = null;
 let isFormInitialized = false;
+let isFormLoading = false;
 let isSubmitting = false;
 let isEmptyCollectionCreationConfirmed = false;
 
@@ -47,6 +49,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmDeleteCollectionButton = document.querySelector("#confirmDeleteCollectionButton");
 
     currentFormMode = page.dataset.formMode;
+    document.querySelector("#retryFormLoadButton")
+        ?.addEventListener("click", () => prepareUpdateForm(collectionId));
     collectionForm.addEventListener("submit", submitCollection);
     window.addEventListener("beforeunload", warnUnsavedChanges);
 
@@ -178,7 +182,14 @@ function hideLengthWarning(input, warning) {
 
 /** 수정할 컬렉션과 전체 작품을 불러와 폼을 채운다. */
 async function prepareUpdateForm(collectionId) {
+    if (isFormLoading || isFormInitialized) {
+        return;
+    }
+
     const errorMessage = document.querySelector("#errorMessage");
+    isFormLoading = true;
+    updateFormLoadControls();
+    hideFormError(errorMessage);
 
     try {
         const [collection, contents] = await Promise.all([
@@ -198,7 +209,31 @@ async function prepareUpdateForm(collectionId) {
         initializeFormState();
     } catch (error) {
         showFormError(errorMessage, error.message);
+    } finally {
+        isFormLoading = false;
+        updateFormLoadControls();
     }
+}
+
+/** 기존 컬렉션의 초기 조회가 완료된 경우에만 편집과 저장을 허용한다. */
+function updateFormLoadControls() {
+    const locked = !isFormInitialized;
+    const submitButton = document.querySelector("#submitButton");
+    const retryButton = document.querySelector("#retryFormLoadButton");
+
+    document.querySelectorAll("#title, #description, #isPublic").forEach((input) => {
+        input.disabled = locked;
+    });
+    submitButton.disabled = locked || isSubmitting;
+    submitButton.textContent = isFormLoading ? "불러오는 중..." : getSubmitButtonLabel();
+    document.querySelector("#collectionForm").setAttribute("aria-busy", String(isFormLoading));
+    document.querySelector("#formLoadStatus").classList.toggle("d-none", !locked);
+    document.querySelector("#formLoadMessage").textContent = isFormLoading
+        ? "기존 컬렉션을 불러오는 중입니다." : "기존 컬렉션을 불러온 후 수정할 수 있습니다.";
+    retryButton.disabled = isFormLoading;
+    retryButton.classList.toggle("d-none", isFormLoading);
+    document.querySelector(".collection-grid-add-card").disabled = locked || isContentEditMode;
+    updateContentEditControls();
 }
 
 // ==================== 저장·삭제와 API 요청 ====================
@@ -207,7 +242,7 @@ async function prepareUpdateForm(collectionId) {
 async function submitCollection(event) {
     event.preventDefault();
 
-    if (isSubmitting) {
+    if (isSubmitting || (isUpdateForm() && !isFormInitialized)) {
         return;
     }
 
@@ -617,7 +652,7 @@ function createAddContentCard() {
 
     button.className = "collection-grid-add-card";
     button.type = "button";
-    button.disabled = isContentEditMode;
+    button.disabled = isContentEditMode || (isUpdateForm() && !isFormInitialized);
     button.setAttribute("data-bs-toggle", "modal");
     button.setAttribute("data-bs-target", "#contentSearchModal");
     visual.className = "collection-grid-add-visual";
@@ -757,7 +792,7 @@ function updateContentEditControls() {
     const confirmButton = document.querySelector("#confirmContentRemovalButton");
 
     toggleButton.classList.toggle("d-none", isContentEditMode);
-    toggleButton.disabled = selectedContentIds.length === 0;
+    toggleButton.disabled = selectedContentIds.length === 0 || (isUpdateForm() && !isFormInitialized);
     editActions.classList.toggle("d-none", !isContentEditMode);
     document.querySelector("#pendingRemovalCount").textContent = String(pendingRemovalIds.size);
     confirmButton.disabled = pendingRemovalIds.size === 0;
