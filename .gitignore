@@ -2,13 +2,22 @@ HELP.md
 target/
 
 # Local-only verification scaffolding (not shared with team)
-/src/main/java/com/endit/controller/TestContentController.java
-/src/main/java/com/endit/service/TestContentService.java
-/src/main/java/com/endit/service/impl/TestContentServiceImpl.java
-/src/main/resources/templates/test/
+/src/test/java/com/endit/ApplicationTest.java
+/src/main/java/com/endit/config/DataSourceConfig.java
+/src/main/resources/application.yaml
+/database/
+/docs/
+/AGENTS.md
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+## 개인적인 코드 정리
+/src/main/java/com/endit/cmn/AESCryptoUtil.java
+/src/main/java/com/endit/cmn/MessageVO.java
+## import 정리
+/src/main/java/com/endit/controller/MemberOAuthSignupController.java
+/src/main/java/com/endit/service/impl/MemberServiceImpl.java
+
 
 ### STS ###
 .apt_generated
