@@ -30,8 +30,10 @@ Modification History
 					<when test="searchDiv == '30'">
 						country LIKE #{searchWord} || '%' ESCAPE '\'
 					</when>
+					<!-- 관리자 목록 전용 축. TMDB id 일부만 알아도 찾을 수 있어야 해서 부분일치다.
+					     sync의 중복 검사는 findContentIdByExternal과 searchMap.externalId가 맡으므로 그쪽은 그대로 등호다 -->
 					<when test="searchDiv == '40'">
-						external_id = #{searchWord}
+						external_id LIKE '%' || #{searchWord} || '%' ESCAPE '\'
 					</when>
 					<when test="searchDiv == '50'">
 						(

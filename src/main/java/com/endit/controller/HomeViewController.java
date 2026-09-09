@@ -15,17 +15,22 @@ import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.endit.cmn.DTO;
 import com.endit.cmn.LocaleTextHelper;
+import com.endit.cmn.LoginMember;
 import com.endit.domain.ContentCreditVO;
 import com.endit.domain.ContentVO;
+import com.endit.domain.GenrePreferenceVO;
 import com.endit.domain.GenreVO;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.ContentCreditService;
 import com.endit.service.ContentService;
 import com.endit.service.GenreService;
+import com.endit.service.MemberContentService;
 
 /** H-01 메인화면. 정렬 축이 다른 포스터 선반을 여러 줄로 쌓아 보여준다. */
 @Controller
@@ -73,10 +78,17 @@ public class HomeViewController {
 	private static final String MSG_SHELF_CURATION_FALLBACK = "home.shelf.curation.fallback";
 	private static final String MSG_SHELF_DIRECTOR = "home.shelf.director";
 	private static final String MSG_SHELF_ACTOR = "home.shelf.actor";
+	// 회원 전용 장르 줄. {0}=닉네임, {1}=장르다. 대상이 본인 취향이라 "추천작" 대신
+	// 누구의 무슨 취향인지를 제목이 말한다
+	private static final String MSG_SHELF_PREFERRED_GENRE = "home.shelf.preferredGenre";
+	// 장르별 카피 뒤에 공통으로 붙는 꼬릿말({0}=앞에서 만든 문장). 꼬리만 바꾸려면 이 키 한 줄이면 된다
+	private static final String MSG_SHELF_PREFERRED_GENRE_TAIL = "home.shelf.preferredGenre.tail";
 
 	// 대상별 카피·표시명 키의 앞부분. 뒤에 장르는 external_genre_id가, 연대는 시작 연도가 붙는다.
 	// 장르를 GENRE.name이 아니라 id로 잡는 것은 이름이 한국어뿐이라 영어를 담을 곳이 없기 때문이다
 	private static final String MSG_PREFIX_GENRE_COPY = "home.copy.genre.";
+	// 선호 장르 줄의 장르별 카피. 랜덤 줄과 달리 닉네임이 함께 들어가 문장을 통째로 갖는다({0}=닉네임, {1}=장르)
+	private static final String MSG_PREFIX_PREFERRED_GENRE_COPY = "home.copy.preferredGenre.";
 	private static final String MSG_PREFIX_GENRE_NAME = "genre.name.";
 	private static final String MSG_PREFIX_DECADE_COPY = "home.copy.decade.";
 	private static final String MSG_PREFIX_DECADE_LABEL = "home.decade.label.";
@@ -93,6 +105,9 @@ public class HomeViewController {
 	// 배지를 그쪽만 다는 이유는 ContentVO.no에 순위 숫자가 실려 오는 축이 popular뿐이기 때문이다 -
 	// 순위가 비어 서비스가 boxoffice로 폴백해도 no는 적재순 행번호라 배지가 깨지지는 않는다
 	// 고정 2줄도 제목이 로케일마다 달라 static 상수로 둘 수 없다. 매 요청 만든다
+
+	// 선호 장르 목록(평가 편수 내림차순)에서 선반이 쓸 자리. 1위 한 줄만 쓴다
+	private static final int PREFERRED_GENRE_RANK = 0;
 
 	// @RequestParam의 defaultValue는 문자열만 받는다
 	private static final String FIRST_PAGE_NO = "1";
@@ -111,6 +126,8 @@ public class HomeViewController {
 	private final ContentService contentService;
 	private final GenreService genreService;
 	private final ContentCreditService contentCreditService;
+	// 선호 장르 집계는 MEMBER_CONTENT를 읽는다 - 담당 밖 테이블이라 팀원 서비스를 호출만 한다
+	private final MemberContentService memberContentService;
 	private final MessageSource messageSource;
 	private final LocaleTextHelper localeText;
 
@@ -118,11 +135,13 @@ public class HomeViewController {
 			ContentService contentService,
 			GenreService genreService,
 			ContentCreditService contentCreditService,
+			MemberContentService memberContentService,
 			MessageSource messageSource,
 			LocaleTextHelper localeText) {
 		this.contentService = contentService;
 		this.genreService = genreService;
 		this.contentCreditService = contentCreditService;
+		this.memberContentService = memberContentService;
 		this.messageSource = messageSource;
 		this.localeText = localeText;
 	}
@@ -132,6 +151,8 @@ public class HomeViewController {
 	 * Method Name : home
 	 * Description : 메인화면(H-01). 선반 6줄이며 비거나 실패한 선반은 통째로 빠진다.
 	 *               순서는 박스오피스 - 장르 - 감독 - 배우 - 연대 - 최신 개봉작이다.
+	 *               둘째 줄만 회원과 비회원이 다르다 - 회원은 본인이 가장 많이 평가한 장르이고,
+	 *               비회원이거나 평가 이력이 없거나 그 줄이 비면 아래 랜덤 장르로 떨어진다.
 	 *               가운데 넷은 대상이 매 요청 정해진다 - 연대는 랜덤,
 	 *               장르는 인기순위가 한 화면(7건) 이상 잡힌 장르 중 랜덤,
 	 *               감독과 배우는 박스오피스 순위 500편 안에서 참여가 가장 많은 인물이다.
@@ -155,7 +176,11 @@ public class HomeViewController {
 		List<Shelf> shelves = new ArrayList<>();
 		// 한 섹션이 비어도 나머지는 그려야 한다(정의서 H-04 "빈 섹션 숨김")
 		addShelf(shelves, getBoxOfficeSpec(), pageNo);
-		addShelf(shelves, getGenreSpec(), pageNo);
+		// 회원은 본인이 가장 많이 평가한 장르로 이 줄을 채운다.
+		// 비회원·평가 이력 없음·집계 실패·결과 0건은 전부 여기서 false가 되어 랜덤 장르로 떨어진다
+		if (!addShelf(shelves, getPreferredGenreSpec(), pageNo)) {
+			addShelf(shelves, getGenreSpec(), pageNo);
+		}
 		addShelf(shelves, getPersonSpec(ROLE_DIRECTOR, MSG_SHELF_DIRECTOR), pageNo);
 		addShelf(shelves, getPersonSpec(ROLE_ACTOR, MSG_SHELF_ACTOR), pageNo);
 		addShelf(shelves, getDecadeSpec(), pageNo);
@@ -191,11 +216,12 @@ public class HomeViewController {
 		}
 	}
 
-	// 선반 하나를 조회해 목록에 담는다. 비거나 대상을 못 정했거나 조회가 실패한 선반은 담지 않는다
-	private void addShelf(List<Shelf> shelves, ShelfSpec spec, int pageNo) {
+	// 선반 하나를 조회해 목록에 담는다. 비거나 대상을 못 정했거나 조회가 실패한 선반은 담지 않는다.
+	// 담겼는지를 돌려주는 것은 선호 장르 줄이 비었을 때 랜덤 장르로 갈아탈 자리가 필요해서다
+	private boolean addShelf(List<Shelf> shelves, ShelfSpec spec, int pageNo) {
 		// 큐레이션 빌더가 대상을 못 정하면 null을 준다. 그 줄만 빠진다
 		if (spec == null) {
-			return;
+			return false;
 		}
 
 		DTO param = new DTO();
@@ -214,14 +240,88 @@ public class HomeViewController {
 			movies = contentService.retrieve(param);
 		} catch (RuntimeException e) {
 			log.warn("선반 조회 실패로 건너뜁니다. title={}", spec.getTitle(), e);
-			return;
+			return false;
 		}
 
 		if (movies.isEmpty()) {
-			return;
+			return false;
 		}
 
 		shelves.add(new Shelf(spec, movies));
+
+		return true;
+	}
+
+	/*
+	 * 회원 선반 - 본인이 가장 많이 평가한 장르로 채운다. 대상을 못 정하면 null이고 그때는 랜덤 장르가 대신 선다.
+	 * 집계는 마이페이지 선호 장르와 같은 계약(MemberContentService.retrieveGenrePreference)을 그대로 쓴다 -
+	 * MEMBER_CONTENT는 담당 밖이라 우리가 SQL을 따로 만들지 않는다.
+	 * "선호"의 기준은 별점을 준 편수이지 점수가 아니다(1점을 준 영화도 5점과 같게 센다).
+	 */
+	private ShelfSpec getPreferredGenreSpec() {
+		// 회원 번호와 닉네임을 같이 쓰므로 인증 정보를 통째로 받는다.
+		// LoginMemberHelper.getMemberId()는 비로그인에 예외를 던져 홈에서는 쓸 수 없다
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		// 닉네임이 제목의 절반이라 비어 있으면 이 줄을 만들지 않는다 - 랜덤 장르가 대신 선다
+		if (loginMember == null || !StringUtils.hasText(loginMember.getNickname())) {
+			return null;
+		}
+
+		List<GenrePreferenceVO> preferences;
+
+		try {
+			preferences = memberContentService.retrieveGenrePreference(
+					Math.toIntExact(loginMember.getMemberId()));
+		} catch (RuntimeException e) {
+			// 다른 선반 빌더와 같은 처리다. 개인화만 포기하고 랜덤 장르로 떨어진다
+			log.warn("선호 장르 집계 실패로 랜덤 장르 선반으로 대체합니다.", e);
+			return null;
+		}
+
+		// 평가 이력이 없는 회원은 빈 목록이다
+		if (preferences == null || preferences.size() <= PREFERRED_GENRE_RANK) {
+			return null;
+		}
+
+		int genreId = preferences.get(PREFERRED_GENRE_RANK).getGenreId();
+		// 제목 키가 external_genre_id로 걸려 있어 GENRE 한 줄을 더 읽어야 한다.
+		// 집계 결과에는 내부 id와 한국어 이름만 실려 온다
+		GenreVO genre = findGenre(genreId);
+
+		if (genre == null) {
+			return null;
+		}
+
+		return toCurationSpec(
+				toPreferredGenreTitle(genre, loginMember.getNickname()),
+				hasEnoughRank(genreId) ? SORT_POPULAR : SORT_BOX_OFFICE,
+				Map.of(SEARCH_KEY_RELEASED, RELEASED_ONLY,
+						SEARCH_KEY_GENRE_ID, String.valueOf(genreId)));
+	}
+
+	// 내부 장르 번호로 GENRE 한 줄을 찾는다. 목록을 못 읽거나 없는 번호면 null
+	private GenreVO findGenre(int genreId) {
+		List<GenreVO> genres;
+
+		try {
+			genres = genreService.retrieveAll();
+		} catch (RuntimeException e) {
+			log.warn("장르 목록 조회 실패로 선호 장르 선반을 건너뜁니다. genreId={}", genreId, e);
+			return null;
+		}
+
+		if (genres == null) {
+			return null;
+		}
+
+		for (GenreVO genre : genres) {
+			if (genre.getGenreId() == genreId) {
+				return genre;
+			}
+		}
+
+		return null;
 	}
 
 	// 장르 선반 - 순위 목록이 한 화면을 채울 만큼 있는 장르 중 매 요청 하나를 뽑는다. 못 뽑으면 null.
@@ -261,12 +361,35 @@ public class HomeViewController {
 		List<GenreVO> rankedGenres = new ArrayList<>();
 
 		for (GenreVO genre : genres) {
-			if (contentService.retrieveRank(genre.getGenreId()).size() >= CURATION_PER_VIEW) {
+			if (hasEnoughRank(genre.getGenreId())) {
 				rankedGenres.add(genre);
 			}
 		}
 
 		return rankedGenres;
+	}
+
+	// 그 장르의 인기순위가 한 화면을 채우는지. 선호 장르 줄과 랜덤 장르 줄이 같은 기준으로 정렬축을 고른다
+	private boolean hasEnoughRank(int genreId) {
+		return contentService.retrieveRank(genreId).size() >= CURATION_PER_VIEW;
+	}
+
+	/*
+	 * 선호 장르 줄 제목. 장르마다 다른 문장을 쓰되, 카피 표에 없는 장르는 기본 문구로 떨어진다.
+	 * 랜덤 줄(toCurationTitle)이 "{카피} {장르} 추천작!"으로 조립하는 것과 달리
+	 * 여기서는 카피 한 줄이 닉네임 자리까지 갖는다 - 장르마다 말투를 다르게 하려는 것이다.
+	 */
+	private String toPreferredGenreTitle(GenreVO genre, String nickname) {
+		String label = toLabel(MSG_PREFIX_GENRE_NAME + genre.getExternalGenreId(), genre.getName());
+		// 없을 때를 null로 받아야 폴백을 가릴 수 있다. 기본값에 코드를 넣으면 키 문자열이 화면에 나간다
+		String copy = messageSource.getMessage(
+				MSG_PREFIX_PREFERRED_GENRE_COPY + genre.getExternalGenreId(),
+				new Object[] { nickname, label }, null, LocaleContextHolder.getLocale());
+
+		String body = copy != null ? copy : toMessage(MSG_SHELF_PREFERRED_GENRE, nickname, label);
+
+		// 꼬릿말은 장르를 안 가리고 같은 것을 쓴다 - 카피 19줄에 같은 꼬리를 19번 적지 않으려는 것이다
+		return toMessage(MSG_SHELF_PREFERRED_GENRE_TAIL, body);
 	}
 
 	// "{카피} {대상} 추천작!"을 만든다. 번들에 카피 키가 없는 대상은 기본 문구로 떨어진다

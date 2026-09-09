@@ -219,14 +219,19 @@
         const nameOrg = $("#nameOrg");
         const externalId = $("#externalId");
 
-        // ACT-AD-006 - 원문명·외부ID는 DB가 NOT NULL이라 필수다. 서버도 같은 규칙을 막는다
-        function syncSaveButton() {
-            saveButton.disabled = !nameOrg.value.trim() || !externalId.value.trim();
-        }
+        /*
+         * ACT-AD-006 - 원문명·외부ID는 DB가 NOT NULL이라 필수다. 서버도 같은 규칙을 막는다.
+         * 예전에는 둘이 빌 때 저장 버튼을 잠갔는데, 눌러도 아무 일이 없어 무엇이 모자란지 알 수 없었다.
+         * 지금은 항상 누를 수 있게 두고 눌렀을 때 빈 항목을 이름으로 알려 준다.
+         * 조사가 달라 라벨마다 같이 들고 다닌다("원문명을" / "외부 ID를").
+         */
+        const REQUIRED_FIELDS = [
+            { input: nameOrg, label: "원문명", particle: "을" },
+            { input: externalId, label: "외부 ID", particle: "를" }
+        ];
 
-        nameOrg.addEventListener("input", syncSaveButton);
-        externalId.addEventListener("input", syncSaveButton);
-        syncSaveButton();
+        // TMDB 인물 ID는 숫자다. 주소나 이름을 통째로 붙여 넣는 실수를 저장 전에 잡는다
+        const EXTERNAL_ID_PATTERN = /^[0-9]+$/;
 
         $("#cancelButton").addEventListener("click", () => {
             location.href = ADMIN_PEOPLE_PATH;
@@ -236,15 +241,23 @@
             event.preventDefault();
             errorBox.hidden = true;
 
-            if (!nameOrg.value.trim()) {
-                errorBox.textContent = "원문명을 입력해 주세요.";
+            const missing = REQUIRED_FIELDS.filter((field) => !field.input.value.trim());
+
+            if (missing.length > 0) {
+                // 하나씩 알리면 저장을 두 번 눌러야 둘 다 안다. 한 문장으로 묶는다
+                const names = missing.map((field) => field.label).join("과 ");
+                const particle = missing[missing.length - 1].particle;
+
+                errorBox.textContent = names + particle + " 채워 주세요.";
                 errorBox.hidden = false;
-                nameOrg.focus();
+                missing[0].input.focus();
                 return;
             }
 
-            if (!externalId.value.trim()) {
-                errorBox.textContent = "외부 ID를 입력해 주세요.";
+            if (!EXTERNAL_ID_PATTERN.test(externalId.value.trim())) {
+                // 직접 정해 넣는 경우까지 막지 않도록, 숫자이기만 하면 통과시킨다
+                errorBox.textContent =
+                    "외부 ID는 숫자만 넣습니다. TMDB에 없는 인물이면 겹치지 않는 숫자를 직접 정해 주세요.";
                 errorBox.hidden = false;
                 externalId.focus();
                 return;
@@ -279,7 +292,7 @@
                 errorBox.textContent = error.message;
                 errorBox.hidden = false;
                 saveButton.textContent = "저장";
-                syncSaveButton();
+                saveButton.disabled = false;
             }
         });
 

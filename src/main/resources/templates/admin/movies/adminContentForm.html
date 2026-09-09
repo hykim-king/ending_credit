@@ -1,22 +1,26 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>영화 등록 | END IT ADMIN</title>
 
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-    <!-- 사이드바(admin_side)가 쓰는 .admin-side 스킨이 endit.css에 있다.
-         목록 화면은 공용 레이아웃이 실어 주지만 이 화면은 레이아웃을 안 써서 직접 싣는다 -->
-    <link rel="stylesheet" href="/assets/css/endit.css">
     <link rel="stylesheet" href="/assets/css/admin/movies.css">
 </head>
 <body data-page="admin-content-form">
 
-<div class="admin-layout">
-    <aside th:replace="~{fragments/admin_side :: admin_side('movies')}">side</aside>
+<div layout:fragment="content">
 
-    <main class="admin-content">
+    <div class="d-flex gap-3">
+
+        <aside th:replace="~{fragments/admin_side :: admin_side('movies')}">
+            side
+        </aside>
+
+        <div class="admin-content flex-grow-1" style="min-width: 0;">
         <h1 class="admin-page-title">영화 등록</h1>
 
         <!--
@@ -39,11 +43,12 @@
                                     aria-label="TMDB 영화 ID 받는 곳 안내">?</button>
                         </div>
                         <div class="field-with-button">
-                            <input type="text" id="externalId" maxlength="50" placeholder="TMDB 영화 ID">
+                            <input type="text" id="externalId" maxlength="50" inputmode="numeric"
+                                   placeholder="TMDB 영화 ID">
                             <button type="button" class="outline-button" id="checkButton">중복 확인</button>
                         </div>
                         <p class="check-result" id="checkResult" hidden></p>
-                        <p class="form-hint">이미 등록된 ID면 저장할 때 막힙니다.</p>
+                        <p class="form-hint">숫자만 넣습니다. 이미 등록된 ID면 저장할 때 막힙니다.</p>
                     </div>
 
                     <div class="field">
@@ -111,7 +116,12 @@
             </section>
 
             <section class="form-section">
-                <h2>갤러리 이미지</h2>
+                <div class="section-label">
+                    <h2>갤러리 이미지</h2>
+                    <!-- 외부 ID와 같은 이유다 - 이미지 주소를 어디서 복사해 오는지 몰라 비워 두는 일이 많다 -->
+                    <button type="button" class="hint-button" id="imageHelp"
+                            aria-label="이미지 주소 넣는 법 안내">?</button>
+                </div>
                 <p class="form-hint">비워 둔 줄은 저장하지 않습니다.</p>
 
                 <div class="image-rows" id="imageRows"></div>
@@ -176,9 +186,30 @@
             <div class="form-actions">
                 <button type="button" class="outline-button" id="cancelButton">취소</button>
                 <!-- 제목과 외부 ID를 채워야 활성화된다. 서버도 같은 규칙을 막는다 -->
-                <button type="submit" class="primary-button" id="saveButton" disabled>등록</button>
+                <!-- 항상 누를 수 있다. 필수 항목이 비거나 형식이 틀리면 위 form-error가 이유를 알린다 -->
+                <button type="submit" class="primary-button" id="saveButton">등록</button>
             </div>
         </form>
+
+        <!-- 이미지 주소 안내 - 외부 ID 안내와 같은 이유로 form 밖에 둔다 -->
+        <dialog class="help-dialog" id="imageHelpDialog">
+            <h2>이미지 주소는 어떻게 넣나요?</h2>
+            <ol>
+                <li>
+                    <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer">themoviedb.org</a>에서
+                    해당 영화의 상세 화면으로 들어갑니다.
+                </li>
+                <li>원하는 포스터나 스틸 이미지를 마우스 오른쪽 눌러 <b>이미지를 새 탭에서 열기</b>로 엽니다.</li>
+                <li>주소창의 <code>image.tmdb.org/t/p/original/abc123.jpg</code>를 복사해 그대로 붙여 넣습니다.</li>
+            </ol>
+            <p class="form-hint">
+                전체 URL 대신 <code>/abc123.jpg</code> 같은 TMDB 경로만 넣어도 되고, 다른 사이트의 이미지 주소도 그대로 씁니다.
+                TMDB 전체 URL은 저장할 때 경로로 줄여 담습니다.
+            </p>
+            <form method="dialog" class="help-dialog-actions">
+                <button class="primary-button">닫기</button>
+            </form>
+        </dialog>
 
         <!-- 외부 ID 안내 - form 안에 두면 닫기 버튼의 form이 중첩된다 -->
         <dialog class="help-dialog" id="externalIdHelpDialog">
@@ -198,9 +229,10 @@
                 <button class="primary-button">닫기</button>
             </form>
         </dialog>
-    </main>
-</div>
+        </div>
+    </div>
 
-<script src="/assets/js/admin/movies.js"></script>
+    <script src="/assets/js/admin/movies.js"></script>
+</div>
 </body>
 </html>
