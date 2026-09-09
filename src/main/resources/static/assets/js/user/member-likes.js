@@ -3,6 +3,7 @@
  * 2026. 8. 31. jinyoung - TMDB 이미지 URL 및 페이지네이션 공통 UI 적용
  * 2026. 9. 01. jinyoung - U-07 인물·컬렉션 탭 전환 UI 반영
  * 2026. 9. 03. jinyoung - 인물·컬렉션 조회 카드와 고정형 페이지네이션 UI 정리
+ * 2026. 9. 09. jinyoung - 유형별 최신 요청만 좋아요 캐시와 화면에 반영
  */
 
 // ==================== 좋아요 탭 설정 ====================
@@ -28,7 +29,7 @@ const likePaginationIndicatorState = Object.fromEntries(LIKE_TYPES.map((type) =>
 let activeLikeType = normalizeLikeType(likesPage.dataset.initialType || new URLSearchParams(window.location.search).get("type")
 ); // 현재 탭
 
-let requestSequence = 0; // 이전 비동기 응답 무시용 요청 순번
+const likeRequestSequences = Object.fromEntries(LIKE_TYPES.map((type) => [type, 0])); // 유형별 요청 순번
 
 // ==================== 화면 초기화 및 이벤트 연결 ====================
 document.addEventListener("DOMContentLoaded", () => {
@@ -125,7 +126,7 @@ function configureLikeTypeView() {
 
 /** 유형별 좋아요 목록 조회 */
 async function loadLikes(type, pageNo) {
-    const requestId = ++requestSequence;
+    const requestId = ++likeRequestSequences[type];
 
     likeState[type].pageNo = pageNo;
     showLikeLoading();
@@ -140,13 +141,16 @@ async function loadLikes(type, pageNo) {
 
         const data = await requestGet("/api/members/likes", requestParam);
 
+        if (requestId !== likeRequestSequences[type]) {
+            return;
+        }
         likeState[type].data = data;
 
-        if (requestId === requestSequence && activeLikeType === type) {
+        if (activeLikeType === type) {
             renderLikes(type, data);
         }
     } catch (error) {
-        if (requestId === requestSequence && activeLikeType === type) {
+        if (requestId === likeRequestSequences[type] && activeLikeType === type) {
             showLikeError(error.message);
         }
     }

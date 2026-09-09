@@ -4,6 +4,7 @@
  * 2026. 9. 01. jinyoung - U-03~U-06 4탭 UI와 회원 컬렉션 조회 연결
  * 2026. 9. 03. jinyoung - 작품 정렬·평균 별점·컬렉션 카드 및 더보기 UI 적용
  * 2026. 9. 05. jinyoung - 본인 영화·컬렉션 코멘트 조회와 수정·삭제·좋아요 UI 적용
+ * 2026. 9. 09. jinyoung - 탭별 최신 요청만 기록 목록·캐시·로딩 상태에 반영
  */
 
 // ==================== 기록 탭 설정 ====================
@@ -65,6 +66,8 @@ const recordState = Object.fromEntries(RECORD_TABS.map((tab) => [
     ]));
 // 페이지 표시선의 이전 위치를 보관하는 탭별 상태
 const paginationIndicatorState = Object.fromEntries(RECORD_TABS.map((tab) => [tab, null]));
+// 다른 탭의 캐시는 유지하면서 같은 탭의 오래된 응답을 무시한다.
+const recordRequestSequences = Object.fromEntries(RECORD_TABS.map((tab) => [tab, 0]));
 
 let activeTab = normalizeTab(recordsPage.dataset.initialTab || new URLSearchParams(window.location.search).get("tab")); // 현재 탭
 let commentEditModal;
@@ -186,6 +189,7 @@ function changeSort(sort) {
 
 /** 탭 조회 상태 초기화 */
 function resetTabState(tab, keepSort = false) {
+    recordRequestSequences[tab] += 1;
     const sort = keepSort ? recordState[tab].sort : RECORD_CONFIG[tab].sorts[0]?.[0] || null;
     recordState[tab] = { pageNo: 1, sort, data: null, scrollY: 0 };
 }
@@ -292,15 +296,22 @@ function closeSortMenu(returnFocus = false) {
 /** 탭별 기록 조회 */
 async function loadRecords(tab, pageNo, append = false) {
     const requestTab = tab;
+    const requestId = ++recordRequestSequences[requestTab];
 
     if (append) {
         setLoadMoreLoading(true);
     } else {
+        if (tab === "collections") {
+            setLoadMoreLoading(false);
+        }
         showRecordLoading();
     }
 
     try {
         const data = await requestGet(createRecordEndpoint(tab), createRecordParams(tab, pageNo));
+        if (requestId !== recordRequestSequences[requestTab]) {
+            return;
+        }
         const state = recordState[requestTab];
         const items = Array.isArray(data.items) ? data.items : [];
         // 컬렉션 더보기 요청은 기존 목록 뒤에 새 결과를 이어 붙인다.
@@ -313,11 +324,11 @@ async function loadRecords(tab, pageNo, append = false) {
             renderRecords(requestTab, state.data);
         }
     } catch (error) {
-        if (activeTab === requestTab) {
+        if (requestId === recordRequestSequences[requestTab] && activeTab === requestTab) {
             showRecordError(error.message);
         }
     } finally {
-        if (append) {
+        if (append && requestId === recordRequestSequences[requestTab]) {
             setLoadMoreLoading(false);
         }
     }
