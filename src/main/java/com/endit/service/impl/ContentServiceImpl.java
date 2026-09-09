@@ -1354,8 +1354,7 @@ public class ContentServiceImpl implements ContentService {
 	private String toEscapedSearchWord(DTO param) {
 		String searchWord = param.getSearchWord();
 
-		// 외부 ID 축은 등호 비교라 이스케이프가 오히려 검색어를 망친다
-		if (!StringUtils.hasText(searchWord) || SEARCH_BY_EXTERNAL_ID.equals(param.getSearchDiv())) {
+		if (!StringUtils.hasText(searchWord)) {
 			return searchWord;
 		}
 

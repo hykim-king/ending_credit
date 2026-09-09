@@ -240,10 +240,21 @@
             errorBox.hidden = false;
         }
 
-        // 제목과 외부 ID를 채워야 등록이 열린다. 서버도 같은 값을 필수로 본다
-        function syncSaveButton() {
-            saveButton.disabled = !titleKo.value.trim() || !externalId.value.trim();
-        }
+        /*
+         * 제목과 외부 ID는 서버도 필수로 본다.
+         * 예전에는 둘이 빌 때 등록 버튼을 잠갔는데, 눌러도 아무 일이 없어 무엇이 모자란지 알 수 없었다.
+         * 지금은 항상 누를 수 있게 두고 눌렀을 때 빈 항목을 이름으로 알려 준다(인물 등록과 같은 방식).
+         * 조사가 달라 라벨마다 같이 들고 다닌다("제목을" / "외부 ID를").
+         */
+        const REQUIRED_FIELDS = [
+            { input: titleKo, label: "제목", particle: "을" },
+            { input: externalId, label: "외부 ID", particle: "를" }
+        ];
+
+        // TMDB 영화 ID는 숫자다. 등록과 중복 확인이 같은 규칙을 쓴다
+        const EXTERNAL_ID_PATTERN = /^[0-9]+$/;
+        const EXTERNAL_ID_MESSAGE =
+            "외부 ID는 숫자만 넣습니다. themoviedb.org 주소의 /movie/ 뒤 숫자만 넣으세요.";
 
         /*
          * Enter로 인한 암묵적 제출을 막는다.
@@ -258,26 +269,34 @@
             }
         });
 
-        titleKo.addEventListener("input", syncSaveButton);
         externalId.addEventListener("input", () => {
             // 값이 바뀌면 직전 중복 확인 결과는 더 이상 유효하지 않다
             checkResult.hidden = true;
-            syncSaveButton();
         });
-        syncSaveButton();
 
         // ── 외부 ID 안내 모달 ──
         // <dialog>이라 Esc와 닫기 버튼(form method="dialog")은 브라우저가 처리한다
-        const helpDialog = $("#externalIdHelpDialog");
+        // 물음표 버튼과 안내 모달을 짝지어 연다. 안내가 둘로 늘어 여는 코드를 한 벌로 둔다
+        const bindHelpDialog = (buttonSelector, dialogSelector) => {
+            const button = $(buttonSelector);
+            const dialog = $(dialogSelector);
 
-        $("#externalIdHelp").addEventListener("click", () => helpDialog.showModal());
-
-        // 바깥(백드롭)을 눌러도 닫는다 - 클릭 대상이 dialog 자신이면 내용 밖이다
-        helpDialog.addEventListener("click", (event) => {
-            if (event.target === helpDialog) {
-                helpDialog.close();
+            if (!button || !dialog) {
+                return;
             }
-        });
+
+            button.addEventListener("click", () => dialog.showModal());
+
+            // 바깥(백드롭)을 눌러도 닫는다 - 클릭 대상이 dialog 자신이면 내용 밖이다
+            dialog.addEventListener("click", (event) => {
+                if (event.target === dialog) {
+                    dialog.close();
+                }
+            });
+        };
+
+        bindHelpDialog("#externalIdHelp", "#externalIdHelpDialog");
+        bindHelpDialog("#imageHelp", "#imageHelpDialog");
 
         // ── 외부 ID 중복 확인 (ACT-AD-004) ──
         $("#checkButton").addEventListener("click", async () => {
@@ -286,6 +305,12 @@
 
             if (!value) {
                 showError("외부 ID를 먼저 입력해 주세요.");
+                externalId.focus();
+                return;
+            }
+
+            if (!EXTERNAL_ID_PATTERN.test(value)) {
+                showError(EXTERNAL_ID_MESSAGE);
                 externalId.focus();
                 return;
             }
@@ -488,14 +513,19 @@
             event.preventDefault();
             errorBox.hidden = true;
 
-            if (!titleKo.value.trim()) {
-                showError("제목을 입력해 주세요.");
-                titleKo.focus();
+            const missing = REQUIRED_FIELDS.filter((field) => !field.input.value.trim());
+
+            if (missing.length > 0) {
+                // 하나씩 알리면 등록을 두 번 눌러야 둘 다 안다. 한 문장으로 묶는다
+                const names = missing.map((field) => field.label).join("과 ");
+
+                showError(names + missing[missing.length - 1].particle + " 채워 주세요.");
+                missing[0].input.focus();
                 return;
             }
 
-            if (!externalId.value.trim()) {
-                showError("외부 ID를 입력해 주세요.");
+            if (!EXTERNAL_ID_PATTERN.test(externalId.value.trim())) {
+                showError(EXTERNAL_ID_MESSAGE);
                 externalId.focus();
                 return;
             }
@@ -545,7 +575,7 @@
             } catch (error) {
                 showError(error.message);
                 saveButton.textContent = "등록";
-                syncSaveButton();
+                saveButton.disabled = false;
             }
         });
     }
