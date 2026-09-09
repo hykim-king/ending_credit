@@ -4,7 +4,7 @@
  * 경로 규칙(2조 SecurityConfig): 관리자 기능은 /admin/** 아래여야 ADMIN 보호를 받는다
  * → 접수(doSave)만 회원 경로(/report), 목록·상세·처리·승인은 /admin/report/**.
  * ⚠️ 회원 인증(2조 시큐리티 설정)이 아직 준비되지 않아 신고자·처리자 ID는 폼 값으로 받는다.
- * 시큐리티 도입 후 LoginMemberHelper 기반으로 교체할 것.
+ * 신고자(reportMemberId)는 폼 값을 믿지 않고 로그인 세션에서 꺼낸다.
  */
 package com.endit.controller;
 
@@ -23,11 +23,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.endit.cmn.CodeUtil;
 import com.endit.cmn.DTO;
+import com.endit.auth.AuthenticationRequiredException;
+import com.endit.cmn.LoginMember;
 import com.endit.cmn.MessageVO;
 import com.endit.cmn.exception.ReportNotFoundException;
 import com.endit.domain.CodeVO;
 import com.endit.domain.ReportCommentVO;
 import com.endit.service.CodeService;
+import com.endit.security.LoginMemberHelper;
 import com.endit.service.ReportCommentService;
 
 @Controller
@@ -158,6 +161,9 @@ public class ReportCommentController {
 		log.debug("param: {}", param);
 		log.debug("=============================");
 
+		// 폼이 보낸 reportMemberId는 위조될 수 있어 쓰지 않는다
+		param.setReportMemberId(requireLoginMemberId());
+
 		int flag = reportCommentService.doSave(param);
 		String message = 1 == flag ? "신고가 접수 되었습니다." : "신고 접수에 실패 했습니다.";
 
@@ -214,6 +220,27 @@ public class ReportCommentController {
 		String message = 1 == flag ? "신고를 승인했습니다. 해당 댓글은 목록에서 안내 문구로 가려집니다." : "신고 승인에 실패 했습니다.";
 
 		return new MessageVO(flag + "", message);
+	}
+
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : requireLoginMemberId
+	 * Description : 현재 로그인 회원 번호를 돌려준다. 비로그인이면 401로 끊는다.
+	 *
+	 * </pre>
+	 *
+	 * @return 로그인 회원 번호
+	 */
+	private long requireLoginMemberId() {
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+
+		if (null == loginMember || null == loginMember.getMemberId()) {
+			throw new AuthenticationRequiredException("로그인이 필요한 기능입니다.");
+		}
+
+		return loginMember.getMemberId();
 	}
 
 }

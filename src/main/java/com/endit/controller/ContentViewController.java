@@ -347,9 +347,8 @@ public class ContentViewController {
 		// 평가 0건이면 0.0이 아니라 "없음"이어야 한다(정의서 C-01 빈 상태)
 		model.addAttribute("ratingAverage", raters == 0 ? null : average);
 		model.addAttribute("raterCount", raters);
+		// 눈금 상한은 Chart.js가 데이터에서 잡는다 - 서버가 최댓값을 따로 넘기지 않는다
 		model.addAttribute("ratingCounts", counts);
-		// 막대 길이는 가장 많은 점수를 100%로 잡는다. 총원 대비로 하면 고른 분포가 전부 짧아져 형태가 안 보인다
-		model.addAttribute("ratingMaxCount", Collections.max(counts.values()));
 	}
 
 	// 1~5점 자리를 0으로 채운 눈금

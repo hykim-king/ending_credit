@@ -402,6 +402,22 @@ a {
 	font-family: Arial, "Noto Sans KR", sans-serif;
 }
 
+/* 레이아웃 - 사이드바(.admin-side, endit.css) + 본문 2열.
+   목록 화면은 공용 레이아웃의 d-flex를 쓰지만 상세·등록 화면은 이 규칙이 유일한 뼈대다.
+   2026-09-04 머지에서 어두운 사이드바 스킨을 걷어낼 때 이 두 규칙까지 함께 지워져
+   두 화면이 사이드바 아래로 무너져 있었다(아래 900px 미디어쿼리는 이 규칙을 전제로 남아 있었다). */
+.admin-layout {
+	min-height: 100vh;
+	display: grid;
+	grid-template-columns: 190px 1fr;
+	gap: 20px;
+	padding: 24px;
+}
+
+.admin-content {
+	min-width: 0;
+}
+
 /* 하단 여백은 브랜드바가 갖는다 - 로고에 그대로 두면 선까지 같이 내려간다 */
 .admin-brandbar .admin-logo {
 	margin-bottom: 0;

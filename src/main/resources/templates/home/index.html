@@ -6,6 +6,7 @@ layout:decorate="~{layout/layout}">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title th:text="#{home.title}">홈</title>
+<link rel="stylesheet" th:href="@{/assets/css/common/scroll-top.css}">
 <style>
     /* 캐러셀 - detail.html 갤러리와 같은 골격(clip + track + translateX) */
     /* 선반 사이 간격. 부트스트랩 mb-5(3rem)에서 3분의 1쯤 줄였다 */
@@ -122,8 +123,8 @@ layout:decorate="~{layout/layout}">
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #6B6577;
-        font-size: .8rem;
+        color: #A49EB1;
+        font-size: 2rem;
     }
     /* 로딩에 실패한 포스터는 빈 자리와 같은 회색 판으로 남긴다 */
     .poster-error {
@@ -212,40 +213,6 @@ layout:decorate="~{layout/layout}">
         }
     }
 
-    /* 선반이 여섯 줄이라 아래로 내려가면 헤더가 멀다. 스크롤이 THRESHOLD를 넘을 때만 JS가 띄운다 */
-    .scroll-top {
-        position: fixed;
-        right: 24px;
-        bottom: 24px;
-        /* 접근성 원칙의 44px 터치 영역. 원 자체를 그만큼 그린다 */
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        border: none;
-        background: var(--endit-primary);
-        color: #fff;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
-        cursor: pointer;
-        z-index: 3;
-    }
-    .scroll-top:hover {
-        background: var(--endit-hover);
-    }
-    .scroll-top:active {
-        background: var(--endit-active);
-    }
-    .scroll-top:focus-visible {
-        outline: 3px solid #D8D1FF;
-        outline-offset: 2px;
-    }
-    /* display:flex가 hidden을 덮어쓴다(.shelf-nav과 같은 함정) */
-    .scroll-top[hidden] {
-        display: none;
-    }
 </style>
 </head>
 <body>
@@ -276,7 +243,8 @@ layout:decorate="~{layout/layout}">
                                          th:alt="${@localeText.get(movie.titleKo, movie.titleOrg)}"
                                          loading="lazy"
                                          onerror="this.onerror = null; this.classList.add('poster-error');">
-                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty" th:text="#{home.card.noImage}">이미지 없음</div>
+                                    <div th:if="${#strings.isEmpty(movie.posterUrl)}" class="poster-empty"
+                                         th:title="#{home.card.noImage}" title="이미지 없음"><i class="bi bi-film" aria-hidden="true"></i></div>
 
                                     <!-- no는 인기 순 경로에서만 순위 숫자다(ContentServiceImpl.retrievePopular) -->
                                     <span th:if="${shelf.ranked}" class="rank-badge" th:text="${movie.no}">1</span>
@@ -314,11 +282,9 @@ layout:decorate="~{layout/layout}">
 
         </section>
 
-        <!-- 맨 위로. 처음에는 감춰 두고 스크롤이 내려간 뒤에만 JS가 띄운다 -->
-        <button type="button" class="scroll-top" id="scrollTopButton" hidden
-                th:aria-label="#{home.scrollTop}" aria-label="맨 위로">
-            <i class="bi bi-arrow-up" aria-hidden="true"></i>
-        </button>
+        <!-- 맨 위로. 마크업·CSS·동작 모두 공용 한 벌이다(fragments/scroll_top) -->
+        <div th:replace="~{fragments/scroll_top :: button}"></div>
+        <script th:src="@{/assets/js/common/scroll-top.js}"></script>
 
         <script th:src="@{/assets/js/common/carousel.js}"></script>
         <script>
@@ -343,24 +309,6 @@ layout:decorate="~{layout/layout}">
                         onUpdate: window.enditCarousel.centerNavOn('.poster-wrap')
                     });
                 });
-
-                // 선반 여섯 줄이라 아래에서 헤더까지 되돌아가는 거리가 길다
-                var SCROLL_TOP_THRESHOLD = 150;
-                var topButton = document.getElementById('scrollTopButton');
-
-                function updateTopButton() {
-                    topButton.hidden = window.scrollY < SCROLL_TOP_THRESHOLD;
-                }
-
-                if (topButton) {
-                    // 스크롤마다 부르므로 passive로 둔다 - 여기서 기본 동작을 막을 일이 없다
-                    window.addEventListener('scroll', updateTopButton, { passive: true });
-                    topButton.addEventListener('click', function () {
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    });
-                    // 새로고침이 화면 중간에서 되살아나는 경우가 있어 처음에도 한 번 본다
-                    updateTopButton();
-                }
             });
         </script>
 

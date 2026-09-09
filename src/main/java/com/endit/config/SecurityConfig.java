@@ -1,5 +1,7 @@
 package com.endit.config;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +28,8 @@ import com.endit.security.OAuth2SuccessHandler;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 9. 05. jinyoung    회원 기록 댓글 API를 로그인 필수 경로로 추가
+ * 2026. 9. 08. 홍선기      코멘트·좋아요·신고 쓰기 경로를 로그인 필수로 추가,
+ *                          비동기 경로는 로그인 화면 대신 401 JSON을 주도록 예외 처리 추가
  * ------------------------------------------------------------
  * </pre>
  */
@@ -99,6 +103,10 @@ public class SecurityConfig {
 				.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
 				.requestMatchers(HttpMethod.DELETE, "/api/collections/**").authenticated()
 				.requestMatchers(HttpMethod.GET, "/api/collections/*/likes").authenticated()
+				// 코멘트 등록·수정·삭제와 좋아요·신고 접수 (목록 조회는 비회원도 본다)
+				.requestMatchers(HttpMethod.POST,
+						"/comment/doSave", "/comment/doUpdate", "/comment/doDelete",
+						"/commentLike/upToggleLike", "/report/doSave").authenticated()
 				// 그 외 모든 요청은 개발 편의상 일단 전부 허용
 				.anyRequest().permitAll()
 			)
@@ -135,7 +143,27 @@ public class SecurityConfig {
 			// ── 4) 로그인 검증에 쓸 UserDetailsService 연결 ──
 			.userDetailsService(userDetailsService)
 
-			// ── 5) CSRF: 개발 편의를 위해 지금은 끔 ──
+			// ── 5) 인증 실패 응답 ──
+			// 비동기(fetch) 경로가 로그인 화면 HTML을 받으면 JSON 파싱에서 깨진다.
+			// 그래서 그 경로만 401 JSON으로 끊고, 나머지 화면 요청은 종전대로 로그인 화면으로 보낸다
+			.exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, authException) -> {
+				String uri = request.getRequestURI();
+				boolean isAsyncPath = uri.startsWith("/comment/do")
+						|| uri.startsWith("/commentLike/")
+						|| uri.equals("/report/doSave");
+
+				if (false == isAsyncPath) {
+					response.sendRedirect(request.getContextPath() + "/login");
+					return;
+				}
+
+				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+				response.setContentType("application/json;charset=UTF-8");
+				response.getWriter().write(
+						"{\"id\":\"0\",\"message\":\"로그인이 필요한 기능입니다.\",\"detailMessage\":\"\"}");
+			}))
+
+			// ── 6) CSRF: 개발 편의를 위해 지금은 끔 ──
 			.csrf(csrf -> csrf.disable());
 
 		return http.build();

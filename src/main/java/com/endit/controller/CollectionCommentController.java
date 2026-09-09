@@ -160,6 +160,8 @@ public class CollectionCommentController {
 
 		UserCommentVO comment = new UserCommentVO();
 		comment.setCommentId(commentId);
+		// 매퍼가 작성자 본인만 수정하도록 member_id를 함께 본다(위 requireCommentOwner와 같은 값)
+		comment.setMemberId(memberId);
 		comment.setCommentDetail(normalizeCommentDetail(request));
 		comment.setSpoiler(normalizeSpoiler(request));
 
