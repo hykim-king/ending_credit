@@ -6,6 +6,7 @@
  * 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
  * 2026. 9. 05. jinyoung - 컬렉션 댓글 작성·대표 댓글·전체 댓글 모달 적용
  * 2026. 9. 07. jinyoung - 댓글 상대 작성일·좋아요·수정·삭제·신고 적용
+ * 2026. 9. 09. jinyoung - 좋아요 상태 조회 실패 시 작품·댓글 조회 유지 및 좋아요 변경 차단
  */
 // ==================== 설정과 화면 상태 ====================
 
@@ -25,6 +26,7 @@ let currentItemPage = 0;
 let totalItemCount = 0;
 let isOwner = false;
 let isLiked = false;
+let isLikeStatusLoaded = false;
 let isPublicCollection = false;
 let copyFeedbackTimer = null;
 let currentCommentsPage = 0;
@@ -115,7 +117,7 @@ function applyActionVisibility() {
     const likeButton = document.querySelector("#likeButton");
 
     document.querySelector("#ownerActions").classList.toggle("d-none", !isOwner);
-    likeButton.disabled = currentMemberId <= 0;
+    likeButton.disabled = currentMemberId <= 0 || (!isOwner && !isLikeStatusLoaded);
     likeButton.title = currentMemberId <= 0 ? "로그인 후 좋아요를 누를 수 있습니다." : (isOwner ? "자신의 컬렉션에는 좋아요를 누를 수 없습니다." : "");
 }
 
@@ -172,11 +174,30 @@ function copyLinkWithTemporaryInput(link) {
     }
 }
 
-/** 현재 회원의 좋아요 여부를 조회해 토글 버튼 상태를 맞춘다. */
+/** 좋아요 상태 조회 실패를 별도로 처리하여 작품·댓글 조회를 계속한다. */
 async function loadLikeStatus() {
-    const status = await requestGet(`/api/collections/${collectionId}/likes`);
-    isLiked = status.liked === true;
-    renderLikeButton();
+    const likeButton = document.querySelector("#likeButton");
+    isLikeStatusLoaded = false;
+    likeButton.disabled = true;
+
+    try {
+        const status = await requestGet(`/api/collections/${collectionId}/likes`);
+        if (typeof status?.liked !== "boolean") {
+            throw new Error("좋아요 상태를 확인할 수 없습니다.");
+        }
+        isLiked = status.liked;
+        isLikeStatusLoaded = true;
+        likeButton.title = "";
+        renderLikeButton();
+    } catch (error) {
+        const message = "좋아요 상태를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.";
+        likeButton.removeAttribute("aria-pressed");
+        likeButton.setAttribute("aria-label", "좋아요 상태 조회 실패");
+        likeButton.title = message;
+        showDetailError(document.querySelector("#errorMessage"), message);
+    } finally {
+        likeButton.disabled = !isLikeStatusLoaded;
+    }
 }
 
 /** 현재 좋아요 상태를 버튼 아이콘과 접근성 속성에 반영한다. */
@@ -199,6 +220,10 @@ async function toggleLike() {
 
     if (isOwner) {
         showCopyFeedback("내 컬렉션에는 좋아요를 누를 수 없어요.");
+        return;
+    }
+
+    if (currentMemberId <= 0 || !isLikeStatusLoaded) {
         return;
     }
 
