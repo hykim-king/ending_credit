@@ -18,7 +18,7 @@
         /* ── 프로필 헤더 ── */
         .mypage-head {
             display: flex;
-            align-items: flex-start;   /* 소개가 여러 줄이어도 위쪽 기준 정렬 */
+            align-items: center;   /* 아바타와 이름·소개를 세로 가운데 정렬 */
             gap: 20px;
             margin-bottom: 32px;
         }
@@ -47,13 +47,21 @@
             font-size: 24px;
             font-weight: 700;
             margin: 0 0 6px;
+            line-height: 1.2;
         }
         .mypage-intro {
             color: #6b7280;
             font-size: 15px;
             margin: 0;
+            line-height: 1.4;
             white-space: pre-wrap;    /* 줄바꿈 유지 */
             word-break: break-word;   /* 긴 단어도 줄바꿈 */
+        }
+        /* 이름+소개 묶음을 세로 가운데로 (아바타 중앙 높이에 이름이 오게) */
+        .mypage-head .flex-grow-1 {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         /* 설정 버튼: 소개가 길어도 찌그러지거나 줄바꿈되지 않게 */
         .mypage-head .btn {
@@ -335,6 +343,7 @@
         <!-- ===== 별점 분포 ===== -->
         <section id="ratingSection" class="rating-box d-none">
             <div class="rating-box-title">별점 분포</div>
+            <p id="ratingEmpty" class="text-muted text-center d-none" style="margin-bottom:16px;">아직 평가한 영화가 없어요 ㅠㅠ</p>
             <div class="rating-bars" id="ratingBars"></div>
             <div class="rating-stats">
                 <div class="rating-stat">
@@ -638,13 +647,17 @@
                 if (!res.ok) return;
                 const d = await res.json();
 
-                if (!d.total) return;   // 평가 없으면 섹션 숨김
+                section.classList.remove('d-none');   // 평가 없어도 섹션은 표시
 
-                // 막대 높이는 최댓값 기준 비율로. dist = [1점,2점,3점,4점,5점]
                 const dist = d.dist || [0,0,0,0,0];
+                const total = d.total || 0;
+
+                // 평가 없으면 안내 문구 + 0으로
+                const emptyMsg = document.getElementById('ratingEmpty');
+                emptyMsg.classList.toggle('d-none', total > 0);
+
                 const max = Math.max(...dist, 1);   // 0으로 나눔 방지
-                const bars = document.getElementById('ratingBars');
-                bars.innerHTML = dist.map((cnt, i) => `
+                document.getElementById('ratingBars').innerHTML = dist.map((cnt, i) => `
                     <div class="rating-bar-col">
                         <div class="rating-bar-cnt">${cnt > 0 ? cnt : ''}</div>
                         <div class="rating-bar" style="height:${(cnt / max) * 100}%"></div>
@@ -653,10 +666,8 @@
                 `).join('');
 
                 document.getElementById('ratingAvg').textContent = d.average ?? '0.0';
-                document.getElementById('ratingTotal').textContent = d.total ?? 0;
+                document.getElementById('ratingTotal').textContent = total;
                 document.getElementById('ratingTop').textContent = d.topScore ? d.topScore + '점' : '-';
-
-                section.classList.remove('d-none');
             } catch (e) {
                 console.error('별점 분포 조회 실패', e);
             }
@@ -696,8 +707,14 @@
                 const d = await res.json();
 
                 const topGenre = d.topGenre;
-                // 평가한 영화가 없으면 섹션 자체를 숨김
-                if (!topGenre) return;
+                section.classList.remove('d-none');   // 항상 표시
+
+                // 평가 없으면 중립 멘트, TOP3 비움
+                if (!topGenre) {
+                    document.getElementById('genreComment').textContent = '당신의 취향은 아직 미스터리 🎬';
+                    document.getElementById('genreRanks').innerHTML = '';
+                    return;
+                }
 
                 // 멘트: 매핑에 있으면 그 멘트, 없으면 기본 멘트
                 const comment = GENRE_COMMENTS[topGenre] || `${topGenre} 애호가시군요! 🎬`;
@@ -708,8 +725,6 @@
                 document.getElementById('genreRanks').innerHTML = top3.map(g => `
                     <span class="genre-rank">${escapeHtml(g.genreName)}<span class="cnt">${g.ratedCnt}</span></span>
                 `).join('');
-
-                section.classList.remove('d-none');   // 데이터 있을 때만 표시
             } catch (e) {
                 console.error('선호 장르 조회 실패', e);
             }
