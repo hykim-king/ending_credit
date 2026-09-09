@@ -285,6 +285,163 @@ public class MemberMyPageApiController {
 
 		return ResponseEntity.ok(toPublicProfileResponse(member));
 	}
+	
+	/**
+	 * 다른 유저가 좋아한 인물 미리보기.
+	 * 최신순 3명 + 전체 건수.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return { items: [{personId, nameKo, profileImgUrl}], totalCount }
+	 */
+	@GetMapping("/{memberId:[0-9]+}/likes/persons")
+	public ResponseEntity<Map<String, Object>> getLikedPersons(
+			@PathVariable long memberId) {
+	 
+		log.debug("getLikedPersons(memberId={})", memberId);
+	 
+		DTO param = new DTO();
+		param.setPageNo(1);
+		param.setPageSize(LIKE_PREVIEW_SIZE);
+	 
+		List<PersonLikeVO> likes =
+				personLikeService.retrieveLikes((int) memberId, param, "latest");
+	 
+		List<Map<String, Object>> items = new ArrayList<>();
+		for (PersonLikeVO like : likes) {
+			Map<String, Object> item = new LinkedHashMap<>();
+			item.put("personId",      like.getPersonId());
+			item.put("nameKo",        like.getNameKo());
+			item.put("profileImgUrl", like.getProfileImageUrl());
+			items.add(item);
+		}
+	 
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items",      items);
+		response.put("totalCount", param.getTotalCnt());
+	 
+		return ResponseEntity.ok(response);
+	}
+	 
+	/**
+	 * 다른 유저가 좋아한 컬렉션 미리보기.
+	 * 최신순 3개 + 전체 건수. 조회자(로그인 회원)가 볼 수 있는 공개범위만.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return { items: [{collectionId, title, previewPosterUrl1~4}], totalCount }
+	 */
+	@GetMapping("/{memberId:[0-9]+}/likes/collections")
+	public ResponseEntity<Map<String, Object>> getLikedCollections(
+			@PathVariable long memberId) {
+	 
+		log.debug("getLikedCollections(memberId={})", memberId);
+	 
+		// 조회자 = 로그인한 나. 비회원이면 empty → 공개 컬렉션만.
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+		OptionalLong viewer = loginMember == null
+				? OptionalLong.empty()
+				: OptionalLong.of(loginMember.getMemberId());
+	 
+		DTO param = new DTO();
+		param.setPageNo(1);
+		param.setPageSize(LIKE_PREVIEW_SIZE);
+	 
+		List<CollectionLikeItemVO> likes =
+				collectionLikeService.retrieveByMember((int) memberId, param, viewer);
+	 
+		List<Map<String, Object>> items = new ArrayList<>();
+		for (CollectionLikeItemVO like : likes) {
+			Map<String, Object> item = new LinkedHashMap<>();
+			item.put("collectionId",      like.getCollectionId());
+			item.put("title",             like.getTitle());
+			item.put("previewPosterUrl1", like.getPreviewPosterUrl1());
+			item.put("previewPosterUrl2", like.getPreviewPosterUrl2());
+			item.put("previewPosterUrl3", like.getPreviewPosterUrl3());
+			item.put("previewPosterUrl4", like.getPreviewPosterUrl4());
+			items.add(item);
+		}
+	 
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items",      items);
+		response.put("totalCount", param.getTotalCnt());
+	 
+		return ResponseEntity.ok(response);
+	}
+	 
+	/**
+	 * 다른 유저의 선호 장르 조회.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return { items: [{genreId, genreName, ratedCnt}], topGenre }
+	 */
+	@GetMapping("/{memberId:[0-9]+}/genre-preference")
+	public ResponseEntity<Map<String, Object>> getGenrePreference(
+			@PathVariable long memberId) {
+	 
+		log.debug("getGenrePreference(memberId={})", memberId);
+	 
+		List<GenrePreferenceVO> genres =
+				memberContentService.retrieveGenrePreference((int) memberId);
+	 
+		List<Map<String, Object>> items = new ArrayList<>();
+		for (GenrePreferenceVO g : genres) {
+			Map<String, Object> item = new LinkedHashMap<>();
+			item.put("genreId",   g.getGenreId());
+			item.put("genreName", g.getGenreName());
+			item.put("ratedCnt",  g.getRatedCnt());
+			items.add(item);
+		}
+	 
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("items", items);
+		response.put("topGenre", genres.isEmpty() ? null : genres.get(0).getGenreName());
+	 
+		return ResponseEntity.ok(response);
+	}
+	 
+	/**
+	 * 다른 유저의 별점 분포 조회.
+	 *
+	 * @param memberId 조회 대상 회원 번호
+	 * @return 1~5점 개수 배열(dist), 총 개수(total), 평균(average), 최다 점수(topScore)
+	 */
+	@GetMapping("/{memberId:[0-9]+}/rating-distribution")
+	public ResponseEntity<Map<String, Object>> getRatingDistribution(
+			@PathVariable long memberId) {
+	 
+		log.debug("getRatingDistribution(memberId={})", memberId);
+	 
+		List<RatingDistributionVO> rows =
+				memberContentService.retrieveRatingDistribution((int) memberId);
+	 
+		int[] dist = new int[5];
+		int total = 0;
+		long sum = 0;
+		for (RatingDistributionVO row : rows) {
+			int score = row.getRatingScore();
+			int cnt   = row.getScoreCnt();
+			if (score >= 1 && score <= 5) {
+				dist[score - 1] = cnt;
+				total += cnt;
+				sum   += (long) score * cnt;
+			}
+		}
+	 
+		String average = total == 0 ? "0.0"
+				: String.format("%.1f", (double) sum / total);
+		int topScore = 0;
+		int topCnt = -1;
+		for (int i = 0; i < 5; i++) {
+			if (dist[i] > topCnt) { topCnt = dist[i]; topScore = i + 1; }
+		}
+	 
+		Map<String, Object> response = new LinkedHashMap<>();
+		response.put("dist", dist);
+		response.put("total", total);
+		response.put("average", average);
+		response.put("topScore", total == 0 ? 0 : topScore);
+	 
+		return ResponseEntity.ok(response);
+	}
 
 	// ===================== 응답 조립 (비밀번호 제거 지점) =====================
 
