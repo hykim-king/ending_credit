@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -95,16 +94,16 @@ public class MemberOAuthSignupController {
 					signup.getProviderUserId(),
 					signup.getEmail());
 		} catch (IllegalStateException e) {
-			
+
 			String code = e.getMessage();
-			
+
 			if ("EMAIL_DUPLICATED".equals(code)) {
 			    // 닉네임 입력 사이에 그 이메일로 자체가입이 생긴 드문 경우 -> 안내 페이지로
 			    session.removeAttribute(OAuth2SignupSession.SESSION_KEY);
 			    session.setAttribute(OAuth2SignupSession.BLOCKED_EMAIL_KEY, signup.getEmail());
 			    return "redirect:/signup/oauth/email-in-use";
 			}
-			
+
 			// 닉네임 중복 등 -> 다시 입력 화면
 			model.addAttribute("email", signup.getEmail());
 			model.addAttribute("errorMessage", toMessage(e.getMessage()));

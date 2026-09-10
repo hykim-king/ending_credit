@@ -6,6 +6,7 @@ import java.util.Map;
 import com.endit.cmn.DTO;
 import com.endit.domain.ContentVO;
 import com.endit.domain.EnglishContentVO;
+import com.endit.domain.TmdbRatingVO;
 
 /**
  * <pre>
@@ -73,6 +74,32 @@ public interface ContentService {
 	 * @return EnglishContentVO (실패하면 null. 없는 항목은 빈 문자열이며 이미지는 TMDB 원본 경로다)
 	 */
 	EnglishContentVO getEnglishContent(int contentId, String externalId);
+
+	/**
+	 *
+	 * <pre>
+	 * Method Name : getTmdbRating
+	 * Description : TMDB가 매긴 평균 평점·참여 인원과 예고편 영상 id를 받아 온다.
+	 *               C-01 평가 분석이 우리 평균과 나란히 쓰고, 예고편 버튼이 영상 id를 쓴다.
+	 *               예고편은 상세 응답에 함께 실어 받으므로 호출이 늘지 않는다.
+	 *               평균은 TMDB 척도 그대로인 10점 만점이며, 5점 환산은 getStarAverage가 한다.
+	 *               TMDB는 점수별 분포를 주지 않는다 - 우리 그래프 같은 막대는 만들 수 없고 평균선만 그린다.
+	 *               getEnglishContent와 같은 이유로 DB에 쓰지 않고 서비스 메모리에만 캐시하므로
+	 *               재시작하면 비워진다. 평점을 담을 컬럼이 없고 스키마를 바꾸지 않기로 했기 때문이다.
+	 *               한 번 받은 콘텐츠는 다시 부르지 않는다.
+	 *               TMDB 호출이 실패하면 캐시하지 않고 null을 준다 - 일시 장애를 굳히지 않기 위해서다.
+	 *               호출부는 null이면 TMDB 평점 영역과 예고편 버튼을 통째로 빼면 된다.
+	 *               예고편만 없을 수도 있다 - 그때는 trailerKey만 null이다.
+	 *               한국어 예고편이 없으면 영어로 한 번 더 찾으므로 그 경우에만 호출이 하나 는다.
+	 *               외부 호출이 나가므로 목록이 아니라 단건 화면에서만 부른다.
+	 *
+	 * </pre>
+	 *
+	 * @param contentId 캐시 키
+	 * @param externalId TMDB 영화 id
+	 * @return TmdbRatingVO (실패하면 null. 평균은 10점 만점, trailerKey는 YouTube 영상 id)
+	 */
+	TmdbRatingVO getTmdbRating(int contentId, String externalId);
 
 	/**
 	 * <pre>

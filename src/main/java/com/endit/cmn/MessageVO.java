@@ -1,11 +1,11 @@
 package com.endit.cmn;
 
 public class MessageVO {
-	
+
 	private String id;
 	private String message;
 	private String detailMessage;
-	
+
 	public MessageVO() {
 		super();
 	}
@@ -57,5 +57,5 @@ public class MessageVO {
 		return "MessageVO [id=" + id + ", message=" + message + ", detailMessage=" + detailMessage + "]";
 	}
 
-	
+
 }

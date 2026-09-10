@@ -192,6 +192,9 @@ public class ContentViewController {
 
 		addCastAndCrew(contentId, model);
 		addRating(contentId, model);
+		// TMDB 평점은 외부 호출이라 실패해도 나머지는 그대로 그린다(정의서 H-04와 같은 격리)
+		model.addAttribute("tmdbRating",
+				contentService.getTmdbRating(contentId, content.getExternalId()));
 		addMyRecord(contentId, loginMemberId, model);
 		addComments(contentId, loginMemberId, model);
 		addReportReasons(model);

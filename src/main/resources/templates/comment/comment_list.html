@@ -1,13 +1,21 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
 xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
 layout:decorate="~{layout/layout}">
 <head>
 <meta charset="UTF-8">
+<!--비회원 로그인 안내 모달(C-01·P-01 공용)이 쓰는 스타일 -
+     골격은 common.css(.collection-delete-*), 아이콘은 comment.css(.collection-login-icon)에 있다-->
+<link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
+<link rel="stylesheet" th:href="@{/assets/css/collection/comment.css}">
 <title>코멘트</title>
 </head>
 <body>
 <div layout:fragment="content">
+
+    <!--로그인 여부. 비회원이면 이 표시가 없어 comment_list.js가 로그인 안내 모달로 돌린다-->
+    <div id="loginState" sec:authorize="isAuthenticated()" hidden></div>
 
     <!--진입 안내 (대상 없이 직접 접근한 경우) — 정식 진입은 영화 상세(1조)·컬렉션 상세(3조)-->
     <div th:if="${mode == 'none'}" class="comment-card text-center py-5">
@@ -166,6 +174,8 @@ layout:decorate="~{layout/layout}">
                         <input class="form-check-input" type="checkbox" id="cmSpoiler">
                         <label class="form-check-label filter-bar" for="cmSpoiler">스포일러가 포함되어 있어요</label>
                     </div>
+                    <!--쓰던 내용을 남긴 채 알려야 해 안내 모달이 아니라 여기에 띄운다-->
+                    <p class="text-danger filter-bar mt-2 mb-0" id="cmStatus" role="alert" hidden></p>
                 </div>
                 <div class="modal-footer d-flex justify-content-end gap-1">
                     <button type="button" class="btn btn-danger d-none" id="btnCmDelete">삭제</button>
@@ -199,6 +209,8 @@ layout:decorate="~{layout/layout}">
                         <textarea id="rpDetail" class="form-control" rows="3" maxlength="1000"
                                   placeholder="신고 사유를 구체적으로 적어 주세요."></textarea>
                     </div>
+                    <!--쓰던 내용을 남긴 채 알려야 해 안내 모달이 아니라 여기에 띄운다-->
+                    <p class="text-danger filter-bar mt-2 mb-0" id="rpStatus" role="alert" hidden></p>
                 </div>
                 <div class="modal-footer d-flex justify-content-end gap-1">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
@@ -208,6 +220,46 @@ layout:decorate="~{layout/layout}">
         </div>
     </div>
     <!--//신고 모달-->
+
+    <!--비회원 로그인 안내. 설명 줄은 comment_list.js가 막힌 행동에 맞춰 채운다(fragments/login_required)-->
+    <div th:replace="~{fragments/login_required :: modal('')}"></div>
+
+    <!--처리 결과 안내 (경고창 대신). 문구는 서버 MessageVO를 comment_list.js가 그대로 채운다-->
+    <div class="modal fade" id="noticeModal" tabindex="-1" aria-label="안내" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content collection-delete-modal">
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                <div class="modal-body">
+                    <p class="collection-delete-question" id="noticeMessage" role="alert"></p>
+                    <div class="collection-delete-actions">
+                        <button type="button" class="btn btn-primary collection-delete-button"
+                                data-bs-dismiss="modal">확인</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--//처리 결과 안내-->
+
+    <!--삭제 확인 (MOD-03). 지울 코멘트는 comment_list.js가 들고 있다-->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-label="코멘트 삭제 확인" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content collection-delete-modal">
+                <button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                <div class="modal-body">
+                    <p class="collection-delete-question">코멘트를 삭제할까요?</p>
+                    <p class="collection-delete-description">좋아요·신고 기록도 함께 삭제되며 되돌릴 수 없습니다.</p>
+                    <div class="collection-delete-actions">
+                        <button type="button" class="btn collection-delete-button collection-delete-cancel"
+                                data-bs-dismiss="modal">취소</button>
+                        <button type="button" class="btn btn-danger collection-delete-button"
+                                id="btnDeleteConfirm">삭제</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--//삭제 확인-->
 
     <script th:src="@{/assets/js/comment/comment_list.js}" defer></script>
 </div>

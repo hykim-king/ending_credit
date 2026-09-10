@@ -13,7 +13,7 @@ public class OAuth2SignupSession implements Serializable {
 
 	/** 세션에 담을 때 쓰는 고정 key. 컨트롤러/핸들러가 이 이름으로 꺼낸다. */
 	public static final String SESSION_KEY = "oauth2SignupSession";
-	
+
 	/** 이메일 중복으로 막힌 경우, 안내 페이지에서 보여줄 이메일을 담는 세션 key */
 	public static final String BLOCKED_EMAIL_KEY = "oauthBlockedEmail";
 

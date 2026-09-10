@@ -19,7 +19,7 @@ public class FooterDataController {
 	public FooterDataController(UserCommentService userCommentService) {
 		this.userCommentService = userCommentService;
 	}
-	
+
 	/**
 	 * 푸터 하단에 노출할 USER_COMMENT 테이블의 총 코멘트 개수를 전역으로 공급
 	 */

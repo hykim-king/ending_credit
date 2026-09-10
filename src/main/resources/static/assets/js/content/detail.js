@@ -47,6 +47,8 @@
     const ICON_HEART_ON = "bi bi-heart-fill";
     const ICON_HEART_OFF = "bi bi-heart";
     const COMMENT_LIKE_PATH = "/commentLike/upToggleLike";
+    // 영상은 유튜브에 있고 TMDB는 id만 준다. nocookie 쪽은 재생 전까지 추적 쿠키를 심지 않는다
+    const TRAILER_EMBED_PREFIX = "https://www.youtube-nocookie.com/embed/";
 
     // MessageVO의 성공 코드. 실패는 "0"이다
     const MESSAGE_OK = "1";
@@ -155,9 +157,10 @@
 
     // ── 미리보기 격자의 "더보기" 노출 판정 ──────────────
     /*
-     * 출연/제작과 코멘트는 화면이 좁아지면 CSS가 뒷줄을 감춰 줄 수를 유지한다(detail.css).
+     * 출연/제작은 화면이 좁아지면 CSS가 뒷줄을 감춰 줄 수를 유지한다(detail.css).
      * 그래서 "다 보여 줬는지"를 서버가 미리 알 수 없다 - 실제로 그려진 칸을 세어 판정한다.
-     * 감춘 것이 하나라도 있거나 서버가 전체를 못 보냈으면 더보기를 띄운다.
+     * 감춘 것이 하나라도 있거나 서버가 전체를 못 보냈으면 전체보기를 띄운다.
+     * 코멘트 더보기는 이 판정을 쓰지 않는다 - 수정·삭제로 가는 길이라 항상 보여 준다.
      */
     function initSectionMore(gridId, buttonId) {
         const grid = document.getElementById(gridId);
@@ -194,6 +197,13 @@
     const RATING_TICK_COLOR = "#8B8493";
     // 눈금은 0과 최댓값 언저리만 있으면 된다. 폭이 220px이라 더 넣으면 숫자가 겹친다
     const RATING_Y_TICK_LIMIT = 3;
+    // TMDB 평균선. 우리 분포 위에 겹쳐 어느 쪽이 후한 평가인지 보이게 한다.
+    // TMDB는 점수별 분포를 주지 않아 막대를 그릴 수 없다 - 평균 한 점만 선으로 세운다
+    const TMDB_LINE_COLOR = "#8FBF1F";
+    // 선 색 그대로는 11px 글자가 흰 바탕에서 흐려 대비를 올린 같은 계열을 쓴다
+    const TMDB_LABEL_COLOR = "#5F810F";
+    const TMDB_LABEL_FONT = "11px sans-serif";
+    const TMDB_LABEL_GAP = 4;
 
     function initRatingChart() {
         const canvas = document.getElementById("ratingChart");
@@ -216,6 +226,8 @@
         }
 
         const counts = (canvas.dataset.counts || "").split(",").map(Number);
+        // 서버가 이미 5점 척도로 바꿔 실어 준다(TmdbRatingVO.starAverage)
+        const tmdbAverage = Number(canvas.dataset.tmdbAverage);
 
         new Chart(canvas, {
             type: "line",
@@ -253,11 +265,69 @@
                     pointBorderWidth: 2
                 }]
             },
+            plugins: [{
+                id: "tmdbAverageLine",
+
+                // TMDB 평균이 x축 어디에 서는지. 라벨은 1★~5★이고 값은 1~5점이라 한 칸 당긴다
+                markerX(chart) {
+                    const xScale = chart.scales.x;
+                    const index = Math.min(Math.max(tmdbAverage - 1, 0), counts.length - 1);
+                    const floor = Math.floor(index);
+                    const next = Math.min(floor + 1, counts.length - 1);
+
+                    // 칸 사이는 비례로 나눈다
+                    return xScale.getPixelForValue(floor)
+                        + (xScale.getPixelForValue(next) - xScale.getPixelForValue(floor)) * (index - floor);
+                },
+
+                // 선은 우리 그래프 뒤에 깔린다 - 우리 분포가 주인공이다
+                beforeDatasetsDraw(chart) {
+                    if (!tmdbAverage) {
+                        return;
+                    }
+
+                    const area = chart.chartArea;
+                    const x = this.markerX(chart);
+                    const ctx = chart.ctx;
+
+                    ctx.save();
+                    ctx.setLineDash([4, 3]);
+                    ctx.strokeStyle = TMDB_LINE_COLOR;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x, area.top);
+                    ctx.lineTo(x, area.bottom);
+                    ctx.stroke();
+                    ctx.restore();
+                },
+
+                // 글자는 맨 앞에 - 우리 면이 반투명이라 뒤에 두면 흐려진다
+                afterDatasetsDraw(chart) {
+                    if (!tmdbAverage) {
+                        return;
+                    }
+
+                    const area = chart.chartArea;
+                    const x = this.markerX(chart);
+                    const ctx = chart.ctx;
+                    const text = MSG.ratingTmdbMarker.replace("{0}", tmdbAverage.toFixed(1));
+
+                    ctx.save();
+                    ctx.fillStyle = TMDB_LABEL_COLOR;
+                    ctx.font = TMDB_LABEL_FONT;
+                    ctx.textBaseline = "top";
+                    // 오른쪽 끝에 붙으면 글자가 잘린다 - 넘칠 때만 왼쪽으로 붙여 쓴다
+                    ctx.textAlign = x + ctx.measureText(text).width > area.right ? "right" : "left";
+                    ctx.fillText(text, ctx.textAlign === "right" ? x - TMDB_LABEL_GAP : x + TMDB_LABEL_GAP,
+                        area.top);
+                    ctx.restore();
+                }
+            }],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    // 한 줄뿐이라 범례가 설명할 것이 없다. 제목이 이미 무엇인지 말한다
+                    // 그래프 안의 TMDB 라벨이 이미 무엇인지 말해 범례를 두지 않는다
                     legend: { display: false },
                     tooltip: {
                         displayColors: false,
@@ -308,6 +378,7 @@
         const stars = Array.prototype.slice.call(box.querySelectorAll(".star"));
         const label = document.getElementById("ratingLabel");
         const watchButton = document.getElementById("watchlistButton");
+        const cancelHint = document.getElementById("ratingCancelHint");
 
         // 다시 들어와도 내 기록이 채워져 있도록 서버가 그려 둔 값에서 출발한다.
         // 비회원·미평가면 data-my-score 자체가 없어 Number(undefined)가 NaN이라 0으로 떨어진다
@@ -325,6 +396,23 @@
         function render() {
             paintStars(score);
             label.textContent = score === NO_SCORE ? MSG.ratingLabel : formatScore(score);
+            showCancelHint(null);
+        }
+
+        // ACT-C-002를 눈에 보이게 한다 - 지금 준 점수와 같은 별에 올렸을 때만 띄운다.
+        // star가 null이면 감춘다. 가로 위치는 그 별의 중앙에 맞춘다
+        function showCancelHint(star) {
+            if (!cancelHint) {
+                return;
+            }
+
+            if (!star || score === NO_SCORE || Number(star.dataset.score) !== score) {
+                cancelHint.hidden = true;
+                return;
+            }
+
+            cancelHint.style.left = (star.offsetLeft + star.offsetWidth / 2) + "px";
+            cancelHint.hidden = false;
         }
 
         function renderWatch() {
@@ -385,7 +473,10 @@
             });
 
             // 누르기 전 몇 점이 될지 미리 보여 준다
-            star.addEventListener("mouseenter", () => paintStars(Number(star.dataset.score)));
+            star.addEventListener("mouseenter", () => {
+                paintStars(Number(star.dataset.score));
+                showCancelHint(star);
+            });
         });
 
         box.querySelector(".stars").addEventListener("mouseleave", render);
@@ -704,7 +795,7 @@
 
             button.addEventListener("click", async () => {
                 if (!memberId) {
-                    showNotice(MSG.loginRequired);
+                    showLoginRequired("loginLike");
                     return;
                 }
 
@@ -1190,6 +1281,45 @@
         });
     }
 
+    // ── 예고편 ────────────────────────────────────────
+    // 갤러리 확대와 같은 전면 오버레이다. 다른 점은 닫을 때 src를 반드시 비워야 한다는 것 -
+    // iframe을 남겨 두면 모달이 사라져도 유튜브가 계속 재생돼 소리가 난다
+    function initTrailerModal() {
+        const button = document.getElementById("trailerButton");
+        const modal = document.getElementById("trailerModal");
+
+        // 예고편이 없는 작품은 서버가 버튼을 안 그린다
+        if (!button || !modal) {
+            return;
+        }
+
+        const frame = document.getElementById("trailerFrame");
+        const closeBtn = modal.querySelector(".gallery-modal-close");
+
+        function close() {
+            frame.src = "";
+            modal.classList.remove("active");
+        }
+
+        button.addEventListener("click", () => {
+            frame.src = TRAILER_EMBED_PREFIX + button.dataset.trailerKey;
+            modal.classList.add("active");
+        });
+
+        closeBtn.addEventListener("click", close);
+        modal.addEventListener("click", (event) => {
+            // 대화상자 바깥(어두운 배경)을 눌렀을 때만 닫는다
+            if (event.target === modal) {
+                close();
+            }
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && modal.classList.contains("active")) {
+                close();
+            }
+        });
+    }
+
     // ── 갤러리 확대 (MOD-06) ───────────────────────────
     function initGalleryModal() {
         // 확대용 URL은 서버가 data-full에 완성해 준다. 화면은 이미지 크기를 알지 못한다
@@ -1256,7 +1386,6 @@
 
     document.addEventListener("DOMContentLoaded", () => {
         initSectionMore("castGrid", "castMoreButton");
-        initSectionMore("commentGrid", "commentMoreButton");
         initRatingChart();
         initRecord();
         initCollection();
@@ -1269,5 +1398,6 @@
         initGallery();
         initCollectionRow();
         initGalleryModal();
+        initTrailerModal();
     });
 })();

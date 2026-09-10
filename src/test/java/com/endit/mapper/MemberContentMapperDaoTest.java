@@ -118,7 +118,7 @@ class MemberContentMapperDaoTest {
 		assertEquals(testData.getContentId(), outVO.getContentId());
 		assertEquals(testData.getRatingScore(), outVO.getRatingScore());
 		assertEquals(testData.getWatchlist(), outVO.getWatchlist());
-		
+
 		assertNotNull(outVO.getRatedDt());
 		assertNotNull(outVO.getWatchlistDt());
 		assertNotNull(outVO.getUpdatedDt());
@@ -151,7 +151,7 @@ class MemberContentMapperDaoTest {
 		assertEquals(testData.getContentId(), outVO.getContentId());
 		assertEquals(testData.getRatingScore(), outVO.getRatingScore());
 		assertEquals(testData.getWatchlist(), outVO.getWatchlist());
-		
+
 		assertNotNull(outVO.getRatedDt());
 		assertNotNull(outVO.getWatchlistDt());
 		assertNotNull(outVO.getUpdatedDt());
@@ -189,7 +189,7 @@ class MemberContentMapperDaoTest {
 
 		assertEquals(testData.getRatingScore(), outVO.getRatingScore());
 		assertEquals(testData.getWatchlist(), outVO.getWatchlist());
-		
+
 		assertNotNull(outVO.getRatedDt());
 		assertNull(outVO.getWatchlistDt());
 		assertNotNull(outVO.getUpdatedDt());
@@ -222,7 +222,7 @@ class MemberContentMapperDaoTest {
 		assertNull(afterDeleteVO);
 
 		log.debug("* deletedData: memberId-{}, contentId-{}, ratingScore-{}, watchlist-{}, ratedDt-{}, watchlistDt-{}, updatedDt-{}, result-{}건",
-				beforeDeleteVO.getMemberId(), beforeDeleteVO.getContentId(), beforeDeleteVO.getRatingScore(), beforeDeleteVO.getWatchlist(), 
+				beforeDeleteVO.getMemberId(), beforeDeleteVO.getContentId(), beforeDeleteVO.getRatingScore(), beforeDeleteVO.getWatchlist(),
 				beforeDeleteVO.getRatedDt(), beforeDeleteVO.getWatchlistDt(), beforeDeleteVO.getUpdatedDt(), flag);
 	}
 
@@ -657,5 +657,5 @@ class MemberContentMapperDaoTest {
 
 		assertEquals(0, flag);
 	}
-	
+
 }

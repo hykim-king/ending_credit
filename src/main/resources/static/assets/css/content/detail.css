@@ -68,12 +68,12 @@
 .rating-chart {
 	margin-top: 16px;
 }
-/* 제목 왼쪽, 평균 오른쪽 - 막대 폭과 같은 줄을 쓰므로 양 끝으로 벌린다 */
+/* 우리 평균과 TMDB 평균 두 줄을 세로로 쌓는다.
+   한 줄에 몰아 두고 flex-wrap에 맡기면 이름이 긴 언어(영어)에서 줄이 끊겨 값이 왼쪽으로 흘러내린다 */
 .rating-chart-title {
 	display: flex;
-	align-items: baseline;
-	justify-content: space-between;
-	gap: 8px;
+	flex-direction: column;
+	gap: 2px;
 	margin: 0 0 8px;
 	font-size: 13px;
 	font-weight: 600;
@@ -84,9 +84,31 @@
 	font-weight: 700;
 	font-variant-numeric: tabular-nums;
 }
-.rating-chart-average i {
+.rating-chart-average i,
+.rating-chart-tmdb-value i {
 	font-size: .85em;
 	margin-right: 2px;
+}
+/* 남의 평점이라 우리 평균(--endit-primary)과 색을 갈라 둔다.
+   그래프의 TMDB 평균선 라벨과 같은 초록이라 둘이 한 짝으로 읽힌다.
+   제 줄을 통째로 써서 위의 "평가 분석 / 평균"과 좌우 위치를 맞춘다 */
+/* 이름 왼쪽, 값 오른쪽. 줄이 제 너비를 다 쓰므로 양 끝이 위아래로 맞는다 */
+.rating-chart-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+}
+/* 값은 숫자라 끊기면 읽기 나쁘다. 자리가 모자라면 이름 쪽이 접힌다 */
+.rating-chart-average,
+.rating-chart-tmdb-value {
+	white-space: nowrap;
+}
+/* 라벨은 "평가 분석"과 같은 회색으로 두고, 값만 초록으로 세운다 */
+.rating-chart-tmdb-value {
+	color: #5F810F;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
 }
 /* 참여 인원은 평균을 거드는 값이라 색·무게를 낮춘다 */
 .rating-chart-raters {
@@ -131,6 +153,31 @@
 }
 .stars {
 	display: flex;
+	/* 취소하기 말풍선을 별 위에 띄우기 위한 기준점 */
+	position: relative;
+}
+/* 왓챠와 같은 자리 - 내 점수와 같은 별에 올렸을 때만 뜬다.
+   left는 detail.js가 그 별 중앙으로 잡아 준다 */
+.star-cancel-hint {
+	position: absolute;
+	bottom: calc(100% + 6px);
+	transform: translateX(-50%);
+	padding: 3px 8px;
+	border-radius: 6px;
+	background: #3f3f46;
+	color: #fff;
+	font-size: 12px;
+	white-space: nowrap;
+	pointer-events: none;
+}
+.star-cancel-hint::after {
+	content: "";
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	margin-left: -4px;
+	border: 4px solid transparent;
+	border-top-color: #3f3f46;
 }
 .star {
 	/* 세로는 접근성 원칙의 44px을 지키고, 가로만 좁혀 별 사이를 붙인다.
@@ -175,6 +222,10 @@
 /* 내 별점과 같은 Primary를 쓴다 - 한 줄에 나란히 서는데 색이 갈리면 다른 지표처럼 읽힌다 */
 .rating-average i {
 	color: var(--endit-primary);
+}
+/* TMDB는 남의 점수라 별 색을 가른다. 평가 분석 그래프의 TMDB 초록과 같은 값이다 */
+.rating-average-tmdb i {
+	color: #5F810F;
 }
 .rating-average-count {
 	margin-left: 4px;
@@ -644,7 +695,8 @@
 .gallery-item img {
 	cursor: pointer;
 }
-.gallery-modal {
+.gallery-modal,
+.trailer-modal {
 	display: none;
 	position: fixed;
 	inset: 0;
@@ -653,8 +705,24 @@
 	justify-content: center;
 	z-index: 1050;
 }
-.gallery-modal.active {
+.gallery-modal.active,
+.trailer-modal.active {
 	display: flex;
+}
+/* 유튜브 플레이어는 16:9다. 좁은 화면에서도 가로가 먼저 줄고 세로는 비율을 따라간다.
+   세로가 먼저 막히는 화면(낮고 넓은 창)에서는 max-width가 가로도 같이 줄여 비율을 지킨다 */
+.trailer-frame {
+	position: relative;
+	width: min(92vw, 1280px);
+	max-width: calc(85vh * 16 / 9);
+	aspect-ratio: 16 / 9;
+	max-height: 85vh;
+}
+.trailer-frame iframe {
+	width: 100%;
+	height: 100%;
+	border: 0;
+	border-radius: 8px;
 }
 .gallery-modal-img {
 	max-width: 85vw;
