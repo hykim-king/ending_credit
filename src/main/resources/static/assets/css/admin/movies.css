@@ -46,18 +46,8 @@ textarea {
 
 
 
-/* 레이아웃 - 사이드바(.admin-side, endit.css) + 본문 2열.
-   목록 화면은 공용 레이아웃의 d-flex를 쓰지만 상세·등록 화면은 이 규칙이 유일한 뼈대다.
-   2026-09-04 머지에서 어두운 사이드바 스킨을 걷어낼 때 이 두 규칙까지 함께 지워져
-   두 화면이 사이드바 아래로 무너져 있었다(아래 900px 미디어쿼리는 이 규칙을 전제로 남아 있었다). */
-.admin-layout {
-	min-height: 100vh;
-	display: grid;
-	grid-template-columns: 190px 1fr;
-	gap: 20px;
-	padding: 24px;
-}
-
+/* 본문 열 - 사이드바 옆 칸. 골격은 목록 화면과 같은 부트스트랩 d-flex가 잡는다.
+   긴 제목이나 표가 칸을 밀어내지 않도록 최소 너비만 풀어 준다 */
 .admin-content {
 	min-width: 0;
 }
@@ -338,6 +328,20 @@ textarea {
 	display: flex;
 	align-items: center;
 	gap: 6px;
+}
+
+/* 섹션 제목 옆 도움말 - 필드 라벨 옆의 것과 같은 규칙을 제목 줄에 쓴다.
+   h2의 아래 여백은 이 줄이 대신 갖는다 - h2에 남겨 두면 flex가 마진 박스를 기준으로 맞춰
+   물음표가 여백의 절반만큼 아래로 처진다 */
+.section-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 4px;
+}
+
+.section-label > h2 {
+	margin-bottom: 0;
 }
 
 /* 라벨에 붙는 표기라 44px 터치 규칙에서 유일하게 벗어난다.
@@ -676,10 +680,6 @@ textarea {
 }
 
 @media (max-width: 900px) {
-	.admin-layout {
-		grid-template-columns: 1fr;
-	}
-
 	.admin-filter-box,
 	.field-grid,
 	.person-search,

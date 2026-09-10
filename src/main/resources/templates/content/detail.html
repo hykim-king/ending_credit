@@ -57,7 +57,8 @@ layout:decorate="~{layout/layout}">
 		reportFailed: /*[[#{detail.js.reportFailed}]]*/ "",
 		ratingScore: /*[[#{detail.rating.score('{0}')}]]*/ "",
 		ratingBucket: /*[[#{detail.rating.bucket('{0}','{1}')}]]*/ "",
-		ratingChartLabel: /*[[#{detail.rating.chartLabel}]]*/ ""
+		ratingChartLabel: /*[[#{detail.rating.chartLabel}]]*/ "",
+		collectionItemCount: /*[[#{detail.collection.itemCount('{0}')}]]*/ ""
 	};
 </script>
 
@@ -374,6 +375,9 @@ layout:decorate="~{layout/layout}">
 			<div class="picker-dialog" role="dialog" aria-modal="true" aria-labelledby="collectionModalTitle">
 				<div class="picker-head">
 					<h5 class="mb-0" id="collectionModalTitle" th:text="#{detail.action.collection}">컬렉션에 추가</h5>
+					<!-- 담을 컬렉션이 없을 때 화면을 나갔다 오지 않도록 만들기 통로를 여기 둔다(D-03) -->
+					<a class="picker-new" th:href="@{/collections/new}"
+					   th:text="#{detail.collection.new}">컬렉션 만들기</a>
 					<button type="button" class="picker-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
 				</div>
 				<div class="picker-body">

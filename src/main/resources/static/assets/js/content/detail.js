@@ -99,6 +99,7 @@
         collectionEmpty: "아직 만든 컬렉션이 없습니다. 컬렉션 화면에서 먼저 만들어 주세요.",
         collectionOn: "담김",
         collectionOff: "담기",
+        collectionItemCount: "작품 {0}",
         castLoadFailed: "출연/제작을 불러오지 못했습니다.",
         castLoadRetry: "출연/제작을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         castRoleEmpty: "해당 역할의 인물이 없습니다.",
@@ -450,6 +451,40 @@
             return response.ok;
         }
 
+        // 목록 화면 카드와 같은 대표 포스터를 쓴다. 없으면 카드 폴백과 같은 필름 아이콘이다
+        function toThumb(collection) {
+            const thumb = document.createElement("span");
+
+            thumb.className = "picker-item-thumb";
+
+            // 포스터는 완성 URL이 아니라 TMDB 경로(/abc.jpg)로 온다.
+            // 목록 화면 카드가 쓰는 변환을 그대로 부른다 - 베이스 주소를 여기 또 적지 않는다
+            const posterUrl = typeof resolveCollectionPosterUrl === "function"
+                ? resolveCollectionPosterUrl(collection.previewPosterUrl1)
+                : collection.previewPosterUrl1;
+
+            if (collection.previewPosterUrl1) {
+                const image = document.createElement("img");
+
+                image.src = posterUrl;
+                image.alt = "";
+                image.loading = "lazy";
+                // 주소가 죽어 있으면 빈 칸 대신 아이콘으로 떨어진다
+                image.addEventListener("error", () => {
+                    thumb.classList.add("is-empty");
+                    thumb.innerHTML = '<i class="bi bi-film" aria-hidden="true"></i>';
+                });
+                thumb.appendChild(image);
+
+                return thumb;
+            }
+
+            thumb.classList.add("is-empty");
+            thumb.innerHTML = '<i class="bi bi-film" aria-hidden="true"></i>';
+
+            return thumb;
+        }
+
         function drawRow(collection, included) {
             const item = document.createElement("li");
             const row = document.createElement("button");
@@ -459,19 +494,28 @@
             row.setAttribute("aria-pressed", String(included));
 
             const mark = document.createElement("span");
+            const body = document.createElement("span");
             const title = document.createElement("span");
+            const items = document.createElement("span");
             const count = document.createElement("span");
 
             mark.className = "picker-item-mark";
+            body.className = "picker-item-body";
             title.className = "picker-item-title";
+            items.className = "picker-item-items";
             count.className = "picker-item-count";
 
             title.textContent = collection.title;
+            // 몇 편이 담긴 컬렉션인지 알아야 어디에 넣을지 고를 수 있다
+            items.textContent = MSG.collectionItemCount.replace("{0}", collection.itemCount || 0);
+            body.append(title, items);
 
             function paint(on) {
                 mark.innerHTML = on ? '<i class="bi bi-check-lg"></i>' : "";
                 // 체크 아이콘만으로 상태를 알리지 않도록 문구를 함께 바꾼다
                 count.textContent = on ? MSG.collectionOn : MSG.collectionOff;
+                // 담긴 줄은 문구도 보라로 - 아이콘·문구·색 셋이 같은 말을 한다
+                count.classList.toggle("is-on", on);
                 row.setAttribute("aria-pressed", String(on));
             }
 
@@ -523,7 +567,8 @@
             });
 
             row.appendChild(mark);
-            row.appendChild(title);
+            row.appendChild(toThumb(collection));
+            row.appendChild(body);
             row.appendChild(count);
             item.appendChild(row);
             list.appendChild(item);

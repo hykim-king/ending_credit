@@ -1,30 +1,38 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${isEdit ? '인물 수정' : '인물 등록'} + ' | END IT ADMIN'">인물 등록 | END IT ADMIN</title>
 
-    <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
-    <!-- 사이드바(admin_side)가 쓰는 .admin-side 스킨이 endit.css에 있다.
-         목록 화면은 공용 레이아웃이 실어 주지만 이 화면은 레이아웃을 안 써서 직접 싣는다 -->
-    <link rel="stylesheet" href="/assets/css/endit.css">
     <link rel="stylesheet" href="/assets/css/admin/people.css">
 </head>
 <body data-page="admin-person-form"
       th:attr="data-person-id=${person.personId}, data-edit=${isEdit}">
 
-<div class="admin-layout">
-    <aside th:replace="~{fragments/admin_side :: admin_side('people')}">side</aside>
+<div layout:fragment="content">
 
-    <main class="admin-content">
+    <div class="d-flex gap-3">
+
+        <aside th:replace="~{fragments/admin_side :: admin_side('people')}">
+            side
+        </aside>
+
+        <div class="admin-content flex-grow-1" style="min-width: 0;">
         <h1 class="admin-page-title" th:text="${isEdit ? '인물 수정' : '인물 등록'}">인물 등록</h1>
 
         <!--
             공개 상태·임시저장 컨트롤이 없다 - POL-037: PERSON에 해당 컬럼이 없다.
             폼은 action/method 없이 JS가 fetch로 보낸다(공지 관리 화면과 같은 방식).
         -->
-        <form id="personForm" class="admin-person-form">
+        <!--
+            novalidate - 브라우저 기본 검사가 먼저 가로채면 한 항목씩만 말풍선으로 알린다.
+            required는 의미 전달(스크린리더)을 위해 남기고, 문구는 JS가 빈 항목을 모아 한 번에 띄운다.
+        -->
+        <form id="personForm" class="admin-person-form" novalidate>
             <label for="nameKo">국문명</label>
             <input type="text" id="nameKo" name="nameKo" maxlength="100"
                    th:value="${person.nameKo}" placeholder="예) 크리스토퍼 놀란">
@@ -37,9 +45,9 @@
 
             <label for="externalId">외부 ID *</label>
             <input type="text" id="externalId" name="externalId" maxlength="50" required
-                   th:value="${person.externalId}" placeholder="TMDB 인물 ID">
+                   inputmode="numeric" th:value="${person.externalId}" placeholder="TMDB 인물 ID">
             <p class="form-hint">
-                동명이인 구분에 쓰입니다. TMDB에 없는 인물이면 겹치지 않는 값을 직접 정해 넣으세요.
+                숫자만 넣습니다. 동명이인 구분에 쓰이며, TMDB에 없는 인물이면 겹치지 않는 숫자를 직접 정해 넣으세요.
                 이미 쓰이는 값이면 저장할 때 막힙니다.
             </p>
 
@@ -58,7 +66,7 @@
 
             <div class="form-actions">
                 <button type="button" class="outline-button" id="cancelButton">취소</button>
-                <!-- ACT-AD-006 - 이름 조건을 통과해야 활성화된다 -->
+                <!-- ACT-AD-006 - 항상 누를 수 있다. 필수 항목이 비면 위 form-error가 무엇이 빈지 알린다 -->
                 <button type="submit" class="primary-button" id="saveButton">저장</button>
             </div>
         </form>
@@ -116,9 +124,10 @@
                 <div class="form-error" id="creditError" hidden></div>
             </div>
         </section>
-    </main>
-</div>
+        </div>
+    </div>
 
-<script src="/assets/js/admin/people.js"></script>
+    <script src="/assets/js/admin/people.js"></script>
+</div>
 </body>
 </html>
