@@ -275,7 +275,7 @@ class CollectionMapperDaoTest {
 						&& item.getUpdatedDt() != null							// 목록 표시용 최근 수정일 검증
 				));
 	}
-	
+
 	/**
 	 * 제목 조건을 이용한 컬렉션 목록 조회 검증
 	 */

@@ -1,7 +1,7 @@
 /**
  * <pre>
  * Class Name : AESCryptoUtil
- * Description : 양방향 암호화 
+ * Description : 양방향 암호화
  *
  * Modification Information
  * 수정일        수정자     수정내용
@@ -28,7 +28,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-   
+
 @Component
 public class AESCryptoUtil {
 	final Logger log = LoggerFactory.getLogger(getClass());
@@ -36,8 +36,8 @@ public class AESCryptoUtil {
 	//32bit key
 	final static String ENV_KEY = "SECRET_KEY";
 
-	
-	
+
+
 	public AESCryptoUtil() {
 		super();
 		log.debug("==============================");
@@ -47,10 +47,10 @@ public class AESCryptoUtil {
 
 	public SecretKeySpec getKey() {
 		String key = System.getenv(ENV_KEY);
-		
+
 		return new SecretKeySpec(key.getBytes()	,ALGORITHM);
 	}
-	
+
 	/**
 	 * 복호화
 	 * @param encryptedString
@@ -62,16 +62,16 @@ public class AESCryptoUtil {
 		SecretKeySpec key=getKey();
 		//AES 알고리즘 암호화 객체 생성
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
-				
+
 		//key 복호화 모드로 초기화
 		cipher.init(Cipher.DECRYPT_MODE, key);
-		
-		
+
+
 		//Base64로 디코딩
 		byte[] decoded=Base64.getDecoder().decode(encryptedString);
 //		log.debug(" 1. encryptedString :{}",encryptedString);
 //		log.debug(" 2. decoded :{}",decoded);
-		
+
 		byte[] decrypted = cipher.doFinal(decoded);
 //		log.debug(" 3. decrypted :{}",decrypted);
 		//UTF-8 처리
@@ -79,41 +79,41 @@ public class AESCryptoUtil {
 //		log.debug(" 4. decryptedString :{}",decryptedString);
 		return decryptedString;
 	}
-	
+
 	/**
 	 * 암호화
 	 * @param plainText
 	 * @return String(encryptText)
-	 * @throws NoSuchPaddingException 
-	 * @throws NoSuchAlgorithmException 
-	 * @throws InvalidKeyException 
-	 * @throws UnsupportedEncodingException 
-	 * @throws BadPaddingException 
-	 * @throws IllegalBlockSizeException 
+	 * @throws NoSuchPaddingException
+	 * @throws NoSuchAlgorithmException
+	 * @throws InvalidKeyException
+	 * @throws UnsupportedEncodingException
+	 * @throws BadPaddingException
+	 * @throws IllegalBlockSizeException
 	 */
-	public  String encrypt(String plainText) 
+	public  String encrypt(String plainText)
 			throws Exception {
 		String encryptedBase64String = "";
 		//바이트 배열로 부터 AES 키 객체 생성
 		SecretKeySpec key=getKey();
 		//AES 알고리즘 암호화 객체 생성
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
-		
+
 		//key 암호화 모드로 초기화
 		cipher.init(Cipher.ENCRYPT_MODE, key);
-		
+
 		//plainText
 		//입력 문자열을 UTF-8로 바이트 변환 -> AES암호화
-		
+
 		byte[] encrypted = cipher.doFinal(plainText.getBytes("UTF-8"));
 //		log.debug(" 1.plainText : {},length:{}",plainText,plainText.length());
 //		log.debug(" encrypted : {},length:{}",encrypted,encrypted.length);
-		
-		//encrypted 결과는 바이너리 -> Base64로 인코딩 
+
+		//encrypted 결과는 바이너리 -> Base64로 인코딩
 		encryptedBase64String =Base64.getEncoder().encodeToString(encrypted);
 //		log.debug(" 2.encryptedBase64String : {},length:{}",encryptedBase64String,encryptedBase64String.length());
-		
-		
+
+
 		return encryptedBase64String;
 	}
 }

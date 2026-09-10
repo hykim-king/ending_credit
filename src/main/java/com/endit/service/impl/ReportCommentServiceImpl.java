@@ -160,7 +160,7 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 			return;
 		}
 		if (SEARCH_DIV_COMMENT_ID.equals(param.getSearchDiv())
-				&& false == param.getSearchWord().matches(NUMERIC_PATTERN)) {
+				&& !param.getSearchWord().matches(NUMERIC_PATTERN)) {
 			throw new IllegalArgumentException("코멘트 번호 검색은 숫자만 입력할 수 있습니다: " + param.getSearchWord());
 		}
 	}

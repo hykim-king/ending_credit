@@ -10,10 +10,10 @@ import com.endit.domain.MemberVO;
 
 @Mapper
 public interface MemberMapper {
-	
+
 	/** 회원 등록 (SEQ_MEMBER 증가 후 memberId 세팅) */
 	int insertMember(MemberVO member);
-	
+
     /** 회원번호로 조회 */
     MemberVO selectMemberById(Long memberId);
 
@@ -31,8 +31,8 @@ public interface MemberMapper {
                        @Param("password") String password);
 
     /** 회원 삭제 (하드 삭제) */
-    int deleteMember(Long memberId);	
-    
+    int deleteMember(Long memberId);
+
     /** 회원 목록 조회 (검색 + 페이징) */
     List<MemberVO> selectMemberList(DTO dto);
 

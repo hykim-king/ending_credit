@@ -1,10 +1,10 @@
 package com.endit.mapper;
 
-import java.util.List;  
+import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
-import com.endit.domain.NoticeSearchVO;
 
+import com.endit.domain.NoticeSearchVO;
 import com.endit.domain.NoticeVO;
 
 @Mapper
@@ -21,7 +21,7 @@ public interface NoticeMapper {
 
     /** 공지 삭제 */
     int deleteNotice(Long noticeId);
-    
+
     /** 일반 사용자 공지 목록 */
     List<NoticeVO> selectPublicNoticeList(NoticeSearchVO search);
 

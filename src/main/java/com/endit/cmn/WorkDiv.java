@@ -14,7 +14,7 @@ public interface WorkDiv<T> {
 
 	/**
 	 * 수정
-	 * 
+	 *
 	 * @param param
 	 * @return 1(성공)/0(실패)
 	 */
@@ -22,7 +22,7 @@ public interface WorkDiv<T> {
 
 	/**
 	 * 단건 삭제
-	 * 
+	 *
 	 * @param param
 	 * @return 1(성공)/0(실패)
 	 */
@@ -30,7 +30,7 @@ public interface WorkDiv<T> {
 
 	/**
 	 * 등록
-	 * 
+	 *
 	 * @param param
 	 * @return 1(성공)/0(실패)
 	 */
@@ -38,7 +38,7 @@ public interface WorkDiv<T> {
 
 	/**
 	 * 단건조회
-	 * 
+	 *
 	 * @param param
 	 * @return T(성공)/null(실패)
 	 */

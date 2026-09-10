@@ -375,5 +375,5 @@ class PersonLikeMapperDaoTest {
 
 		assertEquals(0, flag);
 	}
-	
+
 }

@@ -11,7 +11,7 @@ public class DTO {
 	private String searchDiv; 	// 검색구분
 	private String searchWord;	// 검색어
 
-	private Map<String, String> searchMap = new HashMap<String, String>();
+	private Map<String, String> searchMap = new HashMap<>();
 
 	public DTO() {
 		super();
