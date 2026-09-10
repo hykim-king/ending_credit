@@ -63,7 +63,12 @@ async function requestFetch(url, options = {}) {
             // JSON 형식의 오류 응답이 아닌 경우
         }
 
-        throw new Error(message);
+        const error = new Error(message);
+
+        // 401(로그인 필요)을 메시지 문자열이 아니라 상태 코드로 가려낼 수 있게 실어 준다
+        error.status = response.status;
+
+        throw error;
     }
 
     // 204 No Content

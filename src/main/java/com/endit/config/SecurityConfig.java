@@ -41,16 +41,16 @@ public class SecurityConfig {
 
 	/** 이메일로 회원을 찾아 주는 서비스 (com.endit.security). 시큐리티가 로그인 검증 중 사용한다. */
 	private final CustomUserDetailsService userDetailsService;
-	
+
 	/** 구글 정보를 받아 회원을 찾거나 신규 판단하는 서비스 */
 	private final CustomOAuth2UserService customOAuth2UserService;
- 
+
 	/** 구글 로그인 성공 처리(기존 회원 → 홈) */
 	private final OAuth2SuccessHandler oAuth2SuccessHandler;
- 
+
 	/** 구글 로그인 실패/신규/중복 분기 처리 */
 	private final OAuth2FailureHandler oAuth2FailureHandler;
- 
+
 	public SecurityConfig(
 			CustomUserDetailsService userDetailsService,
 			CustomOAuth2UserService customOAuth2UserService,
@@ -131,7 +131,7 @@ public class SecurityConfig {
 				.failureUrl("/login?error")          // 실패 시 다시 로그인 화면
 				.permitAll()
 			)
-			
+
 			// ── 2-2) 구글 로그인(oauth2Login) ──
 			.oauth2Login(oauth -> oauth
 				.loginPage("/login")                          // 로그인 화면 (이메일이랑 공유)

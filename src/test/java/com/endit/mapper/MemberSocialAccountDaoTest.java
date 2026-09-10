@@ -1,6 +1,9 @@
 package com.endit.mapper;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,13 +21,13 @@ class MemberSocialAccountDaoTest {
 
 	@Autowired
 	private MemberSocialAccountMapper socialMapper;
-	
+
 	@Autowired
 	private MemberMapper memberMapper;
-	
+
 	@BeforeEach
 	void setUp() throws Exception {
-		
+
 	}
 
     private Long createMember(String email, String nickname) {
@@ -82,6 +85,6 @@ class MemberSocialAccountDaoTest {
             socialMapper.insertSocialAccount(account);
         });
     }
-	
+
 
 }

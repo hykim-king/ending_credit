@@ -29,6 +29,7 @@ layout:decorate="~{layout/layout}">
 		loginWatchlist: /*[[#{detail.login.watchlist}]]*/ "",
 		loginCollection: /*[[#{detail.login.collection}]]*/ "",
 		loginComment: /*[[#{detail.login.comment}]]*/ "",
+		loginLike: /*[[#{detail.login.like}]]*/ "",
 		requestFailed: /*[[#{detail.js.requestFailed}]]*/ "",
 		ratingSaveFailed: /*[[#{detail.js.ratingSaveFailed}]]*/ "",
 		watchlistSaveFailed: /*[[#{detail.js.watchlistSaveFailed}]]*/ "",
@@ -58,6 +59,7 @@ layout:decorate="~{layout/layout}">
 		ratingScore: /*[[#{detail.rating.score('{0}')}]]*/ "",
 		ratingBucket: /*[[#{detail.rating.bucket('{0}','{1}')}]]*/ "",
 		ratingChartLabel: /*[[#{detail.rating.chartLabel}]]*/ "",
+		ratingTmdbMarker: /*[[#{detail.rating.tmdbMarker}]]*/ "",
 		collectionItemCount: /*[[#{detail.collection.itemCount('{0}')}]]*/ ""
 	};
 </script>
@@ -120,20 +122,37 @@ layout:decorate="~{layout/layout}">
 					  평가가 하나도 없으면 섹션째 빠진다.
 					-->
 					<div class="rating-chart" th:if="${ratingAverage != null}">
+						<!-- 이름과 값을 줄마다 좌우로 벌린다. 줄을 나눠 두지 않으면 영어처럼 이름이 긴 언어에서
+						     flex 줄바꿈이 끊겨 값이 왼쪽으로 흘러내린다 -->
 						<h6 class="rating-chart-title">
-							<span th:text="#{detail.section.ratingAnalysis}">평가 분석</span>
-							<span class="rating-chart-average">
-								<span class="visually-hidden" th:text="#{detail.rating.averageLabel}">평균 별점</span>
-								<i class="bi bi-star-fill" aria-hidden="true"></i><span th:text="${ratingAverage}">3.9</span>
-								<span class="rating-chart-raters"
-								      th:text="'(' + #{detail.rating.participants(${raterCount})} + ')'">(571명 참여)</span>
+							<span class="rating-chart-row">
+								<span th:text="#{detail.section.ratingAnalysis}">평가 분석</span>
+								<span class="rating-chart-average">
+									<span class="visually-hidden" th:text="#{detail.rating.averageLabel}">평균 별점</span>
+									<i class="bi bi-star-fill" aria-hidden="true"></i><span th:text="${ratingAverage}">3.9</span>
+									<span class="rating-chart-raters"
+									      th:text="'(' + #{detail.rating.participants(${raterCount})} + ')'">(571명 참여)</span>
+								</span>
+							</span>
+							<!-- TMDB 평균. 외부 호출이 실패하면 tmdbRating이 null이라 이 줄만 빠진다.
+							     10점 만점 원값이 아니라 우리 축에 맞춘 환산 별점을 쓴다(TmdbRatingVO.starAverage) -->
+							<span class="rating-chart-row rating-chart-tmdb"
+							      th:if="${tmdbRating != null and tmdbRating.rated}">
+								<span th:text="#{detail.rating.tmdbLabel}">TMDB</span>
+								<span class="rating-chart-tmdb-value">
+									<i class="bi bi-star-fill" aria-hidden="true"></i><span
+									      th:text="${#numbers.formatDecimal(tmdbRating.starAverage, 1, 1)}">4.2</span>
+									<span class="rating-chart-raters"
+									      th:text="'(' + #{detail.rating.participants(${tmdbRating.voteCount})} + ')'">(12,043명 참여)</span>
+								</span>
 							</span>
 						</h6>
 						<!-- 인원은 1→5점 차례로 실어 보낸다. 그래프가 왼쪽(1점)에서 오른쪽(5점)으로 읽히는 순서다 -->
 						<div class="rating-chart-canvas">
 							<canvas id="ratingChart" role="img"
 							        th:attr="data-counts=|${ratingCounts.get(1)},${ratingCounts.get(2)},${ratingCounts.get(3)},${ratingCounts.get(4)},${ratingCounts.get(5)}|,
-							                 aria-label=#{detail.rating.chartLabel}"></canvas>
+							                 aria-label=#{detail.rating.chartLabel}"
+							        th:attrappend="data-tmdb-average=${tmdbRating != null and tmdbRating.rated ? tmdbRating.starAverage : null}"></canvas>
 						</div>
 						<!-- 캔버스는 스크린리더가 못 읽는다. 같은 숫자를 표로 두고,
 						     Chart.js를 못 받아 오면 detail.js가 이 표를 대신 펼친다 -->
@@ -160,6 +179,9 @@ layout:decorate="~{layout/layout}">
 							<button type="button" class="star" th:each="score : ${#numbers.sequence(1, 5)}"
 							        th:attr="data-score=${score}" th:aria-label="#{detail.rating.score(${score})}"
 							        aria-pressed="false"><i class="bi bi-star-fill"></i></button>
+							<!-- 내 점수와 같은 별에 올렸을 때만 detail.js가 띄운다. 가로 위치도 그때 잡는다 -->
+							<span class="star-cancel-hint" id="ratingCancelHint" hidden aria-hidden="true"
+							      th:text="#{detail.rating.cancel}">취소하기</span>
 						</div>
 						<p class="rating-label" id="ratingLabel" th:text="#{detail.rating.label}">평가하기</p>
 						<!--
@@ -171,6 +193,18 @@ layout:decorate="~{layout/layout}">
 							<i class="bi bi-star-fill"></i><span th:text="${ratingAverage}">3.9</span>
 							<span class="rating-average-count"
 							      th:text="#{detail.rating.participants(${raterCount})}">500명 참여</span>
+						</p>
+						<!-- TMDB 평균. 우리 평균과 같은 모양으로 옆에 세우고 별 색만 갈라 어느 쪽 점수인지 보인다.
+						     10점 만점 원값이 아니라 환산 별점이라 우리 평균과 바로 견줄 수 있다.
+						     우리 평가가 없으면 함께 숨긴다 - 견줄 상대가 없는 남의 점수만 서 있으면
+						     우리 평점처럼 읽힌다(평가 분석 그래프도 같은 조건으로 빠진다) -->
+						<p class="rating-average rating-average-tmdb"
+						   th:if="${ratingAverage != null and tmdbRating != null and tmdbRating.rated}">
+							<span class="rating-average-label" th:text="#{detail.rating.tmdbLabel}">TMDB</span>
+							<i class="bi bi-star-fill"></i><span
+							      th:text="${#numbers.formatDecimal(tmdbRating.starAverage, 1, 1)}">4.0</span>
+							<span class="rating-average-count"
+							      th:text="#{detail.rating.participants(${tmdbRating.voteCount})}">2,545명 참여</span>
 						</p>
 						<p class="rating-empty" th:if="${ratingAverage == null}"
 						   th:text="#{detail.rating.empty}">아직 평가가 없습니다</p>
@@ -184,6 +218,12 @@ layout:decorate="~{layout/layout}">
 						</button>
 						<button type="button" class="action-btn" id="commentButton">
 							<i class="bi bi-pencil"></i><span class="action-label" th:text="#{detail.action.comment}">코멘트</span>
+						</button>
+						<!-- 예고편이 없는 작품은 버튼 자체를 안 그린다. 영상 id는 TMDB가 주고 주소는 detail.js가 만든다 -->
+						<button type="button" class="action-btn" id="trailerButton"
+						        th:if="${tmdbRating != null and tmdbRating.trailerKey != null}"
+						        th:attr="data-trailer-key=${tmdbRating.trailerKey}">
+							<i class="bi bi-play"></i><span class="action-label" th:text="#{detail.action.trailer}">예고편</span>
 						</button>
 					</div>
 					<p class="action-notice" id="actionNotice" hidden></p>
@@ -233,8 +273,9 @@ layout:decorate="~{layout/layout}">
 		<div class="container pb-4" th:if="${comments != null and !comments.isEmpty()}">
 			<div class="section-head">
 				<h5 class="mb-0"><span th:text="#{detail.section.comment}">코멘트</span> <span class="section-count" th:text="${commentTotalCnt}">0</span></h5>
-				<!-- ACT-C-008 - 출연/제작과 같은 규칙으로 detail.js가 띄운다. 전문과 정렬 4종은 C-04가 맡는다 -->
-				<a class="section-more" id="commentMoreButton" hidden
+				<!-- ACT-C-008 - 미리보기에 다 보이더라도 감추지 않는다: 내 코멘트 수정·삭제로 가는 길이 여기뿐이다.
+				     전문과 정렬 4종은 C-04가 맡는다 -->
+				<a class="section-more" id="commentMoreButton"
 				   th:href="@{/comment/doRetrieve(contentId=${content.contentId})}" th:text="#{detail.section.more}">더보기</a>
 			</div>
 			<!-- 좋아요가 쓸 회원 번호는 카드마다가 아니라 그리드에 한 번만 싣는다. 비회원이면 서버가 아예 안 그린다 -->
@@ -350,6 +391,17 @@ layout:decorate="~{layout/layout}">
 			<img id="galleryModalImg" class="gallery-modal-img" src="" alt="gallery large view">
 			<button type="button" class="gallery-nav gallery-modal-next" th:aria-label="#{home.carousel.next}" aria-label="다음"><i class="bi bi-chevron-right"></i></button>
 			<div id="galleryModalCount" class="gallery-modal-count" aria-live="polite">0 / 0</div>
+		</div>
+
+		<!-- 예고편. 영상은 유튜브에 있고 우리는 id로 주소만 만든다.
+		     src는 열 때 넣고 닫을 때 비운다 - 안 비우면 닫아도 소리가 계속 난다(detail.js) -->
+		<div id="trailerModal" class="trailer-modal" th:aria-label="#{detail.trailer.title}" aria-label="예고편 재생">
+			<button type="button" class="gallery-modal-close" th:aria-label="#{common.lang.close}" aria-label="닫기"><i class="bi bi-x-lg"></i></button>
+			<div class="trailer-frame">
+				<iframe id="trailerFrame" src="" th:title="#{detail.trailer.title}" title="예고편 재생"
+				        allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture"
+				        allowfullscreen></iframe>
+			</div>
 		</div>
 
 		<!-- MOD-05 출연/제작 전체. 목록·역할 필터·페이징을 API-007에서 받는다 -->
@@ -469,33 +521,8 @@ layout:decorate="~{layout/layout}">
 			</div>
 		</div>
 
-		<!--
-		  비회원 로그인 안내(MOD). 3조 컬렉션 상세(collection/detail.html)의 #commentLoginModal을
-		  골격·클래스 그대로 가져왔다 - 같은 안내가 화면마다 다르게 보이지 않게 한다.
-		  설명 줄만 비워 두고 detail.js가 무엇을 하려다 막혔는지에 맞춰 채운다.
-		-->
-		<div class="modal fade" id="loginRequiredModal" tabindex="-1"
-		     th:aria-label="#{detail.login.title}" aria-label="로그인 안내" aria-hidden="true">
-			<div class="modal-dialog modal-dialog-centered">
-				<div class="modal-content collection-delete-modal">
-					<button type="button" class="btn-close collection-delete-close" data-bs-dismiss="modal"
-					        th:aria-label="#{common.lang.close}" aria-label="닫기"></button>
-					<div class="modal-body">
-						<div class="collection-login-icon" aria-hidden="true">
-							<i class="bi bi-person-lock"></i>
-						</div>
-						<p class="collection-delete-question" th:text="#{detail.login.title}">로그인이 필요해요</p>
-						<p class="collection-delete-description" id="loginRequiredDescription" aria-live="polite"></p>
-						<div class="collection-delete-actions">
-							<button type="button" class="btn collection-delete-button collection-delete-cancel"
-							        data-bs-dismiss="modal" th:text="#{common.lang.confirm.cancel}">취소</button>
-							<a class="btn btn-primary collection-delete-button" th:href="@{/login}"
-							   th:text="#{common.header.login}">로그인</a>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+		<!-- 비회원 로그인 안내. 설명 줄은 detail.js가 막힌 행동에 맞춰 채운다(fragments/login_required) -->
+		<div th:replace="~{fragments/login_required :: modal('')}"></div>
 
 		<!-- 맨 위로. 마크업·CSS·동작 모두 공용 한 벌이다(fragments/scroll_top) -->
 		<div th:replace="~{fragments/scroll_top :: button}"></div>

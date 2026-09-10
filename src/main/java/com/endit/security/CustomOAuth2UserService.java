@@ -2,9 +2,9 @@ package com.endit.security;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -55,7 +55,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 		// 4) 기존 소셜 회원인지 확인
 		MemberVO member = memberService.findBySocial(providerCode, sub);
 		if (member != null) {
-			
+
 			// 기존 회원 -> 그대로 로그인
 			log.debug("기존 소셜 회원 로그인 memberId={}", member.getMemberId());
 			return new CustomOAuth2User(member, oAuth2User.getAttributes());

@@ -11,7 +11,7 @@ public class MemberVO {
 	private String role;
 	private String createdDt;
 	private String updatedDt;
-	
+
 	public MemberVO() {
 		super();
 	}
@@ -94,5 +94,5 @@ public class MemberVO {
 				+ nickname + ", introduction=" + introduction + ", profileImgUrl=" + profileImgUrl + ", role=" + role
 				+ ", createdDt=" + createdDt + ", updatedDt=" + updatedDt + "]";
 	}
-	
+
 }

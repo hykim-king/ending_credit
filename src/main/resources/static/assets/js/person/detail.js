@@ -17,6 +17,23 @@
         return typeof getCsrfHeaders === "function" ? getCsrfHeaders() : {};
     }
 
+    // 비회원 로그인 안내(C-09). 설명 줄은 화면이 이미 채워 두었다.
+    // 모달이나 부트스트랩이 없으면 예전처럼 안내 문구 한 줄로 떨어진다
+    function showLoginRequired(notice) {
+        const modal = document.getElementById("loginRequiredModal");
+
+        if (!modal || typeof bootstrap === "undefined") {
+            const description = document.getElementById("loginRequiredDescription");
+
+            notice.textContent = description ? description.textContent : "";
+            notice.hidden = false;
+            return;
+        }
+
+        notice.hidden = true;
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+
     // ── 좋아요 (ACT-P-001) ────────────────────────────
     function initLike() {
         const button = document.getElementById("personLikeButton");
@@ -44,10 +61,9 @@
         button.addEventListener("click", async () => {
             const memberId = button.dataset.memberId;
 
-            // FL-01 - 비회원의 쓰기 행동은 로그인으로 유도한다. C-09가 아직 없어 안내로 대체한다
+            // FL-01 - 비회원의 쓰기 행동은 로그인으로 유도한다(C-09, 영화 상세와 같은 모달)
             if (!memberId) {
-                notice.textContent = "좋아요는 로그인 후 이용할 수 있습니다.";
-                notice.hidden = false;
+                showLoginRequired(notice);
                 return;
             }
 

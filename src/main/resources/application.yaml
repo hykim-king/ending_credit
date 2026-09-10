@@ -87,5 +87,8 @@ tmdb:
   api-key: ${TMDB_API_KEY:}
   language: ko-KR
   image-size: w500
- 
 
+# 인기순위 갱신 스케줄. 아래 세 줄의 주석만 떼면 매일 새벽 4시(Asia/Seoul)에 돈다.
+#endit:
+#  rank:
+#    cron: "0 0 4 * * *"

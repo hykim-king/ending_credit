@@ -129,6 +129,11 @@ public class CommentController {
 		model.addAttribute("pageDTO", pageDTO);
 		model.addAttribute("dto", dto);
 
+		// 로그인 회원번호 — 화면에서 "본인 코멘트에만 수정·삭제 버튼" 판단에 쓴다
+		LoginMember loginMember = LoginMemberHelper.getLoginMember();
+		model.addAttribute("loginMemberId",
+				null != loginMember ? loginMember.getMemberId() : null);
+
 		return viewName;
 	}
 
