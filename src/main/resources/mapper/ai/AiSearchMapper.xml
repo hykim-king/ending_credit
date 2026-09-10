@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- AI 검색 전용. type-aliases-package 가 com.endit.domain 이라 전체 경로를 쓴다 -->
+<mapper namespace="com.endit.mapper.AiSearchMapper">
+
+    <!-- AI 가 뽑은 조건으로 영화 검색.
+         기존 ContentMapper 와 다른 점은 줄거리(overview)까지 본다는 것이다.
+         조건은 전부 <if> 스위치라 SQL 자체는 이 하나로 끝난다 -->
+    <select id="doSearchByIntent"
+            parameterType="com.endit.ai.dto.SearchIntent"
+            resultType="com.endit.ai.dto.AiSearchItem">
+        SELECT c.content_id                                   AS contentId
+             , c.title_ko                                     AS titleKo
+             , c.title_org                                    AS titleOrg
+             , TO_CHAR(c.release_year, 'YYYY')                AS releaseYear
+             , c.poster_url                                   AS posterUrl
+             , DBMS_LOB.SUBSTR(c.overview, 300, 1)            AS overview
+             , (SELECT ROUND(AVG(mc.rating_score), 1)
+                  FROM member_content mc
+                 WHERE mc.content_id = c.content_id)          AS avgRating
+             , (SELECT COUNT(*)
+                  FROM user_comment uc
+                 WHERE uc.content_id = c.content_id)          AS commentCnt
+          FROM content c
+        <where>
+            <!-- 제목 지정 검색 -->
+            <if test="title != null and title != ''">
+                AND ( UPPER(c.title_ko)  LIKE '%' || UPPER(#{title}) || '%'
+                   OR UPPER(c.title_org) LIKE '%' || UPPER(#{title}) || '%' )
+            </if>
+
+            <!-- 낱말 검색 - 제목과 줄거리를 함께 본다.
+                 CLOB 은 LIKE 대신 DBMS_LOB.INSTR 로 찾는다 -->
+            <if test="keywords != null and keywords.size() > 0">
+                AND (
+                <foreach item="k" collection="keywords" separator=" OR ">
+                    (    DBMS_LOB.INSTR(c.overview, #{k}) &gt; 0
+                      OR UPPER(c.title_ko)  LIKE '%' || UPPER(#{k}) || '%'
+                      OR UPPER(c.title_org) LIKE '%' || UPPER(#{k}) || '%' )
+                </foreach>
+                )
+            </if>
+
+            <!-- 장르 -->
+            <if test="genre != null and genre != ''">
+                AND EXISTS ( SELECT 1
+                               FROM content_genre cg
+                               JOIN genre g ON g.genre_id = cg.genre_id
+                              WHERE cg.content_id = c.content_id
+                                AND g.name = #{genre} )
+            </if>
+
+            <!-- 연도 구간 -->
+            <if test="yearFrom != null">
+                AND EXTRACT(YEAR FROM c.release_year) &gt;= #{yearFrom}
+            </if>
+            <if test="yearTo != null">
+                AND EXTRACT(YEAR FROM c.release_year) &lt;= #{yearTo}
+            </if>
+        </where>
+        ORDER BY
+        <choose>
+            <when test="sort == 'oldest'">
+                c.release_year ASC NULLS LAST
+            </when>
+            <when test="sort == 'rating'">
+                (SELECT AVG(mc.rating_score) FROM member_content mc
+                  WHERE mc.content_id = c.content_id) DESC NULLS LAST
+            </when>
+            <when test="sort == 'popular'">
+                (SELECT COUNT(*) FROM user_comment uc
+                  WHERE uc.content_id = c.content_id) DESC
+            </when>
+            <otherwise>
+                c.release_year DESC NULLS LAST
+            </otherwise>
+        </choose>
+             , c.content_id ASC
+        FETCH FIRST #{limit} ROWS ONLY
+    </select>
+
+    <!-- 공개 공지 제목 검색. 2조 selectPublicNoticeList 에는 searchWord 조건이
+         없어서(페이지 전체 목록용) AI 검색용으로 따로 둔다. 낱말이 없으면 최신 공지 -->
+    <select id="doSearchNotices"
+            parameterType="com.endit.ai.dto.SearchIntent"
+            resultType="com.endit.ai.dto.AiNoticeItem">
+        SELECT NOTICE_ID                                     AS noticeId
+             , TITLE                                         AS title
+             , TO_CHAR(CREATED_DT, 'YYYY-MM-DD')             AS createdDt
+          FROM NOTICE
+         WHERE STATUS = 'PUBLISHED'
+        <if test="keywords != null and keywords.size() > 0">
+           AND (
+            <foreach item="k" collection="keywords" separator=" OR ">
+                TITLE LIKE '%' || #{k} || '%'
+            </foreach>
+           )
+        </if>
+         ORDER BY IMPORTANT DESC, CREATED_DT DESC, NOTICE_ID DESC
+         FETCH FIRST 5 ROWS ONLY
+    </select>
+
+    <!-- ── 임베딩(뜻 좌표) ─────────────────────────────────────── -->
+
+    <!-- 적재 대상: 줄거리는 있는데 좌표가 없거나, 다른 저울로 잰 것 -->
+    <select id="selectEmbedTargets" parameterType="string"
+            resultType="com.endit.ai.dto.ContentEmbeddingVO">
+        SELECT c.content_id  AS contentId
+             , c.title_ko    AS titleKo
+             , c.overview    AS overview
+             , (SELECT LISTAGG(g.name, ', ') WITHIN GROUP (ORDER BY g.genre_id)
+                  FROM content_genre cg
+                  JOIN genre g ON g.genre_id = cg.genre_id
+                 WHERE cg.content_id = c.content_id) AS genres
+          FROM content c
+          LEFT JOIN content_embedding ce ON ce.content_id = c.content_id
+         WHERE c.overview IS NOT NULL
+           AND ( ce.content_id IS NULL OR ce.model != #{model} )
+         ORDER BY c.content_id
+    </select>
+
+    <!-- 있으면 갱신, 없으면 삽입 -->
+    <!-- 오라클 21c 에서 CLOB 를 MERGE 에 물리면 ORA-3146/3138 이 난다(실측).
+         그래서 UPDATE 해보고 0건이면 INSERT 하는 두 방 방식으로 간다 -->
+    <update id="updateEmbedding" parameterType="com.endit.ai.dto.ContentEmbeddingVO">
+        UPDATE content_embedding
+           SET embedding  = #{embedding, jdbcType=CLOB}
+             , model      = #{model}
+             , updated_dt = SYSDATE
+         WHERE content_id = #{contentId}
+    </update>
+
+    <insert id="insertEmbedding" parameterType="com.endit.ai.dto.ContentEmbeddingVO">
+        INSERT INTO content_embedding (content_id, embedding, model)
+        VALUES (#{contentId}, #{embedding, jdbcType=CLOB}, #{model})
+    </insert>
+
+    <select id="selectEmbeddings" parameterType="string"
+            resultType="com.endit.ai.dto.ContentEmbeddingVO">
+        SELECT content_id AS contentId
+             , embedding  AS embedding
+          FROM content_embedding
+         WHERE model = #{model}
+    </select>
+
+    <select id="selectContentIdByTitle" parameterType="string" resultType="long">
+        SELECT content_id
+          FROM content
+         WHERE UPPER(title_ko)  LIKE '%' || UPPER(#{title}) || '%'
+            OR UPPER(title_org) LIKE '%' || UPPER(#{title}) || '%'
+         ORDER BY LENGTH(title_ko) ASC
+         FETCH FIRST 1 ROWS ONLY
+    </select>
+
+    <select id="selectItemsByIds" parameterType="list"
+            resultType="com.endit.ai.dto.AiSearchItem">
+        SELECT c.content_id                                   AS contentId
+             , c.title_ko                                     AS titleKo
+             , c.title_org                                    AS titleOrg
+             , TO_CHAR(c.release_year, 'YYYY')                AS releaseYear
+             , c.poster_url                                   AS posterUrl
+             , DBMS_LOB.SUBSTR(c.overview, 300, 1)            AS overview
+             , (SELECT ROUND(AVG(mc.rating_score), 1)
+                  FROM member_content mc
+                 WHERE mc.content_id = c.content_id)          AS avgRating
+             , (SELECT COUNT(*)
+                  FROM user_comment uc
+                 WHERE uc.content_id = c.content_id)          AS commentCnt
+          FROM content c
+         WHERE c.content_id IN
+        <foreach item="id" collection="list" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+</mapper>

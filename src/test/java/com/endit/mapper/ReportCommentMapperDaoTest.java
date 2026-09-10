@@ -46,8 +46,8 @@ class ReportCommentMapperDaoTest {
 	private static final long MEMBER_REPORTER = 10L;  // admin2@endit.com — 신고자
 	private static final long MEMBER_REPORTER_B = 1L; // 영화왕김철수 — 두 번째 신고자
 	private static final long ADMIN_PROCESSOR = 9L;   // 신고 처리 관리자 (ROLE=ADMIN)
-	private static final long CONTENT_A = 9L;          // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
-	private static final long CONTENT_B = 10L;         // 올드보이 — 더미 코멘트 없는 영화
+	private static final long CONTENT_A = 442L;          // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
+	private static final long CONTENT_B = 443L;         // 올드보이 — 더미 코멘트 없는 영화
 
 	@Autowired
 	ReportCommentMapper mapper;

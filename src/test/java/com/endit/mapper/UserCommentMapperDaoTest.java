@@ -46,8 +46,8 @@ class UserCommentMapperDaoTest {
 	// → 더미 코멘트가 전혀 없는 회원 9·10을 쓰면 UNIQUE(회원×대상 1개) 충돌이 없다.
 	private static final long MEMBER_A = 9L;     // admin1@endit.com — 더미 코멘트 없음
 	private static final long MEMBER_B = 10L;    // admin2@endit.com — 더미 코멘트 없음
-	private static final long CONTENT_A = 9L;    // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
-	private static final long CONTENT_B = 10L;   // 올드보이 — 더미 코멘트 없는 영화
+	private static final long CONTENT_A = 442L;  // TMDB 적재분 첫 영화 — 코멘트 없음 (더미 10편 삭제 후 교체)
+	private static final long CONTENT_B = 443L;  // TMDB 적재분 둘째 영화 — 코멘트 없음
 	private static final long COLLECTION_A = 1L; // 인생 SF 영화 모음집(회원1 소유) — 더미 코멘트 없음
 
 	@Autowired
@@ -252,7 +252,7 @@ class UserCommentMapperDaoTest {
 		// 3. 마지막 페이지(3페이지) → 1건
 
 		// 1.
-		final long[] contents = { 1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L }; // 더미 영화 1~8
+		final long[] contents = { 444L, 445L, 446L, 447L, 448L, 449L, 450L, 451L }; // TMDB 적재분 8편 (더미 삭제 후 교체)
 		final int TOTAL_COUNT = contents.length + 1; // 영화 8건 + 컬렉션 1건 = 9건
 
 		for (long content : contents) {
@@ -294,17 +294,17 @@ class UserCommentMapperDaoTest {
 		// 3. rating_desc: 별점 5(영화1)가 먼저
 		// 4. rating_asc: 별점 3(영화2)가 먼저 (NULLS LAST는 별점 없는 행이 뒤로)
 
-		UserCommentVO c1 = new UserCommentVO(0, MEMBER_A, 1L, null, "별점5 영화 한줄평", UserCommentVO.SPOILER_NO,
+		UserCommentVO c1 = new UserCommentVO(0, MEMBER_A, 444L, null, "별점5 영화 한줄평", UserCommentVO.SPOILER_NO,
 				null, null);
-		UserCommentVO c2 = new UserCommentVO(0, MEMBER_A, 2L, null, "별점3 영화 한줄평", UserCommentVO.SPOILER_NO,
+		UserCommentVO c2 = new UserCommentVO(0, MEMBER_A, 445L, null, "별점3 영화 한줄평", UserCommentVO.SPOILER_NO,
 				null, null);
 		mapper.doSave(c1);
 		mapper.doSave(c2);
 		likeMapper.doSave(new CommentLikeVO(MEMBER_B, c2.getCommentId(), null));
 		jdbcTemplate.update("INSERT INTO member_content (member_id, content_id, rating_score) VALUES (?, ?, ?)",
-				MEMBER_A, 1L, 5);
+				MEMBER_A, 444L, 5);
 		jdbcTemplate.update("INSERT INTO member_content (member_id, content_id, rating_score) VALUES (?, ?, ?)",
-				MEMBER_A, 2L, 3);
+				MEMBER_A, 445L, 3);
 
 		dto.setPageNo(1);
 		dto.setPageSize(PAGE_SIZE);
@@ -421,7 +421,7 @@ class UserCommentMapperDaoTest {
 		log.debug("*getTargetTitle()*");
 		log.debug("---------------------------");
 		// 화면 헤더용 대상 제목 조회 — 공용 더미 실제 값과 대조 (C-04·D-07)
-		assertEquals("어벤져스: 인피니티 워", mapper.getContentTitle(CONTENT_A));
+		assertEquals("스파이더맨: 브랜드 뉴 데이", mapper.getContentTitle(CONTENT_A));
 		assertEquals("인생 SF 영화 모음집", mapper.getCollectionTitle(COLLECTION_A));
 		assertNull(mapper.getContentTitle(999_999_999L)); // 없는 대상은 null
 	}

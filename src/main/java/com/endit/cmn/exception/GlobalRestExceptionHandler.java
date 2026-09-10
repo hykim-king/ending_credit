@@ -10,6 +10,9 @@
  * (응답이 text/html로 정해진 뒤라) 변환 실패로 백지 500이 된다.
  * 실측 2026-08-31: 2조 공지 화면(/notices) 템플릿 부재 예외를 이 advice가 가로챔.
  * ※ 401(인증 필요)·403(권한 없음) 처리는 3조 이진영 추가(2026-08-29).
+ * ※ 4조: 브라우저 주소창 이동(Sec-Fetch-Dest=document)은 JSON이 아니라 오류 화면으로
+ *   리다이렉트한다. 이 앱은 브라우저와 fetch가 모두 Accept 와일드카드를 보내
+ *   콘텐츠 협상(produces)으로는 둘을 못 가린다(실측 2026-09-10). Sec-Fetch-Dest로 판별한다.
  */
 package com.endit.cmn.exception;
 
@@ -17,6 +20,8 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
+import java.net.URI;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MissingRequestValueException;
@@ -26,6 +31,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.endit.auth.AuthenticationRequiredException;
 import com.endit.auth.ForbiddenOperationException;
 import com.endit.cmn.MessageVO;
+
+import jakarta.servlet.http.HttpServletRequest;
 import com.endit.controller.AdminMemberController;
 import com.endit.controller.CommentController;
 import com.endit.controller.CommentLikeController;
@@ -80,10 +87,15 @@ public class GlobalRestExceptionHandler {
 	 * @return ResponseEntity<MessageVO>
 	 */
 	@ExceptionHandler(ReportNotFoundException.class)
-	public ResponseEntity<MessageVO> handlerReportNotFoundException(ReportNotFoundException e) {
+	public ResponseEntity<?> handlerReportNotFoundException(ReportNotFoundException e,
+			HttpServletRequest request) {
 		log.debug("=============================");
 		log.debug("handlerReportNotFoundException: {}", e.getMessage());
 		log.debug("=============================");
+
+		if (isBrowserNavigation(request)) {
+			return redirectToErrorView(request, "/error-page/business", e.getMessage());
+		}
 
 		MessageVO messageVO = new MessageVO();
 		messageVO.setId("0");
@@ -144,10 +156,14 @@ public class GlobalRestExceptionHandler {
 	 * @return ResponseEntity<MessageVO>
 	 */
 	@ExceptionHandler(Exception.class)
-	public ResponseEntity<MessageVO> handlerException(Exception e) {
+	public ResponseEntity<?> handlerException(Exception e, HttpServletRequest request) {
 		log.debug("=============================");
 		log.debug("handlerException: {}", e.getMessage());
 		log.debug("=============================");
+
+		if (isBrowserNavigation(request)) {
+			return redirectToErrorView(request, "/error-page/system", "서비스 처리 중 오류가 발생했습니다.");
+		}
 
 		MessageVO messageVO = new MessageVO();
 		messageVO.setId("0");
@@ -157,4 +173,30 @@ public class GlobalRestExceptionHandler {
 		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(messageVO);
 	}
 
+
+	/**
+	 * 브라우저 주소창 이동/링크 클릭인가(= 오류 화면이 필요한가).
+	 * Sec-Fetch-Dest=document면 확실한 화면 요청. 이 헤더가 없는 구형 브라우저는
+	 * Accept가 text/html을 원하고 X-Requested-With(AJAX 표시)가 없으면 화면으로 본다.
+	 */
+	private boolean isBrowserNavigation(HttpServletRequest request) {
+		String dest = request.getHeader("Sec-Fetch-Dest");
+		if (null != dest) {
+			return "document".equals(dest);
+		}
+		String accept = request.getHeader("Accept");
+		boolean wantsHtml = null != accept && accept.contains("text/html");
+		boolean isAjax = "XMLHttpRequest".equalsIgnoreCase(request.getHeader("X-Requested-With"));
+		return wantsHtml && false == isAjax;
+	}
+
+	/**
+	 * 오류 메시지를 세션에 잠깐 담고 오류 화면(ErrorViewController)으로 302 보낸다.
+	 * ResponseEntity 리다이렉트라 @RestControllerAdvice에서도 그대로 나간다.
+	 */
+	private ResponseEntity<Void> redirectToErrorView(HttpServletRequest request, String path,
+			String message) {
+		request.getSession().setAttribute("enditErrorMessage", message);
+		return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(path)).build();
+	}
 }

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+ AI 도우미 - 모든 화면에 붙는 떠 있는 버튼
+ layout.html 이 이 조각을 불러 body 끝에 둔다.
+ 검색 결과가 0건인 화면에서는 말풍선이 먼저 말을 건다.
+-->
+<div th:fragment="aiAssistant">
+
+    <!--선제 말풍선. 처음에는 숨어 있고 JS 가 조건을 보고 띄운다-->
+    <div id="aiTeaser" class="ai-teaser d-none" role="status">
+        <button type="button" id="aiTeaserClose" class="ai-teaser-close"
+                aria-label="닫기">&times;</button>
+        <div id="aiTeaserTitle" class="ai-teaser-title">제목으로 못 찾으셨나요?</div>
+        <div id="aiTeaserBody" class="ai-teaser-body">줄거리와 분위기로 찾아드릴게요.</div>
+    </div>
+
+    <!--검색 패널-->
+    <div id="aiPanel" class="ai-panel d-none" role="dialog"
+         aria-modal="false" aria-labelledby="aiPanelTitle">
+
+        <div class="ai-panel-head">
+            <i class="bi bi-stars"></i>
+            <span id="aiPanelTitle">AI 검색</span>
+            <button type="button" id="aiPanelClose" class="ai-panel-close"
+                    aria-label="닫기">&times;</button>
+        </div>
+
+        <div class="ai-panel-body">
+
+            <div class="input-group input-group-sm">
+                <input type="text" id="aiQuery" class="form-control" maxlength="200"
+                       placeholder="어떤 영화를 찾으세요?"
+                       aria-label="AI 검색어">
+                <button type="button" id="aiSubmit" class="btn btn-primary">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+
+            <div id="aiStatus" class="ai-status d-none">
+                <span class="spinner-border spinner-border-sm"></span>
+                <span>찾고 있습니다...</span>
+            </div>
+
+            <div id="aiMsg" class="ai-msg d-none"></div>
+
+            <div id="aiResults" class="ai-results"></div>
+
+        </div>
+    </div>
+
+    <!--떠 있는 버튼-->
+    <button type="button" id="aiFab" class="ai-fab"
+            aria-label="AI 검색 열기" aria-expanded="false" aria-controls="aiPanel">
+        <i class="bi bi-stars"></i>
+    </button>
+
+</div>
+
+</body>
+</html>

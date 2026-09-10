@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-dotenv
+
+# 아래 둘은 실제 AI를 붙일 때만 필요하다. mock 으로 도는 동안은 없어도 된다.
+# openai
+# anthropic

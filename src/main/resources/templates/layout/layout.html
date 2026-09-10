@@ -12,6 +12,7 @@ xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
 <link rel="stylesheet"
 href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 <link rel="stylesheet" th:href="@{/assets/css/endit.css}">
+<link rel="stylesheet" th:href="@{/assets/css/ai/ai_assistant.css}">
 <title layout:title-pattern="$CONTENT_TITLE | ENDIT">ENDIT</title>
 <script th:src="@{/assets/js/cmn/common.js}" defer></script>
 <script th:src="@{/assets/js/cmn/common_fetch.js}" defer></script>
@@ -39,6 +40,10 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.m
 	</div>
 	<!--// root container end -->
 
+	<!-- AI 도우미 - 모든 화면에 뜨는 검색 버튼. 화면 구성에는 영향을 주지 않는다 -->
+	<div th:replace="~{fragments/ai_assistant :: aiAssistant}"></div>
+
 <script th:src="@{/assets/js/bootstrap.js}"></script>
+<script th:src="@{/assets/js/ai/ai_assistant.js}" defer></script>
 </body>
 </html>
