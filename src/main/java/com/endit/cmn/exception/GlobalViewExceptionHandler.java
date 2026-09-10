@@ -21,8 +21,9 @@ import com.endit.controller.AdminMemberController;
 import com.endit.controller.CommentController;
 import com.endit.controller.ReportCommentController;
 
-// [비활성] REST advice가 브라우저 이동을 감지해 ErrorViewController로 리다이렉트하도록 바뀌어
-// 이 advice는 더 이상 필요 없다(@ControllerAdvice 제거로 비작동). 커밋 시 삭제 예정.
+@Order(2)
+@ControllerAdvice(assignableTypes = { CommentController.class, ReportCommentController.class,
+		AdminMemberController.class })
 public class GlobalViewExceptionHandler {
 
 	final Logger log = LoggerFactory.getLogger(getClass());
