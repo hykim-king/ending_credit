@@ -116,8 +116,11 @@ layout:decorate="~{layout/layout}">
                     </button>
                     <button type="button" class="card-action report-btn"><i class="bi bi-flag"></i> 신고</button>
                     <span class="ms-auto"></span>
-                    <button type="button" class="card-action edit-btn"><i class="bi bi-pencil"></i> 수정</button>
-                    <button type="button" class="card-action danger del-btn"><i class="bi bi-trash"></i> 삭제</button>
+                    <!-- 본인 코멘트에만 수정·삭제 노출(서버도 막지만 UI에서도 숨김) -->
+                    <button type="button" class="card-action edit-btn"
+                            th:if="${loginMemberId != null and vo.memberId == loginMemberId}"><i class="bi bi-pencil"></i> 수정</button>
+                    <button type="button" class="card-action danger del-btn"
+                            th:if="${loginMemberId != null and vo.memberId == loginMemberId}"><i class="bi bi-trash"></i> 삭제</button>
                 </div>
             </div>
         </div>
