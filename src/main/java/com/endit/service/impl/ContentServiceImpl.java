@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +31,7 @@ import com.endit.domain.ContentVO;
 import com.endit.domain.EnglishContentVO;
 import com.endit.domain.GenreVO;
 import com.endit.domain.PersonVO;
+import com.endit.domain.TmdbRatingVO;
 import com.endit.mapper.ContentCreditMapper;
 import com.endit.mapper.ContentGenreMapper;
 import com.endit.mapper.ContentImageMapper;
@@ -46,6 +48,8 @@ import info.movito.themoviedbapi.model.core.Movie;
 import info.movito.themoviedbapi.model.core.MovieResultsPage;
 import info.movito.themoviedbapi.model.core.ProductionCountry;
 import info.movito.themoviedbapi.model.core.image.Artwork;
+import info.movito.themoviedbapi.model.core.video.Video;
+import info.movito.themoviedbapi.model.core.video.VideoResults;
 import info.movito.themoviedbapi.model.movies.Cast;
 import info.movito.themoviedbapi.model.movies.Credits;
 import info.movito.themoviedbapi.model.movies.Crew;
@@ -152,6 +156,17 @@ public class ContentServiceImpl implements ContentService {
 	// 영문 줄거리를 받을 때 쓰는 언어. tmdbProperties.getLanguage()는 ko-KR이라 그대로 쓸 수 없다
 	private static final String LANGUAGE_EN = "en-US";
 
+	// 아직 아무도 평가하지 않은 TMDB 영화. 평균이 0.0으로 와서 그래프에 선을 그을 수 없다.
+	// 값은 그대로 담고 화면이 TmdbRatingVO.rated로 가린다 - 안 담으면 캐시가 안 돼 매번 다시 부른다
+	private static final int NO_TMDB_VOTE = 0;
+	private static final double NO_TMDB_AVERAGE = 0;
+
+	// 예고편으로 쓸 영상. 임베드 주소 형식이 유튜브 것만 맞아 다른 사이트는 거른다
+	private static final String VIDEO_SITE_YOUTUBE = "YouTube";
+	private static final String VIDEO_TYPE_TRAILER = "Trailer";
+	// 개봉 전 작품은 예고편이 아직 없고 티저만 있는 경우가 있다
+	private static final String VIDEO_TYPE_TEASER = "Teaser";
+
 	// 한국 등급이 없는 작품이 20%쯤 되어 미국 등급으로 보완한다
 	private static final String CERTIFICATION_COUNTRY_US = "US";
 
@@ -189,6 +204,8 @@ public class ContentServiceImpl implements ContentService {
 	// 영문 표시값 캐시. 위 둘과 달리 통째로 갈지 않고 조회할 때마다 한 칸씩 채우므로 ConcurrentHashMap이다.
 	// 줄거리·포스터·배경이 상세 응답 하나에서 함께 오므로 묶어서 담는다 - 따로 담으면 같은 호출을 두 번 하게 된다
 	private final Map<Integer, EnglishContentVO> englishContents = new ConcurrentHashMap<>();
+	// TMDB 평점도 담을 컬럼이 없어 같은 방식으로 메모리에만 둔다
+	private final Map<Integer, TmdbRatingVO> tmdbRatings = new ConcurrentHashMap<>();
 
 	public ContentServiceImpl(
 			ContentMapper contentMapper,
@@ -219,8 +236,12 @@ public class ContentServiceImpl implements ContentService {
 	public int sync(int limit) {
 		// API 키가 존재하는지 확인
 		validateApiKey();
-		// 영화보다 장르 코드표-> 장르를 먼저 넣는다
-		syncGenreMaster();
+		/*
+		 * 영화보다 장르 코드표-> 장르를 먼저 넣는다.
+		 * 여기서 만든 대응표를 아래 저장 경로가 그대로 쓴다 - 19종 고정값을 영화마다 다시 묻지 않으려는 것이다
+		 * (syncGenreRank가 콘텐츠 대응표를 먼저 읽어 두는 것과 같은 이유다).
+		 */
+		Map<String, Integer> genreIdByExternal = syncGenreMaster();
 
 		if (limit <= 0) {
 			limit = DEFAULT_SYNC_LIMIT;
@@ -260,7 +281,7 @@ public class ContentServiceImpl implements ContentService {
 
 					// 성인등급이거나 등급을 못 구하면 저장하지 않는다.
 					// 저장 안 한 건은 limit에 세지 않으므로 다음 페이지로 보충된다
-					switch (saveFromTmdb(movie.getId())) {
+					switch (saveFromTmdb(movie.getId(), genreIdByExternal)) {
 						case SAVED -> insertedCount++;
 						case ADULT -> adultSkippedCount++;
 						case NO_CERTIFICATION -> unratedSkippedCount++;
@@ -495,36 +516,38 @@ public class ContentServiceImpl implements ContentService {
 
 	//장르 코드표를 받아 GENRE에 넣음. API 는 영화 목록 조회와 다름. 영화 목록 조회 하기 전에 GENRE 정보를 먼저 받아와 삽입. 이건
 	//있으면 업데이트하고 없으면 새로 삽입함.
-	private void syncGenreMaster() {
+	private Map<String, Integer> syncGenreMaster() {
+		Map<String, Integer> genreIdByExternal = new HashMap<>();
+
 		try {
 			// HTTP GET /genre/movie/list
 			List<Genre> genres = tmdbApi.getGenre().getMovieList(tmdbProperties.getLanguage());
 			// 장르 지대로 받아왔나 비어있나 검사
 			if (genres == null || genres.isEmpty()) {
-				return;
+				return genreIdByExternal;
 			}
 
-			int saved = 0;
 			// 장르 순회하며 비어 있으면 pass
 			for (Genre genre : genres) {
 				if (genre == null) {
 					continue;
 				}
 				// 말그대로 업서트. 있으면 업데이트 없으면 인서트 ㅋㅋ 업 + 서트 ㅋㅋ
-				resolveGenreId(genre);
-				saved++;
+				genreIdByExternal.put(String.valueOf(genre.getId()), resolveGenreId(genre));
 			}
-			log.info("TMDB 장르 마스터 동기화: count={}", saved);
+			log.info("TMDB 장르 마스터 동기화: count={}", genreIdByExternal.size());
 		} catch (TmdbException e) {
 			throw new IllegalStateException("TMDB 장르 목록 조회 실패", e);
 		}
+
+		return genreIdByExternal;
 	}
 
 	// 저장하지 않은 사유. 호출부가 로그를 갈라 찍어야 해서 boolean으로는 부족하다
 	private enum SaveOutcome { SAVED, ADULT, NO_CERTIFICATION }
 
 	// 신규 영화만 상세 조회한 뒤 CONTENT와 하위 테이블에 넣는다
-	private SaveOutcome saveFromTmdb(int tmdbMovieId) {
+	private SaveOutcome saveFromTmdb(int tmdbMovieId, Map<String, Integer> genreIdByExternal) {
 		try {
 			// HTTP GET /movie/영화id + append_to_response=credits,translations,release_dates
 			// 이유는 API 호출 횟수를 줄이기 위해서. 항목을 얹는 것뿐이라 호출 수는 늘지 않는다.
@@ -559,7 +582,7 @@ public class ContentServiceImpl implements ContentService {
 			// syncImages 안에 호출해서 이미지 집어넣는거 다 포함 되어 있음.
 			syncImages(contentId, tmdbMovieId);
 			// 장르는 credits가 아님. 상세 JSON에 이미 들어있는 genres로 CONTENT_GENRE만 연결
-			syncContentGenres(contentId, movie);
+			syncContentGenres(contentId, movie, genreIdByExternal);
 
 			return SaveOutcome.SAVED;
 		} catch (TmdbException e) {
@@ -727,7 +750,8 @@ public class ContentServiceImpl implements ContentService {
 	}
 
 	// 영화와 장르를 CONTENT_GENRE로 연결한다
-	private void syncContentGenres(int contentId, MovieDb movie) {
+	private void syncContentGenres(int contentId, MovieDb movie,
+			Map<String, Integer> genreIdByExternal) {
 		try {
 			List<Genre> genres = movie.getGenres();
 			if (genres == null || genres.isEmpty()) {
@@ -740,7 +764,9 @@ public class ContentServiceImpl implements ContentService {
 				if (genre == null) {
 					continue;
 				}
-				int genreId = resolveGenreId(genre);
+				// 마스터 업서트에서 이미 확인한 장르다. 표에 없는 것만(TMDB가 새로 추가한 장르) 예전 경로로 떨어진다
+				Integer mapped = genreIdByExternal.get(String.valueOf(genre.getId()));
+				int genreId = mapped != null ? mapped : resolveGenreId(genre);
 				ContentGenreVO contentGenre = new ContentGenreVO();
 				contentGenre.setContentId(contentId);
 				contentGenre.setGenreId(genreId);
@@ -821,8 +847,27 @@ public class ContentServiceImpl implements ContentService {
 		}
 
 		person.setPersonId(personId);
+
+		/*
+		 * 인기 영화는 배우가 크게 겹쳐, 500건을 적재하면 이 자리가 5천 번 넘게 불린다.
+		 * 예전에는 그때마다 doUpdate로 네 컬럼을 덮어썼는데 값은 대개 그대로였다 -
+		 * 같은 값이어도 오라클에는 실제 갱신이라 redo·undo가 쌓이고 updated_dt만 매번 바뀐다.
+		 * PK 조회는 버퍼에서 읽는 값싼 연산이라, 한 번 더 읽고 쓰기를 없애는 쪽이 싸다.
+		 */
+		if (isSamePerson(personMapper.doSelectOne(person), person)) {
+			return personId;
+		}
+
 		personMapper.doUpdate(person);
 		return personId;
+	}
+
+	// 저장된 인물과 TMDB가 준 값이 같은지. updated_dt를 헛되이 흔들지 않으려고 실제 컬럼만 본다
+	private boolean isSamePerson(PersonVO stored, PersonVO fresh) {
+		return stored != null
+				&& Objects.equals(stored.getNameKo(), fresh.getNameKo())
+				&& Objects.equals(stored.getNameOrg(), fresh.getNameOrg())
+				&& Objects.equals(stored.getProfileImageUrl(), fresh.getProfileImageUrl());
 	}
 
 	// 라이브러리가 준 인물 정보를 우리 person VO로 바꿈.
@@ -1075,7 +1120,7 @@ public class ContentServiceImpl implements ContentService {
 			return cached;
 		}
 
-		EnglishContentVO english = readEnglishContent(externalId);
+		EnglishContentVO english = readEnglishContent(contentId, externalId);
 
 		if (english == null) {
 			// 실패는 캐시하지 않는다. 굳혀 두면 TMDB가 돌아와도 영영 한국어로 남는다
@@ -1090,10 +1135,17 @@ public class ContentServiceImpl implements ContentService {
 	}
 
 	// 성공하면 값(없는 항목은 빈 문자열), 실패하면 null. 캐시 여부를 호출부가 가릴 수 있게 둘을 나눈다
-	private EnglishContentVO readEnglishContent(String externalId) {
+	private EnglishContentVO readEnglishContent(int contentId, String externalId) {
 		try {
+			int tmdbMovieId = Integer.parseInt(externalId);
+			// 평점·예고편도 이 응답에 들어 있다. 영어 화면에서 같은 상세를 두 번 부르지 않으려고 함께 받는다
 			MovieDb movie = tmdbApi.getMovies().getDetails(
-					Integer.parseInt(externalId), LANGUAGE_EN);
+					tmdbMovieId, LANGUAGE_EN, MovieAppendToResponse.VIDEOS);
+
+			// 이 화면(C-01)은 영문 값을 평점보다 먼저 부르므로 여기서 채워 두면 뒤 호출이 캐시에 걸린다.
+			// 이미 있으면 손대지 않는다 - 한국어 예고편을 이미 찾아 둔 것을 영어로 덮으면 안 된다
+			tmdbRatings.computeIfAbsent(contentId,
+					key -> toTmdbRating(movie, readTrailerKey(tmdbMovieId, toVideos(movie))));
 
 			if (movie == null) {
 				return new EnglishContentVO("", "", "");
@@ -1108,6 +1160,122 @@ public class ContentServiceImpl implements ContentService {
 			log.warn("영문 표시값 조회 실패. 한국어로 대체한다: externalId={}", externalId, e);
 			return null;
 		}
+	}
+
+	// TMDB 평점 - 영문 표시값과 같은 이유로 DB에 안 쓰고 메모리에만 둔다
+	@Override
+	public TmdbRatingVO getTmdbRating(int contentId, String externalId) {
+		if (contentId <= 0 || !StringUtils.hasText(externalId)) {
+			return null;
+		}
+
+		TmdbRatingVO cached = tmdbRatings.get(contentId);
+
+		if (cached != null) {
+			return cached;
+		}
+
+		TmdbRatingVO rating = readTmdbRating(externalId);
+
+		if (rating == null) {
+			// 호출 실패만 캐시하지 않는다. 굳혀 두면 TMDB가 돌아와도 영영 빈 채로 남는다.
+			// "받아 봤는데 평점이 없더라"는 실패가 아니라서 아래에서 캐시된다
+			return null;
+		}
+
+		tmdbRatings.put(contentId, rating);
+
+		return rating;
+	}
+
+	// 아직 아무도 평가하지 않은 영화는 voteCount가 0이다. 그때는 보여 줄 것이 없어 null로 떨어뜨린다
+	private TmdbRatingVO readTmdbRating(String externalId) {
+		try {
+			int tmdbMovieId = Integer.parseInt(externalId);
+			// 영상 목록을 상세에 얹어 받는다. 따로 부르면 호출이 하나 더 나간다
+			MovieDb movie = tmdbApi.getMovies().getDetails(
+					tmdbMovieId, tmdbProperties.getLanguage(), MovieAppendToResponse.VIDEOS);
+
+			return toTmdbRating(movie, readTrailerKey(tmdbMovieId, toVideos(movie)));
+		} catch (TmdbException | NumberFormatException e) {
+			log.warn("TMDB 평점 조회 실패. 평점 영역을 빼고 그린다: externalId={}", externalId, e);
+			return null;
+		}
+	}
+
+	// 평가가 없으면 0으로 담는다. 안 담고 null을 주면 캐시가 안 돼 그 영화만 볼 때마다 다시 부른다
+	private TmdbRatingVO toTmdbRating(MovieDb movie, String trailerKey) {
+		if (movie == null) {
+			return new TmdbRatingVO(NO_TMDB_AVERAGE, NO_TMDB_VOTE, trailerKey);
+		}
+
+		double average = movie.getVoteAverage() == null ? NO_TMDB_AVERAGE : movie.getVoteAverage();
+		int voteCount = movie.getVoteCount() == null ? NO_TMDB_VOTE : movie.getVoteCount();
+
+		return new TmdbRatingVO(average, voteCount, trailerKey);
+	}
+
+	private VideoResults toVideos(MovieDb movie) {
+		return movie == null ? null : movie.getVideos();
+	}
+
+	// 한국어 예고편이 없는 작품이 많아 영어로 한 번 더 찾는다. 그때만 호출이 하나 는다.
+	// 여기서 실패해도 평점은 살려야 하므로 예외를 밖으로 내보내지 않는다
+	private String readTrailerKey(int tmdbMovieId, VideoResults videos) {
+		String key = toTrailerKey(videos);
+
+		if (key != null) {
+			return key;
+		}
+
+		try {
+			return toTrailerKey(tmdbApi.getMovies().getVideos(tmdbMovieId, LANGUAGE_EN));
+		} catch (TmdbException e) {
+			log.warn("영어 예고편 조회 실패. 예고편 버튼을 빼고 그린다: tmdbMovieId={}", tmdbMovieId, e);
+			return null;
+		}
+	}
+
+	// 공식 예고편 > 예고편 > 공식 티저 > 티저 차례로 훑는다. 없으면 null
+	private String toTrailerKey(VideoResults videos) {
+		if (videos == null || videos.getResults() == null) {
+			return null;
+		}
+
+		List<Video> results = videos.getResults();
+		String key = toVideoKey(results, VIDEO_TYPE_TRAILER, true);
+
+		if (key == null) {
+			key = toVideoKey(results, VIDEO_TYPE_TRAILER, false);
+		}
+
+		if (key == null) {
+			key = toVideoKey(results, VIDEO_TYPE_TEASER, true);
+		}
+
+		if (key == null) {
+			key = toVideoKey(results, VIDEO_TYPE_TEASER, false);
+		}
+
+		return key;
+	}
+
+	private String toVideoKey(List<Video> videos, String type, boolean officialOnly) {
+		for (Video video : videos) {
+			if (!VIDEO_SITE_YOUTUBE.equals(video.getSite()) || !type.equals(video.getType())) {
+				continue;
+			}
+
+			if (officialOnly && !Boolean.TRUE.equals(video.getOfficial())) {
+				continue;
+			}
+
+			if (StringUtils.hasText(video.getKey())) {
+				return video.getKey();
+			}
+		}
+
+		return null;
 	}
 
 	@Override
