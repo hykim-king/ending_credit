@@ -160,6 +160,13 @@ body {
     align-items: center;
     justify-content: center;
     flex: none;
+    /* 헤더의 내 프로필과 코멘트 작성자 프로필 모두 링크라 기본 밑줄을 지운다 */
+    text-decoration: none;
+}
+
+a.avatar-circle:hover {
+    background: var(--endit-primary);
+    color: #fff;
 }
 
 .star {

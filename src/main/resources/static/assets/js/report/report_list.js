@@ -10,6 +10,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 행 클릭 → 상세·처리 화면 (AD-10)
     document.getElementById('reportTbody').addEventListener('click', (e) => {
+        // 행 안의 링크(신고자 프로필 등)는 링크대로 동작하게 두고 행 이동은 건너뛴다
+        if (e.target.closest('a')) {
+            return;
+        }
         const tr = e.target.closest('tr');
         if (!tr || !tr.dataset.reportId) {
             return;

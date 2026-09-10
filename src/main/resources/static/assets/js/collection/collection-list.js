@@ -184,7 +184,7 @@ function createCollectionCard(collection, currentMemberId) {
     author.className = "collection-list-card-author";
 
     const nickname = collection.nickname || `회원 ${collection.memberId}`;
-    const avatar = createAuthorAvatar(collection.profileImgUrl, nickname);
+    const avatar = createAuthorAvatar(collection);
     const authorName = document.createElement("span");
     authorName.textContent = nickname;
     author.append(avatar, authorName);
@@ -284,28 +284,73 @@ function createCollectionPosterCollage(posterUrls, visual) {
     return collage;
 }
 
-/** 작성자 프로필 이미지 생성 */
-function createAuthorAvatar(profileImgUrl, nickname) {
+/**
+ * 작성자 프로필 이미지 생성
+ * 카드 전체가 이미 컬렉션 링크라 아바타를 a로 만들면 링크가 중첩된다.
+ * 그래서 role=link로 두고 클릭·Enter를 직접 받아 프로필로 보낸다.
+ */
+function createAuthorAvatar(collection) {
+
+    const nickname = collection.nickname || `회원 ${collection.memberId}`;
 
     const fallback = document.createElement("span");
     fallback.className = "collection-list-card-avatar collection-list-card-avatar-fallback";
-    fallback.setAttribute("aria-hidden", "true");
-    fallback.innerHTML = '<i class="bi bi-person-fill"></i>';
+    fallback.innerHTML = '<i class="bi bi-person-fill" aria-hidden="true"></i>';
 
-    if (!profileImgUrl) {
-        return fallback;
+    if (!collection.profileImgUrl) {
+        return applyProfileLink(fallback, collection.memberId, nickname);
     }
 
     const image = document.createElement("img");
     image.className = "collection-list-card-avatar";
-    image.src = resolveCollectionProfileUrl(profileImgUrl);
+    image.src = resolveCollectionProfileUrl(collection.profileImgUrl);
     image.alt = "";
     image.loading = "lazy";
     image.decoding = "async";
-    image.addEventListener("error", () => image.replaceWith(fallback));
-    image.setAttribute("title", `${nickname} 프로필`);
+    // 이미지가 깨지면 폴백으로 갈아 끼우므로 폴백에도 같은 링크 동작을 걸어 둔다.
+    image.addEventListener("error",
+            () => image.replaceWith(applyProfileLink(fallback, collection.memberId, nickname)));
 
-    return image;
+    return applyProfileLink(image, collection.memberId, nickname);
+}
+
+/**
+ * 아바타 요소에 회원 프로필 이동 동작을 붙인다.
+ * 회원 번호가 없으면 표시만 하고 아무 동작도 걸지 않는다.
+ *
+ * @param element  아바타 요소
+ * @param memberId 대상 회원 번호
+ * @param nickname 대상 회원 닉네임
+ * @return 동작을 붙인 아바타 요소
+ */
+function applyProfileLink(element, memberId, nickname) {
+
+    if (!memberId) {
+        element.setAttribute("aria-hidden", "true");
+        return element;
+    }
+
+    element.classList.add("is-profile-link");
+    element.setAttribute("role", "link");
+    element.setAttribute("tabindex", "0");
+    element.setAttribute("title", `${nickname} 프로필`);
+    element.setAttribute("aria-label", `${nickname} 프로필 보기`);
+
+    const moveToProfile = (event) => {
+        // 카드의 컬렉션 링크가 같이 열리지 않도록 막는다.
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.href = `/members/${memberId}`;
+    };
+
+    element.addEventListener("click", moveToProfile);
+    element.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            moveToProfile(event);
+        }
+    });
+
+    return element;
 }
 
 /** TMDB 포스터 URL 정규화 */

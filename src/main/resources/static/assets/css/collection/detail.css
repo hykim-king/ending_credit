@@ -158,6 +158,13 @@
     border: 2px solid rgba(255, 255, 255, .86);
     border-radius: 50%;
     box-shadow: 0 3px 12px rgba(0, 0, 0, .3);
+    /* 작성자 프로필로 가는 링크라 기본 밑줄을 지운다 */
+    text-decoration: none;
+}
+
+a.collection-cover-avatar[href]:hover {
+    border-color: #fff;
+    box-shadow: 0 3px 14px rgba(101, 80, 200, .55);
 }
 
 .collection-cover-avatar img {
