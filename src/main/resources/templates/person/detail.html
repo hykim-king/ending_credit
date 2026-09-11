@@ -7,6 +7,9 @@ layout:decorate="~{layout/layout}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title th:text="${notFound ? '인물' : (person.nameKo != null and !person.nameKo.isEmpty() ? person.nameKo : person.nameOrg)}">인물</title>
 <link rel="stylesheet" th:href="@{/assets/css/person/detail.css}">
+<!-- 로그인 안내 모달이 쓰는 3조 스타일. 골격은 common, 자물쇠 아이콘은 comment에 있다 -->
+<link rel="stylesheet" th:href="@{/assets/css/collection/common.css}">
+<link rel="stylesheet" th:href="@{/assets/css/collection/comment.css}">
 <script th:src="@{/assets/js/person/detail.js}" defer></script>
 </head>
 <body>
@@ -107,6 +110,9 @@ layout:decorate="~{layout/layout}">
 				</button>
 			</div>
 		</section>
+
+		<!-- 비회원 좋아요 안내. 설명이 하나뿐이라 여기서 채워 둔다(fragments/login_required) -->
+		<div th:replace="~{fragments/login_required :: modal(#{detail.login.like})}"></div>
 
 	</div>
 </div>

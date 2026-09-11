@@ -63,5 +63,5 @@ public class CustomUserDetails implements UserDetails {
 	public String getUsername() {
 		return loginMember.getEmail();
 	}
-	
+
 }

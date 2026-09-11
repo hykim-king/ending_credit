@@ -42,15 +42,9 @@ public class CustomUserDetailsService implements UserDetailsService {
 		MemberVO member = memberMapper.selectMemberByEmail(email);
 
 		// 2) 회원이 없으면 로그인 실패
-		if (member == null) {
-			// 보안상 "이메일이 없다/비번이 틀렸다"를 구분하지 않음.
-			// 그래서 메시지는 일반적으로 두고, 실제 구분은 사용자에게 노출하지 않는다.
-			throw new UsernameNotFoundException("로그인 정보가 올바르지 않습니다.");
-		}
-
 		// 3) 소셜 전용 회원(비밀번호 null)이 이메일 로그인 시도하는 경우 차단
 		//    구글로만 가입한 회원은 PASSWORD가 null이라 이메일/비번 로그인을 할 수 없다.
-		if (member.getPassword() == null || member.getPassword().isBlank()) {
+		if ((member == null) || member.getPassword() == null || member.getPassword().isBlank()) {
 			throw new UsernameNotFoundException("로그인 정보가 올바르지 않습니다.");
 		}
 

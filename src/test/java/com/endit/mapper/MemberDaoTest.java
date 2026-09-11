@@ -22,16 +22,16 @@ import com.endit.domain.MemberVO;
 @SpringBootTest
 @Transactional
 class MemberDaoTest {
-	
+
 	@Autowired
 	private MemberMapper memberMapper;
 
 	@BeforeEach
 	void setUp() throws Exception {
-		
-		
+
+
 	}
-	
+
     /** 테스트용 회원 객체를 만드는 헬퍼 (중복 방지를 위해 값 일부를 파라미터로 받음) */
     private MemberVO newMember(String email, String nickname) {
         MemberVO member = new MemberVO();
@@ -47,13 +47,13 @@ class MemberDaoTest {
     @Test
     @DisplayName("회원 등록 후 회원번호로 조회")
     void insertAndSelectById() {
-        
+
         MemberVO member = newMember("test1@endit.com", "테스터1");
 
         // 회원 등록
         int flag = memberMapper.insertMember(member);
 
-        
+
         assertEquals(1, flag);
         assertNotNull(member.getMemberId());
 
@@ -71,7 +71,7 @@ class MemberDaoTest {
     @Test
     @DisplayName("이메일로 회원 조회")
     void selectByEmail() {
-        
+
     	// 회원 등록
         MemberVO member = newMember("test2@endit.com", "테스터2");
         memberMapper.insertMember(member);
@@ -79,7 +79,7 @@ class MemberDaoTest {
         // 이메일로 조회
         MemberVO outVO = memberMapper.selectMemberByEmail("test2@endit.com");
 
-        
+
         assertNotNull(outVO);
         assertEquals(member.getMemberId(), outVO.getMemberId());
         assertEquals("테스터2", outVO.getNickname());
@@ -118,7 +118,7 @@ class MemberDaoTest {
     @Test
     @DisplayName("같은 닉네임으로 두 번 등록하면 예외 발생 (UNIQUE 제약)")
     void insert_duplicateNickname_throws() {
-    	
+
         // 첫 등록은 성공
         memberMapper.insertMember(newMember("emailA@endit.com", "같은닉"));
 
@@ -143,7 +143,7 @@ class MemberDaoTest {
     @Test
     @DisplayName("프로필 수정 후 조회하면 변경된 값이 반영")
     void updateProfile() {
-        
+
         MemberVO member = newMember("update@endit.com", "수정전닉");
         memberMapper.insertMember(member);
 
@@ -153,7 +153,7 @@ class MemberDaoTest {
         member.setProfileImgUrl("http://img/new.png");
         int flag = memberMapper.updateProfile(member);
 
-        
+
         assertEquals(1, flag);
         MemberVO outVO = memberMapper.selectMemberById(member.getMemberId());
         assertEquals("수정후닉", outVO.getNickname());
@@ -165,14 +165,14 @@ class MemberDaoTest {
     @Test
     @DisplayName("비밀번호 변경 후 조회하면 변경된 비밀번호가 반영")
     void updatePassword() {
-        
+
         MemberVO member = newMember("pw@endit.com", "비번테스터");
         memberMapper.insertMember(member);
 
-        
+
         int updated = memberMapper.updatePassword(member.getMemberId(), "newEncodedPw");
 
-        
+
         assertEquals(1, updated);
         MemberVO outVO = memberMapper.selectMemberById(member.getMemberId());
         assertEquals("newEncodedPw", outVO.getPassword());
@@ -181,19 +181,19 @@ class MemberDaoTest {
     @Test
     @DisplayName("회원 삭제 후 조회하면 null 반환")
     void deleteMember() {
-        
+
         MemberVO member = newMember("delete@endit.com", "삭제테스터");
         memberMapper.insertMember(member);
         Long id = member.getMemberId();
 
-        
+
         int deleted = memberMapper.deleteMember(id);
 
-        
+
         assertEquals(1, deleted);
         assertNull(memberMapper.selectMemberById(id));
     }
-    
+
     @Test
     @DisplayName("회원 목록 페이징 조회 - 1페이지 10개")
     void selectMemberList() {

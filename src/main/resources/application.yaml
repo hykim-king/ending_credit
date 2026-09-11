@@ -84,7 +84,7 @@ logging:
 
 # TMDB Read Access Token. 말이 어렵지 유저가 읽어올 권한이 있는지 검사하는 개념임.
 tmdb:
-  api-key: ${TMDB_API_KEY}
+  api-key: ${TMDB_API_KEY:}
   language: ko-KR
   image-size: w500
 
@@ -95,3 +95,7 @@ ai:
   base-url: http://localhost:5000
   connect-timeout-ms: 3000
   read-timeout-ms: 20000
+# 인기순위 갱신 스케줄. 아래 세 줄의 주석만 떼면 매일 새벽 4시(Asia/Seoul)에 돈다.
+#endit:
+#  rank:
+#    cron: "0 0 4 * * *"

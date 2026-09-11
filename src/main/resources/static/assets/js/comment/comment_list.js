@@ -7,6 +7,114 @@
 let commentModal;
 let reportModal;
 
+const HTTP_UNAUTHORIZED = 401;
+
+// 비회원 안내 문구 — 무엇을 하려다 막혔는지에 따라 모달 설명 줄만 갈아 끼운다
+const LOGIN_MSG = {
+    required: '로그인 후 이용할 수 있습니다.',
+    write: '로그인 후 코멘트를 남길 수 있어요.',
+    edit: '로그인 후 내 코멘트를 수정할 수 있어요.',
+    remove: '로그인 후 내 코멘트를 삭제할 수 있어요.',
+    like: '로그인 후 좋아요를 남길 수 있어요.',
+    report: '로그인 후 신고할 수 있어요.'
+};
+
+// 서버가 비회원에게는 이 표시를 아예 안 그린다 (comment_list.html)
+function isLoggedIn() {
+    return null !== document.getElementById('loginState');
+}
+
+function modalOf(id) {
+    return bootstrap.Modal.getOrCreateInstance(document.getElementById(id));
+}
+
+// 모달을 겹쳐 띄우면 뒤엣것이 가려진다 - 닫히는 것을 기다렸다가 다음을 연다
+function closeModal(id) {
+    return new Promise((resolve) => {
+        const el = document.getElementById(id);
+
+        if (!el.classList.contains('show')) {
+            resolve();
+            return;
+        }
+
+        el.addEventListener('hidden.bs.modal', resolve, { once: true });
+        modalOf(id).hide();
+    });
+}
+
+// 비회원 로그인 안내 (영화 상세 C-01·인물 상세 P-01과 같은 모달)
+function showLoginRequired(reason) {
+    document.getElementById('loginRequiredDescription').textContent = reason;
+    modalOf('loginRequiredModal').show();
+}
+
+// 처리 결과 안내 (경고창 대신). 확인을 눌러 닫은 뒤에 afterClose를 부른다 -
+// 목록을 먼저 갱신하면 문구가 스치듯 사라져 못 읽는다
+function showMessage(message, afterClose) {
+    const el = document.getElementById('noticeModal');
+
+    document.getElementById('noticeMessage').textContent = message;
+
+    if (afterClose) {
+        el.addEventListener('hidden.bs.modal', afterClose, { once: true });
+    }
+
+    modalOf('noticeModal').show();
+}
+
+// 모달 안 오류 문구 - 쓰던 내용을 남긴 채 알려야 하는 자리
+function showStatus(statusId, message) {
+    const status = document.getElementById(statusId);
+
+    status.textContent = message;
+    status.hidden = false;
+}
+
+function clearStatus(statusId) {
+    document.getElementById(statusId).hidden = true;
+}
+
+// common.js의 isEmpty는 경고창을 띄운다 - 이 화면은 모달 안 문구로 알린다
+function isBlank(input, statusId, message) {
+    if ('' !== input.value.trim()) {
+        return false;
+    }
+
+    showStatus(statusId, message);
+    input.focus();
+    return true;
+}
+
+// 비회원이면 안내 모달을 띄우고 false — 호출부는 모달을 열기 전에 멈춘다
+function requireLogin(reason) {
+    if (isLoggedIn()) {
+        return true;
+    }
+
+    showLoginRequired(reason);
+    return false;
+}
+
+// 요청 실패 안내 — 화면을 열어 둔 사이 세션이 끊겼으면 로그인 안내 모달로 돌린다.
+// 모달이 열린 채 실패했으면 그 안 문구로 알려 쓰던 내용을 남긴다
+async function showRequestError(e, modalId, statusId) {
+    if (HTTP_UNAUTHORIZED === e.status) {
+        if (modalId) {
+            await closeModal(modalId);
+        }
+        showLoginRequired(LOGIN_MSG.required);
+        return;
+    }
+
+    if (statusId) {
+        showStatus(statusId, e.message);
+        return;
+    }
+
+    showMessage(e.message);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     commentModal = new bootstrap.Modal(document.getElementById('commentModal'));
@@ -21,10 +129,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // 작성 버튼은 컬렉션 코멘트(D-07)에만 있다
     const btnOpenSave = document.getElementById('btnOpenSave');
     if (btnOpenSave) {
-        btnOpenSave.addEventListener('click', openSaveModal);
+        btnOpenSave.addEventListener('click', () => {
+            if (requireLogin(LOGIN_MSG.write)) {
+                openSaveModal();
+            }
+        });
     }
     document.getElementById('btnCmSave').addEventListener('click', doSave);
     document.getElementById('btnCmDelete').addEventListener('click', doDeleteInModal);
+    document.getElementById('btnDeleteConfirm').addEventListener('click', deleteComment);
     document.getElementById('btnRpSave').addEventListener('click', doReport);
 
     // 정렬·페이지크기 변경 시 즉시 재조회
@@ -47,19 +160,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (e.target.closest('.like-btn')) {
-                doToggleLike(card, e.target.closest('.like-btn'));
+                if (requireLogin(LOGIN_MSG.like)) {
+                    doToggleLike(card, e.target.closest('.like-btn'));
+                }
                 return;
             }
             if (e.target.closest('.edit-btn')) {
-                openEditModal(card);
+                if (requireLogin(LOGIN_MSG.edit)) {
+                    openEditModal(card);
+                }
                 return;
             }
             if (e.target.closest('.del-btn')) {
-                doDeleteRow(card);
+                if (requireLogin(LOGIN_MSG.remove)) {
+                    doDeleteRow(card);
+                }
                 return;
             }
             if (e.target.closest('.report-btn')) {
-                openReportModal(card);
+                if (requireLogin(LOGIN_MSG.report)) {
+                    openReportModal(card);
+                }
             }
         });
     }
@@ -80,6 +201,7 @@ function openSaveModal() {
     document.getElementById('cmCount').textContent = '0';
     document.getElementById('cmSpoiler').checked = false;
     document.getElementById('btnCmDelete').classList.add('d-none');
+    clearStatus('cmStatus');
     commentModal.show();
 }
 
@@ -92,15 +214,20 @@ function openEditModal(card) {
     document.getElementById('cmCount').textContent = card.dataset.detail.length;
     document.getElementById('cmSpoiler').checked = ('Y' === card.dataset.spoiler);
     document.getElementById('btnCmDelete').classList.remove('d-none');
+    clearStatus('cmStatus');
     commentModal.show();
 }
 
 // 저장 (신규=doSave: 컬렉션 고정 / 수정=doUpdate)
 async function doSave() {
     const detailInput = document.getElementById('cmDetail');
-    if (isEmpty(detailInput, '내용을 입력하세요.')) {
+
+    clearStatus('cmStatus');
+
+    if (isBlank(detailInput, 'cmStatus', '내용을 입력하세요.')) {
         return;
     }
+
     const mode = document.getElementById('cmMode').value;
     const spoiler = document.getElementById('cmSpoiler').checked ? 'Y' : 'N';
 
@@ -121,41 +248,50 @@ async function doSave() {
             });
         }
 
-        alert(result.message);
-        if ('1' === String(result.id)) {
-            commentModal.hide();
-            doSearch(1);
+        // 실패는 모달을 연 채 알린다 - 쓰던 내용이 사라지면 다시 쓸 수 없다
+        if ('1' !== String(result.id)) {
+            showStatus('cmStatus', result.message);
+            return;
         }
+
+        await closeModal('commentModal');
+        showMessage(result.message, () => doSearch(1));
     } catch (e) {
-        alert(e.message);
+        await showRequestError(e, 'commentModal', 'cmStatus');
     }
+}
+
+// 확인 모달이 '삭제'를 받으면 지울 코멘트
+let deleteTargetId = null;
+
+// 삭제 확인 (MOD-03) — 수정 모달에서 왔으면 그것을 먼저 닫는다(취소하면 다시 열리지 않는다)
+async function askDelete(commentId) {
+    deleteTargetId = commentId;
+
+    await closeModal('commentModal');
+    modalOf('deleteConfirmModal').show();
 }
 
 // 삭제 (수정 모달 안 — MOD-03)
 async function doDeleteInModal() {
-    await deleteComment(document.getElementById('cmCommentId').value, () => commentModal.hide());
+    await askDelete(document.getElementById('cmCommentId').value);
 }
 
 // 삭제 (카드)
 async function doDeleteRow(card) {
-    await deleteComment(card.dataset.commentId, null);
+    await askDelete(card.dataset.commentId);
 }
 
-async function deleteComment(commentId, afterHide) {
-    if (!confirm('코멘트를 삭제할까요? 좋아요·신고도 함께 삭제됩니다.')) {
-        return;
-    }
+async function deleteComment() {
+    await closeModal('deleteConfirmModal');
+
     try {
-        const result = await requestPostForm('/comment/doDelete', { commentId: commentId });
-        alert(result.message);
-        if ('1' === String(result.id)) {
-            if (afterHide) {
-                afterHide();
-            }
-            doSearch(1);
-        }
+        const result = await requestPostForm('/comment/doDelete', { commentId: deleteTargetId });
+
+        // 남의 코멘트면 서버가 0건으로 돌려준다 - 성공일 때만 목록을 다시 읽는다
+        showMessage(result.message, '1' === String(result.id) ? () => doSearch(1) : null);
     } catch (e) {
-        alert(e.message);
+        await showRequestError(e);
     }
 }
 
@@ -168,7 +304,7 @@ async function doToggleLike(card, btn) {
         });
         btn.querySelector('.like-cnt').textContent = result.detailMessage;
     } catch (e) {
-        alert(e.message);
+        await showRequestError(e);
     }
 }
 
@@ -187,6 +323,7 @@ function toggleSpoiler(guard, btn) {
 function openReportModal(card) {
     document.getElementById('rpCommentId').value = card.dataset.commentId;
     document.getElementById('rpDetail').value = '';
+    clearStatus('rpStatus');
     reportModal.show();
 }
 
@@ -194,8 +331,10 @@ async function doReport() {
     const reason = document.getElementById('rpReason').value;
     const detailInput = document.getElementById('rpDetail');
 
+    clearStatus('rpStatus');
+
     // 기타(OTHER) 사유는 상세 필수 (CK_REPORT_OTHER_DETAIL)
-    if ('OTHER' === reason && isEmpty(detailInput, '기타 사유는 상세 내용을 입력해야 합니다.')) {
+    if ('OTHER' === reason && isBlank(detailInput, 'rpStatus', '기타 사유는 상세 내용을 입력해야 합니다.')) {
         return;
     }
 
@@ -206,11 +345,15 @@ async function doReport() {
             reason: reason,
             detail: detailInput.value.trim()
         });
-        alert(result.message);
-        if ('1' === String(result.id)) {
-            reportModal.hide();
+
+        if ('1' !== String(result.id)) {
+            showStatus('rpStatus', result.message);
+            return;
         }
+
+        await closeModal('reportModal');
+        showMessage(result.message);
     } catch (e) {
-        alert(e.message);
+        await showRequestError(e, 'reportModal', 'rpStatus');
     }
 }

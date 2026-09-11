@@ -8,8 +8,8 @@ public class MemberSocialAccountVO {
 	private String providerUserId;
 	private String providerEmail;
 	private String connectedDt;
-	
-	
+
+
 	public MemberSocialAccountVO() {
 		super();
 	}
@@ -81,6 +81,6 @@ public class MemberSocialAccountVO {
 				+ ", providerCode=" + providerCode + ", providerUserId=" + providerUserId + ", providerEmail="
 				+ providerEmail + ", connectedDt=" + connectedDt + "]";
 	}
-	
-	
+
+
 }

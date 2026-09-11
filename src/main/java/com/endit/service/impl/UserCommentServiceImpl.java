@@ -139,13 +139,10 @@ public class UserCommentServiceImpl implements UserCommentService {
 	 * @param param
 	 */
 	private void checkNumericSearchWord(DTO param) {
-		if (null == param || StringUtils.isEmpty(param.getSearchWord())) {
+		if (null == param || StringUtils.isEmpty(param.getSearchWord()) || !NUMERIC_SEARCH_DIVS.contains(param.getSearchDiv())) {
 			return;
 		}
-		if (false == NUMERIC_SEARCH_DIVS.contains(param.getSearchDiv())) {
-			return;
-		}
-		if (false == param.getSearchWord().matches(NUMERIC_PATTERN)) {
+		if (!param.getSearchWord().matches(NUMERIC_PATTERN)) {
 			throw new IllegalArgumentException("검색어는 숫자(번호)만 입력할 수 있습니다: " + param.getSearchWord());
 		}
 	}
