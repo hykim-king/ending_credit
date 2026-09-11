@@ -186,6 +186,7 @@ function changeSort(sort) {
 
     state.sort = sort;
     resetTabState(activeTab, true);
+    updateSortControl();
     loadRecords(activeTab, 1);
 }
 
