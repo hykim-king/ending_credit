@@ -21,6 +21,7 @@ import com.endit.domain.CollectionVO;
  * 2026. 8. 13.	jinyoung    최초 생성
  * 2026. 8. 14. jinyoung    전체 삭제 및 전체 건수 조회 기능 추가
  * 2026. 8. 29. jinyoung    전체 공개 목록 및 U-05 공개 범위 목록·건수 조회 추가
+ * 2026. 9. 09. jinyoung    컬렉션 수정 일시 단독 갱신 추가
  * ------------------------------------------------------------
  * </pre>
  *
@@ -29,6 +30,14 @@ import com.endit.domain.CollectionVO;
  */
 @Mapper
 public interface CollectionMapper extends WorkDiv<CollectionVO> {
+
+	/**
+	 * 작품 변경에 따른 컬렉션 수정 일시 갱신
+	 *
+	 * @param collectionId 컬렉션 번호
+	 * @return 수정된 행 수
+	 */
+	int updateUpdatedDt(int collectionId);
 
 	/**
 	 * 전체 삭제

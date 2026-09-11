@@ -4,11 +4,13 @@
  * 2026. 9. 01. jinyoung - U-03~U-06 4탭 UI와 회원 컬렉션 조회 연결
  * 2026. 9. 03. jinyoung - 작품 정렬·평균 별점·컬렉션 카드 및 더보기 UI 적용
  * 2026. 9. 05. jinyoung - 본인 영화·컬렉션 코멘트 조회와 수정·삭제·좋아요 UI 적용
+ * 2026. 9. 09. jinyoung - 탭별 최신 요청만 기록 목록·캐시·로딩 상태에 반영
  * 2026. 9. 10. heetae   - 다른 회원 기록 조회를 위한 대상 회원 기준 API 호출 적용
+ * 2026. 9. 11. jinyoung - 댓글·컬렉션 페이지 크기 조정 및 컬렉션 번호 페이징 적용
+ * 2026. 9. 11. jinyoung - 내 컬렉션 탭에서 새 컬렉션 작성 버튼 표시
  */
 
 // ==================== 기록 탭 설정 ====================
-const RECORD_PAGE_SIZE = 12; // 페이지당 기록 수
 const RECORD_PAGINATION_GROUP_SIZE = 5; // 한 구간의 최대 페이지 수
 const RECORD_TABS = ["ratings", "comments", "collections", "watchlist"]; // 지원 탭
 // 탭별 제목, 빈 상태 문구, 활동 건수 속성, 정렬 옵션
@@ -17,6 +19,7 @@ const RECORD_CONFIG = Object.freeze({
         title: "평가한 작품들",
         empty: "아직 평가한 작품이 없습니다.",
         countKey: "ratingsCount",
+        pageSize: 12,
         sorts: [
             ["latest", "최신 순"], ["oldest", "오래된 순"], ["rating_desc", "별점 높은 순"], ["rating_asc", "별점 낮은 순"]
         ]
@@ -25,6 +28,7 @@ const RECORD_CONFIG = Object.freeze({
         title: "작성한 코멘트",
         empty: "아직 작성한 코멘트가 없습니다.",
         countKey: "commentsCount",
+        pageSize: 6,
         sorts: [
             ["latest", "최신 순"], ["oldest", "오래된 순"], ["likes", "좋아요 많은 순"]
         ]
@@ -33,6 +37,7 @@ const RECORD_CONFIG = Object.freeze({
         title: "만든 컬렉션",
         empty: "아직 만든 컬렉션이 없습니다.",
         countKey: "collectionsCount",
+        pageSize: 6,
         sorts: [
             ["latest", "최신 순"], ["oldest", "오래된 순"], ["likes", "좋아요 많은 순"]
         ]
@@ -41,6 +46,7 @@ const RECORD_CONFIG = Object.freeze({
         title: "보고싶어요 작품들",
         empty: "아직 보고싶어요로 등록한 작품이 없습니다.",
         countKey: "watchlistCount",
+        pageSize: 12,
         sorts: [
             ["latest", "최신 순"], ["oldest", "오래된 순"]
         ]
@@ -68,6 +74,8 @@ const recordState = Object.fromEntries(RECORD_TABS.map((tab) => [
     ]));
 // 페이지 표시선의 이전 위치를 보관하는 탭별 상태
 const paginationIndicatorState = Object.fromEntries(RECORD_TABS.map((tab) => [tab, null]));
+// 다른 탭의 캐시는 유지하면서 같은 탭의 오래된 응답을 무시한다.
+const recordRequestSequences = Object.fromEntries(RECORD_TABS.map((tab) => [tab, 0]));
 
 let activeTab = normalizeTab(recordsPage.dataset.initialTab || new URLSearchParams(window.location.search).get("tab")); // 현재 탭
 let commentEditModal;
@@ -103,12 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
             closeSortMenu(true);
         }
     });
-
-    document.querySelector("#collectionLoadMoreButton")
-        .addEventListener("click", () => {
-            const state = recordState.collections;
-            loadRecords("collections", state.pageNo + 1, true);
-        });
 
     document.querySelector("#recordList").addEventListener("click", handleCommentAction);
     document.querySelector("#commentEditSaveButton")
@@ -184,17 +186,21 @@ function changeSort(sort) {
 
     state.sort = sort;
     resetTabState(activeTab, true);
+    updateSortControl();
     loadRecords(activeTab, 1);
 }
 
 /** 탭 조회 상태 초기화 */
 function resetTabState(tab, keepSort = false) {
+    recordRequestSequences[tab] += 1;
     const sort = keepSort ? recordState[tab].sort : RECORD_CONFIG[tab].sorts[0]?.[0] || null;
     recordState[tab] = { pageNo: 1, sort, data: null, scrollY: 0 };
 }
 
 /** 활성 탭 화면 갱신 */
 function updateTabView() {
+    const showCollectionCreateButton = isOwner && activeTab === "collections";
+
     document.querySelectorAll("#recordTabs [data-tab]")
         .forEach((tabLink) => {
             const selected = tabLink.dataset.tab === activeTab;
@@ -211,6 +217,8 @@ function updateTabView() {
     document.querySelector("#recordTitleText").textContent = RECORD_CONFIG[activeTab].title;
     document.querySelector("#recordTotalCount").textContent = String(recordCounts[activeTab]);
     document.querySelector("#recordTabs").style.setProperty("--active-tab-index", String(RECORD_TABS.indexOf(activeTab)));
+    document.querySelector(".member-content-heading").classList.toggle("has-collection-create", showCollectionCreateButton);
+    document.querySelector("#recordCollectionCreateButton")?.classList.toggle("d-none", !showCollectionCreateButton);
 
     updateSortControl();
 }
@@ -293,35 +301,29 @@ function closeSortMenu(returnFocus = false) {
 // ==================== 기록 API 조회 ====================
 
 /** 탭별 기록 조회 */
-async function loadRecords(tab, pageNo, append = false) {
+async function loadRecords(tab, pageNo) {
     const requestTab = tab;
+    const requestId = ++recordRequestSequences[requestTab];
 
-    if (append) {
-        setLoadMoreLoading(true);
-    } else {
-        showRecordLoading();
-    }
+    showRecordLoading();
 
     try {
         const data = await requestGet(createRecordEndpoint(tab), createRecordParams(tab, pageNo));
+        if (requestId !== recordRequestSequences[requestTab]) {
+            return;
+        }
         const state = recordState[requestTab];
         const items = Array.isArray(data.items) ? data.items : [];
-        // 컬렉션 더보기 요청은 기존 목록 뒤에 새 결과를 이어 붙인다.
-        const mergedItems = append && state.data ? [...state.data.items, ...items] : items;
 
         state.pageNo = pageNo;
-        state.data = { ...data, items: mergedItems };
+        state.data = { ...data, items };
 
         if (activeTab === requestTab) {
             renderRecords(requestTab, state.data);
         }
     } catch (error) {
-        if (activeTab === requestTab) {
+        if (requestId === recordRequestSequences[requestTab] && activeTab === requestTab) {
             showRecordError(error.message);
-        }
-    } finally {
-        if (append) {
-            setLoadMoreLoading(false);
         }
     }
 }
@@ -349,13 +351,13 @@ function createRecordParams(tab, pageNo) {
     if (tab === "collections") {
         return {
             pageNo,
-            pageSize: RECORD_PAGE_SIZE,
+            pageSize: RECORD_CONFIG[tab].pageSize,
             sort: recordState[tab].sort
         };
     }
     return {
         page: pageNo,
-        size: RECORD_PAGE_SIZE,
+        size: RECORD_CONFIG[tab].pageSize,
         sort: recordState[tab].sort
     };
 }
@@ -380,11 +382,7 @@ function renderRecords(tab, data) {
 
     if (tab === "collections") {
         renderCollectionCards(items);
-        renderCollectionLoadMore(items.length, totalCount);
-        return;
-    }
-
-    if (tab === "comments") {
+    } else if (tab === "comments") {
         renderCommentCards(items);
     } else {
         renderMovieCards(items);
@@ -997,8 +995,9 @@ function renderPagination(page, currentPage) {
         container: pagination,
         page,
         currentPage,
-        defaultPageSize: RECORD_PAGE_SIZE,
+        defaultPageSize: RECORD_CONFIG[activeTab].pageSize,
         maxVisiblePages: RECORD_PAGINATION_GROUP_SIZE,
+        showFirstLast: true,
         onPageChange: (pageNo) => {
             loadRecords(activeTab, pageNo);
             document.querySelector("#recordTitle").scrollIntoView({
@@ -1013,19 +1012,28 @@ function renderPagination(page, currentPage) {
     navigation.classList.toggle("d-none", !hasPagination);
 
     if (pageItems.length >= 2) {
-        const previousButton = pageItems[0].querySelector(".page-link");
-        const nextButton = pageItems[pageItems.length - 1].querySelector(".page-link");
-        const numberItems = Array.from(pageItems).slice(1, -1);
-        const previousIcon = document.createElement("i");
-        const nextIcon = document.createElement("i");
-        previousIcon.className = "bi bi-chevron-left page-arrow-icon";
-        previousIcon.setAttribute("aria-hidden", "true");
-        nextIcon.className = "bi bi-chevron-right page-arrow-icon";
-        nextIcon.setAttribute("aria-hidden", "true");
-        previousButton.replaceChildren(previousIcon);
-        previousButton.setAttribute("aria-label", "이전 페이지");
-        nextButton.replaceChildren(nextIcon);
-        nextButton.setAttribute("aria-label", "다음 페이지");
+        const arrowConfig = {
+            first: ["bi-chevron-double-left", "첫 페이지"],
+            previous: ["bi-chevron-left", "이전 페이지 묶음"],
+            next: ["bi-chevron-right", "다음 페이지 묶음"],
+            last: ["bi-chevron-double-right", "마지막 페이지"]
+        };
+
+        Object.entries(arrowConfig).forEach(([action, [iconName, label]]) => {
+            const button = pagination.querySelector(`[data-page-action="${action}"] .page-link`);
+
+            if (!button) {
+                return;
+            }
+
+            const icon = document.createElement("i");
+            icon.className = `bi ${iconName} page-arrow-icon`;
+            icon.setAttribute("aria-hidden", "true");
+            button.replaceChildren(icon);
+            button.setAttribute("aria-label", label);
+        });
+
+        const numberItems = Array.from(pageItems).filter((item) => !item.dataset.pageAction);
 
         numberItems.forEach((item) => item.classList.add("member-page-number"));
         renderPaginationIndicator(pagination, numberItems);
@@ -1073,20 +1081,7 @@ function renderPaginationIndicator(pagination, numberItems) {
     paginationIndicatorState[activeTab] = { startPage, activeIndex };
 }
 
-// ==================== 더보기 및 화면 상태 ====================
-
-/** 컬렉션 더보기 버튼 표시 */
-function renderCollectionLoadMore(loadedCount, totalCount) {
-    document.querySelector("#collectionLoadMoreWrap").classList.toggle("d-none", loadedCount >= totalCount);
-}
-
-/** 컬렉션 더보기 로딩 상태 표시 */
-function setLoadMoreLoading(loading) {
-    const button = document.querySelector("#collectionLoadMoreButton");
-
-    button.disabled = loading;
-    button.textContent = loading ? "불러오는 중..." : "더보기";
-}
+// ==================== 화면 상태 ====================
 
 /** 기록 로딩 상태 표시 */
 function showRecordLoading() {
@@ -1121,5 +1116,4 @@ function hideRecordStatus() {
     document.querySelector("#recordList").classList.add("d-none");
     document.querySelector("#recordPaginationNavigation").classList.add("d-none");
     document.querySelector("#recordPagination").replaceChildren();
-    document.querySelector("#collectionLoadMoreWrap").classList.add("d-none");
 }

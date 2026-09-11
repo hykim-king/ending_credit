@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.endit.cmn.DTO;
 import com.endit.domain.CollectionItemVO;
 import com.endit.mapper.CollectionItemMapper;
+import com.endit.mapper.CollectionMapper;
 import com.endit.service.CollectionItemService;
 import com.endit.service.CollectionService;
 
@@ -26,6 +27,7 @@ import com.endit.service.CollectionService;
  * 2026. 8. 26. jinyoung    최초 생성
  * 2026. 8. 29. jinyoung    부모 컬렉션 조회 권한 및 변경 소유권 검증 추가
  * 2026. 9. 02. jinyoung    목록 조회 시 현재 회원 평가 조건 전달
+ * 2026. 9. 09. jinyoung    작품 추가·삭제 시 부모 컬렉션 수정 일시 갱신
  * ------------------------------------------------------------
  * </pre>
  *
@@ -41,19 +43,23 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 	private static final int MAX_PAGE_SIZE = 100;
 
 	private final CollectionItemMapper collectionItemMapper;
+	private final CollectionMapper collectionMapper;
 	private final CollectionService collectionService;
 
 	/**
-	 * CollectionItemMapper를 주입받아 Service 구현체 생성
+	 * Mapper와 부모 컬렉션 접근 정책 Service를 주입받아 구현체 생성
 	 *
 	 * @param collectionItemMapper 컬렉션 작품 Mapper
+	 * @param collectionMapper 부모 컬렉션 Mapper
 	 * @param collectionService 부모 컬렉션 접근 정책 Service
 	 */
 	public CollectionItemServiceImpl(
 			CollectionItemMapper collectionItemMapper,
+			CollectionMapper collectionMapper,
 			CollectionService collectionService) {
 
 		this.collectionItemMapper = collectionItemMapper;
+		this.collectionMapper = collectionMapper;
 		this.collectionService = collectionService;
 	}
 
@@ -135,6 +141,7 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 			throw new IllegalStateException("추가한 컬렉션 작품을 조회할 수 없습니다.");
 		}
 
+		updateCollectionUpdatedDt(collectionId);
 		return created;
 	}
 
@@ -148,6 +155,17 @@ public class CollectionItemServiceImpl implements CollectionItemService {
 
 		if (result != 1) {
 			throw new IllegalStateException("컬렉션 작품 삭제에 실패했습니다.");
+		}
+
+		updateCollectionUpdatedDt(collectionId);
+	}
+
+	/** 작품 변경과 같은 트랜잭션에서 부모 컬렉션 수정 일시만 갱신한다. */
+	private void updateCollectionUpdatedDt(int collectionId) {
+		int result = collectionMapper.updateUpdatedDt(collectionId);
+
+		if (result != 1) {
+			throw new IllegalStateException("컬렉션 수정 일시 갱신에 실패했습니다.");
 		}
 	}
 

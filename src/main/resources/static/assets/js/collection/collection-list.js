@@ -5,6 +5,7 @@
  * 2026. 9. 02. jinyoung - 빈 설명과 내 컬렉션 표시 개선
  * 2026. 9. 03. jinyoung - 5개 단위 페이지 이동 표시
  * 2026. 9. 05. eunhu    - 컬렉션 카드 생성 함수를 쓰는 화면을 위해 목록 초기화 가드 추가
+ * 2026. 9. 09. jinyoung - 최신 검색·페이지 요청만 목록과 주소에 반영
  */
 
 /** ===================================
@@ -14,6 +15,7 @@ const DEFAULT_PAGE_SIZE = "12"; // 기본 페이지 크기
 const PAGE_GROUP_SIZE = 5; // 한 구간의 최대 페이지 수
 const TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"; // TMDB 포스터 주소
 let collectionPaginationIndicatorState = null; // 이전 활성 페이지 위치
+let collectionRequestSequence = 0; // 이전 비동기 응답 무시용 요청 순번
 
 /** ===================================
  *  화면 초기화 및 이벤트 연결
@@ -58,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 /** 컬렉션 목록 조회 및 화면 갱신 */
 async function loadCollections(pageNo) {
+    const requestId = ++collectionRequestSequence;
 
     const errorMessage = document.querySelector("#errorMessage");
     const searchWord = document.querySelector("#searchWord").value.trim();
@@ -74,6 +77,10 @@ async function loadCollections(pageNo) {
             searchWord
         });
 
+        if (requestId !== collectionRequestSequence) {
+            return;
+        }
+
         const collections = data.items || [];
         const totalCount = Number(data.page?.totalCnt || 0);
 
@@ -84,7 +91,9 @@ async function loadCollections(pageNo) {
         setSearchResultMode(searchWord);
 
     } catch (error) {
-        showLoadFailure(errorMessage, error.message);
+        if (requestId === collectionRequestSequence) {
+            showLoadFailure(errorMessage, error.message);
+        }
     }
 }
 

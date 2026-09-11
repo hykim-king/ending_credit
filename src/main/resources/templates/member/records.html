@@ -6,6 +6,8 @@ Modification History
 2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
 2026. 9. 05. jinyoung - 본인 코멘트 카드·수정·삭제 확인 모달 추가
 2026. 9. 10. heetae   - 다른 회원 기록 조회를 위한 대상·조회자 속성과 경로 분기 적용
+2026. 9. 11. jinyoung - 전체 탭 번호 페이징 및 처음·마지막 페이지 이동 UI 반영
+2026. 9. 11. jinyoung - 내 컬렉션 탭에 새 컬렉션 작성 버튼 추가
 -->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
@@ -94,14 +96,24 @@ Modification History
                 <span id="recordTotalCount" class="member-content-count" aria-live="polite">0</span>
             </h2>
 
-            <!-- 탭별 정렬 메뉴 -->
-            <div id="recordSortWrap" class="member-sort-control">
-                <button id="recordSortButton" class="member-sort-button" type="button" aria-haspopup="listbox" aria-expanded="false"
-                        aria-controls="recordSortMenu">
-                    <span id="recordSortLabel">최신 순</span>
-                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
-                </button>
-                <div id="recordSortMenu" class="member-sort-menu d-none" role="listbox" aria-label="정렬 기준"></div>
+            <!-- 탭별 정렬 메뉴와 컬렉션 작성 버튼 -->
+            <div class="member-content-actions">
+                <a id="recordCollectionCreateButton"
+                   class="btn btn-primary collection-create-button member-collection-create-button d-none"
+                   th:if="${owner}"
+                   th:href="@{/collections/new}">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    새 컬렉션
+                </a>
+
+                <div id="recordSortWrap" class="member-sort-control">
+                    <button id="recordSortButton" class="member-sort-button" type="button" aria-haspopup="listbox" aria-expanded="false"
+                            aria-controls="recordSortMenu">
+                        <span id="recordSortLabel">최신 순</span>
+                        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                    </button>
+                    <div id="recordSortMenu" class="member-sort-menu d-none" role="listbox" aria-label="정렬 기준"></div>
+                </div>
             </div>
         </div>
 
@@ -135,15 +147,10 @@ Modification History
         <!-- JavaScript가 탭에 맞는 카드 또는 코멘트 목록 삽입 -->
         <div id="recordList" class="d-none" aria-live="polite"></div>
 
-        <!-- 작품·보고싶어요 페이지네이션 -->
+        <!-- 탭 공통 페이지네이션 -->
         <nav id="recordPaginationNavigation" class="member-record-pagination d-none" aria-label="회원 기록 페이지">
             <ul id="recordPagination" class="pagination justify-content-center mb-0"></ul>
         </nav>
-
-        <!-- 컬렉션 탭은 페이지네이션 대신 12개 단위 더보기 사용 -->
-        <div id="collectionLoadMoreWrap" class="member-record-load-more d-none">
-            <button id="collectionLoadMoreButton" class="btn btn-outline-primary" type="button">더보기</button>
-        </div>
     </section>
 
     <!-- 본인 코멘트 수정 모달 -->

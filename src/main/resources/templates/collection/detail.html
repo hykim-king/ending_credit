@@ -7,6 +7,7 @@ Modification History
 2026. 9. 02. jinyoung - 반응형·소유자 작업·내 평가 표시 개선
 2026. 9. 05. jinyoung - 컬렉션 댓글 작성·대표 댓글·전체 댓글 모달 적용
 2026. 9. 07. jinyoung - 댓글 신고 모달 추가
+2026. 9. 09. jinyoung - 공통 스크립트 중복 로딩 및 존재하지 않는 스크립트 참조 제거
 -->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
@@ -305,11 +306,6 @@ Modification History
             </div>
         </div>
     </div>
-
-    <!-- 모달·공통 요청·컬렉션 좋아요 스크립트 -->
-    <script th:src="@{/assets/js/bootstrap.js}"></script>
-    <script th:src="@{/assets/js/cmn/common_fetch.js}"></script>
-    <script th:src="@{/assets/js/collection/collection-like.js}"></script>
 
 </div>
 </body>
