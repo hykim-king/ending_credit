@@ -8,6 +8,7 @@ Modification History
 2026. 8. 29. jinyoung - 컬렉션 공개 범위 목록 조회 추가
 2026. 9. 01. jinyoung - 대표 포스터 및 작성자 프로필 조회 추가
 2026. 9. 02. jinyoung - 내 비공개·좋아요 상태 반영 및 빈 컬렉션 제외
+2026. 9. 09. jinyoung - 작품 변경에 따른 컬렉션 수정 일시 단독 갱신 추가
 -->
 
 <mapper namespace="com.endit.mapper.CollectionMapper">
@@ -122,6 +123,13 @@ Modification History
                DESCRIPTION = #{description,jdbcType=NVARCHAR},
                IS_PUBLIC = #{isPublic},
                UPDATED_DT = SYSDATE
+         WHERE COLLECTION_ID = #{collectionId}
+    </update>
+
+    <!-- 작품 변경 시 제목·설명·공개 여부를 유지하고 수정 일시만 갱신 -->
+    <update id="updateUpdatedDt" parameterType="int">
+        UPDATE COLLECTION
+           SET UPDATED_DT = SYSDATE
          WHERE COLLECTION_ID = #{collectionId}
     </update>
 
