@@ -4,6 +4,7 @@ Modification History
 2026. 8. 31. jinyoung - 회원 목록 공통 UI 스크립트 적용
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-07 본문 UI와 본인 취소 동작 반영
 2026. 9. 03. jinyoung - 화면 제목·2열 탭·조회 카드·고정형 페이지네이션 UI 반영
+2026. 9. 10. heetae   - 다른 회원 좋아요 조회를 위한 대상·조회자 속성과 경로 분기 적용
 -->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
@@ -17,10 +18,20 @@ Modification History
     <script th:src="@{/assets/js/user/member-likes.js}" defer></script>
 </head>
 <body>
+<!-- ===================================
+     회원 좋아요 화면
+     data-member-id는 조회 대상, data-current-member-id는 조회자(로그인 회원)다.
+     본인 화면은 기존 경로를, 다른 회원 화면은 회원 번호가 붙은 경로를 쓴다.
+     =================================== -->
 <div layout:fragment="content"
      id="memberLikesPage"
      class="member-activity-page"
-     th:attr="data-current-member-id=${currentMemberId},data-initial-type=${type}">
+     th:with="recordsPath=${owner} ? '/members/records' : '/members/' + ${memberId} + '/records',
+              likesPath=${owner} ? '/members/likes' : '/members/' + ${memberId} + '/likes'"
+     th:attr="data-member-id=${memberId},
+              data-current-member-id=${currentMemberId},
+              data-owner=${owner},
+              data-initial-type=${type}">
 
     <!-- 좋아요 제목과 회원 기록 화면 이동 -->
     <header class="member-activity-heading">
@@ -29,8 +40,8 @@ Modification History
             <span class="member-activity-page-title-byline">by</span>
             <span class="member-activity-page-title-name" th:text="${member.nickname}">회원 닉네임</span>
         </h1>
-        <a class="member-heading-link" th:href="@{/members/records}">
-            내 기록 보기
+        <a class="member-heading-link" th:href="@{${recordsPath}}">
+            <span th:text="${owner} ? '내 기록 보기' : ${member.nickname} + '님의 기록 보기'">내 기록 보기</span>
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
     </header>
@@ -38,10 +49,10 @@ Modification History
     <!-- 인물·컬렉션 좋아요 탭 -->
     <nav class="member-tabs-wrap" aria-label="회원 좋아요 유형">
         <div id="likeTabs" class="member-tabs member-like-tabs" role="tablist">
-            <a id="personLikeTab" class="member-tab" role="tab" data-type="person" th:href="@{/members/likes(type='person')}">
+            <a id="personLikeTab" class="member-tab" role="tab" data-type="person" th:href="@{${likesPath}(type='person')}">
                 인물
             </a>
-            <a id="collectionLikeTab" class="member-tab" role="tab" data-type="collection" th:href="@{/members/likes(type='collection')}">
+            <a id="collectionLikeTab" class="member-tab" role="tab" data-type="collection" th:href="@{${likesPath}(type='collection')}">
                 컬렉션
             </a>
         </div>

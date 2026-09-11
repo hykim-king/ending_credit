@@ -599,7 +599,7 @@ async function loadAllComments(pageNo) {
 /** 댓글 한 건을 작성일·본문·좋아요·작성자별 작업과 함께 만든다. */
 function renderCommentCard(card, comment) {
     const layout = document.createElement("div");
-    const avatar = createCommentAvatar(comment.profileImgUrl, comment.nickname);
+    const avatar = createCommentAvatar(comment);
     const main = document.createElement("div");
     const meta = document.createElement("div");
     const nickname = document.createElement("strong");
@@ -959,14 +959,27 @@ function renderCommentDetail(detail, comment, afterReveal) {
     detail.append(warning, revealButton);
 }
 
-/** 댓글 작성자의 프로필 이미지 또는 기본 아바타를 만든다. */
-function createCommentAvatar(profileImgUrl, nickname) {
-    const avatar = document.createElement("span");
+/**
+ * 댓글 작성자의 프로필 이미지 또는 기본 아바타를 만든다.
+ * 작성자 번호가 있으면 프로필로 가는 링크로, 없으면 그냥 표시만 한다.
+ * 본인 번호를 눌러도 서버가 /members/me 로 돌려보내므로 따로 가르지 않는다.
+ */
+function createCommentAvatar(comment) {
+    const profileImgUrl = comment.profileImgUrl;
+    const nickname = comment.nickname;
+    const initial = (nickname || "회").trim().charAt(0) || "회";
+    const avatar = document.createElement(comment.memberId ? "a" : "span");
+
     avatar.className = "collection-comment-avatar";
+
+    if (comment.memberId) {
+        avatar.href = `/members/${comment.memberId}`;
+        avatar.setAttribute("aria-label", `${nickname || "회원"} 프로필 보기`);
+    }
 
     if (!profileImgUrl) {
         avatar.classList.add("is-fallback");
-        avatar.textContent = (nickname || "회").trim().charAt(0) || "회";
+        avatar.textContent = initial;
         return avatar;
     }
 
@@ -976,7 +989,7 @@ function createCommentAvatar(profileImgUrl, nickname) {
     image.addEventListener("error", () => {
         avatar.replaceChildren();
         avatar.classList.add("is-fallback");
-        avatar.textContent = (nickname || "회").trim().charAt(0) || "회";
+        avatar.textContent = initial;
     });
     avatar.append(image);
 
@@ -1000,12 +1013,25 @@ function showCommentToast(message) {
 
 // ==================== 작성자와 수정 일시 표시 ====================
 
-/** 작성자 이름과 프로필 이미지를 표시한다. */
+/**
+ * 작성자 이름과 프로필 이미지를 표시한다.
+ * 아바타를 누르면 작성자 프로필로 간다. 본인 번호면 서버가 /members/me 로 돌려보낸다.
+ */
 function renderCollectionAuthor(collection) {
     const nickname = collection.nickname || `회원 ${collection.memberId}`;
     const avatar = document.querySelector("#collectionAuthorAvatar");
 
     document.querySelector("#collectionAuthor").textContent = nickname;
+
+    // 작성자 번호가 없으면 링크로 만들지 않는다.
+    if (collection.memberId) {
+        avatar.href = `/members/${collection.memberId}`;
+        avatar.setAttribute("aria-label", `${nickname} 프로필 보기`);
+    } else {
+        avatar.removeAttribute("href");
+        avatar.removeAttribute("aria-label");
+    }
+
     avatar.replaceChildren();
     avatar.className = "collection-cover-avatar collection-cover-avatar-fallback";
 

@@ -369,6 +369,12 @@
 	color: var(--endit-primary);
 	font-size: 14px;
 	font-weight: 700;
+	/* 작성자 프로필로 가는 링크라 기본 밑줄을 지운다 */
+	text-decoration: none;
+}
+
+.comment-avatar:hover {
+	color: var(--endit-active);
 }
 .comment-nickname {
 	font-size: 14px;

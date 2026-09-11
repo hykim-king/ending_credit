@@ -4,6 +4,7 @@
  * 2026. 9. 01. jinyoung - U-03~U-06 4탭 UI와 회원 컬렉션 조회 연결
  * 2026. 9. 03. jinyoung - 작품 정렬·평균 별점·컬렉션 카드 및 더보기 UI 적용
  * 2026. 9. 05. jinyoung - 본인 영화·컬렉션 코멘트 조회와 수정·삭제·좋아요 UI 적용
+ * 2026. 9. 10. heetae   - 다른 회원 기록 조회를 위한 대상 회원 기준 API 호출 적용
  */
 
 // ==================== 기록 탭 설정 ====================
@@ -49,6 +50,8 @@ const RECORD_CONFIG = Object.freeze({
 // ==================== 화면 요소 및 탭별 상태 ====================
 
 const recordsPage = document.querySelector("#memberRecordsPage"); // 기록 화면 루트 요소
+const targetMemberId = recordsPage.dataset.memberId; // 기록을 조회할 대상 회원 번호
+const isOwner = recordsPage.dataset.owner === "true"; // 본인 기록 화면 여부
 // 서버에서 전달받은 탭별 전체 건수
 const recordCounts = Object.fromEntries(RECORD_TABS.map((tab) => [
         tab, Number(recordsPage.dataset[RECORD_CONFIG[tab].countKey] || 0)
@@ -323,16 +326,22 @@ async function loadRecords(tab, pageNo, append = false) {
     }
 }
 
-/** 탭별 API 주소 생성 */
+/**
+ * 탭별 API 주소 생성
+ * 본인·다른 회원 구분 없이 대상 회원 번호를 경로에 넣어 조회한다.
+ * 컬렉션은 서버에서 조회자 기준 공개 범위를 걸러 준다.
+ */
 function createRecordEndpoint(tab) {
     if (tab === "collections") {
-        return "/api/members/collections";
+        return `/api/users/${targetMemberId}/collections`;
     }
     if (tab === "comments") {
-        return "/api/members/comments";
+        return `/api/members/${targetMemberId}/comments`;
     }
 
-    return tab === "ratings" ? "/api/members/ratings" : "/api/members/watchlist";
+    return tab === "ratings"
+        ? `/api/users/${targetMemberId}/ratings`
+        : `/api/users/${targetMemberId}/watchlist`;
 }
 
 /** 탭별 API 요청 조건 생성 */
@@ -408,9 +417,6 @@ function createCommentCard(item) {
     const moreButton = document.createElement("button");
     const footer = document.createElement("footer");
     const likeButton = document.createElement("button");
-    const actions = document.createElement("div");
-    const editButton = document.createElement("button");
-    const deleteButton = document.createElement("button");
     const isMovie = item.targetType === "MOVIE" || item.contentId != null;
     const targetTitle = item.targetTitle || (isMovie
         ? `영화 ${item.contentId}`
@@ -478,17 +484,27 @@ function createCommentCard(item) {
     likeCount.textContent = String(Number(item.likeCnt || 0));
     likeButton.append(likeCount);
 
-    actions.className = "member-comment-actions";
-    editButton.className = "member-comment-action";
-    editButton.type = "button";
-    editButton.dataset.action = "edit";
-    editButton.textContent = "수정";
-    deleteButton.className = "member-comment-action is-delete";
-    deleteButton.type = "button";
-    deleteButton.dataset.action = "delete";
-    deleteButton.textContent = "삭제";
-    actions.append(editButton, deleteButton);
-    footer.append(likeButton, actions);
+    footer.append(likeButton);
+
+    // 수정·삭제는 본인 기록 화면에서만 그린다.
+    // 서버도 다른 회원의 코멘트 변경을 403으로 막지만 UI에서 먼저 가린다.
+    if (isOwner) {
+        const actions = document.createElement("div");
+        const editButton = document.createElement("button");
+        const deleteButton = document.createElement("button");
+
+        actions.className = "member-comment-actions";
+        editButton.className = "member-comment-action";
+        editButton.type = "button";
+        editButton.dataset.action = "edit";
+        editButton.textContent = "수정";
+        deleteButton.className = "member-comment-action is-delete";
+        deleteButton.type = "button";
+        deleteButton.dataset.action = "delete";
+        deleteButton.textContent = "삭제";
+        actions.append(editButton, deleteButton);
+        footer.append(actions);
+    }
 
     card.append(header, body, footer);
     return card;

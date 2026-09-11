@@ -284,9 +284,14 @@ layout:decorate="~{layout/layout}">
 				<article class="comment-card" th:each="comment : ${comments}">
 					<div class="comment-head">
 						<span class="comment-writer">
-							<!-- 프로필 사진은 코멘트 조회에 실려 오지 않아 닉네임 첫 글자로 대신한다 -->
-							<span class="comment-avatar" aria-hidden="true"
-							      th:text="${#strings.isEmpty(comment.nickname)} ? '?' : ${#strings.substring(comment.nickname, 0, 1)}">닉</span>
+							<!--
+							  프로필 사진은 코멘트 조회에 실려 오지 않아 닉네임 첫 글자로 대신한다.
+							  아바타를 누르면 작성자 프로필로 간다. 본인 번호면 서버가 /members/me 로 돌려보낸다.
+							-->
+							<a class="comment-avatar"
+							   th:href="@{/members/{id}(id=${comment.memberId})}"
+							   th:aria-label="#{detail.comment.profile(${comment.nickname})}"
+							   th:text="${#strings.isEmpty(comment.nickname)} ? '?' : ${#strings.substring(comment.nickname, 0, 1)}">닉</a>
 							<span class="comment-nickname" th:text="${comment.nickname}">닉네임</span>
 						</span>
 						<span class="comment-rating" th:if="${comment.ratingScore != null}">

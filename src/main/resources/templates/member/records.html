@@ -5,6 +5,7 @@ Modification History
 2026. 9. 01. jinyoung - 화면설계서 v3.0 기준 U-03~U-06 4탭 본문 UI 반영
 2026. 9. 03. jinyoung - 기록 제목·활동 건수·정렬·페이징·컬렉션 더보기 UI 반영
 2026. 9. 05. jinyoung - 본인 코멘트 카드·수정·삭제 확인 모달 추가
+2026. 9. 10. heetae   - 다른 회원 기록 조회를 위한 대상·조회자 속성과 경로 분기 적용
 -->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
@@ -23,11 +24,18 @@ Modification History
 <!-- ===================================
      회원 기록 화면
      서버 조회값을 data-* 속성으로 JavaScript에 전달한다.
+     data-member-id는 조회 대상, data-viewer-member-id는 조회자(로그인 회원)다.
+     본인 화면은 기존 경로를, 다른 회원 화면은 회원 번호가 붙은 경로를 쓴다.
      =================================== -->
 <div layout:fragment="content"
      id="memberRecordsPage"
      class="member-activity-page"
+     th:with="recordsPath=${owner} ? '/members/records' : '/members/' + ${memberId} + '/records',
+              likesPath=${owner} ? '/members/likes' : '/members/' + ${memberId} + '/likes'"
      th:attr="data-initial-tab=${tab},
+              data-member-id=${memberId},
+              data-viewer-member-id=${viewerMemberId},
+              data-owner=${owner},
               data-ratings-count=${ratingCount},
               data-comments-count=${commentCount},
               data-collections-count=${collectionCount},
@@ -43,8 +51,8 @@ Modification History
             <span class="member-activity-page-title-name" th:text="${member.nickname}">회원 닉네임</span>
         </h1>
 
-        <a class="member-heading-link" th:href="@{/members/likes(type='person')}">
-            내 좋아요 보기
+        <a class="member-heading-link" th:href="@{${likesPath}(type='person')}">
+            <span th:text="${owner} ? '내 좋아요 보기' : ${member.nickname} + '님의 좋아요 보기'">내 좋아요 보기</span>
             <i class="bi bi-chevron-right" aria-hidden="true"></i>
         </a>
     </header>
@@ -54,19 +62,19 @@ Modification History
          =================================== -->
     <nav class="member-tabs-wrap" aria-label="회원 기록 유형">
         <div id="recordTabs" class="member-tabs" role="tablist">
-            <a id="ratingsTab" class="member-tab" role="tab" data-tab="ratings" th:href="@{/members/records(tab='ratings')}">
+            <a id="ratingsTab" class="member-tab" role="tab" data-tab="ratings" th:href="@{${recordsPath}(tab='ratings')}">
                 작품
             </a>
 
-            <a id="commentsTab" class="member-tab" role="tab" data-tab="comments" th:href="@{/members/records(tab='comments')}">
+            <a id="commentsTab" class="member-tab" role="tab" data-tab="comments" th:href="@{${recordsPath}(tab='comments')}">
                 코멘트
             </a>
 
-            <a id="collectionsTab" class="member-tab" role="tab" data-tab="collections" th:href="@{/members/records(tab='collections')}">
+            <a id="collectionsTab" class="member-tab" role="tab" data-tab="collections" th:href="@{${recordsPath}(tab='collections')}">
                 컬렉션
             </a>
 
-            <a id="watchlistTab" class="member-tab" role="tab" data-tab="watchlist" th:href="@{/members/records(tab='watchlist')}">
+            <a id="watchlistTab" class="member-tab" role="tab" data-tab="watchlist" th:href="@{${recordsPath}(tab='watchlist')}">
                 보고싶어요
             </a>
         </div>
