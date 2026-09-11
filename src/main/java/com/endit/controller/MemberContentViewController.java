@@ -1,6 +1,8 @@
 package com.endit.controller;
 
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Controller;
@@ -107,10 +109,14 @@ public class MemberContentViewController {
 				: Math.toIntExact(LoginMemberHelper.getMemberId());
 
 		MemberVO member = memberService.getMember(targetMemberId);
-
+		
 		if (member == null) {
 			throw new NoSuchElementException("회원을 찾을 수 없습니다.");
 		}
+		
+		Map<String, Object> publicMember = new LinkedHashMap<>();
+		publicMember.put("nickname", member.getNickname());
+		publicMember.put("profileImgUrl", member.getProfileImgUrl());
 
 		DTO commentParam = new DTO();
 		commentParam.setSearchDiv("10");
@@ -120,7 +126,7 @@ public class MemberContentViewController {
 		model.addAttribute("viewerMemberId", viewerMemberId);
 		model.addAttribute("owner", viewerMemberId != null && viewerMemberId.longValue() == targetMemberId);
 		model.addAttribute("tab", normalizedTab);
-		model.addAttribute("member", member);
+		model.addAttribute("member", publicMember);
 		model.addAttribute("ratingCount", memberContentService.countRatingByMember(targetMemberId));
 		model.addAttribute("commentCount", userCommentService.totalCntBySearch(commentParam));
 		model.addAttribute("collectionCount", collectionService.countVisibleByMember(targetMemberId, viewerMemberId));

@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.endit.cmn.LoginMember;
+import com.endit.domain.MemberVO;
 import com.endit.security.LoginMemberHelper;
+import com.endit.service.MemberService;
 
 /**
  * Class Name : MemberMyPageController Description : 마이페이지 및 회원 프로필 화면의 경로를 처리하는
@@ -27,6 +29,14 @@ import com.endit.security.LoginMemberHelper;
 public class MemberMyPageController {
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
+	
+	private final MemberService memberService;
+	
+	
+	public MemberMyPageController(MemberService memberService) {
+		super();
+		this.memberService = memberService;
+	}
 
 	/** 비로그인 상태로 "내" 화면에 들어왔을 때 보낼 곳 */
 	private static final String REDIRECT_LOGIN = "redirect:/login";
@@ -157,17 +167,24 @@ public class MemberMyPageController {
 	@GetMapping("/{memberId:[0-9]+}")
 	public String profile(@PathVariable long memberId, Model model) {
 
-		log.debug("profile(memberId={})", memberId);
+	    log.debug("profile(memberId={})", memberId);
 
-		LoginMember me = LoginMemberHelper.getLoginMember();
+	    LoginMember me = LoginMemberHelper.getLoginMember();
 
-		if (me != null && me.getMemberId() != null && me.getMemberId() == memberId) {
-			return "redirect:/members/me";
-		}
+	    if (me != null && me.getMemberId() != null && me.getMemberId() == memberId) {
+	        return "redirect:/members/me";
+	    }
 
-		model.addAttribute("memberId", memberId);
+	    // 존재하지 않는 회원이면 안내 화면으로
+	    MemberVO member = memberService.getMember(memberId);
 
-		return "member/userProfile";
+	    if (member == null) {
+	        return "member/notFound";
+	    }
+
+	    model.addAttribute("memberId", memberId);
+
+	    return "member/userProfile";
 	}
 
 	private String normalizeRecordTab(String tab) {

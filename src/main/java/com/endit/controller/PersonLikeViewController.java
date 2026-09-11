@@ -1,5 +1,7 @@
 package com.endit.controller;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Controller;
@@ -90,10 +92,14 @@ public class PersonLikeViewController {
 		if (member == null) {
 			throw new NoSuchElementException("회원을 찾을 수 없습니다.");
 		}
+		
+		Map<String, Object> publicMember = new LinkedHashMap<>();
+		publicMember.put("nickname", member.getNickname());
+		publicMember.put("profileImgUrl", member.getProfileImgUrl());
 
 		model.addAttribute("memberId", targetMemberId);
 		model.addAttribute("type", normalizedType);
-		model.addAttribute("member", member);
+		model.addAttribute("member", publicMember);
 		model.addAttribute("currentMemberId", currentMemberId);
 		model.addAttribute("owner", currentMemberId != null && currentMemberId.longValue() == targetMemberId);
 

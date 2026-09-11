@@ -375,7 +375,6 @@
             <div class="like-box">
                 <a href="/members/me/likes?type=person" class="like-box-head">
                     <span class="title">좋아한 인물 <span id="personLikeCount">0</span>명</span>
-                    <span class="more">›</span>
                 </a>
                 <div id="personLikeList" class="like-list"></div>
             </div>
@@ -384,7 +383,6 @@
             <div class="like-box">
                 <a href="/members/me/likes?type=collection" class="like-box-head">
                     <span class="title">좋아한 컬렉션 <span id="collectionLikeCount">0</span>개</span>
-                    <span class="more">›</span>
                 </a>
                 <div id="collectionLikeList" class="like-list"></div>
             </div>
@@ -426,7 +424,7 @@
                       data-target="support">문의하기 / FAQ <span class="float-end text-muted">›</span></button>
               <a href="#" target="_blank" rel="noopener noreferrer"
                  class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent d-block text-decoration-none text-dark">
-                 DB 수정·추가 요청 <span class="float-end text-muted">↗</span></a>
+                 DB 수정·추가 요청 <span class="float-end text-muted">›</span></a>
               <a th:href="@{/notices}"
                  class="list-group-item list-group-item-action w-100 text-start border-0 py-2 px-1 bg-transparent d-block text-decoration-none text-dark">
                  공지사항 <span class="float-end text-muted">›</span></a>
@@ -560,6 +558,11 @@
                     img.src = d.profileImgUrl;
                     img.classList.remove('d-none');
                     icon.classList.add('d-none');
+                    
+                    img.onerror = () => {
+                    img.classList.add('d-none');
+                    icon.classList.remove('d-none');
+                    };
                 } else {
                     img.classList.add('d-none');
                     icon.classList.remove('d-none');
