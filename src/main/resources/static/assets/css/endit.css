@@ -62,15 +62,16 @@ body {
 }
 
 .endit-brand {
-    color: var(--endit-primary);
-    font-weight: 800;
-    font-size: 1.35rem;
-    letter-spacing: .04em;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
     text-decoration: none;
 }
 
-.endit-brand:hover {
-    color: var(--endit-hover);
+.endit-brand-logo {
+    display: block;
+    width: auto;
+    height: 36px;
 }
 
 .endit-search {
@@ -87,10 +88,8 @@ body {
         gap: .75rem !important;
         padding-inline: .75rem !important;
     }
-    .endit-brand {
-        font-size: 1.05rem;
-        /* 로고가 줄어들어 "END\nIT"으로 접히면 헤더 높이가 무너진다 */
-        white-space: nowrap;
+    .endit-brand-logo {
+        height: 30px;
     }
     .endit-search {
         font-size: .8125rem;
@@ -110,9 +109,8 @@ body {
 }
 /* 로고까지 자리를 다투는 폭. 검색창이 헤더의 주인이 된다 */
 @media (max-width: 479.98px) {
-    .endit-brand {
-        font-size: .9rem;
-        letter-spacing: 0;
+    .endit-brand-logo {
+        height: 26px;
     }
     .endit-header .endit-main {
         gap: .5rem !important;
