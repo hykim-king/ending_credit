@@ -10,7 +10,10 @@
     <header th:fragment="header" class="endit-header">
         <div class="endit-main d-flex align-items-center gap-4 h-100 px-3">
             <!-- 브랜드 로고는 메인화면(H-01)으로 돌아간다 -->
-            <a class="endit-brand" th:href="@{/}">END IT</a>
+            <a class="endit-brand" th:href="@{/}">
+                <img class="endit-brand-logo" th:src="@{/assets/images/endit-logo.svg}"
+                     width="95" height="36" alt="END IT">
+            </a>
             <!-- Enter로 S-02 통합검색(/search?query=)으로 간다. 헤더는 폭이 좁아 별도 버튼을 두지 않는다.
                  좁은 화면에서도 감추지 않는다 - 검색이 헤더의 유일한 기능이라 없으면 헤더가 로고만 남는다.
                  대신 endit.css의 미디어쿼리가 로고·여백을 줄여 자리를 만든다 -->
