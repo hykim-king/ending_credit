@@ -20,13 +20,13 @@ public class DataSourceConfig {
 		
 		//Oracle datasource-개인
 //		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-//		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE1");
+//		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XEPDB1");
 //		ds.setUsername("endit_test");
 //		ds.setPassword("qwer1234");
 		
 		//Oracle datasource-공용
 		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-		ds.setJdbcUrl("jdbc:oracle:thin:@//192.168.100.30:1522/XE");
+		ds.setJdbcUrl("jdbc:oracle:thin:@//218.144.130.138:1522/XE");
 		ds.setUsername("enditpcwk");
 		ds.setPassword("qwer1234");
 		
