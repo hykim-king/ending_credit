@@ -58,6 +58,7 @@ layout:decorate="~{layout/layout}">
 		reportFailed: /*[[#{detail.js.reportFailed}]]*/ "",
 		ratingScore: /*[[#{detail.rating.score('{0}')}]]*/ "",
 		ratingBucket: /*[[#{detail.rating.bucket('{0}','{1}')}]]*/ "",
+		ratingParticipants: /*[[#{detail.rating.participants('{0}')}]]*/ "",
 		ratingChartLabel: /*[[#{detail.rating.chartLabel}]]*/ "",
 		ratingTmdbMarker: /*[[#{detail.rating.tmdbMarker}]]*/ "",
 		collectionItemCount: /*[[#{detail.collection.itemCount('{0}')}]]*/ ""
@@ -174,7 +175,7 @@ layout:decorate="~{layout/layout}">
 					  MEMBER_CONTENT에 점수별 집계 계약이 없어 평가 분석은 아직 그리지 못한다.
 					-->
 					<div class="rating-box mb-2" id="ratingBox"
-					     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId},data-my-score=${myRatingScore},data-my-watchlist=${myWatchlist}">
+					     th:attr="data-content-id=${content.contentId},data-member-id=${loginMemberId},data-my-score=${myRatingScore},data-my-watchlist=${myWatchlist},data-rater-count=${raterCount}">
 						<div class="stars" role="group" th:aria-label="#{detail.rating.starsLabel}" aria-label="별점 주기">
 							<button type="button" class="star" th:each="score : ${#numbers.sequence(1, 5)}"
 							        th:attr="data-score=${score}" th:aria-label="#{detail.rating.score(${score})}"
@@ -187,10 +188,11 @@ layout:decorate="~{layout/layout}">
 						<!--
 						  정의서 C-01 - 평균과 내 기록을 함께 보인다.
 						  바로 왼쪽이 내 별점이라 "평균" 라벨과 세로선으로 갈라 준다.
+						  평가가 없으면 지우지 않고 감춘다 - 첫 평가를 주는 순간 detail.js가 아래 빈 줄과 맞바꿔 그린다.
 						-->
-						<p class="rating-average" th:if="${ratingAverage != null}">
+						<p class="rating-average" th:hidden="${ratingAverage == null}">
 							<span class="rating-average-label" th:text="#{detail.rating.average}">평균</span>
-							<i class="bi bi-star-fill"></i><span th:text="${ratingAverage}">3.9</span>
+							<i class="bi bi-star-fill"></i><span class="rating-average-value" th:text="${ratingAverage}">3.9</span>
 							<span class="rating-average-count"
 							      th:text="#{detail.rating.participants(${raterCount})}">500명 참여</span>
 						</p>
@@ -206,7 +208,7 @@ layout:decorate="~{layout/layout}">
 							<span class="rating-average-count"
 							      th:text="#{detail.rating.participants(${tmdbRating.voteCount})}">2,545명 참여</span>
 						</p>
-						<p class="rating-empty" th:if="${ratingAverage == null}"
+						<p class="rating-empty" th:hidden="${ratingAverage != null}"
 						   th:text="#{detail.rating.empty}">아직 평가가 없습니다</p>
 					</div>
 					<div class="action-row">

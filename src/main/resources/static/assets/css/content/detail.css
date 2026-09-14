@@ -233,6 +233,11 @@
 	font-weight: 400;
 	color: #777;
 }
+/* 평가 유무에 따라 detail.js가 둘을 맞바꾼다 - display를 직접 잡아 hidden만으로는 안 감추어진다 */
+.rating-average[hidden],
+.rating-empty[hidden] {
+	display: none;
+}
 .rating-empty {
 	margin: 0 0 0 8px;
 	padding-left: 18px;

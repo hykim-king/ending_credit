@@ -63,6 +63,7 @@
     const ROLE_DIRECTOR = "DIRECTOR";
 
     const NO_SCORE = 0;
+    const NO_RATERS = 0;
 
     // 서버가 data-my-watchlist에 찍는 boolean의 문자열 표기
     const WATCHLIST_ON = "true";
@@ -108,7 +109,8 @@
         ratingLabel: "평가하기",
         loading: "불러오는 중…",
         profileEmpty: "사진 없음",
-        ratingScore: "{0}점"
+        ratingScore: "{0}점",
+        ratingParticipants: "{0}명 참여"
     }, window.ENDIT_MSG || {});
 
     // "{0}점" / "{0} stars"처럼 숫자 자리가 있는 문구를 채운다. 언어마다 자리가 달라 서버 문구를 그대로 쓴다
@@ -385,6 +387,53 @@
         let score = Number(box.dataset.myScore) || NO_SCORE;
         let watched = box.dataset.myWatchlist === WATCHLIST_ON;
 
+        // ACT-C-001·002가 바꾸는 건 내 기록 하나뿐이라 인원은 서버에 다시 안 묻고 화면에서 더하고 민다.
+        // 서버가 그린 인원은 내 기록을 이미 포함하므로 진입 당시 평가 여부와 달라진 만큼만 움직인다.
+        // 평균과 평가 분석 그래프는 점수별 분포를 알아야 맞춰지므로 여기서 손대지 않는다 -
+        // 예외로 내가 첫 평가자면 평균이 곧 내 점수라 그때만 함께 채운다
+        const baseRaters = Number(box.dataset.raterCount) || NO_RATERS;
+        const ratedAtLoad = score !== NO_SCORE;
+        const averageLine = box.querySelector(".rating-average:not(.rating-average-tmdb)");
+        const averageValue = averageLine && averageLine.querySelector(".rating-average-value");
+        const averageCount = averageLine && averageLine.querySelector(".rating-average-count");
+        const emptyLine = box.querySelector(".rating-empty");
+        // 평가 분석 제목의 인원. 같은 class가 TMDB 줄에도 있어 우리 평균 안으로 좁혀 찾는다
+        const chartRaters = document.querySelector(".rating-chart-average .rating-chart-raters");
+
+        function raterCount() {
+            const rated = score !== NO_SCORE;
+
+            if (rated === ratedAtLoad) {
+                return baseRaters;
+            }
+
+            // 집계 조회가 실패한 화면은 내가 평가해 두고도 인원이 0으로 내려오므로 음수로 떨어지지 않게 막는다
+            return rated ? baseRaters + 1 : Math.max(baseRaters - 1, NO_RATERS);
+        }
+
+        function renderRaters() {
+            const count = raterCount();
+            const text = MSG.ratingParticipants.replace("{0}", count.toLocaleString());
+
+            if (averageCount) {
+                averageCount.textContent = text;
+            }
+
+            if (chartRaters) {
+                chartRaters.textContent = "(" + text + ")";
+            }
+
+            if (averageLine && emptyLine) {
+                averageLine.hidden = count === NO_RATERS;
+                emptyLine.hidden = count !== NO_RATERS;
+            }
+
+            // 서버가 보낸 평균이 없었던 화면에서만 덮어쓴다 - 이미 다른 사람 점수가 섞인 평균은 모른다
+            if (averageValue && baseRaters === NO_RATERS && count !== NO_RATERS) {
+                averageValue.textContent = score.toFixed(1);
+            }
+        }
+
         function paintStars(value) {
             stars.forEach((star) => {
                 const on = Number(star.dataset.score) <= value;
@@ -396,6 +445,7 @@
         function render() {
             paintStars(score);
             label.textContent = score === NO_SCORE ? MSG.ratingLabel : formatScore(score);
+            renderRaters();
             showCancelHint(null);
         }
 

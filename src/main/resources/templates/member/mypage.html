@@ -209,6 +209,13 @@
             gap: 20px;
             align-items: start;   /* 각 박스가 내용 높이만큼만 (인물 박스 아래 빈 공간 제거) */
         }
+        .likes-grid .like-box-head {
+            text-decoration: none;
+            color: inherit;
+        }
+        .likes-grid .like-box-head:hover {
+            color: #6550C8;
+        }
         .like-box {
             background: #F7F6FB;
             border: 1px solid #E4E2E9;
@@ -373,7 +380,7 @@
 
             <!-- 좋아한 인물 -->
             <div class="like-box">
-                <a href="/members/me/likes?type=person" class="like-box-head">
+                <a class="like-box-head" href="/members/me/likes?type=person">
                     <span class="title">좋아한 인물 <span id="personLikeCount">0</span>명</span>
                 </a>
                 <div id="personLikeList" class="like-list"></div>
@@ -381,7 +388,7 @@
 
             <!-- 좋아한 컬렉션 -->
             <div class="like-box">
-                <a href="/members/me/likes?type=collection" class="like-box-head">
+                <a class="like-box-head" href="/members/me/likes?type=collection">
                     <span class="title">좋아한 컬렉션 <span id="collectionLikeCount">0</span>개</span>
                 </a>
                 <div id="collectionLikeList" class="like-list"></div>
@@ -681,7 +688,7 @@
 
         // 장르별 멘트 (키는 GENRE.NAME 과 정확히 일치해야 함. TMDB 한국어 장르명 기준)
         const GENRE_COMMENTS = {
-            "액션":      "심장 쫄깃, 액션 없인 못 살죠 💥",
+            "액션":      "몸이 먼저 반응하는 액션 러버 💥",
             "모험":      "떠나는 게 인생, 모험 러버 🧭",
             "애니메이션": "동심을 잃지 않는 애니 마니아 🎨",
             "코미디":    "웃음이 최고의 힐링, 코미디 마니아 😆",
