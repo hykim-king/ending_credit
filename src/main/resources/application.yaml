@@ -1,33 +1,72 @@
+#--------------------------------------------------
+# Ending Credit | 공통 설정
+# 기준: Spring Boot 3.5.16 / Java 21
+# 적용: DataSourceConfig.java 교체와 함께 반영한다.
+#--------------------------------------------------
 spring:
   application:
     name: ending_credit
 
-#--------------------------------------
-# messages (F-01 다국어)
-#--------------------------------------
+  #------------------------------------------------
+  # Profile
+  # 미지정 시 dev. 서버에서는 SPRING_PROFILES_ACTIVE=prod를 지정한다.
+  # 기존 STS/실행 명령의 app 설정도 dev 또는 prod로 변경한다.
+  #------------------------------------------------
+  profiles:
+    default: dev
+
+  #------------------------------------------------
+  # Messages | 다국어
+  # 서버의 기본 언어에 따라 한국어 방문자에게 영어가 나가지 않도록 한다.
+  #------------------------------------------------
   messages:
     basename: messages
     encoding: UTF-8
-    # 끄지 않으면 messages_ko가 없는 탓에 JVM 기본 로케일이 영어인 서버에서 한국어 방문자에게 영어가 나간다
     fallback-to-system-locale: false
-#--------------------------------------
-# Thymeleaf
-# 개발: cache: false
-#--------------------------------------
+
+  #------------------------------------------------
+  # Thymeleaf | 화면 템플릿
+  # 캐시 사용 여부는 dev/prod 파일에서 지정한다.
+  #------------------------------------------------
   thymeleaf:
     prefix: classpath:/templates/
     suffix: .html
-    cache: false
     encoding: UTF-8
-#--------------------------------------
-# dev/run
-#-------------------------------------- 
-  profiles:
-    active: app
-    
-#--------------------------------------
-# GoogleOAuth
-#--------------------------------------    
+
+  #------------------------------------------------
+  # DataSource | Oracle / HikariCP
+  # 공용 DB로 자동 연결되지 않도록 접속 정보의 기본값을 두지 않는다.
+  # DataSourceConfig가 spring.datasource와 hikari 설정을 실제로 바인딩한다.
+  #------------------------------------------------
+  datasource:
+    driver-class-name: oracle.jdbc.OracleDriver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      pool-name: ENDIT-HikariCP
+      maximum-pool-size: 10
+      minimum-idle: 5
+      # 아래 시간 단위는 밀리초(ms). 기존 연결 풀 값을 유지한다.
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      auto-commit: true
+
+  #------------------------------------------------
+  # SQL 초기화
+  # schema.sql/data.sql 자동 실행을 막는다. 테스트나 API의 DB 쓰기는 별개다.
+  #------------------------------------------------
+  sql:
+    init:
+      mode: never
+
+  #------------------------------------------------
+  # Google OAuth2
+  # 비밀값은 STS Environment 또는 서버 서비스 환경에서 공급한다.
+  # dev 콜백은 기본 경로, prod 콜백은 application-prod.yaml에서 지정한다.
+  #------------------------------------------------
   security:
     oauth2:
       client:
@@ -38,57 +77,58 @@ spring:
             scope:
               - email
               - profile
-              
-#--------------------------------------
-# Mybatis
-#-------------------------------------- 
+
+#--------------------------------------------------
+# MyBatis
+#--------------------------------------------------
 mybatis:
   mapper-locations: classpath:/mapper/**/*.xml
-  type-aliases-package: com.endit.domain     
+  type-aliases-package: com.endit.domain
   configuration:
     map-underscore-to-camel-case: true
     cache-enabled: false
-    
-#--------------------------------------
-# server
-#--------------------------------------     
+
+#--------------------------------------------------
+# Server | 포트 / 문자 인코딩 / 세션 쿠키
+# Secure 여부와 프록시 처리는 dev/prod에서 구분한다.
+#--------------------------------------------------
 server:
-  port: 8080 
-      
-#--------------------------------------
-# logging
-#-------------------------------------- 
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+
+#--------------------------------------------------
+# Logging | 공통 출력 형식
+# 로그의 날짜만 서울 시간으로 표시한다. JVM/DB 시간대를 바꾸지는 않는다.
+#--------------------------------------------------
 logging:
-  level:
-    root: info
-    com.endit: DEBUG
-    # Transaction
-    org.springframework.transaction: DEBUG
-    org.springframework.transaction.interceptor: DEBUG
-
-    # DataSource TransactionManager
-    org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
-
-    # MyBatis
-    org.mybatis: DEBUG
-
-    # SQL
-    org.springframework.jdbc.core: DEBUG    
-
-  file:
-    name: logs/application.log
-
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss,Asia/Seoul} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss,Asia/Seoul} [%thread] %-5level %logger{36} - %msg%n"
 
-# TMDB Read Access Token. 말이 어렵지 유저가 읽어올 권한이 있는지 검사하는 개념임.
+#--------------------------------------------------
+# TMDB | API Read Access Token
+# TmdbConfig가 빈 값을 허용하지 않으므로 dev/prod 모두 필수다.
+# 토큰 앞뒤 공백을 제거해 입력한다. 서비스 자체 JWT 서명키가 아니다.
+#--------------------------------------------------
 tmdb:
-  api-key: ${TMDB_API_KEY:}
+  api-key: ${TMDB_API_KEY}
   language: ko-KR
   image-size: w500
 
-# 인기순위 갱신 스케줄. 아래 세 줄의 주석만 떼면 매일 새벽 4시(Asia/Seoul)에 돈다.
-#endit:
-#  rank:
-#    cron: "0 0 4 * * *"
+#--------------------------------------------------
+# 인기순위 갱신
+# '-'는 정기 실행 비활성. 시작 시 동기화는 별도 Java 코드에서 실행된다.
+# 정기 실행이 필요하면 ENDIT_RANK_CRON으로 승인된 cron 식을 공급한다.
+# 예: 0 0 4 * * * (ContentRankScheduler 기준 Asia/Seoul)
+#--------------------------------------------------
+endit:
+  rank:
+    cron: "-"
