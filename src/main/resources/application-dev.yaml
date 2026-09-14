@@ -1,0 +1,44 @@
+#--------------------------------------------------
+# Ending Credit | 개발 설정
+# 실행: SPRING_PROFILES_ACTIVE=dev (미지정 시 기본 dev)
+# DB_URL은 개인 테스트 DB로 지정한 뒤 실행한다.
+#--------------------------------------------------
+spring:
+  #------------------------------------------------
+  # Thymeleaf | 수정한 화면을 바로 확인
+  #------------------------------------------------
+  thymeleaf:
+    cache: false
+
+#--------------------------------------------------
+# Server | 로컬 HTTP 개발
+# 전달 헤더를 신뢰하지 않는다. HTTPS 프록시 검증은 prod에서 진행한다.
+#--------------------------------------------------
+server:
+  address: 127.0.0.1
+  forward-headers-strategy: none
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+#--------------------------------------------------
+# Logging | 개발 진단
+# SQL 파라미터 등이 기록될 수 있으므로 개인 테스트 데이터로 확인한다.
+#--------------------------------------------------
+logging:
+  level:
+    root: INFO
+    com.endit: DEBUG
+    org.springframework.transaction: DEBUG
+    org.springframework.transaction.interceptor: DEBUG
+    org.springframework.jdbc.datasource.DataSourceTransactionManager: DEBUG
+    org.mybatis: DEBUG
+    org.springframework.jdbc.core: DEBUG
+  file:
+    name: logs/application-dev.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      total-size-cap: 100MB
