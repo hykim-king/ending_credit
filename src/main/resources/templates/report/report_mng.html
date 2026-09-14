@@ -34,7 +34,12 @@ layout:decorate="~{layout/layout}">
                 </div>
                 <div class="col-md-3">
                     <div class="filter-bar text-muted">신고자</div>
-                    <div class="fw-bold" th:text="|${outVO.reporterNickname} (회원 ${outVO.reportMemberId})|">신고자</div>
+                    <!--닉네임을 누르면 그 회원의 프로필로 간다-->
+                    <div class="fw-bold">
+                        <a th:href="@{/members/{id}(id=${outVO.reportMemberId})}"
+                           th:text="${outVO.reporterNickname}">신고자</a>
+                        <span th:text="|(회원 ${outVO.reportMemberId})|">(회원 1)</span>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <div class="filter-bar text-muted">접수일</div>
@@ -62,7 +67,15 @@ layout:decorate="~{layout/layout}">
                 </div>
                 <div class="col-md-6" th:if="${outVO.processedDt != null}">
                     <div class="filter-bar text-muted">처리자 / 처리일</div>
-                    <div th:text="|${outVO.processorNickname} · ${outVO.processedDt}|">-</div>
+                    <!--처리자 닉네임을 누르면 그 관리자의 프로필로 간다-->
+                    <div>
+                        <a th:if="${outVO.processedByMemberId != null}"
+                           th:href="@{/members/{id}(id=${outVO.processedByMemberId})}"
+                           th:text="${outVO.processorNickname}">처리자</a>
+                        <span th:unless="${outVO.processedByMemberId != null}"
+                              th:text="${outVO.processorNickname}">-</span>
+                        <span th:text="|· ${outVO.processedDt}|">· 2026/08/25</span>
+                    </div>
                 </div>
                 <div class="col-md-6" th:if="${outVO.processNote != null}">
                     <div class="filter-bar text-muted">처리 내용</div>

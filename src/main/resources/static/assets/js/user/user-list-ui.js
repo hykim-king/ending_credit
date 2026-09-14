@@ -2,6 +2,7 @@
  * Modification History
  * 2026. 8. 31. jinyoung - 회원 목록 화면의 이미지 URL과 페이지네이션 공통 처리 분리
  * 2026. 9. 03. jinyoung - 표시 페이지 수 옵션 설정 추가
+ * 2026. 9. 11. jinyoung - 선택적으로 처음·마지막 페이지 이동 버튼을 표시하도록 확장
  */
 (() => {
     /** ===================================
@@ -29,6 +30,7 @@
             currentPage,
             defaultPageSize,
             maxVisiblePages = 10,
+            showFirstLast = false,
             onPageChange
         } = options;
         const pageSize = Number(page.pageSize || defaultPageSize); // 페이지 크기
@@ -45,23 +47,41 @@
         // 현재 페이지가 속한 구간의 시작과 끝 번호만 화면에 표시한다.
         const startPage = Math.floor((currentPage - 1) / pageBlockSize) * pageBlockSize + 1;
         const endPage = Math.min(startPage + pageBlockSize - 1, totalPages);
+        const showBoundaryButtons = showFirstLast && totalPages > pageBlockSize;
 
-        container.append(createPageButton("이전", startPage - 1, startPage === 1, false, onPageChange));
+        if (showBoundaryButtons) {
+            container.append(createPageButton("처음", 1, currentPage === 1, false, onPageChange, "first"));
+        }
+
+        container.append(createPageButton(
+            "이전", startPage - 1, startPage === 1, false, onPageChange, "previous"
+        ));
 
         for (let pageNo = startPage;pageNo <= endPage;pageNo += 1) {
             container.append(createPageButton(String(pageNo), pageNo, false, pageNo === currentPage, onPageChange));
         }
 
-        container.append(createPageButton("다음", endPage + 1, endPage === totalPages, false, onPageChange));
+        container.append(createPageButton(
+            "다음", endPage + 1, endPage === totalPages, false, onPageChange, "next"
+        ));
+
+        if (showBoundaryButtons) {
+            container.append(createPageButton(
+                "마지막", totalPages, currentPage === totalPages, false, onPageChange, "last"
+            ));
+        }
     }
 
     /** 단일 페이지 버튼 생성 */
-    function createPageButton(label, pageNo, disabled, selected, onPageChange) {
+    function createPageButton(label, pageNo, disabled, selected, onPageChange, action) {
 
         const item = document.createElement("li");
         const button = document.createElement("button");
 
         item.className = `page-item${disabled ? " disabled" : ""}${selected ? " active" : ""}`;
+        if (action) {
+            item.dataset.pageAction = action;
+        }
         button.className = "page-link";
         button.type = "button";
         button.textContent = label;

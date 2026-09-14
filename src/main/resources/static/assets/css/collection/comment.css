@@ -197,6 +197,13 @@
     font-weight: 800;
     background: #eeeafd;
     border-radius: 50%;
+    /* 작성자 프로필로 가는 링크라 기본 밑줄을 지운다 */
+    text-decoration: none;
+}
+
+a.collection-comment-avatar:hover {
+    background: #6550c8;
+    color: #fff;
 }
 
 .collection-comment-avatar img {

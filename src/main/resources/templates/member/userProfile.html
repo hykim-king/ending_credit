@@ -217,14 +217,14 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
+            text-decoration: none;
+            color: inherit;
         }
         .like-box-head .title {
             font-weight: 600;
         }
-        .like-box-head .more {
+        .like-box-head:hover .title {
             color: #6550C8;
-            font-size: 14px;
-            text-decoration: none;
         }
         .like-list {
             display: flex;
@@ -311,8 +311,6 @@
                 <h2 id="nickname" class="mypage-name">&nbsp;</h2>
                 <p id="introduction" class="mypage-intro"></p>
             </div>
-            <!-- 남의 프로필: 설정 대신 신고 버튼 -->
-            <button type="button" id="reportBtn" class="btn btn-outline-danger">신고</button>
         </section>
 
         <!-- ===== 기록 카운트 4종 ===== -->
@@ -366,17 +364,15 @@
         <h3 class="likes-title">좋아요</h3>
         <section class="likes-grid">
             <div class="like-box">
-                <div class="like-box-head">
+                <a class="like-box-head" th:href="@{/members/{id}/likes(id=${memberId}, type='person')}">
                     <span class="title">좋아한 인물 <span id="personLikeCount">0</span>명</span>
-                    <span class="more">›</span>
-                </div>
+                </a>
                 <div id="personLikeList" class="like-list"></div>
             </div>
             <div class="like-box">
-                <div class="like-box-head">
+                <a class="like-box-head" th:href="@{/members/{id}/likes(id=${memberId}, type='collection')}">
                     <span class="title">좋아한 컬렉션 <span id="collectionLikeCount">0</span>개</span>
-                    <span class="more">›</span>
-                </div>
+                </a>
                 <div id="collectionLikeList" class="like-list"></div>
             </div>
         </section>
@@ -393,9 +389,6 @@
             loadGenrePreference();
             loadPersonLikes();
             loadCollectionLikes();
-            document.getElementById('reportBtn').addEventListener('click', () => {
-                alert('신고 기능은 준비 중입니다.');
-            });
         });
 
         // 공개 프로필 + 기록 카운트
@@ -467,7 +460,7 @@
 
         // 선호 장르 멘트 매핑
         const GENRE_COMMENTS = {
-            "액션":      "심장 쫄깃, 액션 없인 못 살죠 💥",
+            "액션":      "몸이 먼저 반응하는 액션 러버 💥",
             "모험":      "떠나는 게 인생, 모험 러버 🧭",
             "애니메이션": "동심을 잃지 않는 애니 마니아 🎨",
             "코미디":    "웃음이 최고의 힐링, 코미디 마니아 😆",

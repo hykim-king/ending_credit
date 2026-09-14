@@ -81,7 +81,11 @@ layout:decorate="~{layout/layout}">
                     <!--내용이 길면 잘라서 한 줄로, 전문은 마우스를 올리면 보인다-->
                     <td class="text-truncate" th:title="${vo.commentDetail}"
                         th:text="${vo.commentDetail}">신고된 코멘트 내용(200자 요약)</td>
-                    <td class="text-truncate" th:text="${vo.reporterNickname}">신고자</td>
+                    <!--신고자 닉네임을 누르면 그 회원의 프로필로 간다(행 클릭보다 링크가 우선)-->
+                    <td class="text-truncate" th:title="${vo.reporterNickname}">
+                        <a th:href="@{/members/{id}(id=${vo.reportMemberId})}"
+                           th:text="${vo.reporterNickname}">신고자</a>
+                    </td>
                     <td th:text="${vo.reason}">SPOILER</td>
                     <!--같은 코멘트의 누적 신고 건수 — 2건 이상이면 중복 신고로 강조-->
                     <td class="text-center">

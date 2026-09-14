@@ -66,7 +66,10 @@ layout:decorate="~{layout/layout}">
                     class="text-nowrap">
                     <td th:text="${vo.memberId}">1</td>
                     <td class="text-truncate" th:title="${vo.email}" th:text="${vo.email}">a@b.com</td>
-                    <td class="text-truncate" th:title="${vo.nickname}" th:text="${vo.nickname}">닉네임</td>
+                    <!--닉네임을 누르면 그 회원의 프로필로 간다-->
+                    <td class="text-truncate" th:title="${vo.nickname}">
+                        <a th:href="@{/members/{id}(id=${vo.memberId})}" th:text="${vo.nickname}">닉네임</a>
+                    </td>
                     <td>
                         <span class="badge badge-accepted" th:if="${vo.role == 'ADMIN'}">관리자</span>
                         <span class="badge badge-received" th:unless="${vo.role == 'ADMIN'}">회원</span>

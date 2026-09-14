@@ -42,6 +42,7 @@ import com.endit.mapper.MemberContentMapper;
  * 2026. 8. 29. jinyoung    인증 회원 및 컬렉션 작품 소유권 검증 추가
  * 2026. 8. 31. jinyoung    컬렉션 작품 평균 별점 조회 검증 추가
  * 2026. 9. 05. jinyoung    대상 외 부모 데이터를 운영 시퀀스와 분리
+ * 2026. 9. 09. jinyoung    작품 추가·삭제 시 수정 일시 갱신 및 기존 정보 보존 검증
  * ------------------------------------------------------------
  * </pre>
  *
@@ -131,6 +132,7 @@ class CollectionItemServiceTest {
 		assertEquals(collection.getCollectionId(), result.getCollectionId());
 		assertEquals(content.getContentId(), result.getContentId());
 		assertNotNull(result.getAddedDt());
+		assertNotNull(collectionMapper.doSelectOne(collection).getUpdatedDt());
 	}
 
 	@Test
@@ -146,20 +148,24 @@ class CollectionItemServiceTest {
 	}
 
 	@Test
-	@DisplayName("중복 확인 후 컬렉션 작품 추가")
+	@DisplayName("컬렉션 작품 추가 시 수정 일시 갱신 및 기존 정보 보존")
 	void create() {
-		// Given: 소유자 컬렉션과 추가할 콘텐츠를 준비한다.
+		// Given: 수정 일시를 과거로 설정한 컬렉션과 추가할 콘텐츠를 준비한다.
 		CollectionVO collection = createCollection();
 		ContentVO content = createContent();
+		CollectionVO before = prepareUpdatedDtCheck(collection);
+		CollectionVO otherCollection = prepareUpdatedDtCheck(createCollection());
 
 		// When: 컬렉션에 작품을 추가한다.
 		CollectionItemVO result = collectionItemService.create(
 				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		// Then: 등록한 복합 키와 추가 일시가 반환되어야 한다.
+		// Then: 작품이 등록되고 대상 컬렉션의 수정 일시만 갱신되어야 한다.
 		assertEquals(collection.getCollectionId(), result.getCollectionId());
 		assertEquals(content.getContentId(), result.getContentId());
 		assertNotNull(result.getAddedDt());
+		assertCollectionUpdated(before);
+		assertEquals(otherCollection.getUpdatedDt(), collectionMapper.doSelectOne(otherCollection).getUpdatedDt());
 	}
 
 	@Test
@@ -172,10 +178,15 @@ class CollectionItemServiceTest {
 		collectionItemService.create(
 				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
-		// When, Then: 같은 작품을 다시 추가하면 중복 예외가 발생해야 한다.
+		CollectionVO before = prepareUpdatedDtCheck(collection);
+
+		// When: 같은 작품을 다시 추가하여 중복 예외가 발생하는지 확인한다.
 		assertThrows(IllegalStateException.class, 
 				() -> collectionItemService.create(
 						collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId())));
+
+		// Then: 중복 추가가 거절된 컬렉션의 수정 일시는 유지되어야 한다.
+		assertEquals(before.getUpdatedDt(), collectionMapper.doSelectOne(collection).getUpdatedDt());
 	}
 
 	@Test
@@ -186,15 +197,19 @@ class CollectionItemServiceTest {
 		ContentVO content = createContent();
 		
 		int otherMemberId = createMemberId();
+		CollectionVO before = prepareUpdatedDtCheck(collection);
 
-		// When, Then: 비소유자가 작품을 추가하면 권한 예외가 발생해야 한다.
+		// When: 비소유자가 작품을 추가하여 권한 예외가 발생하는지 확인한다.
 		assertThrows(ForbiddenOperationException.class, 
 				() -> collectionItemService.create(
 						otherMemberId, collection.getCollectionId(), createItem(content.getContentId())));
+
+		// Then: 추가 권한이 없는 요청으로 컬렉션의 수정 일시가 바뀌지 않아야 한다.
+		assertEquals(before.getUpdatedDt(), collectionMapper.doSelectOne(collection).getUpdatedDt());
 	}
 
 	@Test
-	@DisplayName("컬렉션 작품 삭제")
+	@DisplayName("컬렉션 작품 삭제 시 수정 일시 갱신 및 기존 정보 보존")
 	void delete() {
 		// Given: 컬렉션에 삭제할 작품을 등록한다.
 		CollectionVO collection = createCollection();
@@ -203,14 +218,57 @@ class CollectionItemServiceTest {
 		collectionItemService.create(
 				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
 
+		CollectionVO before = prepareUpdatedDtCheck(collection);
+		CollectionVO otherCollection = prepareUpdatedDtCheck(createCollection());
+
 		// When: 소유자가 컬렉션 작품을 삭제한다.
 		collectionItemService.delete(
 				collection.getMemberId(), collection.getCollectionId(), content.getContentId());
 
-		// Then: 삭제한 작품을 다시 조회하면 예외가 발생해야 한다.
+		// Then: 작품이 삭제되고 대상 컬렉션의 수정 일시만 갱신되어야 한다.
+		assertCollectionUpdated(before);
+		assertEquals(otherCollection.getUpdatedDt(), collectionMapper.doSelectOne(otherCollection).getUpdatedDt());
 		assertThrows(NoSuchElementException.class, 
 				() -> collectionItemService.get(
 						collection.getCollectionId(), content.getContentId(), viewer(collection)));
+	}
+
+	@Test
+	@DisplayName("비소유자의 컬렉션 작품 삭제 시 수정 일시 유지")
+	void deleteByNonOwner() {
+		// Given: 작품이 등록된 컬렉션과 소유자가 아닌 회원을 준비한다.
+		CollectionVO collection = createCollection();
+		ContentVO content = createContent();
+		collectionItemService.create(
+				collection.getMemberId(), collection.getCollectionId(), createItem(content.getContentId()));
+		int otherMemberId = createMemberId();
+		CollectionVO before = prepareUpdatedDtCheck(collection);
+
+		// When: 비소유자가 작품을 삭제하여 권한 예외가 발생하는지 확인한다.
+		assertThrows(ForbiddenOperationException.class,
+				() -> collectionItemService.delete(
+						otherMemberId, collection.getCollectionId(), content.getContentId()));
+
+		// Then: 삭제가 거절된 작품과 컬렉션의 수정 일시는 유지되어야 한다.
+		assertNotNull(collectionItemService.get(
+				collection.getCollectionId(), content.getContentId(), viewer(collection)));
+		assertEquals(before.getUpdatedDt(), collectionMapper.doSelectOne(collection).getUpdatedDt());
+	}
+
+	@Test
+	@DisplayName("존재하지 않는 컬렉션 작품 삭제 시 수정 일시 유지")
+	void deleteNotFound() {
+		// Given: 작품이 없는 컬렉션의 수정 일시를 과거로 설정한다.
+		CollectionVO collection = createCollection();
+		CollectionVO before = prepareUpdatedDtCheck(collection);
+
+		// When: 없는 작품을 삭제하여 작품 조회 예외가 발생하는지 확인한다.
+		assertThrows(NoSuchElementException.class,
+				() -> collectionItemService.delete(
+						collection.getMemberId(), collection.getCollectionId(), MISSING_CONTENT_ID));
+
+		// Then: 삭제할 작품이 없으므로 컬렉션의 수정 일시는 유지되어야 한다.
+		assertEquals(before.getUpdatedDt(), collectionMapper.doSelectOne(collection).getUpdatedDt());
 	}
 
 	@Test
@@ -219,6 +277,44 @@ class CollectionItemServiceTest {
 		// When, Then: 유효하지 않은 컬렉션 번호로 조회하면 예외가 발생해야 한다.
 		assertThrows(IllegalArgumentException.class,
 				() -> collectionItemService.retrieve(0, new DTO(), OptionalLong.empty()));
+	}
+
+	/**
+	 * 대기 없이 갱신 여부를 비교하도록 테스트 컬렉션의 수정 일시를 과거로 설정
+	 *
+	 * @param collection 테스트 컬렉션
+	 * @return 변경 전 컬렉션 정보
+	 */
+	private CollectionVO prepareUpdatedDtCheck(CollectionVO collection) {
+		// Given: 테스트 대상 한 건의 수정 일시를 하루 전으로 설정한다.
+		assertEquals(1, jdbcTemplate.update(
+				"UPDATE COLLECTION SET UPDATED_DT = SYSDATE - 1 WHERE COLLECTION_ID = ?",
+				collection.getCollectionId()));
+
+		// When: 이후 갱신 여부와 기본 정보 보존을 비교할 기준값을 조회한다.
+		return collectionMapper.doSelectOne(collection);
+	}
+
+	/**
+	 * 수정 일시가 갱신되고 컬렉션 기본 정보가 유지되었는지 검증
+	 *
+	 * @param before 변경 전 컬렉션 정보
+	 */
+	private void assertCollectionUpdated(CollectionVO before) {
+		// When: 작품 변경 이후의 컬렉션 정보를 다시 조회한다.
+		CollectionVO after = collectionMapper.doSelectOne(before);
+
+		// Then: 수정 일시는 기존 값보다 최신이어야 한다.
+		assertNotNull(after.getUpdatedDt());
+		assertTrue(after.getUpdatedDt().compareTo(before.getUpdatedDt()) > 0);
+
+		// Then: 식별자, 작성자, 제목, 설명, 공개 여부와 생성 일시는 유지되어야 한다.
+		assertEquals(before.getCollectionId(), after.getCollectionId());
+		assertEquals(before.getMemberId(), after.getMemberId());
+		assertEquals(before.getTitle(), after.getTitle());
+		assertEquals(before.getDescription(), after.getDescription());
+		assertEquals(before.getIsPublic(), after.getIsPublic());
+		assertEquals(before.getCreatedDt(), after.getCreatedDt());
 	}
 
 	/**

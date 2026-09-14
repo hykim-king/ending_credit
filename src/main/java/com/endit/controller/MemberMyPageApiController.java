@@ -67,6 +67,7 @@ import jakarta.servlet.http.HttpSession;
  * Date         Author      Description
  * ------------------------------------------------------------
  * 2026. 9. 05. jinyoung    본인 댓글 목록·수정·삭제·좋아요 API 추가
+ * 2026. 9. 10. heetae      다른 회원 댓글 목록 API 추가 및 작성자·조회자 분리
  * ------------------------------------------------------------
  */
 @RestController
@@ -669,7 +670,7 @@ public class MemberMyPageApiController {
 	    return ResponseEntity.ok(response);
 	}
 
-	// ===================== 내 댓글 기록 =====================
+	// ===================== 댓글 기록 =====================
 
 	/**
 	 * 로그인 회원이 작성한 영화·컬렉션 코멘트 목록 조회
@@ -688,17 +689,68 @@ public class MemberMyPageApiController {
 			@RequestParam(defaultValue = "latest") String sort) {
 
 		Long memberId = LoginMemberHelper.getMemberId();
+
+		// 본인 화면이라 작성자와 조회자가 같다.
+		return ResponseEntity.ok(retrieveComments(memberId, memberId, pageNo, pageSize, sort));
+	}
+
+	/**
+	 * 다른 회원이 작성한 영화·컬렉션 코멘트 목록 조회
+	 *
+	 * 작성자는 URL의 회원이고, 카드의 좋아요 초기 상태를 판단할 조회자는 로그인 회원이다.
+	 * 비로그인도 볼 수 있으며 이때는 좋아요 초기 상태 없이 목록만 내려간다.
+	 *
+	 * @param memberId 조회할 회원 번호
+	 * @param pageNo   페이지 번호, 1 이상
+	 * @param pageSize 페이지당 건수, 1~50
+	 * @param sort     정렬 조건 (latest, oldest, likes)
+	 * @return 코멘트 목록(items)과 페이징 정보(page)
+	 * @throws IllegalArgumentException 페이지 또는 정렬 조건 오류
+	 */
+	@GetMapping("/{memberId:[0-9]+}/comments")
+	public ResponseEntity<Map<String, Object>> getMemberComments(
+			@PathVariable long memberId,
+			@RequestParam(name = "page", defaultValue = "1") int pageNo,
+			@RequestParam(name = "size", defaultValue = "12") int pageSize,
+			@RequestParam(defaultValue = "latest") String sort) {
+
+		log.debug("getMemberComments(memberId={})", memberId);
+
+		// 조회자는 로그인 회원. 비로그인이면 null이라 좋아요 초기 상태를 조회하지 않는다.
+		LoginMember viewer = LoginMemberHelper.getLoginMember();
+		Long viewerMemberId = (viewer == null) ? null : viewer.getMemberId();
+
+		return ResponseEntity.ok(retrieveComments(memberId, viewerMemberId, pageNo, pageSize, sort));
+	}
+
+	/**
+	 * 작성자와 조회자를 나누어 코멘트 목록과 페이징 정보를 구성
+	 *
+	 * @param writerMemberId 코멘트 작성자 회원 번호
+	 * @param viewerMemberId 좋아요 초기 상태를 조회할 회원 번호, 비로그인이면 null
+	 * @param pageNo         페이지 번호, 1 이상
+	 * @param pageSize       페이지당 건수, 1~50
+	 * @param sort           정렬 조건 (latest, oldest, likes)
+	 * @return 코멘트 목록(items)과 페이징 정보(page)
+	 * @throws IllegalArgumentException 페이지 또는 정렬 조건 오류
+	 */
+	private Map<String, Object> retrieveComments(
+			long writerMemberId, Long viewerMemberId, int pageNo, int pageSize, String sort) {
+
 		validateCommentPaging(pageNo, pageSize, sort);
 
 		DTO param = new DTO();
 		param.setPageNo(pageNo);
 		param.setPageSize(pageSize);
-		// 작성자 조건을 로그인 회원으로 고정
+		// 작성자 조건을 대상 회원으로 고정
 		param.setSearchDiv("10");
-		param.setSearchWord(String.valueOf(memberId));
+		param.setSearchWord(String.valueOf(writerMemberId));
 		param.getSearchMap().put("sort", sort);
-		// 카드의 좋아요 초기 상태를 조회할 회원
-		param.getSearchMap().put("viewerMemberId", String.valueOf(memberId));
+
+		// 카드의 좋아요 초기 상태를 조회할 회원. 비로그인이면 조건 자체를 넣지 않는다.
+		if (viewerMemberId != null) {
+			param.getSearchMap().put("viewerMemberId", String.valueOf(viewerMemberId));
+		}
 
 		List<UserCommentVO> items = userCommentService.doRetrieve(param);
 		param.setTotalCnt(items.isEmpty()
@@ -709,7 +761,7 @@ public class MemberMyPageApiController {
 		response.put("items", items);
 		response.put("page", param);
 
-		return ResponseEntity.ok(response);
+		return response;
 	}
 
 	/**

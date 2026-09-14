@@ -6,6 +6,7 @@ Modification History
 2026. 9. 01. jinyoung - 등록·수정 화면과 공개 정책 UI 적용
 2026. 9. 02. jinyoung - 작품 추가·제거 흐름 개선
 2026. 9. 05. jinyoung - 수정 화면 상단에 컬렉션 삭제 버튼·확인 모달 추가
+2026. 9. 09. jinyoung - 수정 폼 초기 잠금 및 조회 재시도 안내 추가
 -->
 <html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/layout}">
@@ -36,6 +37,7 @@ Modification History
                 <button id="deleteCollectionButton" class="btn collection-update-delete-button" type="button" data-bs-toggle="modal"
                         data-bs-target="#deleteCollectionFormModal" th:if="${formMode == 'update'}">삭제</button>
                 <button id="submitButton" class="btn collection-update-submit-button" type="submit" form="collectionForm"
+                        th:disabled="${formMode == 'update'}"
                         th:text="${formMode == 'update' ? '수정 완료' : '만들기'}">
                     만들기
                 </button>
@@ -47,6 +49,11 @@ Modification History
 
         <!-- 오류 안내 -->
         <div id="errorMessage" class="alert alert-danger d-none" role="alert" tabindex="-1"></div>
+
+        <div id="formLoadStatus" class="mb-3" role="status" aria-live="polite" th:if="${formMode == 'update'}">
+            <span id="formLoadMessage">기존 컬렉션을 불러오는 중입니다.</span>
+            <button id="retryFormLoadButton" class="btn btn-outline-secondary btn-sm ms-2 d-none" type="button" disabled>다시 불러오기</button>
+        </div>
 
         <form id="collectionForm" novalidate>
             <!-- ===================================
@@ -61,7 +68,7 @@ Modification History
                     <!-- 컬렉션 공개 여부 -->
                     <div class="collection-visibility-row">
                         <label class="collection-visibility-control" for="isPublic">
-                            <input id="isPublic" class="collection-visibility-input" type="checkbox" checked>
+                            <input id="isPublic" class="collection-visibility-input" type="checkbox" checked th:disabled="${formMode == 'update'}">
                             <span class="collection-visibility-check" aria-hidden="true">
                                 <i class="bi bi-check-lg"></i>
                             </span>
@@ -70,7 +77,8 @@ Modification History
                     </div>
 
                     <!-- 제목 입력과 길이 안내 -->
-                    <input id="title" class="form-control collection-input" type="text" maxlength="100" placeholder="컬렉션 타이틀" autocomplete="off" required>
+                    <input id="title" class="form-control collection-input" type="text" maxlength="100" placeholder="컬렉션 타이틀" autocomplete="off" required
+                           th:disabled="${formMode == 'update'}">
                     <div class="invalid-feedback">타이틀을 입력해 주세요.</div>
                     <div id="titleLengthWarning" class="collection-length-warning d-none" role="status" aria-live="polite">
                         제목은 최대 100자까지 가능해요
@@ -81,7 +89,7 @@ Modification History
                 <div class="collection-field collection-update-field mb-0">
                     <label class="visually-hidden" for="description">컬렉션 설명</label>
                     <textarea id="description" class="form-control collection-input collection-textarea" rows="6" maxlength="1000"
-                              placeholder="컬렉션에 대한 설명을 입력해 주세요."></textarea>
+                              placeholder="컬렉션에 대한 설명을 입력해 주세요." th:disabled="${formMode == 'update'}"></textarea>
                     <div id="descriptionLengthWarning" class="collection-length-warning d-none" role="status" aria-live="polite">
                         컬렉션 설명은 최대 1000자까지 가능해요
                     </div>
@@ -97,7 +105,7 @@ Modification History
 
                     <!-- 작품 제거 모드와 선택 항목 제거 -->
                     <div class="collection-content-edit-controls">
-                        <button id="toggleContentEditButton" class="collection-text-action" type="button">수정하기</button>
+                        <button id="toggleContentEditButton" class="collection-text-action" type="button" th:disabled="${formMode == 'update'}">수정하기</button>
                         <div id="contentEditActions" class="d-none">
                             <button id="cancelContentEditButton" class="collection-text-action" type="button">취소</button>
                             <button id="confirmContentRemovalButton" class="collection-text-action" type="button" disabled>

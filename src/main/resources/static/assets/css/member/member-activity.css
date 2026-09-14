@@ -1,6 +1,7 @@
 /**
  * U-03~U-07 회원 기록·좋아요 화면 공통 스타일.
  * 2026. 9. 05. jinyoung - 회원 기록 코멘트 카드·수정 모달 스타일 추가
+ * 2026. 9. 11. jinyoung - 기록 페이지네이션·컬렉션 작성 버튼 및 모바일 너비 보완
  */
 
 /* ==================== 회원 기록·좋아요 공통 레이아웃 ==================== */
@@ -148,6 +149,13 @@
     font-size: inherit;
     font-weight: inherit;
     line-height: inherit;
+}
+
+.member-content-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
 }
 
 .member-sort-control {
@@ -630,34 +638,26 @@
     background: transparent;
 }
 
-.member-record-pagination .page-item:first-child .page-link,
-.member-record-pagination .page-item:last-child .page-link {
+.member-record-pagination .page-item[data-page-action] .page-link {
     min-width: 38px;
     color: #655e6d;
     font-size: 1.28rem;
 }
 
-.member-record-pagination .page-item.disabled:first-child .page-link,
-.member-record-pagination .page-item.disabled:last-child .page-link {
+.member-collection-create-button {
+    min-height: 42px;
+    flex: 0 0 auto;
+    padding-inline: 28px;
+    font-size: .86rem;
+}
+
+.member-record-pagination .page-item[data-page-action].disabled .page-link {
     color: #cbc6cf;
 }
 
 .member-record-pagination .page-arrow-icon {
     display: block;
     line-height: 1;
-}
-
-.member-record-load-more {
-    display: flex;
-    justify-content: center;
-    margin-top: 38px;
-}
-
-.member-record-load-more .btn {
-    min-width: 180px;
-    min-height: 44px;
-    border-radius: 10px;
-    font-weight: 700;
 }
 
 /* ==================== 회원 활동 화면 컬렉션 카드 ==================== */
@@ -944,6 +944,24 @@
         margin-bottom: 16px;
     }
 
+    .member-content-heading.has-collection-create {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .member-content-heading.has-collection-create .member-content-title {
+        flex-basis: 100%;
+    }
+
+    .member-content-heading.has-collection-create .member-content-actions {
+        width: 100%;
+    }
+
+    .member-content-heading.has-collection-create .member-sort-control {
+        width: auto;
+        flex: 1 1 0;
+    }
+
     .member-card-grid,
     .member-skeleton-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -967,6 +985,23 @@
         min-width: 32px;
         height: 44px;
         font-size: 1.04rem;
+    }
+
+    .member-record-pagination .pagination {
+        gap: 0;
+    }
+
+    .member-record-pagination .member-page-number,
+    .member-record-pagination .member-page-number .page-link {
+        width: 32px;
+        min-width: 32px;
+        flex-basis: 32px;
+    }
+
+    .member-record-pagination .page-item[data-page-action] .page-link {
+        width: 28px;
+        min-width: 28px;
+        font-size: 1rem;
     }
 
     .member-state {

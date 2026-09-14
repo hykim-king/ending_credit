@@ -87,11 +87,11 @@ layout:decorate="~{layout/layout}">
             <div class="comment-card" th:each="vo : ${list}"
                  th:attr="data-comment-id=${vo.commentId},data-detail=${vo.commentDetail},data-spoiler=${vo.spoiler},data-content-id=${vo.contentId},data-collection-id=${vo.collectionId},data-member-id=${vo.memberId}">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                    <!-- 작성자 프로필로 이동(3조 /members/{id} 페이지 사용, 소스는 안 고침) -->
-                    <a th:href="@{/members/{id}(id=${vo.memberId})}" class="text-reset text-decoration-none"
-                       th:title="|${vo.nickname} 프로필 보기|">
-                        <span class="avatar-circle" th:text="${#strings.substring(vo.nickname,0,1)}">닉</span>
-                    </a>
+                    <!--아바타를 누르면 작성자 프로필로 간다. 본인 번호면 서버가 /members/me 로 돌려보낸다-->
+                    <a class="avatar-circle"
+                       th:href="@{/members/{id}(id=${vo.memberId})}"
+                       th:aria-label="|${vo.nickname} 프로필 보기|"
+                       th:text="${#strings.substring(vo.nickname,0,1)}">닉</a>
                     <div>
                         <a th:href="@{/members/{id}(id=${vo.memberId})}"
                            class="fw-bold text-reset text-decoration-none"

@@ -92,6 +92,16 @@ public class SecurityConfig {
 						"/api/members/watchlist",
 						"/api/members/collections",
 						"/api/members/likes").authenticated()
+				// 다른 회원의 기록·좋아요 화면과 조회 API는 비로그인도 볼 수 있다.
+				// 위의 본인 전용 규칙보다 아래에 두어 코멘트 수정·삭제·좋아요 보호를 먼저 적용한다.
+				.requestMatchers(HttpMethod.GET,
+						"/members/*/records",
+						"/members/*/likes",
+						"/api/members/*/comments",
+						"/api/users/*/ratings",
+						"/api/users/*/watchlist",
+						"/api/users/*/collections",
+						"/api/users/*/likes").permitAll()
 				// 컬렉션 등록·수정 화면
 				.requestMatchers("/collections/new", "/collections/*/edit").authenticated()
 				// 별점·보고싶어요·인물 좋아요 변경

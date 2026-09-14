@@ -3,6 +3,8 @@
  * 2026. 8. 31. jinyoung - TMDB 이미지 URL 및 페이지네이션 공통 UI 적용
  * 2026. 9. 01. jinyoung - U-07 인물·컬렉션 탭 전환 UI 반영
  * 2026. 9. 03. jinyoung - 인물·컬렉션 조회 카드와 고정형 페이지네이션 UI 정리
+ * 2026. 9. 09. jinyoung - 유형별 최신 요청만 좋아요 캐시와 화면에 반영
+ * 2026. 9. 10. heetae   - 다른 회원 좋아요 조회를 위한 대상 회원 기준 API 호출 적용
  */
 
 // ==================== 좋아요 탭 설정 ====================
@@ -16,6 +18,7 @@ const LIKE_ROLE_LABELS = Object.freeze({
 
 // ==================== 화면 요소 및 탭별 상태 ====================
 const likesPage = document.querySelector("#memberLikesPage"); // 좋아요 화면 루트 요소
+const targetMemberId = likesPage.dataset.memberId; // 좋아요를 조회할 대상 회원 번호
 const currentMemberId = Number(likesPage.dataset.currentMemberId || 0); // 현재 로그인 회원 번호
 // 페이지 번호, 조회 결과, 스크롤 위치를 보관하는 탭별 상태
 const likeState = {
@@ -28,7 +31,7 @@ const likePaginationIndicatorState = Object.fromEntries(LIKE_TYPES.map((type) =>
 let activeLikeType = normalizeLikeType(likesPage.dataset.initialType || new URLSearchParams(window.location.search).get("type")
 ); // 현재 탭
 
-let requestSequence = 0; // 이전 비동기 응답 무시용 요청 순번
+const likeRequestSequences = Object.fromEntries(LIKE_TYPES.map((type) => [type, 0])); // 유형별 요청 순번
 
 // ==================== 화면 초기화 및 이벤트 연결 ====================
 document.addEventListener("DOMContentLoaded", () => {
@@ -125,7 +128,7 @@ function configureLikeTypeView() {
 
 /** 유형별 좋아요 목록 조회 */
 async function loadLikes(type, pageNo) {
-    const requestId = ++requestSequence;
+    const requestId = ++likeRequestSequences[type];
 
     likeState[type].pageNo = pageNo;
     showLikeLoading();
@@ -138,15 +141,21 @@ async function loadLikes(type, pageNo) {
             sort: "latest"
         };
 
-        const data = await requestGet("/api/members/likes", requestParam);
+        // 본인·다른 회원 구분 없이 대상 회원 번호를 경로에 넣어 조회한다.
+        // 인물·컬렉션 분기는 type 파라미터를 보고 서버가 처리하며,
+        // 컬렉션은 서버에서 조회자 기준 공개 범위를 걸러 준다.
+        const data = await requestGet(`/api/users/${targetMemberId}/likes`, requestParam);
 
+        if (requestId !== likeRequestSequences[type]) {
+            return;
+        }
         likeState[type].data = data;
 
-        if (requestId === requestSequence && activeLikeType === type) {
+        if (activeLikeType === type) {
             renderLikes(type, data);
         }
     } catch (error) {
-        if (requestId === requestSequence && activeLikeType === type) {
+        if (requestId === likeRequestSequences[type] && activeLikeType === type) {
             showLikeError(error.message);
         }
     }
@@ -352,7 +361,7 @@ function createCollectionBody(collection) {
 
     author.className = "collection-list-card-author";
     authorName.textContent = nickname;
-    author.append(createCollectionAuthorAvatar(collection.profileImgUrl, nickname), authorName);
+    author.append(createCollectionAuthorAvatar(collection), authorName);
 
     stats.className = "collection-list-card-stats";
     stats.append(createCollectionStat(collection.likedByCurrentMember ? "heart-fill" : "heart", "좋아요", collection.likeCount,
@@ -400,29 +409,73 @@ function createCollectionPosterCollage(posterUrls, visual) {
     return collage;
 }
 
-/** 컬렉션 작성자 프로필 요소 생성 */
-function createCollectionAuthorAvatar(profileImgUrl, nickname) {
+/**
+ * 컬렉션 작성자 프로필 요소 생성
+ * 카드 전체가 이미 컬렉션 링크라 아바타를 a로 만들면 링크가 중첩된다.
+ * 그래서 role=link로 두고 클릭·Enter를 직접 받아 프로필로 보낸다.
+ */
+function createCollectionAuthorAvatar(collection) {
+    const nickname = collection.nickname || `회원 ${collection.memberId}`;
     const fallback = document.createElement("span");
 
     fallback.className = "collection-list-card-avatar collection-list-card-avatar-fallback";
-    fallback.setAttribute("aria-hidden", "true");
-    fallback.innerHTML = '<i class="bi bi-person-fill"></i>';
+    fallback.innerHTML = '<i class="bi bi-person-fill" aria-hidden="true"></i>';
 
-    if (!profileImgUrl) {
-        return fallback;
+    if (!collection.profileImgUrl) {
+        return applyProfileLink(fallback, collection.memberId, nickname);
     }
 
     const image = document.createElement("img");
 
     image.className = "collection-list-card-avatar";
-    image.src = resolveProfileImageUrl(profileImgUrl);
+    image.src = resolveProfileImageUrl(collection.profileImgUrl);
     image.alt = "";
     image.loading = "lazy";
     image.decoding = "async";
-    image.setAttribute("title", `${nickname} 프로필`);
-    image.addEventListener("error", () => image.replaceWith(fallback));
+    // 이미지가 깨지면 폴백으로 갈아 끼우므로 폴백에도 같은 링크 동작을 걸어 둔다.
+    image.addEventListener("error",
+            () => image.replaceWith(applyProfileLink(fallback, collection.memberId, nickname)));
 
-    return image;
+    return applyProfileLink(image, collection.memberId, nickname);
+}
+
+/**
+ * 아바타 요소에 회원 프로필 이동 동작을 붙인다.
+ * 회원 번호가 없으면 표시만 하고 아무 동작도 걸지 않는다.
+ *
+ * @param element  아바타 요소
+ * @param memberId 대상 회원 번호
+ * @param nickname 대상 회원 닉네임
+ * @return 동작을 붙인 아바타 요소
+ */
+function applyProfileLink(element, memberId, nickname) {
+
+    if (!memberId) {
+        element.setAttribute("aria-hidden", "true");
+        return element;
+    }
+
+    element.classList.add("is-profile-link");
+    element.setAttribute("role", "link");
+    element.setAttribute("tabindex", "0");
+    element.setAttribute("title", `${nickname} 프로필`);
+    element.setAttribute("aria-label", `${nickname} 프로필 보기`);
+
+    const moveToProfile = (event) => {
+        // 카드의 컬렉션 링크가 같이 열리지 않도록 막는다.
+        event.preventDefault();
+        event.stopPropagation();
+        window.location.href = `/members/${memberId}`;
+    };
+
+    element.addEventListener("click", moveToProfile);
+    element.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            moveToProfile(event);
+        }
+    });
+
+    return element;
 }
 
 /** 컬렉션 통계 항목 생성 */

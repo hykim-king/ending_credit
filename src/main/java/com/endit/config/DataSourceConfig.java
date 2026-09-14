@@ -1,47 +1,43 @@
 package com.endit.config;
 
-import javax.sql.DataSource;
-
-import org.mybatis.spring.annotation.MapperScan;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.zaxxer.hikari.HikariDataSource;
 
-@Configuration
+/**
+ * <pre>
+ * Class Name : DataSourceConfig
+ * Description : 외부 설정을 사용하는 Oracle HikariCP DataSource 구성
+ *
+ * Modification History
+ * ------------------------------------------------------------
+ * Date         Author      Description
+ * ------------------------------------------------------------
+ * 2026. 9. 12.  Codex       DB 접속 정보와 HikariCP 설정을 YAML로 분리한 교체안 작성
+ * ------------------------------------------------------------
+ * </pre>
+ */
+@Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(DataSourceProperties.class)
 public class DataSourceConfig {
-	final Logger log = LoggerFactory.getLogger(getClass());
-	
-	@Bean
-	public DataSource dataSource() {
-		HikariDataSource ds=new HikariDataSource();
-		
-		//Oracle datasource-개인 (홍선기 로컬: scott_test — 팀 지시: 로컬 개발은 개인 DB로)
-		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-		ds.setJdbcUrl("jdbc:oracle:thin:@//localhost:1521/XE");
-		ds.setUsername("scott_test");
-		ds.setPassword("pcwk");
 
-		//Oracle datasource-공용 (dev/main 반영 시 이쪽으로 되돌릴 것)
-//		ds.setDriverClassName("oracle.jdbc.driver.OracleDriver");
-//		ds.setJdbcUrl("jdbc:oracle:thin:@//192.168.100.30:1522/XE");
-//		ds.setUsername("enditpcwk");
-//		ds.setPassword("qwer1234");
-		
-		//Hikari
-		ds.setPoolName("PCWK-HikariCP");
-		ds.setMaximumPoolSize(10);
-		ds.setMinimumIdle(5);
-		ds.setIdleTimeout(600000);
-		ds.setMaxLifetime(1800000);
-		ds.setConnectionTimeout(30000);
-		ds.setValidationTimeout(5000);
-		ds.setAutoCommit(true);
-		log.debug("DataSouceConfig dataSource: {}", ds);
-		return ds;
-	}
-	
-	
+    /**
+     * spring.datasource의 접속 정보로 연결 풀을 만들고,
+     * spring.datasource.hikari의 연결 풀 설정을 바인딩한다.
+     * DataSourceProperties가 url을 HikariCP의 jdbcUrl로 변환한다.
+     *
+     * @param properties Oracle 접속 정보
+     * @return MyBatis와 트랜잭션 관리자가 사용할 DataSource
+     */
+    @Bean
+    @ConfigurationProperties(prefix = "spring.datasource.hikari")
+    public HikariDataSource dataSource(DataSourceProperties properties) {
+        return properties.initializeDataSourceBuilder()
+                .type(HikariDataSource.class)
+                .build();
+    }
 }
