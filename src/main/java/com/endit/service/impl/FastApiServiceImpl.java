@@ -1,13 +1,14 @@
 /**
  * 파이썬 AI 서버(FastAPI) 호출 - WebClient
  *
- * 서버가 죽어 있거나 AI 를 껐으면 예외 대신 대체값을 돌려준다.
+ * 서버가 죽어 있으면 예외 대신 대체값을 돌려준다.
  */
 package com.endit.service.impl;
 
+import java.time.Duration;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -25,17 +26,30 @@ public class FastApiServiceImpl implements FastApiService {
 	/** 검색어 상한. 이보다 길면 앞부분만 보낸다 */
 	private static final int MAX_QUERY_LENGTH = 200;
 
-	private final WebClient webClient;
-	private final boolean enabled;
+	/** 생존 확인은 길게 기다리지 않는다 */
+	private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(3);
 
-	public FastApiServiceImpl(WebClient webClient, @Value("${ai.enabled:false}") boolean enabled) {
+	private final WebClient webClient;
+
+	public FastApiServiceImpl(WebClient webClient) {
 		super();
 		this.webClient = webClient;
-		this.enabled = enabled;
+	}
 
-		log.debug("=============================");
-		log.debug("FastApiServiceImpl enabled={}", enabled);
-		log.debug("=============================");
+	@Override
+	public boolean isAlive() {
+		try {
+			webClient
+					.get()
+					.uri("/health")
+					.retrieve()
+					.toBodilessEntity()
+					.timeout(HEALTH_TIMEOUT)
+					.block();
+			return true;
+		} catch (RuntimeException e) {
+			return false;
+		}
 	}
 
 	@Override
@@ -46,7 +60,7 @@ public class FastApiServiceImpl implements FastApiService {
 		log.debug("=============================");
 
 		String query = null == request ? null : request.getQuery();
-		if (false == enabled || null == query || query.isBlank()) {
+		if (null == query || query.isBlank()) {
 			return SearchIntentResponseVO.fallbackRanking();
 		}
 
@@ -81,7 +95,7 @@ public class FastApiServiceImpl implements FastApiService {
 
 	@Override
 	public EmbedResponseVO embed(EmbedRequestVO request) {
-		if (false == enabled || null == request || null == request.getTexts() || request.getTexts().isEmpty()) {
+		if (null == request || null == request.getTexts() || request.getTexts().isEmpty()) {
 			return null;
 		}
 

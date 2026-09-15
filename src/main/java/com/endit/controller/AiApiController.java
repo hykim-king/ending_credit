@@ -1,23 +1,23 @@
 /**
- * AI 판정 API
+ * AI 검색 API
  *
  * 떠 있는 검색 패널이 비동기로 호출한다.
  * AI 가 실패해도 200과 함께 대체 결과를 돌려준다 - 화면이 깨지지 않게 한다.
  */
 package com.endit.controller;
 
+import java.util.Map;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.endit.domain.AiSearchResponseVO;
 import com.endit.service.AiSearchService;
-import com.endit.service.ContentEmbeddingService;
+import com.endit.service.FastApiService;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -26,13 +26,23 @@ public class AiApiController {
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final AiSearchService aiSearchService;
-    private final ContentEmbeddingService contentEmbeddingService;
+    private final FastApiService fastApiService;
 
-    public AiApiController(AiSearchService aiSearchService,
-            ContentEmbeddingService contentEmbeddingService) {
+    public AiApiController(AiSearchService aiSearchService, FastApiService fastApiService) {
         this.aiSearchService = aiSearchService;
-        this.contentEmbeddingService = contentEmbeddingService;
+        this.fastApiService = fastApiService;
         log.debug("aiSearchService: {}", aiSearchService);
+    }
+
+    /**
+     * 위젯이 페이지를 열 때 "AI 살아있어?" 묻는 곳.
+     * 파이썬이 없으면 위젯이 스스로 숨는다 - 고장난 것처럼 보이지 않게.
+     *
+     * @return alive true/false
+     */
+    @GetMapping("/health")
+    public Map<String, Boolean> health() {
+        return Map.of("alive", fastApiService.isAlive());
     }
 
     /**
@@ -51,21 +61,5 @@ public class AiApiController {
         log.debug("=============================");
 
         return aiSearchService.search(query);
-    }
-
-    /**
-     * 임베딩 수동 적재(검증·초기 구축용).
-     * 스케줄러(새벽 4:10)와 같은 일을 지금 즉시 한다.
-     * TODO 공용 반영 전 ADMIN 가드 필요 - 지금은 로컬 검증 단계
-     *
-     * @return 새로 잰 건수(-1: 저울 꺼짐)
-     */
-    @PostMapping("/embed-now")
-    public java.util.Map<String, Integer> embedNow() {
-        log.debug("=============================");
-        log.debug("{}()", "embedNow");
-        log.debug("=============================");
-
-        return java.util.Map.of("saved", contentEmbeddingService.embedNewContents());
     }
 }

@@ -123,10 +123,9 @@ tmdb:
   language: ko-KR
   image-size: w500
 
-# AI 서버(ai-server, 파이썬). 코멘트 스포일러 판정을 중계한다.
-# enabled=false 면 호출하지 않고 "판정하지 않음"을 돌려준다 - AI 없이도 서비스는 그대로 돈다.
+# AI 서버(ai-server, 파이썬). 검색 의도 분류와 임베딩을 중계한다.
+# 파이썬이 안 떠 있으면 호출이 실패하고 최신순으로 대체한다 - AI 없이도 서비스는 그대로 돈다.
 ai:
-  enabled: false
   base-url: http://localhost:8081
   connect-timeout-ms: 3000
   read-timeout-ms: 20000

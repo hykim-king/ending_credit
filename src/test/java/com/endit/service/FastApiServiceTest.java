@@ -46,22 +46,15 @@ public class FastApiServiceTest {
 	}
 
 	@Test
-	@DisplayName("AI를 껐으면 최신순 목록으로 떨어뜨린다")
-	public void disabledFallsBackToRanking() {
+	@DisplayName("죽은 서버는 살아있지 않다고 답한다")
+	public void deadServerIsNotAlive() {
 		log.debug("---------------------------");
-		log.debug("*disabledFallsBackToRanking()*");
+		log.debug("*deadServerIsNotAlive()*");
 		log.debug("---------------------------");
 
-		FastApiService service = new FastApiServiceImpl(
-				shortTimeoutClient(), false);
+		FastApiService service = new FastApiServiceImpl(shortTimeoutClient());
 
-		SearchIntentResponseVO intent = service.searchIntent(new SearchIntentRequestVO("우주 배경 영화"));
-
-		assertNotNull(intent);
-		assertEquals(SearchIntentResponseVO.INTENT_RANKING, intent.getIntent());
-		assertEquals("latest", intent.getSort());
-		assertEquals("none", intent.getProvider());
-		assertFalse(intent.isOutOfScope());
+		assertFalse(service.isAlive());
 	}
 
 	@Test
@@ -72,8 +65,7 @@ public class FastApiServiceTest {
 		log.debug("---------------------------");
 		// 빈 화면 대신 최신순이라도 보여줘야 한다
 
-		FastApiService service = new FastApiServiceImpl(
-				shortTimeoutClient(), true);
+		FastApiService service = new FastApiServiceImpl(shortTimeoutClient());
 
 		SearchIntentResponseVO intent = service.searchIntent(new SearchIntentRequestVO("우주 배경 영화"));
 
@@ -88,8 +80,7 @@ public class FastApiServiceTest {
 		log.debug("*blankQueryFallsBack()*");
 		log.debug("---------------------------");
 
-		FastApiService service = new FastApiServiceImpl(
-				shortTimeoutClient(), true);
+		FastApiService service = new FastApiServiceImpl(shortTimeoutClient());
 
 		assertEquals("none", service.searchIntent(new SearchIntentRequestVO(null)).getProvider());
 		assertEquals("none", service.searchIntent(new SearchIntentRequestVO("   ")).getProvider());

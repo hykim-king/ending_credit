@@ -1,13 +1,19 @@
 /**
  * AI 도우미 - 떠 있는 버튼 + 검색 패널 + 선제 말풍선
  *
- * 서버는 /api/ai/search 하나만 부른다. 대화는 하지 않는다(되묻기 없음).
+ * 서버는 /api/ai/health 와 /api/ai/search 둘만 부른다. 대화는 하지 않는다(되묻기 없음).
+ * 페이지를 열 때 AI 서버가 살아 있는지 먼저 묻고, 죽어 있으면 버튼을 아예 그리지 않는다.
  * 검색 결과가 0건인 화면에서는 말풍선이 먼저 말을 건다.
  */
 (function () {
     'use strict';
 
     var SEARCH_API = '/api/ai/search';
+    var HEALTH_API = '/api/ai/health';
+
+    /** "살아있다"고 확인한 뒤 이 시간 동안은 다시 묻지 않는다(페이지마다 요청하지 않게) */
+    var ALIVE_CACHE_MS = 60 * 1000;
+    var ALIVE_UNTIL_KEY = 'endit.ai.aliveUntil';
 
     /** 말풍선이 뜨기까지 기다리는 시간. 바로 뜨면 놀란다 */
     var TEASER_DELAY_MS = 1800;
@@ -34,9 +40,34 @@
         msgBox = document.getElementById('aiMsg');
         resultBox = document.getElementById('aiResults');
 
-        bindEvents();
-        scheduleTeaser();
+        whenAlive(function () {
+            fab.classList.remove('d-none');
+            bindEvents();
+            scheduleTeaser();
+        });
     });
+
+    /**
+     * AI 서버가 살아 있을 때만 onAlive 를 부른다.
+     * 죽어 있으면 아무것도 하지 않는다 - 버튼도 말풍선도 안 나온다.
+     */
+    function whenAlive(onAlive) {
+        var until = parseInt(sessionStorage.getItem(ALIVE_UNTIL_KEY) || '0', 10);
+        if (Date.now() < until) {
+            onAlive();                    // 방금 확인했으면 다시 묻지 않는다
+            return;
+        }
+
+        fetch(HEALTH_API)
+            .then(function (res) { return res.ok ? res.json() : { alive: false }; })
+            .then(function (body) {
+                if (true === body.alive) {
+                    sessionStorage.setItem(ALIVE_UNTIL_KEY, String(Date.now() + ALIVE_CACHE_MS));
+                    onAlive();
+                }
+            })
+            .catch(function () { /* 서버 오류면 숨긴 채로 둔다 */ });
+    }
 
     function bindEvents() {
         fab.addEventListener('click', togglePanel);
