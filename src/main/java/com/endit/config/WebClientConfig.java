@@ -24,6 +24,9 @@ public class WebClientConfig {
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
+	/** 응답 본문 버퍼 한도 16MB (임베딩 묶음 응답용) */
+	private static final int MAX_IN_MEMORY_BYTES = 16 * 1024 * 1024;
+
 	@Bean
 	public WebClient fastApiWebClient(
 			@Value("${ai.base-url:http://localhost:8081}") String baseUrl,
@@ -41,6 +44,9 @@ public class WebClientConfig {
 		return WebClient.builder()
 				.baseUrl(baseUrl)
 				.clientConnector(new ReactorClientHttpConnector(httpClient))
+				// 임베딩 응답은 20편 묶음에 500KB 를 넘는다(실측 575KB). 기본 한도 256KB 면
+				// DataBufferLimitException 으로 적재가 첫 묶음에서 끊긴다 - 넉넉히 잡는다
+				.codecs(codecs -> codecs.defaultCodecs().maxInMemorySize(MAX_IN_MEMORY_BYTES))
 				.build();
 	}
 }
