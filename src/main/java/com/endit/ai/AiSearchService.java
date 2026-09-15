@@ -18,7 +18,7 @@ import com.endit.ai.dto.AiHelpAnswer;
 import com.endit.ai.dto.AiNoticeItem;
 import com.endit.ai.dto.AiSearchItem;
 import com.endit.ai.dto.AiSearchResponse;
-import com.endit.ai.dto.SearchIntent;
+import com.endit.ai.dto.SearchIntentResponseVO;
 import com.endit.mapper.AiSearchMapper;
 import com.endit.service.ContentImageService;
 
@@ -57,7 +57,7 @@ public class AiSearchService {
 		log.debug("query: {}", query);
 		log.debug("=============================");
 
-		SearchIntent intent = intentResolver.resolve(query);
+		SearchIntentResponseVO intent = intentResolver.resolve(query);
 
 		// 영화와도 사이트와도 무관한 질문이면 아무것도 뒤지지 않는다.
 		// 진짜 AI 는 message 를 비워 보내기도 하므로(실측) 기본 안내를 보장한다
@@ -97,7 +97,7 @@ public class AiSearchService {
 
 			if (items.isEmpty()) {
 				intent.setMessage("아직 뜻 좌표가 준비되지 않아 글자 검색으로 대신합니다.");
-				intent.setIntent(SearchIntent.INTENT_KEYWORD);   // 폴백해서 아래로 흘려보낸다
+				intent.setIntent(SearchIntentResponseVO.INTENT_KEYWORD);   // 폴백해서 아래로 흘려보낸다
 			} else {
 				return AiSearchResponse.ofMovies(intent, completePoster(items));
 			}

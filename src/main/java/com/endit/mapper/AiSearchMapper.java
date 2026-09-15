@@ -13,7 +13,7 @@ import org.apache.ibatis.annotations.Mapper;
 import com.endit.ai.dto.AiNoticeItem;
 import com.endit.ai.dto.ContentEmbeddingVO;
 import com.endit.ai.dto.AiSearchItem;
-import com.endit.ai.dto.SearchIntent;
+import com.endit.ai.dto.SearchIntentResponseVO;
 
 @Mapper
 public interface AiSearchMapper {
@@ -24,7 +24,7 @@ public interface AiSearchMapper {
 	 * @param param 검색 의도
 	 * @return 영화 목록
 	 */
-	List<AiSearchItem> doSearchByIntent(SearchIntent param);
+	List<AiSearchItem> doSearchByIntent(SearchIntentResponseVO param);
 
 	/**
 	 * 공개 공지를 제목 낱말로 찾는다.
@@ -33,7 +33,7 @@ public interface AiSearchMapper {
 	 * @param param 검색 의도(keywords 사용)
 	 * @return 공지 목록(중요 공지 우선, 최신순 5건)
 	 */
-	List<AiNoticeItem> doSearchNotices(SearchIntent param);
+	List<AiNoticeItem> doSearchNotices(SearchIntentResponseVO param);
 
 	/** 좌표가 없거나 다른 저울로 잰 영화들(적재 대상) */
 	List<ContentEmbeddingVO> selectEmbedTargets(String model);

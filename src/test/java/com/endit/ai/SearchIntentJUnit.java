@@ -16,10 +16,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import com.endit.ai.dto.SearchIntent;
+import com.endit.ai.dto.SearchIntentResponseVO;
+
+import io.netty.channel.ChannelOption;
+import reactor.netty.http.client.HttpClient;
 
 @DisplayName("AI 검색 의도 분석")
 public class SearchIntentJUnit {
@@ -29,11 +32,15 @@ public class SearchIntentJUnit {
 	/** 아무도 듣고 있지 않은 포트 */
 	private static final String DEAD_SERVER = "http://localhost:5999";
 
-	private RestTemplate shortTimeoutTemplate() {
-		SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-		factory.setConnectTimeout(Duration.ofMillis(1000));
-		factory.setReadTimeout(Duration.ofMillis(2000));
-		return new RestTemplate(factory);
+	/** 죽은 서버를 향한, 짧은 타임아웃의 WebClient (WebClientConfig 와 같은 모양) */
+	private WebClient shortTimeoutClient() {
+		HttpClient httpClient = HttpClient.create()
+				.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 1000)
+				.responseTimeout(Duration.ofMillis(2000));
+		return WebClient.builder()
+				.baseUrl(DEAD_SERVER)
+				.clientConnector(new ReactorClientHttpConnector(httpClient))
+				.build();
 	}
 
 	@Test
@@ -44,12 +51,12 @@ public class SearchIntentJUnit {
 		log.debug("---------------------------");
 
 		SearchIntentResolver resolver = new AiServerIntentResolver(
-				shortTimeoutTemplate(), DEAD_SERVER, false);
+				shortTimeoutClient(), false);
 
-		SearchIntent intent = resolver.resolve("우주 배경 영화");
+		SearchIntentResponseVO intent = resolver.resolve("우주 배경 영화");
 
 		assertNotNull(intent);
-		assertEquals(SearchIntent.INTENT_RANKING, intent.getIntent());
+		assertEquals(SearchIntentResponseVO.INTENT_RANKING, intent.getIntent());
 		assertEquals("latest", intent.getSort());
 		assertEquals("none", intent.getProvider());
 		assertFalse(intent.isOutOfScope());
@@ -64,11 +71,11 @@ public class SearchIntentJUnit {
 		// 빈 화면 대신 최신순이라도 보여줘야 한다
 
 		SearchIntentResolver resolver = new AiServerIntentResolver(
-				shortTimeoutTemplate(), DEAD_SERVER, true);
+				shortTimeoutClient(), true);
 
-		SearchIntent intent = resolver.resolve("우주 배경 영화");
+		SearchIntentResponseVO intent = resolver.resolve("우주 배경 영화");
 
-		assertEquals(SearchIntent.INTENT_RANKING, intent.getIntent());
+		assertEquals(SearchIntentResponseVO.INTENT_RANKING, intent.getIntent());
 		assertTrue(intent.getLimit() > 0);
 	}
 
@@ -80,7 +87,7 @@ public class SearchIntentJUnit {
 		log.debug("---------------------------");
 
 		SearchIntentResolver resolver = new AiServerIntentResolver(
-				shortTimeoutTemplate(), DEAD_SERVER, true);
+				shortTimeoutClient(), true);
 
 		assertEquals("none", resolver.resolve(null).getProvider());
 		assertEquals("none", resolver.resolve("   ").getProvider());
@@ -93,10 +100,10 @@ public class SearchIntentJUnit {
 		log.debug("*outOfScopeIsFlagged()*");
 		log.debug("---------------------------");
 
-		SearchIntent vo = new SearchIntent();
-		vo.setIntent(SearchIntent.INTENT_OUT_OF_SCOPE);
+		SearchIntentResponseVO vo = new SearchIntentResponseVO();
+		vo.setIntent(SearchIntentResponseVO.INTENT_OUT_OF_SCOPE);
 
 		assertTrue(vo.isOutOfScope());
-		assertFalse(SearchIntent.fallbackRanking().isOutOfScope());
+		assertFalse(SearchIntentResponseVO.fallbackRanking().isOutOfScope());
 	}
 }

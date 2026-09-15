@@ -5,16 +5,16 @@
  */
 package com.endit.ai;
 
-import com.endit.ai.dto.SearchIntent;
+import com.endit.ai.dto.SearchIntentResponseVO;
 
 public interface SearchIntentResolver {
 
 	/**
 	 * 검색 문장에서 조건을 뽑는다.
-	 * 실패해도 예외를 던지지 않고 SearchIntent.fallbackRanking()을 돌려준다.
+	 * 실패해도 예외를 던지지 않고 SearchIntentResponseVO.fallbackRanking()을 돌려준다.
 	 *
 	 * @param query 사용자가 입력한 문장
 	 * @return 검색 의도
 	 */
-	SearchIntent resolve(String query);
+	SearchIntentResponseVO resolve(String query);
 }

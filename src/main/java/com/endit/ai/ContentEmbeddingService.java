@@ -4,7 +4,7 @@
  * 적재:  공책(CONTENT_EMBEDDING)에 없는 영화만 골라 저울에 재서 채운다
  * 검색:  검색어를 좌표로 바꾸고, 공책의 좌표들과 거리(코사인)를 재서 가까운 순으로 준다
  *
- * 저울이 무엇이든(hash/local/openai) 응답의 model 로 구분되므로,
+ * 저울이 무엇이든 응답의 model 로 구분되므로,
  * 저울이 바뀌면 옛 좌표는 자동으로 "적재 대상"이 되어 다시 재진다.
  */
 package com.endit.ai;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 
 import com.endit.ai.dto.AiSearchItem;
 import com.endit.ai.dto.ContentEmbeddingVO;
-import com.endit.ai.dto.EmbedResponse;
+import com.endit.ai.dto.EmbedResponseVO;
 import com.endit.mapper.AiSearchMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,13 +61,13 @@ public class ContentEmbeddingService {
 		log.debug("=============================");
 
 		// 지금 어떤 저울이 도는지부터 알아낸다(견본 1건)
-		EmbedResponse probe = embeddingClient.embed(List.of("probe"));
+		EmbedResponseVO probe = embeddingClient.embed(List.of("probe"));
 		if (null == probe) {
 			log.warn("저울(AI 서버)이 꺼져 있어 적재를 건너뜁니다.");
 			return -1;
 		}
 
-		String model = probe.model();
+		String model = probe.getModel();
 		List<ContentEmbeddingVO> targets = aiSearchMapper.selectEmbedTargets(model);
 		log.debug("적재 대상 {}건 (model={})", targets.size(), model);
 
@@ -82,7 +82,7 @@ public class ContentEmbeddingService {
 					.map(t -> cut(buildEmbedText(t)))
 					.toList();
 
-			EmbedResponse res = embeddingClient.embed(texts);
+			EmbedResponseVO res = embeddingClient.embed(texts);
 			if (null == res) {
 				log.warn("묶음 적재 중 실패. 지금까지 {}건 저장하고 멈춥니다.", saved);
 				return saved;
@@ -91,8 +91,8 @@ public class ContentEmbeddingService {
 			for (int i = 0; i < batch.size(); i++) {
 				ContentEmbeddingVO row = new ContentEmbeddingVO();
 				row.setContentId(batch.get(i).getContentId());
-				row.setEmbedding(toJson(res.vectors().get(i)));
-				row.setModel(res.model());
+				row.setEmbedding(toJson(res.getVectors().get(i)));
+				row.setModel(res.getModel());
 				// UPDATE 먼저, 없으면 INSERT (21c CLOB+MERGE 지뢰 회피)
 				if (0 == aiSearchMapper.updateEmbedding(row)) {
 					aiSearchMapper.insertEmbedding(row);
@@ -113,11 +113,11 @@ public class ContentEmbeddingService {
 	 * @return 가까운 순 영화 카드. 좌표가 없으면 빈 목록
 	 */
 	public List<AiSearchItem> searchByMeaning(String query, int limit) {
-		EmbedResponse res = embeddingClient.embed(List.of(cut(query)));
+		EmbedResponseVO res = embeddingClient.embed(List.of(cut(query)));
 		if (null == res) {
 			return List.of();
 		}
-		return rankByDistance(res.vectors().get(0), res.model(), -1L, limit);
+		return rankByDistance(res.getVectors().get(0), res.getModel(), -1L, limit);
 	}
 
 	/**
@@ -135,12 +135,12 @@ public class ContentEmbeddingService {
 
 		// 기준 영화의 좌표는 공책에 이미 있다 - 저울 호출이 필요 없다.
 		// 다만 어떤 저울 좌표인지 알아야 해서 견본 1건으로 저울 이름만 묻는다
-		EmbedResponse probe = embeddingClient.embed(List.of("probe"));
+		EmbedResponseVO probe = embeddingClient.embed(List.of("probe"));
 		if (null == probe) {
 			return List.of();
 		}
 
-		List<ContentEmbeddingVO> all = aiSearchMapper.selectEmbeddings(probe.model());
+		List<ContentEmbeddingVO> all = aiSearchMapper.selectEmbeddings(probe.getModel());
 		double[] ref = null;
 		for (ContentEmbeddingVO row : all) {
 			if (row.getContentId() == refId) {

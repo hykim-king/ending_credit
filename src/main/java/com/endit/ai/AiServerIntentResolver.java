@@ -1,22 +1,20 @@
 /**
- * 파이썬 AI 서버를 호출하는 검색 의도 분석
+ * 파이썬 AI 서버를 호출하는 검색 의도 분석 (WebClient - 수업 04·05 방식)
  *
  * 서버가 죽어 있거나 AI 를 껐으면 최신순 목록으로 떨어뜨린다.
  * AI 때문에 검색 자체가 멈추면 안 된다.
  */
 package com.endit.ai;
 
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import com.endit.ai.dto.SearchIntent;
+import com.endit.ai.dto.SearchIntentRequestVO;
+import com.endit.ai.dto.SearchIntentResponseVO;
 
 @Component
 public class AiServerIntentResolver implements SearchIntentResolver {
@@ -28,27 +26,24 @@ public class AiServerIntentResolver implements SearchIntentResolver {
 	/** 검색어 상한. 이보다 길면 앞부분만 보낸다 */
 	private static final int MAX_QUERY_LENGTH = 200;
 
-	private final RestTemplate restTemplate;
-	private final String baseUrl;
+	private final WebClient webClient;
 	private final boolean enabled;
 
 	public AiServerIntentResolver(
-			@Qualifier("aiRestTemplate") RestTemplate restTemplate,
-			@Value("${ai.base-url:http://localhost:5000}") String baseUrl,
+			@Qualifier("aiWebClient") WebClient webClient,
 			@Value("${ai.enabled:false}") boolean enabled) {
-		this.restTemplate = restTemplate;
-		this.baseUrl = baseUrl;
+		this.webClient = webClient;
 		this.enabled = enabled;
 
 		log.debug("=============================");
-		log.debug("AiServerIntentResolver enabled={} baseUrl={}", enabled, baseUrl);
+		log.debug("AiServerIntentResolver enabled={}", enabled);
 		log.debug("=============================");
 	}
 
 	@Override
-	public SearchIntent resolve(String query) {
+	public SearchIntentResponseVO resolve(String query) {
 		if (false == enabled || null == query || query.isBlank()) {
-			return SearchIntent.fallbackRanking();
+			return SearchIntentResponseVO.fallbackRanking();
 		}
 
 		String target = query.length() > MAX_QUERY_LENGTH
@@ -56,21 +51,27 @@ public class AiServerIntentResolver implements SearchIntentResolver {
 				: query;
 
 		try {
-			SearchIntent intent = restTemplate.postForObject(
-					baseUrl + PATH_SEARCH_INTENT, Map.of("query", target), SearchIntent.class);
+			// POST 방식 호출 - Java 객체를 JSON 으로 보내고, JSON 응답을 Java 객체로 받는다
+			SearchIntentResponseVO intent = webClient
+					.post()
+					.uri(PATH_SEARCH_INTENT)
+					.bodyValue(new SearchIntentRequestVO(target))
+					.retrieve()
+					.bodyToMono(SearchIntentResponseVO.class)
+					.block();
 
 			if (null == intent || null == intent.getIntent()) {
-				return SearchIntent.fallbackRanking();
+				return SearchIntentResponseVO.fallbackRanking();
 			}
 
 			log.debug("검색 의도: {}", intent);
 
 			return intent;
 
-		} catch (RestClientException e) {
-			// AI 가 죽어도 검색은 살아야 한다
+		} catch (RuntimeException e) {
+			// 연결 실패·타임아웃·응답 오류 - AI 가 죽어도 검색은 살아야 한다
 			log.warn("AI 의도 분석에 실패했습니다. 최신순으로 대체합니다.", e);
-			return SearchIntent.fallbackRanking();
+			return SearchIntentResponseVO.fallbackRanking();
 		}
 	}
 }

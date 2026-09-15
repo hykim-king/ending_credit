@@ -6,24 +6,23 @@ Spring Boot 가 호출하는 AI 중계 서버다. 검색 의도 분류와 임베
 
 ```bash
 cd ai-server
-python -m uvicorn main:app --port 5000
+python -m venv .venv             # 최초 1회
+.venv\Scripts\activate           # 가상환경 진입
+pip install -r requirements.txt  # 최초 1회
+uvicorn main:app --reload --port=8081
 ```
 
-## 제공자 바꾸기
+## 키
 
-`.env` 의 `AI_PROVIDER` 한 줄만 고친다.
+`ai-server/.env` 에 적는다. `.env` 는 git 에 올라가지 않는다.
 
-| 값 | 동작 | API 키 |
-|---|---|---|
-| `mock` | AI 를 부르지 않는다. 키워드 규칙으로 흉내 | 불필요 |
-| `openai` | ChatGPT API | `OPENAI_API_KEY` |
-| `claude` | Anthropic API | `ANTHROPIC_API_KEY` |
-
-키가 생기기 전까지는 `mock` 으로 둔다. 자바 쪽은 무엇이 돌든 모른다.
+```
+OPENAI_API_KEY=sk-...
+```
 
 ## 확인
 
 ```bash
-curl http://localhost:5000/health
-curl -X POST http://localhost:5000/search-intent -H "Content-Type: application/json" -d "{\"query\":\"90년대 영화\"}"
+curl http://localhost:8081/health
+curl -X POST http://localhost:8081/search-intent -H "Content-Type: application/json" -d "{\"query\":\"90년대 영화\"}"
 ```

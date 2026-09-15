@@ -11,29 +11,29 @@ package com.endit.ai.dto;
 import java.util.List;
 
 public record AiSearchResponse(
-		SearchIntent intent,
+		SearchIntentResponseVO intent,
 		List<AiSearchItem> items,
 		List<AiNoticeItem> notices,
 		AiHelpAnswer help,
 		int totalCnt,
 		String message) {
 
-	public static AiSearchResponse ofMovies(SearchIntent intent, List<AiSearchItem> items) {
+	public static AiSearchResponse ofMovies(SearchIntentResponseVO intent, List<AiSearchItem> items) {
 		return new AiSearchResponse(intent, items, List.of(), null,
 				items.size(), intent.getMessage());
 	}
 
-	public static AiSearchResponse ofNotices(SearchIntent intent, List<AiNoticeItem> notices) {
+	public static AiSearchResponse ofNotices(SearchIntentResponseVO intent, List<AiNoticeItem> notices) {
 		return new AiSearchResponse(intent, List.of(), notices, null,
 				notices.size(), intent.getMessage());
 	}
 
-	public static AiSearchResponse ofHelp(SearchIntent intent, AiHelpAnswer help) {
+	public static AiSearchResponse ofHelp(SearchIntentResponseVO intent, AiHelpAnswer help) {
 		return new AiSearchResponse(intent, List.of(), List.of(), help, 0, "");
 	}
 
 	/** 영화와도 사이트와도 무관한 질문. 아무것도 뒤지지 않고 안내만 돌려준다. */
-	public static AiSearchResponse outOfScope(SearchIntent intent) {
+	public static AiSearchResponse outOfScope(SearchIntentResponseVO intent) {
 		return new AiSearchResponse(intent, List.of(), List.of(), null, 0, intent.getMessage());
 	}
 }

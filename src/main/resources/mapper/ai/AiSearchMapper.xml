@@ -9,7 +9,7 @@
          기존 ContentMapper 와 다른 점은 줄거리(overview)까지 본다는 것이다.
          조건은 전부 <if> 스위치라 SQL 자체는 이 하나로 끝난다 -->
     <select id="doSearchByIntent"
-            parameterType="com.endit.ai.dto.SearchIntent"
+            parameterType="com.endit.ai.dto.SearchIntentResponseVO"
             resultType="com.endit.ai.dto.AiSearchItem">
         SELECT c.content_id                                   AS contentId
              , c.title_ko                                     AS titleKo
@@ -84,7 +84,7 @@
     <!-- 공개 공지 제목 검색. 2조 selectPublicNoticeList 에는 searchWord 조건이
          없어서(페이지 전체 목록용) AI 검색용으로 따로 둔다. 낱말이 없으면 최신 공지 -->
     <select id="doSearchNotices"
-            parameterType="com.endit.ai.dto.SearchIntent"
+            parameterType="com.endit.ai.dto.SearchIntentResponseVO"
             resultType="com.endit.ai.dto.AiNoticeItem">
         SELECT NOTICE_ID                                     AS noticeId
              , TITLE                                         AS title

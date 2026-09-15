@@ -1,5 +1,5 @@
 /**
- * AI 가 뽑아낸 검색 의도
+ * 파이썬 /search-intent 가 돌려주는 검색 의도 (수업 05 ChatResponseVO 형태)
  *
  * AI 는 "무엇을 찾고 싶은지"만 정하고, 영화 목록은 우리 DB 가 낸다.
  * 그래서 AI 가 없는 영화를 지어낼 자리가 없다.
@@ -10,7 +10,9 @@ package com.endit.ai.dto;
 
 import java.util.List;
 
-public class SearchIntent {
+import com.endit.cmn.DTO;
+
+public class SearchIntentResponseVO extends DTO {
 
 	/** 순위 목록만 원할 때 */
 	public static final String INTENT_RANKING = "ranking";
@@ -38,13 +40,13 @@ public class SearchIntent {
 	private List<String> excludeTitles;
 	private String provider;
 
-	public SearchIntent() {
+	public SearchIntentResponseVO() {
 		super();
 	}
 
 	/** AI 를 부르지 못했을 때. 검색을 막지 않고 최신순 목록으로 떨어뜨린다. */
-	public static SearchIntent fallbackRanking() {
-		SearchIntent vo = new SearchIntent();
+	public static SearchIntentResponseVO fallbackRanking() {
+		SearchIntentResponseVO vo = new SearchIntentResponseVO();
 		vo.setIntent(INTENT_RANKING);
 		vo.setSort("latest");
 		vo.setLimit(20);
@@ -106,7 +108,7 @@ public class SearchIntent {
 
 	@Override
 	public String toString() {
-		return "SearchIntent [intent=" + intent + ", keywords=" + keywords + ", title=" + title
+		return "SearchIntentResponseVO [intent=" + intent + ", keywords=" + keywords + ", title=" + title
 				+ ", genre=" + genre + ", yearFrom=" + yearFrom + ", yearTo=" + yearTo
 				+ ", sort=" + sort + ", limit=" + limit
 				+ ", faqKey=" + faqKey + ", provider=" + provider + "]";

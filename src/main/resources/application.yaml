@@ -127,7 +127,7 @@ tmdb:
 # enabled=false 면 호출하지 않고 "판정하지 않음"을 돌려준다 - AI 없이도 서비스는 그대로 돈다.
 ai:
   enabled: false
-  base-url: http://localhost:5000
+  base-url: http://localhost:8081
   connect-timeout-ms: 3000
   read-timeout-ms: 20000
 
