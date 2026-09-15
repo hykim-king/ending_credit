@@ -1,0 +1,73 @@
+#--------------------------------------------------
+# Ending Credit | 운영 설정
+# 실행: SPRING_PROFILES_ACTIVE=prod
+# 전제: 같은 EC2의 Nginx가 HTTPS를 종료하고 127.0.0.1:8080으로 전달한다.
+# Nginx 인증서/443 포트/도메인 설정은 이 파일이 만들어 주지 않는다.
+#--------------------------------------------------
+spring:
+  #------------------------------------------------
+  # Thymeleaf | 운영 템플릿 캐시
+  #------------------------------------------------
+  thymeleaf:
+    cache: true
+
+  #------------------------------------------------
+  # Google OAuth2 | 운영 콜백 고정
+  # GOOGLE_REDIRECT_URI=https://실제도메인/login/oauth2/code/google
+  # Google Cloud의 승인된 리디렉션 URI와 완전히 일치해야 한다.
+  #------------------------------------------------
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            redirect-uri: ${GOOGLE_REDIRECT_URI}
+
+#--------------------------------------------------
+# Server | Nginx 뒤의 내부 HTTP 서버
+# 외부 8080 공개 없이 Nginx를 통해 접속한다.
+#--------------------------------------------------
+server:
+  address: 127.0.0.1
+  forward-headers-strategy: native
+  tomcat:
+    redirect-context-root: false
+    remoteip:
+      # 단일 EC2 구성을 전제로 루프백 프록시만 신뢰한다.
+      internal-proxies: '127\.0\.0\.1|0:0:0:0:0:0:0:1|::1'
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+      host-header: X-Forwarded-Host
+      port-header: X-Forwarded-Port
+  servlet:
+    session:
+      cookie:
+        # HTTP 주소로 접속하면 세션 쿠키가 전송되지 않는다. HTTPS가 선행 조건이다.
+        secure: true
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+#--------------------------------------------------
+# Logging | 운영 수준 / 파일 보관
+# 서비스 사용자에게 LOG_DIR 쓰기 권한을 부여한 뒤 시작한다.
+# 보관 파일 총량 제한이며 현재 로그, journal, Nginx 로그는 별도로 관리한다.
+#--------------------------------------------------
+logging:
+  level:
+    root: INFO
+    com.endit: INFO
+    org.springframework.transaction: INFO
+    org.springframework.transaction.interceptor: INFO
+    org.springframework.jdbc.datasource.DataSourceTransactionManager: INFO
+    org.mybatis: INFO
+    org.springframework.jdbc.core: INFO
+  file:
+    name: ${LOG_DIR:/var/log/ending-credit}/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 7
+      total-size-cap: 100MB
