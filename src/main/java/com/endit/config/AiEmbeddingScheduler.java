@@ -4,12 +4,14 @@
  * 프로젝트에는 이미 1조 ContentRankScheduler 가 돌고 있어 낯선 패턴이 아니다.
  * ai.enabled=false 면 서비스 쪽에서 조용히 건너뛴다.
  */
-package com.endit.ai;
+package com.endit.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+
+import com.endit.service.ContentEmbeddingService;
 
 @Component
 public class AiEmbeddingScheduler {

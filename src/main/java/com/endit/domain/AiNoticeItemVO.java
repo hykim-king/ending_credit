@@ -3,15 +3,15 @@
  *
  * MyBatis resultType 으로 쓰므로 record 가 아니라 일반 클래스로 둔다.
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
-public class AiNoticeItem {
+public class AiNoticeItemVO {
 
 	private long noticeId;
 	private String title;
 	private String createdDt;
 
-	public AiNoticeItem() {
+	public AiNoticeItemVO() {
 		super();
 	}
 
@@ -26,7 +26,7 @@ public class AiNoticeItem {
 
 	@Override
 	public String toString() {
-		return "AiNoticeItem [noticeId=" + noticeId + ", title=" + title
+		return "AiNoticeItemVO [noticeId=" + noticeId + ", title=" + title
 				+ ", createdDt=" + createdDt + "]";
 	}
 }

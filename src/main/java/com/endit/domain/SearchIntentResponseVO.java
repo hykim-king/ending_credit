@@ -6,7 +6,7 @@
  *
  * MyBatis parameterType 으로도 쓰이므로 record 가 아니라 일반 클래스로 둔다.
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
 import java.util.List;
 

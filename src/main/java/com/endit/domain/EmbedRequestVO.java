@@ -1,7 +1,7 @@
 /**
  * 파이썬 /embed 에 보내는 요청 - 좌표로 바꿀 글 묶음 (수업 05 ChatRequestVO 형태)
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
 import java.util.List;
 

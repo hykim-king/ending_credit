@@ -3,9 +3,9 @@
  *
  * 화면 카드에 필요한 것만 담는다. 전부 DB 에서 나온 값이라 지어낸 값이 섞일 수 없다.
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
-public class AiSearchItem {
+public class AiSearchItemVO {
 
 	private long contentId;
 	private String titleKo;
@@ -16,7 +16,7 @@ public class AiSearchItem {
 	private Double avgRating;
 	private int commentCnt;
 
-	public AiSearchItem() {
+	public AiSearchItemVO() {
 		super();
 	}
 
@@ -46,7 +46,7 @@ public class AiSearchItem {
 
 	@Override
 	public String toString() {
-		return "AiSearchItem [contentId=" + contentId + ", titleKo=" + titleKo
+		return "AiSearchItemVO [contentId=" + contentId + ", titleKo=" + titleKo
 				+ ", releaseYear=" + releaseYear + ", avgRating=" + avgRating
 				+ ", commentCnt=" + commentCnt + "]";
 	}

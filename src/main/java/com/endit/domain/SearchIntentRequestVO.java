@@ -1,7 +1,7 @@
 /**
  * 파이썬 /search-intent 에 보내는 요청 (수업 05 ChatRequestVO 형태)
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
 import com.endit.cmn.DTO;
 

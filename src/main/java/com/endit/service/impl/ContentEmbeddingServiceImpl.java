@@ -7,7 +7,7 @@
  * 저울이 무엇이든 응답의 model 로 구분되므로,
  * 저울이 바뀌면 옛 좌표는 자동으로 "적재 대상"이 되어 다시 재진다.
  */
-package com.endit.ai;
+package com.endit.service.impl;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,15 +20,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import com.endit.ai.dto.AiSearchItem;
-import com.endit.ai.dto.ContentEmbeddingVO;
-import com.endit.ai.dto.EmbedResponseVO;
+import com.endit.domain.AiSearchItemVO;
+import com.endit.domain.ContentEmbeddingVO;
+import com.endit.domain.EmbedResponseVO;
+import com.endit.domain.EmbedRequestVO;
 import com.endit.mapper.AiSearchMapper;
+import com.endit.service.ContentEmbeddingService;
+import com.endit.service.FastApiService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
-public class ContentEmbeddingService {
+public class ContentEmbeddingServiceImpl implements ContentEmbeddingService {
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -38,16 +41,16 @@ public class ContentEmbeddingService {
 	/** 줄거리에서 저울에 올리는 최대 길이(토큰 낭비 방지) */
 	private static final int MAX_TEXT_LENGTH = 1500;
 
-	private final AiEmbeddingClient embeddingClient;
+	private final FastApiService fastApiService;
 	private final AiSearchMapper aiSearchMapper;
 	private final ObjectMapper objectMapper;
 
-	public ContentEmbeddingService(AiEmbeddingClient embeddingClient,
+	public ContentEmbeddingServiceImpl(FastApiService fastApiService,
 			AiSearchMapper aiSearchMapper, ObjectMapper objectMapper) {
-		this.embeddingClient = embeddingClient;
+		this.fastApiService = fastApiService;
 		this.aiSearchMapper = aiSearchMapper;
 		this.objectMapper = objectMapper;
-		log.debug("embeddingClient: {}", embeddingClient);
+		log.debug("fastApiService: {}", fastApiService);
 	}
 
 	/**
@@ -55,13 +58,14 @@ public class ContentEmbeddingService {
 	 *
 	 * @return 새로 잰 건수. 저울이 꺼져 있으면 -1
 	 */
+	@Override
 	public int embedNewContents() {
 		log.debug("=============================");
 		log.debug("{}()", "embedNewContents");
 		log.debug("=============================");
 
 		// 지금 어떤 저울이 도는지부터 알아낸다(견본 1건)
-		EmbedResponseVO probe = embeddingClient.embed(List.of("probe"));
+		EmbedResponseVO probe = fastApiService.embed(new EmbedRequestVO(List.of("probe")));
 		if (null == probe) {
 			log.warn("저울(AI 서버)이 꺼져 있어 적재를 건너뜁니다.");
 			return -1;
@@ -82,7 +86,7 @@ public class ContentEmbeddingService {
 					.map(t -> cut(buildEmbedText(t)))
 					.toList();
 
-			EmbedResponseVO res = embeddingClient.embed(texts);
+			EmbedResponseVO res = fastApiService.embed(new EmbedRequestVO(texts));
 			if (null == res) {
 				log.warn("묶음 적재 중 실패. 지금까지 {}건 저장하고 멈춥니다.", saved);
 				return saved;
@@ -112,8 +116,9 @@ public class ContentEmbeddingService {
 	 * @param limit 최대 건수
 	 * @return 가까운 순 영화 카드. 좌표가 없으면 빈 목록
 	 */
-	public List<AiSearchItem> searchByMeaning(String query, int limit) {
-		EmbedResponseVO res = embeddingClient.embed(List.of(cut(query)));
+	@Override
+	public List<AiSearchItemVO> searchByMeaning(String query, int limit) {
+		EmbedResponseVO res = fastApiService.embed(new EmbedRequestVO(List.of(cut(query))));
 		if (null == res) {
 			return List.of();
 		}
@@ -127,7 +132,8 @@ public class ContentEmbeddingService {
 	 * @param limit 최대 건수
 	 * @return 가까운 순 영화 카드. 기준 영화가 없으면 null, 좌표가 없으면 빈 목록
 	 */
-	public List<AiSearchItem> findSimilar(String title, int limit) {
+	@Override
+	public List<AiSearchItemVO> findSimilar(String title, int limit) {
 		Long refId = aiSearchMapper.selectContentIdByTitle(title);
 		if (null == refId) {
 			return null;                       // "그런 영화가 없다"를 위로 알린다
@@ -135,7 +141,7 @@ public class ContentEmbeddingService {
 
 		// 기준 영화의 좌표는 공책에 이미 있다 - 저울 호출이 필요 없다.
 		// 다만 어떤 저울 좌표인지 알아야 해서 견본 1건으로 저울 이름만 묻는다
-		EmbedResponseVO probe = embeddingClient.embed(List.of("probe"));
+		EmbedResponseVO probe = fastApiService.embed(new EmbedRequestVO(List.of("probe")));
 		if (null == probe) {
 			return List.of();
 		}
@@ -157,13 +163,13 @@ public class ContentEmbeddingService {
 
 	/* ── 안 - 거리 계산 ─────────────────────────────────────── */
 
-	private List<AiSearchItem> rankByDistance(double[] queryVec, String model,
+	private List<AiSearchItemVO> rankByDistance(double[] queryVec, String model,
 			long excludeId, int limit) {
 		List<ContentEmbeddingVO> all = aiSearchMapper.selectEmbeddings(model);
 		return rank(all, queryVec, excludeId, limit);
 	}
 
-	private List<AiSearchItem> rank(List<ContentEmbeddingVO> rows, double[] target,
+	private List<AiSearchItemVO> rank(List<ContentEmbeddingVO> rows, double[] target,
 			long excludeId, int limit) {
 		record Scored(long contentId, double score) {
 		}
@@ -188,8 +194,8 @@ public class ContentEmbeddingService {
 		}
 
 		// IN 조회는 순서를 보장하지 않으므로 거리순으로 다시 줄 세운다
-		Map<Long, AiSearchItem> byId = aiSearchMapper.selectItemsByIds(ids).stream()
-				.collect(Collectors.toMap(AiSearchItem::getContentId, Function.identity()));
+		Map<Long, AiSearchItemVO> byId = aiSearchMapper.selectItemsByIds(ids).stream()
+				.collect(Collectors.toMap(AiSearchItemVO::getContentId, Function.identity()));
 
 		return ids.stream().map(byId::get).filter(java.util.Objects::nonNull).toList();
 	}

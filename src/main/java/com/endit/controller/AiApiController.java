@@ -4,7 +4,7 @@
  * 떠 있는 검색 패널이 비동기로 호출한다.
  * AI 가 실패해도 200과 함께 대체 결과를 돌려준다 - 화면이 깨지지 않게 한다.
  */
-package com.endit.ai;
+package com.endit.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,18 +15,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.endit.ai.dto.AiSearchResponse;
+import com.endit.domain.AiSearchResponseVO;
+import com.endit.service.AiSearchService;
+import com.endit.service.ContentEmbeddingService;
 
 @RestController
 @RequestMapping("/api/ai")
-public class AiController {
+public class AiApiController {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 
     private final AiSearchService aiSearchService;
     private final ContentEmbeddingService contentEmbeddingService;
 
-    public AiController(AiSearchService aiSearchService,
+    public AiApiController(AiSearchService aiSearchService,
             ContentEmbeddingService contentEmbeddingService) {
         this.aiSearchService = aiSearchService;
         this.contentEmbeddingService = contentEmbeddingService;
@@ -42,7 +44,7 @@ public class AiController {
      * @return 의도 + 영화 목록
      */
     @GetMapping("/search")
-    public AiSearchResponse search(@RequestParam(name = "query", defaultValue = "") String query) {
+    public AiSearchResponseVO search(@RequestParam(name = "query", defaultValue = "") String query) {
         log.debug("=============================");
         log.debug("{}()", "search");
         log.debug("query: {}", query);

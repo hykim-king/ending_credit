@@ -1,9 +1,9 @@
 /**
- * AI 검색 의도 분석 단위 테스트
+ * FastAPI 호출 단위 테스트
  *
  * 판정 품질이 아니라 "AI 가 없어도 검색이 살아있는가"를 본다.
  */
-package com.endit.ai;
+package com.endit.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,13 +19,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import com.endit.ai.dto.SearchIntentResponseVO;
+import com.endit.domain.SearchIntentRequestVO;
+import com.endit.domain.SearchIntentResponseVO;
+import com.endit.service.impl.FastApiServiceImpl;
 
 import io.netty.channel.ChannelOption;
 import reactor.netty.http.client.HttpClient;
 
 @DisplayName("AI 검색 의도 분석")
-public class SearchIntentJUnit {
+public class FastApiServiceTest {
 
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
@@ -50,10 +52,10 @@ public class SearchIntentJUnit {
 		log.debug("*disabledFallsBackToRanking()*");
 		log.debug("---------------------------");
 
-		SearchIntentResolver resolver = new AiServerIntentResolver(
+		FastApiService service = new FastApiServiceImpl(
 				shortTimeoutClient(), false);
 
-		SearchIntentResponseVO intent = resolver.resolve("우주 배경 영화");
+		SearchIntentResponseVO intent = service.searchIntent(new SearchIntentRequestVO("우주 배경 영화"));
 
 		assertNotNull(intent);
 		assertEquals(SearchIntentResponseVO.INTENT_RANKING, intent.getIntent());
@@ -70,10 +72,10 @@ public class SearchIntentJUnit {
 		log.debug("---------------------------");
 		// 빈 화면 대신 최신순이라도 보여줘야 한다
 
-		SearchIntentResolver resolver = new AiServerIntentResolver(
+		FastApiService service = new FastApiServiceImpl(
 				shortTimeoutClient(), true);
 
-		SearchIntentResponseVO intent = resolver.resolve("우주 배경 영화");
+		SearchIntentResponseVO intent = service.searchIntent(new SearchIntentRequestVO("우주 배경 영화"));
 
 		assertEquals(SearchIntentResponseVO.INTENT_RANKING, intent.getIntent());
 		assertTrue(intent.getLimit() > 0);
@@ -86,11 +88,11 @@ public class SearchIntentJUnit {
 		log.debug("*blankQueryFallsBack()*");
 		log.debug("---------------------------");
 
-		SearchIntentResolver resolver = new AiServerIntentResolver(
+		FastApiService service = new FastApiServiceImpl(
 				shortTimeoutClient(), true);
 
-		assertEquals("none", resolver.resolve(null).getProvider());
-		assertEquals("none", resolver.resolve("   ").getProvider());
+		assertEquals("none", service.searchIntent(new SearchIntentRequestVO(null)).getProvider());
+		assertEquals("none", service.searchIntent(new SearchIntentRequestVO("   ")).getProvider());
 	}
 
 	@Test

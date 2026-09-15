@@ -4,7 +4,7 @@
  * 적재 대상 조회 때는 contentId+overview 가, 저장 때는 contentId+embedding+model 이,
  * 검색 때는 contentId+embedding 이 채워진다. MyBatis 용이라 일반 클래스다.
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
 public class ContentEmbeddingVO {
 

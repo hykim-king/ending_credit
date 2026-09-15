@@ -10,10 +10,10 @@ import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.endit.ai.dto.AiNoticeItem;
-import com.endit.ai.dto.ContentEmbeddingVO;
-import com.endit.ai.dto.AiSearchItem;
-import com.endit.ai.dto.SearchIntentResponseVO;
+import com.endit.domain.AiNoticeItemVO;
+import com.endit.domain.ContentEmbeddingVO;
+import com.endit.domain.AiSearchItemVO;
+import com.endit.domain.SearchIntentResponseVO;
 
 @Mapper
 public interface AiSearchMapper {
@@ -24,7 +24,7 @@ public interface AiSearchMapper {
 	 * @param param 검색 의도
 	 * @return 영화 목록
 	 */
-	List<AiSearchItem> doSearchByIntent(SearchIntentResponseVO param);
+	List<AiSearchItemVO> doSearchByIntent(SearchIntentResponseVO param);
 
 	/**
 	 * 공개 공지를 제목 낱말로 찾는다.
@@ -33,7 +33,7 @@ public interface AiSearchMapper {
 	 * @param param 검색 의도(keywords 사용)
 	 * @return 공지 목록(중요 공지 우선, 최신순 5건)
 	 */
-	List<AiNoticeItem> doSearchNotices(SearchIntentResponseVO param);
+	List<AiNoticeItemVO> doSearchNotices(SearchIntentResponseVO param);
 
 	/** 좌표가 없거나 다른 저울로 잰 영화들(적재 대상) */
 	List<ContentEmbeddingVO> selectEmbedTargets(String model);
@@ -51,5 +51,5 @@ public interface AiSearchMapper {
 	Long selectContentIdByTitle(String title);
 
 	/** 번호 목록으로 카드 정보 - 순서는 자바가 거리순으로 다시 매긴다 */
-	List<com.endit.ai.dto.AiSearchItem> selectItemsByIds(java.util.List<Long> ids);
+	List<com.endit.domain.AiSearchItemVO> selectItemsByIds(java.util.List<Long> ids);
 }

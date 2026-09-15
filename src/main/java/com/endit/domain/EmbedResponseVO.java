@@ -1,7 +1,7 @@
 /**
  * 파이썬 /embed 가 돌려주는 좌표 묶음 (수업 05 ChatResponseVO 형태)
  */
-package com.endit.ai.dto;
+package com.endit.domain;
 
 import java.util.List;
 

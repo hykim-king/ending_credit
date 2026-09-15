@@ -9,8 +9,8 @@
          기존 ContentMapper 와 다른 점은 줄거리(overview)까지 본다는 것이다.
          조건은 전부 <if> 스위치라 SQL 자체는 이 하나로 끝난다 -->
     <select id="doSearchByIntent"
-            parameterType="com.endit.ai.dto.SearchIntentResponseVO"
-            resultType="com.endit.ai.dto.AiSearchItem">
+            parameterType="com.endit.domain.SearchIntentResponseVO"
+            resultType="com.endit.domain.AiSearchItemVO">
         SELECT c.content_id                                   AS contentId
              , c.title_ko                                     AS titleKo
              , c.title_org                                    AS titleOrg
@@ -84,8 +84,8 @@
     <!-- 공개 공지 제목 검색. 2조 selectPublicNoticeList 에는 searchWord 조건이
          없어서(페이지 전체 목록용) AI 검색용으로 따로 둔다. 낱말이 없으면 최신 공지 -->
     <select id="doSearchNotices"
-            parameterType="com.endit.ai.dto.SearchIntentResponseVO"
-            resultType="com.endit.ai.dto.AiNoticeItem">
+            parameterType="com.endit.domain.SearchIntentResponseVO"
+            resultType="com.endit.domain.AiNoticeItemVO">
         SELECT NOTICE_ID                                     AS noticeId
              , TITLE                                         AS title
              , TO_CHAR(CREATED_DT, 'YYYY-MM-DD')             AS createdDt
@@ -106,7 +106,7 @@
 
     <!-- 적재 대상: 줄거리는 있는데 좌표가 없거나, 다른 저울로 잰 것 -->
     <select id="selectEmbedTargets" parameterType="string"
-            resultType="com.endit.ai.dto.ContentEmbeddingVO">
+            resultType="com.endit.domain.ContentEmbeddingVO">
         SELECT c.content_id  AS contentId
              , c.title_ko    AS titleKo
              , c.overview    AS overview
@@ -124,7 +124,7 @@
     <!-- 있으면 갱신, 없으면 삽입 -->
     <!-- 오라클 21c 에서 CLOB 를 MERGE 에 물리면 ORA-3146/3138 이 난다(실측).
          그래서 UPDATE 해보고 0건이면 INSERT 하는 두 방 방식으로 간다 -->
-    <update id="updateEmbedding" parameterType="com.endit.ai.dto.ContentEmbeddingVO">
+    <update id="updateEmbedding" parameterType="com.endit.domain.ContentEmbeddingVO">
         UPDATE content_embedding
            SET embedding  = #{embedding, jdbcType=CLOB}
              , model      = #{model}
@@ -132,13 +132,13 @@
          WHERE content_id = #{contentId}
     </update>
 
-    <insert id="insertEmbedding" parameterType="com.endit.ai.dto.ContentEmbeddingVO">
+    <insert id="insertEmbedding" parameterType="com.endit.domain.ContentEmbeddingVO">
         INSERT INTO content_embedding (content_id, embedding, model)
         VALUES (#{contentId}, #{embedding, jdbcType=CLOB}, #{model})
     </insert>
 
     <select id="selectEmbeddings" parameterType="string"
-            resultType="com.endit.ai.dto.ContentEmbeddingVO">
+            resultType="com.endit.domain.ContentEmbeddingVO">
         SELECT content_id AS contentId
              , embedding  AS embedding
           FROM content_embedding
@@ -155,7 +155,7 @@
     </select>
 
     <select id="selectItemsByIds" parameterType="list"
-            resultType="com.endit.ai.dto.AiSearchItem">
+            resultType="com.endit.domain.AiSearchItemVO">
         SELECT c.content_id                                   AS contentId
              , c.title_ko                                     AS titleKo
              , c.title_org                                    AS titleOrg
