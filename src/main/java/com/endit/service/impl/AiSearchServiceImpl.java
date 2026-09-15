@@ -112,6 +112,12 @@ public class AiSearchServiceImpl implements AiSearchService {
 		// 비슷한 영화 - 기준 영화 좌표와의 거리.
 		// "OO 는 빼고" 제외 필터를 거치므로 후보를 넉넉히 뽑아 온다
 		if ("similar".equals(intent.getIntent())) {
+			// AI 가 기준 영화를 못 뽑았으면(제목 없음) DB 를 뒤지지 않고 되묻는다 -
+			// null 제목을 SQL 에 바인딩하면 ORA-17004 로 500 이 난다(실측)
+			if (null == intent.getTitle() || intent.getTitle().isBlank()) {
+				intent.setMessage("어떤 영화와 비슷한 걸 찾으시는지 제목을 함께 적어 주세요. 예) \"인터스텔라 같은 영화\"");
+				return AiSearchResponseVO.outOfScope(intent);
+			}
 			int limit = intent.getLimit() > 0 ? intent.getLimit() : 5;
 
 			List<AiSearchItemVO> items = embeddingService.findSimilar(
