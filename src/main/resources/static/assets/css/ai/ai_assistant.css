@@ -7,7 +7,7 @@
 .ai-fab {
     position: fixed;              /* 화면 기준 - 스크롤해도 따라온다 */
     right: 24px;
-    bottom: 24px;
+    bottom: 80px;                /* 팀 '맨 위로' 버튼(24px+44px) 바로 위 - 겹치지 않게 */
     z-index: 1045;                /* 부트스트랩 모달(1055)보다는 아래 */
     width: 52px;
     height: 52px;
@@ -37,7 +37,7 @@
 .ai-teaser {
     position: fixed;
     right: 24px;
-    bottom: 88px;
+    bottom: 144px;
     z-index: 1044;
     max-width: 260px;
     background: #fff;
@@ -84,7 +84,7 @@
 .ai-panel {
     position: fixed;
     right: 24px;
-    bottom: 88px;
+    bottom: 144px;
     z-index: 1046;
     width: 360px;
     max-width: calc(100vw - 32px);
