@@ -122,7 +122,9 @@ layout:decorate="~{layout/layout}">
                     <button type="button" class="like-btn" th:attr="data-comment-id=${vo.commentId}">
                         <i class="bi bi-heart"></i> <span class="like-cnt" th:text="${vo.likeCnt}">0</span>
                     </button>
-                    <button type="button" class="card-action report-btn"><i class="bi bi-flag"></i> 신고</button>
+                    <!-- 본인 코멘트엔 신고 버튼 숨김(영화 상세와 같은 규칙, 서버도 거부) -->
+                    <button type="button" class="card-action report-btn"
+                            th:if="${loginMemberId != null and vo.memberId != loginMemberId}"><i class="bi bi-flag"></i> 신고</button>
                     <span class="ms-auto"></span>
                     <!-- 본인 코멘트에만 수정·삭제 노출(서버도 막지만 UI에서도 숨김) -->
                     <button type="button" class="card-action edit-btn"
