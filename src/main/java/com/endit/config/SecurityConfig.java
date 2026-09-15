@@ -78,48 +78,58 @@ public class SecurityConfig {
 		log.debug("SecurityConfig.filterChain()");
 
 		http
-			// ── 1) URL별 접근 권한 ──
-			.authorizeHttpRequests(auth -> auth
-				// 관리자 영역만 ADMIN 권한 필요 (role "ADMIN" → 권한 "ROLE_ADMIN")
-				.requestMatchers("/admin/**").hasRole("ADMIN")
-				.requestMatchers("/api/admin/**").hasRole("ADMIN")
-				// 로그인 회원 본인의 기록·좋아요 화면과 조회 API
-				.requestMatchers("/members/records", "/members/likes",
-						"/members/me/records", "/members/me/likes").authenticated()
-				.requestMatchers("/api/members/comments", "/api/members/comments/**").authenticated()
-				.requestMatchers(HttpMethod.GET,
-						"/api/members/ratings",
-						"/api/members/watchlist",
-						"/api/members/collections",
-						"/api/members/likes").authenticated()
-				// 다른 회원의 기록·좋아요 화면과 조회 API는 비로그인도 볼 수 있다.
-				// 위의 본인 전용 규칙보다 아래에 두어 코멘트 수정·삭제·좋아요 보호를 먼저 적용한다.
-				.requestMatchers(HttpMethod.GET,
-						"/members/*/records",
-						"/members/*/likes",
-						"/api/members/*/comments",
-						"/api/users/*/ratings",
-						"/api/users/*/watchlist",
-						"/api/users/*/collections",
-						"/api/users/*/likes").permitAll()
-				// 컬렉션 등록·수정 화면
-				.requestMatchers("/collections/new", "/collections/*/edit").authenticated()
-				// 별점·보고싶어요·인물 좋아요 변경
-				.requestMatchers("/api/movies/*/rating", "/api/watchlist/*",
-						"/api/people/*/likes").authenticated()
-				// 컬렉션 변경과 로그인 회원의 좋아요 상태 조회
-				.requestMatchers(HttpMethod.POST, "/api/collections/**").authenticated()
-				.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
-				.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
-				.requestMatchers(HttpMethod.DELETE, "/api/collections/**").authenticated()
-				.requestMatchers(HttpMethod.GET, "/api/collections/*/likes").authenticated()
-				// 코멘트 등록·수정·삭제와 좋아요·신고 접수 (목록 조회는 비회원도 본다)
-				.requestMatchers(HttpMethod.POST,
-						"/comment/doSave", "/comment/doUpdate", "/comment/doDelete",
-						"/commentLike/upToggleLike", "/report/doSave").authenticated()
-				// 그 외 모든 요청은 개발 편의상 일단 전부 허용
-				.anyRequest().permitAll()
-			)
+		// ── 1) URL별 접근 권한 ──
+		.authorizeHttpRequests(auth -> auth
+			// 관리자 영역만 ADMIN 권한 필요 (role "ADMIN" → 권한 "ROLE_ADMIN")
+			.requestMatchers("/admin/**").hasRole("ADMIN")
+			.requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+			// 로그인 회원 본인 전용 API (계정/프로필/비번/탈퇴/좋아요/취향분석).
+			// 타인 조회(/api/members/*/...)보다 반드시 위에 두어 me가 먼저 매칭되게 한다.
+			.requestMatchers("/api/members/me/**").authenticated()
+			.requestMatchers(HttpMethod.DELETE, "/api/members/me").authenticated()
+
+			// 로그인 회원 본인의 기록·좋아요 화면과 조회 API
+			.requestMatchers("/members/records", "/members/likes",
+					"/members/me/records", "/members/me/likes").authenticated()
+			.requestMatchers("/api/members/comments", "/api/members/comments/**").authenticated()
+			.requestMatchers(HttpMethod.GET,
+					"/api/members/ratings",
+					"/api/members/watchlist",
+					"/api/members/collections",
+					"/api/members/likes").authenticated()
+
+			// 다른 회원의 기록·좋아요 화면과 조회 API는 비로그인도 볼 수 있다.
+			// 위의 본인 전용 규칙보다 아래에 두어 코멘트 수정·삭제·좋아요 보호를 먼저 적용한다.
+			.requestMatchers(HttpMethod.GET,
+					"/members/*/records",
+					"/members/*/likes",
+					"/api/members/*/comments",
+					"/api/members/*/likes/**",
+					"/api/members/*/genre-preference",
+					"/api/members/*/rating-distribution",
+					"/api/users/*/ratings",
+					"/api/users/*/watchlist",
+					"/api/users/*/collections",
+					"/api/users/*/likes").permitAll()
+
+			// 컬렉션 등록·수정 화면
+			.requestMatchers("/collections/new", "/collections/*/edit").authenticated()
+			// 별점·보고싶어요·인물 좋아요 변경
+			.requestMatchers("/api/movies/*/rating", "/api/watchlist/*",
+					"/api/people/*/likes").authenticated()
+			// 컬렉션 변경과 로그인 회원의 좋아요 상태 조회
+			.requestMatchers(HttpMethod.POST, "/api/collections/**").authenticated()
+			.requestMatchers(HttpMethod.PATCH, "/api/collections/**").authenticated()
+			.requestMatchers(HttpMethod.DELETE, "/api/collections/**").authenticated()
+			.requestMatchers(HttpMethod.GET, "/api/collections/*/likes").authenticated()
+			// 코멘트 등록·수정·삭제와 좋아요·신고 접수 (목록 조회는 비회원도 본다)
+			.requestMatchers(HttpMethod.POST,
+					"/comment/doSave", "/comment/doUpdate", "/comment/doDelete",
+					"/commentLike/upToggleLike", "/report/doSave").authenticated()
+			// 그 외 모든 요청은 전부 허용 (공개 탐색)
+			.anyRequest().permitAll()
+		)
 
 			// ── 2) 이메일 로그인(formLogin) ──
 			.formLogin(form -> form

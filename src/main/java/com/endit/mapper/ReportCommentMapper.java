@@ -26,4 +26,7 @@ public interface ReportCommentMapper extends WorkDiv<ReportCommentVO> {
 	 * @return int(총건수)
 	 */
 	int totalCnt();
+
+	/** 신고 대상 코멘트의 작성자 회원ID — 본인 코멘트 신고 차단용 (코멘트 없으면 null) */
+	Long selectCommentOwnerId(long commentId);
 }

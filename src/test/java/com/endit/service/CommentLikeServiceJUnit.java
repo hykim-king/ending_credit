@@ -33,7 +33,7 @@ class CommentLikeServiceJUnit {
 	// 공용 DB 더미 데이터의 실제 부모 값 (회의 규칙: 부모 값은 DB 기반 하드코딩)
 	private static final long MEMBER_AUTHOR = 9L; // admin1@endit.com — 더미 코멘트 없음
 	private static final long MEMBER_LIKER = 10L; // admin2@endit.com — 좋아요 누르는 회원
-	private static final long CONTENT_A = 9L;     // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
+	private static final long CONTENT_A = 442L;     // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
 
 	@Autowired
 	CommentLikeService service;

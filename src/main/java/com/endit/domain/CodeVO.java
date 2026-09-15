@@ -1,18 +1,7 @@
 /**
- * <pre>
- * Class Name : CodeVO
- * Description : 공통코드(COMMON_CODE) VO — 화면 select 렌더링용 (학원 27~28장 패턴)
- *               학원 CMN_CODE와 컬럼 구성이 다르다: 팀 스키마는
- *               (GROUP_CODE, CODE) 복합 PK + CODE_NAME + SORT_ORDER.
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * 공통코드(COMMON_CODE) VO — 화면 select 렌더링용 (학원 27~28장 패턴)
+ * 학원 CMN_CODE와 컬럼 구성이 다르다: 팀 스키마는
+ * (GROUP_CODE, CODE) 복합 PK + CODE_NAME + SORT_ORDER.
  */
 package com.endit.domain;
 

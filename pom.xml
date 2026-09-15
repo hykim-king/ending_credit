@@ -85,6 +85,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- 파이썬 AI 서버(FastAPI) 호출용 WebClient (수업 04·05 방식) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
         <!-- TMDB JSON API를 Java 객체로 바꿔 주는 래퍼 라이브러리 -->
         <dependency>
             <groupId>uk.co.conoregan</groupId>

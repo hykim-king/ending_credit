@@ -1,17 +1,6 @@
 /**
- * <pre>
- * Class Name : CodeMapperDaoTest
- * Description : 공통코드 조회 Mapper JUnit
- *               팀 테스트 규칙: 공용 더미 위에서 @Transactional 롤백 (조회 전용이라 쓰기 없음)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * 공통코드 조회 Mapper JUnit
+ * 팀 테스트 규칙: 공용 더미 위에서 @Transactional 롤백 (조회 전용이라 쓰기 없음)
  */
 package com.endit.mapper;
 

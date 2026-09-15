@@ -1,16 +1,5 @@
 /**
- * <pre>
- * Class Name : CodeService
- * Description : 공통코드 조회 Service 인터페이스 (조회 전용 — WorkDiv 미상속)
- *
- * Modification Information
- * 수정일        수정자     수정내용
- * ----------  --------  ---------------------------
- * 2026. 8. 25.  홍선기   최초 생성
- * </pre>
- *
- * @author 홍선기
- * @since 2026. 8. 25.
+ * 공통코드 조회 Service 인터페이스 (조회 전용 — WorkDiv 미상속)
  */
 package com.endit.service;
 
