@@ -66,8 +66,26 @@ public class ReportCommentServiceImpl implements ReportCommentService {
 		//    사용자에게 친절한 메시지를 주기 위해 먼저 거른다
 		checkOtherReasonDetail(param);
 
-		// 2. 접수 (처리상태는 DB DEFAULT 'RECEIVED')
+		// 2. 본인이 쓴 코멘트는 신고할 수 없다 (통합테스트 MOD-04 규칙)
+		checkNotOwnComment(param);
+
+		// 3. 접수 (처리상태는 DB DEFAULT 'RECEIVED')
 		return reportCommentMapper.doSave(param);
+	}
+
+	/**
+	 * 신고자와 코멘트 작성자가 같으면 거부한다.
+	 * 코멘트가 없으면 FK 오류 대신 명확한 메시지로 거부한다.
+	 */
+	private void checkNotOwnComment(ReportCommentVO param) {
+		Long ownerId = reportCommentMapper.selectCommentOwnerId(param.getCommentId());
+
+		if (null == ownerId) {
+			throw new IllegalArgumentException("신고 대상 코멘트가 존재하지 않습니다. commentId=" + param.getCommentId());
+		}
+		if (ownerId.longValue() == param.getReportMemberId()) {
+			throw new IllegalArgumentException("본인이 작성한 코멘트는 신고할 수 없습니다.");
+		}
 	}
 
 	@Transactional(rollbackFor = Exception.class)

@@ -161,3 +161,12 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,eclipse,java
+
+### AI 서버(파이썬) - 키와 캐시는 올리지 않는다
+/ai-server/.env
+/ai-server/__pycache__/
+/ai-server/.venv/
+
+# Claude Code 로컬 세션(팀 공유 안 함)
+/.claude/
+/.env

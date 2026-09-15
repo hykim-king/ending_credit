@@ -1,0 +1,250 @@
+/*
+ * AI 도우미 - 떠 있는 버튼 + 검색 패널 + 선제 말풍선
+ * 색은 endit.css 의 토큰을 그대로 쓴다. 새 색을 만들지 않는다.
+ */
+
+/* ── 떠 있는 버튼 ── */
+.ai-fab {
+    position: fixed;              /* 화면 기준 - 스크롤해도 따라온다 */
+    right: 24px;
+    bottom: 24px;
+    z-index: 1045;                /* 부트스트랩 모달(1055)보다는 아래 */
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: var(--endit-primary);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+    box-shadow: 0 6px 20px rgba(101, 80, 200, .38);
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.ai-fab:hover {
+    background: var(--endit-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(101, 80, 200, .45);
+}
+
+.ai-fab:focus-visible {
+    outline: 3px solid var(--endit-focus);
+    outline-offset: 2px;
+}
+
+/* ── 선제 말풍선 (검색 0건 등) ── */
+.ai-teaser {
+    position: fixed;
+    right: 24px;
+    bottom: 88px;
+    z-index: 1044;
+    max-width: 260px;
+    background: #fff;
+    border: 1px solid var(--endit-focus);
+    border-radius: 12px 12px 4px 12px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 24px rgba(26, 22, 38, .14);
+    font-size: 13px;
+    line-height: 1.5;
+    animation: aiTeaserIn .28s ease-out;
+}
+
+.ai-teaser-title {
+    font-weight: 700;
+    color: var(--endit-primary);
+    margin-bottom: 2px;
+}
+
+.ai-teaser-body {
+    color: #555;
+}
+
+.ai-teaser-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    border: none;
+    background: none;
+    color: #aaa;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.ai-teaser-close:hover { color: #666; }
+
+@keyframes aiTeaserIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 검색 패널 ── */
+.ai-panel {
+    position: fixed;
+    right: 24px;
+    bottom: 88px;
+    z-index: 1046;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    max-height: min(560px, calc(100vh - 130px));
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid var(--endit-focus);
+    border-radius: 14px;
+    box-shadow: 0 12px 40px rgba(26, 22, 38, .2);
+    overflow: hidden;
+    animation: aiPanelIn .2s ease-out;
+}
+
+@keyframes aiPanelIn {
+    from { opacity: 0; transform: translateY(10px) scale(.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ai-panel-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    background: var(--endit-primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    flex: none;
+}
+
+.ai-panel-close {
+    margin-left: auto;
+    border: none;
+    background: none;
+    color: #fff;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    opacity: .85;
+}
+
+.ai-panel-close:hover { opacity: 1; }
+
+.ai-panel-body {
+    padding: 13px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+/* 결과 목록 */
+.ai-results {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ai-result {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 6px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid #F1EFF6;
+}
+
+.ai-result:last-child { border-bottom: none; }
+
+.ai-result:hover {
+    background: #F7F5FD;
+    color: inherit;
+}
+
+.ai-poster {
+    width: 38px;
+    aspect-ratio: 2 / 3;
+    flex: none;
+    border-radius: 5px;
+    border: 1px solid var(--endit-border);
+    background: #EFEDF4 center / cover no-repeat;
+}
+
+.ai-result-title {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+}
+
+.ai-result-meta {
+    font-size: 11.5px;
+    color: #8a8598;
+    font-variant-numeric: tabular-nums;
+}
+
+.ai-msg {
+    font-size: 12.5px;
+    color: #6b6478;
+    padding: 10px 11px;
+    background: #F7F6FA;
+    border-radius: 8px;
+}
+
+.ai-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #6b6478;
+    padding: 14px 0;
+    justify-content: center;
+}
+
+/* 모바일 - 화면을 덜 가리게 */
+@media (max-width: 576px) {
+    .ai-fab { right: 16px; bottom: 16px; width: 46px; height: 46px; font-size: 18px; }
+    .ai-panel { right: 16px; left: 16px; bottom: 72px; width: auto; }
+    .ai-teaser { right: 16px; bottom: 72px; max-width: calc(100vw - 32px); }
+}
+
+/* 움직임을 줄이도록 설정한 사용자 존중 */
+@media (prefers-reduced-motion: reduce) {
+    .ai-fab, .ai-panel, .ai-teaser { transition: none; animation: none; }
+}
+
+/* ── 사용법 안내 카드 ── */
+.ai-help {
+    border: 1px solid var(--endit-focus);
+    background: #F7F5FD;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.ai-help-title {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--endit-primary);
+    margin-bottom: 4px;
+}
+
+.ai-help-body {
+    font-size: 12.5px;
+    color: #555;
+    line-height: 1.6;
+}
+
+/* ── 공지 줄 아이콘 ── */
+.ai-notice-icon {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 7px;
+    background: #F1EDFF;
+    color: var(--endit-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}

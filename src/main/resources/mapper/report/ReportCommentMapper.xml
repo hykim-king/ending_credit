@@ -144,4 +144,11 @@
         SELECT COUNT(*) AS total_cnt FROM report_comment
     </select>
 
+    <!-- 신고 대상 코멘트의 작성자 회원ID (본인 코멘트 신고 차단) -->
+    <select id="selectCommentOwnerId" parameterType="long" resultType="java.lang.Long">
+        SELECT member_id
+          FROM user_comment
+         WHERE comment_id = #{commentId}
+    </select>
+
 </mapper>

@@ -41,7 +41,7 @@ class ReportCommentServiceJUnit {
 	private static final long MEMBER_AUTHOR = 9L;     // admin1@endit.com — 더미 코멘트 없음
 	private static final long MEMBER_REPORTER = 10L;  // admin2@endit.com — 신고자
 	private static final long ADMIN_PROCESSOR = 9L;   // 신고 처리 관리자 (ROLE=ADMIN)
-	private static final long CONTENT_A = 9L;          // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
+	private static final long CONTENT_A = 442L;          // 어벤져스: 인피니티 워 — 더미 코멘트 없는 영화
 	private static final long MISSING_REPORT_ID = 999_999_999L; // 존재하지 않는 신고 번호
 
 	@Autowired
